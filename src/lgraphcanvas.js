@@ -1677,11 +1677,7 @@ export class LGraphCanvas {
 
         var scale = this.ds.scale;
 
-        if (delta > 0) {
-            scale *= 1.1;
-        } else if (delta < 0) {
-            scale *= 1 / 1.1;
-        }
+        scale *= Math.pow(1.1, delta * 0.01);
 
         // this.setZoom( scale, [ e.clientX, e.clientY ] );
         this.ds.changeScale(scale, [e.clientX, e.clientY]);
