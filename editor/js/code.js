@@ -1,6 +1,6 @@
 
 import { LiteGraph } from "../../src/litegraph.js";
-import { Editor } from "../../src/litegraph-editor.js";
+import { Editor } from "../litegraph-editor.js";
 
 export var gl = null; // webgl_canvas
 

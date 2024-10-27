@@ -107,76 +107,112 @@ export var LiteGraph = new class {
 
         this.catch_exceptions = true;
         this.throw_errors = true;
-        this.allow_scripts = false; // if set to true some nodes like Formula would be allowed to evaluate code that comes from unsafe sources (like node configuration), which could lead to exploits
-        this.use_deferred_actions = true; // executes actions during the graph execution flow
-        this.registered_node_types = {}; // nodetypes by string
-        this.node_types_by_file_extension = {}; // used for dropping files in the canvas
-        this.Nodes = {}; // node types by classname
-        this.Globals = {}; // used to store vars between graphs
+        // 如果设置为true,一些节点(如Formula)将被允许评估来自不安全源(如节点配置)的代码,这可能导致漏洞
+        this.allow_scripts = false;
+        // 在图执行流程中执行操作
+        this.use_deferred_actions = true;
+        // 按字符串存储节点类型
+        this.registered_node_types = {};
+        // 用于在画布上拖放文件
+        this.node_types_by_file_extension = {};
+        // 按类名存储节点类型
+        this.Nodes = {};
+        // 用于在图之间存储变量
+        this.Globals = {};
+        // 用于向搜索框添加额外功能
+        this.searchbox_extras = {};
+        // 如果设置为true,将自动对上下文菜单中的节点类型/类别进行排序
+        this.auto_sort_node_types = false; // [true!]
 
-        this.searchbox_extras = {}; // used to add extra features to the search box
-        this.auto_sort_node_types = false; // [true!] If set to true, will automatically sort node types / categories in the context menus
+        // 当触发时(执行/动作)使节点框(左上角圆圈)变色,提供视觉反馈
+        this.node_box_coloured_when_on = false; // [true!]
+        // 根据节点模式为节点框着色,提供视觉反馈
+        this.node_box_coloured_by_mode = false; // [true!]
 
-        this.node_box_coloured_when_on = false; // [true!] this make the nodes box (top left circle) coloured when triggered (execute/action), visual feedback
-        this.node_box_coloured_by_mode = false; // [true!] nodebox based on node mode, visual feedback
-
-        this.dialog_close_on_mouse_leave = true; // [false on mobile] better true if not touch device, TODO add an helper/listener to close if false
+        // 鼠标离开时关闭对话框,在非触摸设备上最好为true
+        this.dialog_close_on_mouse_leave = true; // [false on mobile]
         this.dialog_close_on_mouse_leave_delay = 500;
 
-        this.shift_click_do_break_link_from = false; // [false!] prefer false if results too easy to break links - implement with ALT or TODO custom keys
-        this.click_do_break_link_to = false; // [false!]prefer false, way too easy to break links
+        // 如果结果太容易断开链接,最好设为false - 用ALT或自定义键实现
+        this.shift_click_do_break_link_from = false; // [false!]
+        // 最好为false,断开链接太容易了
+        this.click_do_break_link_to = false; // [false!]
 
-        this.search_hide_on_mouse_leave = true; // [false on mobile] better true if not touch device, TODO add an helper/listener to close if false
-        this.search_filter_enabled = false; // [true!] enable filtering slots type in the search widget, !requires auto_load_slot_types or manual set registered_slot_[in/out]_types and slot_types_[in/out]
-        this.search_show_all_on_open = true; // [true!] opens the results list when opening the search widget
+        // 鼠标离开时隐藏搜索,在非触摸设备上最好为true
+        this.search_hide_on_mouse_leave = true; // [false on mobile]
+        // 在搜索小部件中启用插槽类型过滤,需要auto_load_slot_types或手动设置registered_slot_[in/out]_types和slot_types_[in/out]
+        this.search_filter_enabled = false; // [true!]
+        // 打开搜索小部件时显示所有结果
+        this.search_show_all_on_open = true; // [true!]
 
-        this.show_node_tooltip = false; // [true!] show a tooltip with node property "tooltip" over the selected node
-        this.show_node_tooltip_use_descr_property = false; // enabled tooltip from desc when property tooltip not set
+        // 在选定的节点上显示带有节点属性"tooltip"的工具提示
+        this.show_node_tooltip = false; // [true!]
+        // 当未设置属性tooltip时,从desc启用工具提示
+        this.show_node_tooltip_use_descr_property = false;
 
-        this.auto_load_slot_types = false; // [if want false, use true, run, get vars values to be statically set, than disable] nodes types and nodeclass association with node types need to be calculated, if dont want this, calculate once and set registered_slot_[in/out]_types and slot_types_[in/out]
+        // 需要计算节点类型和nodeclass与节点类型的关联,如果不想这样,计算一次并设置registered_slot_[in/out]_types和slot_types_[in/out]
+        this.auto_load_slot_types = false; // [if want false, use true, run, get vars values to be statically set, than disable]
 
-        // set these values if not using auto_load_slot_types
-        this.registered_slot_in_types = {}; // slot types for nodeclass
-        this.registered_slot_out_types = {}; // slot types for nodeclass
-        this.slot_types_in = []; // slot types IN
-        this.slot_types_out = []; // slot types OUT
-        this.slot_types_default_in = []; // specify for each IN slot type a(/many) default node(s), use single string, array, or object (with node, title, parameters, ..) like for search
-        this.slot_types_default_out = []; // specify for each OUT slot type a(/many) default node(s), use single string, array, or object (with node, title, parameters, ..) like for search
+        // 如果不使用auto_load_slot_types,请设置这些值
+        // nodeclass的插槽类型
+        this.registered_slot_in_types = {};
+        this.registered_slot_out_types = {};
+        // 输入插槽类型
+        this.slot_types_in = [];
+        // 输出插槽类型
+        this.slot_types_out = [];
+        // 为每个输入插槽类型指定一个(或多个)默认节点,使用单个字符串、数组或对象(带有node、title、parameters等),如搜索
+        this.slot_types_default_in = [];
+        // 为每个输出插槽类型指定一个(或多个)默认节点,使用单个字符串、数组或对象(带有node、title、parameters等),如搜索
+        this.slot_types_default_out = [];
 
         this.graphDefaultConfig = {
             align_to_grid: true,
             links_ontop: false,
         };
 
-        this.alt_drag_do_clone_nodes = false; // [true!] very handy, ALT click to clone and drag the new node
-        this.alt_shift_drag_connect_clone_with_input = true; // [true!] very handy, when cloning, keep input connections with SHIFT
+        // 非常方便,ALT点击克隆并拖动新节点
+        this.alt_drag_do_clone_nodes = false; // [true!]
+        // 非常方便,克隆时使用SHIFT保持输入连接
+        this.alt_shift_drag_connect_clone_with_input = true; // [true!]
 
-        this.do_add_triggers_slots = false; // [true!] will create and connect event slots when using action/events connections, !WILL CHANGE node mode when using onTrigger (enable mode colors), onExecuted does not need this
+        // 使用动作/事件连接时将创建并连接事件插槽,使用onTrigger时将更改节点模式(启用模式颜色),onExecuted不需要这个
+        this.do_add_triggers_slots = false; // [true!]
 
-        this.allow_multi_output_for_events = true; // [false!] being events, it is strongly reccomended to use them sequentially, one by one
+        // 强烈建议按顺序一个接一个地使用事件
+        this.allow_multi_output_for_events = true; // [false!]
 
-        this.middle_click_slot_add_default_node = false; // [true!] allows to create and connect a ndoe clicking with the third button (wheel)
+        // 允许使用第三个按钮(滚轮)点击创建和连接节点
+        this.middle_click_slot_add_default_node = false; // [true!]
 
-        this.release_link_on_empty_shows_menu = false; // [true!] dragging a link to empty space will open a menu, add from list, search or defaults
-        this.two_fingers_opens_menu = false; // [true!] using pointer event isPrimary, when is not simulate right click
+        // 将链接拖到空白处将打开菜单,从列表、搜索或默认值中添加
+        this.release_link_on_empty_shows_menu = false; // [true!]
+        // 使用指针事件isPrimary,当不是主要时模拟右键点击
+        this.two_fingers_opens_menu = false; // [true!]
 
-        this.backspace_delete = true; // [false!] delete key is enough, don't mess with text edit and custom
+        // 删除键就足够了,不要干扰文本编辑和自定义
+        this.backspace_delete = true; // [false!]
 
-        this.ctrl_shift_v_paste_connect_unselected_outputs = false; // [true!] allows ctrl + shift + v to paste nodes with the outputs of the unselected nodes connected with the inputs of the newly pasted nodes
+        // 允许使用ctrl + shift + v粘贴节点,并将未选中节点的输出与新粘贴节点的输入连接
+        this.ctrl_shift_v_paste_connect_unselected_outputs = false; // [true!]
 
-        this.actionHistory_enabled = false; // cntrlZ, cntrlY
+        // cntrlZ, cntrlY
+        this.actionHistory_enabled = false;
         this.actionHistoryMaxSave = 40;
 
-        /* EXECUTING ACTIONS AFTER UPDATING VALUES - ANCESTORS */
+        /* 更新值后执行操作 - 祖先 */
+        // 在触发器上刷新祖先
         this.refreshAncestorsOnTriggers = false; // [true!]
+        // 在动作上刷新祖先
         this.refreshAncestorsOnActions = false; // [true!]
-        this.ensureUniqueExecutionAndActionCall = false; // [true!] the new tecnique.. let's make it working best of
+        // 新技术..让它发挥最佳效果
+        this.ensureUniqueExecutionAndActionCall = false; // [true!]
 
-        // if true, all newly created nodes/links will use string UUIDs for their id fields instead of integers.
-        // use this if you must have node IDs that are unique across all graphs and subgraphs.
+        // 如果为true,所有新创建的节点/链接将使用字符串UUID作为其id字段,而不是整数。
+        // 如果您必须在所有图形和子图中使用唯一的节点ID,请使用此选项。
         this.use_uuids = false;
 
-        // enable filtering elements of the context menu with keypress (+ arrows for navigation, escape to close)
+        // 启用使用按键过滤上下文菜单元素(+箭头导航,Esc关闭)
         this.context_menu_filter_enabled = false; // FIX event handler removal
 
         this.showCanvasOptions = false; // [true!] customize availableCanvasOptions
@@ -287,6 +323,7 @@ export var LiteGraph = new class {
      * @param {String} type name of the node and path
      * @param {Class} base_class class containing the structure of a node
      */
+    // 注册一个节点类,以便在用户想要创建新节点时可以列出
     registerNodeType(type, base_class) {
         if (!base_class.prototype) {
             throw new Error("Cannot register a simple object, it must be a class with a prototype");
@@ -307,10 +344,13 @@ export var LiteGraph = new class {
         const propertyDescriptors = Object.getOwnPropertyDescriptors(LGraphNode.prototype);
 
         // Iterate over each property descriptor
+        // 遍历每个属性描述符
         Object.keys(propertyDescriptors).forEach((propertyName) => {
             // Check if the property already exists on the target prototype
+            // 检查目标原型上是否已存在该属性
             if (!base_class.prototype.hasOwnProperty(propertyName)) {
                 // If the property doesn't exist, copy it from the source to the target
+                // 如果属性不存在,则从源复制到目标
                 Object.defineProperty(base_class.prototype, propertyName, propertyDescriptors[propertyName]);
             }
         });
@@ -351,6 +391,7 @@ export var LiteGraph = new class {
 
 
             // used to know which nodes to create when dragging files to the canvas
+            // 用于知道在将文件拖到画布上时要创建哪些节点
             if (base_class.supported_extensions) {
                 for (let i in base_class.supported_extensions) {
                     const ext = base_class.supported_extensions[i];
@@ -371,6 +412,7 @@ export var LiteGraph = new class {
         }
 
         // warnings
+        // 警告
         if (base_class.prototype.onPropertyChange) {
             LiteGraph.warn("LiteGraph node class " +
                     type +
@@ -378,6 +420,7 @@ export var LiteGraph = new class {
         }
 
         // used to know which nodes create when dragging files to the canvas
+        // 用于知道在将文件拖到画布上时要创建哪些节点
         if (base_class.supported_extensions) {
             for (var i=0; i < base_class.supported_extensions.length; i++) {
                 var ext = base_class.supported_extensions[i];
@@ -395,18 +438,24 @@ export var LiteGraph = new class {
 
     /**
      * removes a node type from the system
+     * 从系统中移除一个节点类型
      * @method unregisterNodeType
      * @param {String|Object} type name of the node or the node constructor itself
+     * 节点的名称或节点构造函数本身
      */
     unregisterNodeType(type) {
+        // 确定要移除的基类
         const base_class =
             type.constructor === String
                 ? this.registered_node_types[type]
                 : type;
+        // 如果找不到基类，抛出错误
         if (!base_class) {
             throw new Error("node type not found: " + type);
         }
+        // 从已注册的节点类型中删除该类型
         delete this.registered_node_types[base_class.type];
+        // 如果基类有构造函数名，从Nodes对象中删除该类型
         if (base_class.constructor.name) {
             delete this.Nodes[base_class.constructor.name];
         }
@@ -414,19 +463,23 @@ export var LiteGraph = new class {
 
     /**
     * Save a slot type and his node
+    * 保存插槽类型及其节点
     * @method registerSlotType
     * @param {String|Object} type name of the node or the node constructor itself
     * @param {String} slot_type name of the slot type (variable type), eg. string, number, array, boolean, ..
     */
     registerNodeAndSlotType(type, slot_type, out = false) {
+        // 确定基类
         const base_class =
             type.constructor === String &&
             this.registered_node_types[type] !== "anonymous"
                 ? this.registered_node_types[type]
                 : type;
 
+        // 获取类型
         const class_type = base_class.constructor.type;
 
+        // 处理插槽类型
         let allTypes = [];
         if (typeof slot_type === "string") {
             allTypes = slot_type.split(",");
@@ -436,28 +489,34 @@ export var LiteGraph = new class {
             allTypes = ["*"];
         }
 
+        // 遍历所有类型
         for (let i = 0; i < allTypes.length; ++i) {
             let slotType = allTypes[i];
             if (slotType === "") {
                 slotType = "*";
             }
+            // 确定注册目标
             const registerTo = out
                 ? "registered_slot_out_types"
                 : "registered_slot_in_types";
+            // 初始化注册对象
             if (this[registerTo][slotType] === undefined) {
                 this[registerTo][slotType] = { nodes: [] };
             }
+            // 添加类型到注册对象
             if (!this[registerTo][slotType].nodes.includes(class_type)) {
                 this[registerTo][slotType].nodes.push(class_type);
             }
 
-            // check if is a new type
+            // 检查是否为新类型
             if (!out) {
+                // 处理输入插槽类型
                 if (!this.slot_types_in.includes(slotType.toLowerCase())) {
                     this.slot_types_in.push(slotType.toLowerCase());
                     this.slot_types_in.sort();
                 }
             } else {
+                // 处理输出插槽类型
                 if (!this.slot_types_out.includes(slotType.toLowerCase())) {
                     this.slot_types_out.push(slotType.toLowerCase());
                     this.slot_types_out.sort();
@@ -473,11 +532,13 @@ export var LiteGraph = new class {
      * @param {String} name node name with namespace (p.e.: 'math/sum')
      * @param {Object} object methods expected onCreate, inputs, outputs, properties, onExecute
      */
+    // 通过传递一个包含某些属性的对象来创建新的节点类型
     buildNodeClassFromObject(
         name,
         object,
     ) {
         var ctor_code = "";
+        // 处理输入
         if(object.inputs)
             for(let i=0; i < object.inputs.length; ++i) {
                 let _name = object.inputs[i][0];
@@ -486,6 +547,7 @@ export var LiteGraph = new class {
                     _type = '"'+_type+'"';
                 ctor_code += "this.addInput('"+_name+"',"+_type+");\n";
             }
+        // 处理输出
         if(object.outputs)
             for(let i=0; i < object.outputs.length; ++i) {
                 let _name = object.outputs[i][0];
@@ -494,6 +556,7 @@ export var LiteGraph = new class {
                     _type = '"'+_type+'"';
                 ctor_code += "this.addOutput('"+_name+"',"+_type+");\n";
             }
+        // 处理属性
         if(object.properties)
             for(let i in object.properties) {
                 let prop = object.properties[i];
@@ -502,12 +565,16 @@ export var LiteGraph = new class {
                 ctor_code += "this.addProperty('"+i+"',"+prop+");\n";
             }
         ctor_code += "if(this.onCreate)this.onCreate()";
+        // 创建类对象
         var classobj = Function(ctor_code);
+        // 添加方法到类原型
         for(let i in object)
             if(i!="inputs" && i!="outputs" && i!="properties")
                 classobj.prototype[i] = object[i];
+        // 设置类标题和描述
         classobj.title = object.title || name.split("/").pop();
         classobj.desc = object.desc || "Generated from object";
+        // 注册节点类型
         this.registerNodeType(name, classobj);
         return classobj;
     }
@@ -523,31 +590,41 @@ export var LiteGraph = new class {
      * @param {Object} properties [optional] properties to be configurable
      */
     wrapFunctionAsNode(name, func, param_types, return_type, properties) {
+        // 获取函数参数名称
         const names = LiteGraph.getParameterNames(func);
 
+        // 生成添加输入的代码
         const code = names.map((name, i) => {
             const paramType = param_types?.[i] ? `'${param_types[i]}'` : "0";
             return `this.addInput('${name}', ${paramType});`;
         }).join("\n");
 
+        // 处理返回类型
         const returnTypeStr = return_type ? `'${return_type}'` : 0;
+        // 处理属性
         const propertiesStr = properties ? `this.properties = ${JSON.stringify(properties)};` : "";
 
+        // 创建类对象
         const classObj = new Function(`
             ${code}
             this.addOutput('out', ${returnTypeStr});
             ${propertiesStr}
         `);
 
+        // 设置类标题和描述
         classObj.title = name.split("/").pop();
         classObj.desc = `Generated from ${func.name}`;
 
+        // 定义onExecute方法
         classObj.prototype.onExecute = function() {
+            // 获取输入参数
             const params = names.map((name, i) => this.getInputData(i));
+            // 执行函数并设置输出
             const result = func.apply(this, params);
             this.setOutputData(0, result);
         };
 
+        // 注册节点类型
         this.registerNodeType(name, classObj);
 
         return classObj;
@@ -571,9 +648,11 @@ export var LiteGraph = new class {
      * @param {Function} func
      */
     addNodeMethod(name, func) {
+        // 将方法添加到所有节点类型中，包括现有类型和将要创建的类型
         LGraphNode.prototype[name] = func;
         for (var i in this.registered_node_types) {
             var type = this.registered_node_types[i];
+            // 如果类型原型上已存在该方法，则创建一个同名但带下划线前缀的备份
             if (type.prototype[name]) {
                 type.prototype["_" + name] = type.prototype[name];
             } // keep old in case of replacing
@@ -588,19 +667,23 @@ export var LiteGraph = new class {
      * @param {String} name a name to distinguish from other nodes
      * @param {Object} options to set options
      */
-
+    // 创建一个给定类型和名称的节点。该节点尚未附加到任何图表上。
     createNode(type, title, options = {}) {
+        // 从已注册的节点类型中获取基类
         const base_class = this.registered_node_types[type] ?? null;
 
+        // 如果找不到基类，记录错误并返回null
         if (!base_class) {
             this.log?.(`GraphNode type "${type}" not registered.`);
             return null;
         }
 
+        // 设置节点标题，优先级：传入的title > 基类的title > 类型名
         title = title ?? base_class.title ?? type;
 
         let node = null;
 
+        // 如果启用了异常捕获，则在try-catch块中创建节点
         if (LiteGraph.catch_exceptions) {
             try {
                 node = new base_class(title);
@@ -609,9 +692,11 @@ export var LiteGraph = new class {
                 return null;
             }
         } else {
+            // 否则直接创建节点
             node = new base_class(title);
         }
 
+        // 设置节点的各种属性
         node.type = type;
         node.title ??= title;
         node.properties ??= {};
@@ -621,10 +706,10 @@ export var LiteGraph = new class {
         node.pos ??= LiteGraph.DEFAULT_POSITION.concat();
         node.mode ??= LiteGraph.ALWAYS;
 
-        // extra options
+        // 应用额外的选项
         Object.assign(node, options);
 
-        // callback
+        // 调用节点创建后的回调函数（如果存在）
         node.onNodeCreated?.();
         return node;
     }
@@ -646,13 +731,15 @@ export var LiteGraph = new class {
      * @param {String} category category name
      * @return {Array} array with all the node classes
      */
-
     getNodeTypesInCategory(category, filter) {
+        // 根据注册的节点类型筛选符合条件的类型
         const filteredTypes = Object.values(this.registered_node_types).filter((type) => {
+            // 检查过滤器是否匹配
             if (type.filter !== filter) {
                 return false;
             }
 
+            // 检查类别是否匹配
             if (category === "") {
                 return type.category === null;
             } else {
@@ -660,10 +747,12 @@ export var LiteGraph = new class {
             }
         });
 
+        // 如果启用了自动排序，则按标题字母顺序排序
         if (this.auto_sort_node_types) {
             filteredTypes.sort((a, b) => a.title.localeCompare(b.title));
         }
 
+        // 返回筛选后的节点类型列表
         return filteredTypes;
     }
 

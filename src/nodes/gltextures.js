@@ -2,6 +2,8 @@ import { LiteGraph } from "../litegraph.js";
 import { GL, Shader } from "../../editor/js/libs/litegl.js";
 import { gl } from "../../editor/js/code.js";
 
+import { CurveEditor } from "./curveeditor.js";
+
 LiteGraph.LGraphCanvas.link_type_colors["Texture"] = "#987";
 
 const DEG2RAD = 0.0174532925;
@@ -4894,7 +4896,7 @@ class LGraphTextureCurve {
         if (this.flags.collapsed) return;
 
         if (!this.curve_editor)
-            this.curve_editor = new LiteGraph.CurveEditor(this._points.R);
+            this.curve_editor = new CurveEditor(this._points.R);
         ctx.save();
         ctx.translate(0, this.curve_offset);
         var channel = this.widgets[1].value;

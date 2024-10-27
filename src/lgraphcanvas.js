@@ -4986,38 +4986,38 @@ export class LGraphCanvas {
      * this feature was designed when graphs where meant to create user interfaces
      * @method switchLiveMode
      **/
-    switchLiveMode(transition) {
-        if (!transition) {
-            this.live_mode = !this.live_mode;
-            this.dirty_canvas = true;
-            this.dirty_bgcanvas = true;
-            return;
-        }
+    // switchLiveMode(transition) {
+    //     if (!transition) {
+    //         this.live_mode = !this.live_mode;
+    //         this.dirty_canvas = true;
+    //         this.dirty_bgcanvas = true;
+    //         return;
+    //     }
 
-        var self = this;
-        var delta = this.live_mode ? 1.1 : 0.9;
-        if (this.live_mode) {
-            this.live_mode = false;
-            this.editor_alpha = 0.1;
-        }
+    //     var self = this;
+    //     var delta = this.live_mode ? 1.1 : 0.9;
+    //     if (this.live_mode) {
+    //         this.live_mode = false;
+    //         this.editor_alpha = 0.1;
+    //     }
 
-        var t = setInterval(function() {
-            self.editor_alpha *= delta;
-            self.dirty_canvas = true;
-            self.dirty_bgcanvas = true;
+    //     var t = setInterval(function() {
+    //         self.editor_alpha *= delta;
+    //         self.dirty_canvas = true;
+    //         self.dirty_bgcanvas = true;
 
-            if (delta < 1 && self.editor_alpha < 0.01) {
-                clearInterval(t);
-                if (delta < 1) {
-                    self.live_mode = true;
-                }
-            }
-            if (delta > 1 && self.editor_alpha > 0.99) {
-                clearInterval(t);
-                self.editor_alpha = 1;
-            }
-        }, 1);
-    }
+    //         if (delta < 1 && self.editor_alpha < 0.01) {
+    //             clearInterval(t);
+    //             if (delta < 1) {
+    //                 self.live_mode = true;
+    //             }
+    //         }
+    //         if (delta > 1 && self.editor_alpha > 0.99) {
+    //             clearInterval(t);
+    //             self.editor_alpha = 1;
+    //         }
+    //     }, 1);
+    // }
 
     /* @TODO: Validate this is never called
     onNodeSelectionChange() {
@@ -6930,6 +6930,8 @@ export class LGraphCanvas {
         return dialog;
     }
 
+    // 节点面板dom
+
     createPanel(title, options) {
         options = options || {};
 
@@ -7523,6 +7525,9 @@ export class LGraphCanvas {
         }
     }
 
+
+    // 右键菜单
+
     static onMenuNodeCollapse(value, options, e, menu, node) {
         node.graph.beforeChange(/* ?*/);
 
@@ -7768,7 +7773,6 @@ export class LGraphCanvas {
         }
 
         node.graph.afterChange();
-
         node.setDirtyCanvas(true, true);
     }
 
@@ -7779,7 +7783,7 @@ export class LGraphCanvas {
         } else {
             options = [
                 {
-                    content: "Add Node",
+                    content: "Add Node1",
                     has_submenu: true,
                     callback: LGraphCanvas.onMenuAdd,
                 },

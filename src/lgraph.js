@@ -2,10 +2,13 @@ import { LiteGraph } from "./litegraph.js";
 
 /**
  * LGraph is the class that contain a full graph. We instantiate one and add nodes to it, and then we can run the execution loop.
+ *
+ * LGraph 是包含完整图的类。我们实例化一个并向其添加节点，然后可以运行执行循环。
  * supported callbacks:
-    + onNodeAdded: when a new node is added to the graph
-    + onNodeRemoved: when a node inside this graph is removed
-    + onNodeConnectionChange: some connection has changed in the graph (connected or disconnected)
+ * 支持的回调:
+    + onNodeAdded: 当新节点添加到图中时
+    + onNodeRemoved: 当图中的节点被移除时
+    + onNodeConnectionChange: 图中的某些连接发生了变化(连接或断开)
  */
 export class LGraph {
 
@@ -308,14 +311,19 @@ export class LGraph {
     }
 
     /**
+     * 更新图的执行顺序，根据节点的相关性（只有输出的节点比只有输入的节点更相关）。
      * Updates the graph execution order according to relevance of the nodes (nodes with only outputs have more relevance than
      * nodes with only inputs.
      * @method updateExecutionOrder
      */
     updateExecutionOrder() {
+        // 计算执行顺序
         this._nodes_in_order = this.computeExecutionOrder(false);
+        // 初始化可执行节点数组
         this._nodes_executable = [];
+        // 遍历排序后的节点
         for (var i = 0; i < this._nodes_in_order.length; ++i) {
+            // 如果节点有onExecute方法，将其添加到可执行节点数组中
             if (this._nodes_in_order[i].onExecute) {
                 this._nodes_executable.push(this._nodes_in_order[i]);
             }
@@ -323,30 +331,30 @@ export class LGraph {
     }
 
     /**
-     * Computes the execution order of nodes in the flow graph based on their connections and levels.
-     * @param {boolean} only_onExecute - Indicates whether to consider only nodes with an onExecute method.
-     * @param {boolean} set_level - If true, assigns levels to the nodes based on their connections.
-     * @returns {Array} An array of nodes in the calculated execution order.
+     * 计算流图中节点的执行顺序，基于它们的连接和层级。
+     * @param {boolean} only_onExecute - 指示是否只考虑具有onExecute方法的节点。
+     * @param {boolean} set_level - 如果为true，则根据节点的连接为其分配层级。
+     * @returns {Array} 按计算出的执行顺序排列的节点数组。
      *
-     * @TODO:This whole concept is a mistake.  Should call graph back from output nodes
+     * @TODO:这整个概念是一个错误。应该从输出节点开始回溯调用图
      */
     computeExecutionOrder(only_onExecute, set_level) {
-        var L = [];
-        var S = [];
-        var M = {};
-        var visited_links = {}; // to avoid repeating links
-        var remaining_links = {}; // to a
+        var L = []; // 最终的执行顺序数组
+        var S = []; // 起始节点数组
+        var M = {}; // 待处理节点映射
+        var visited_links = {}; // 用于避免重复处理链接
+        var remaining_links = {}; // 用于跟踪剩余的输入链接数
 
-        // search for the nodes without inputs (starting nodes)
+        // 搜索没有输入的节点（起始节点）
         for (let i = 0, l = this._nodes.length; i < l; ++i) {
             let node = this._nodes[i];
             if (only_onExecute && !node.onExecute) {
                 continue;
             }
 
-            M[node.id] = node; // add to pending nodes
+            M[node.id] = node; // 添加到待处理节点
 
-            var num = 0; // num of input connections
+            var num = 0; // 输入连接数
             if (node.inputs) {
                 for (var j = 0, l2 = node.inputs.length; j < l2; j++) {
                     if (node.inputs[j] && node.inputs[j].link != null) {
@@ -356,12 +364,12 @@ export class LGraph {
             }
 
             if (num == 0) {
-                // is a starting node
+                // 是一个起始节点
                 S.push(node);
                 if (set_level) {
                     node._level = 1;
                 }
-            } else { // num of input links
+            } else { // 输入链接数
                 if (set_level) {
                     node._level = 0;
                 }
@@ -370,20 +378,19 @@ export class LGraph {
         }
 
         while (S.length != 0) {
-
-            // get an starting node
+            // 获取一个起始节点
             var node = S.shift();
-            L.push(node); // add to ordered list
-            delete M[node.id]; // remove from the pending nodes
+            L.push(node); // 添加到有序列表
+            delete M[node.id]; // 从待处理节点中移除
 
             if (!node.outputs) {
                 continue;
             }
 
-            // for every output
+            // 对每个输出
             for (let i = 0; i < node.outputs.length; i++) {
                 let output = node.outputs[i];
-                // not connected
+                // 未连接
                 if (
                     output == null ||
                     output.links == null ||
@@ -392,7 +399,7 @@ export class LGraph {
                     continue;
                 }
 
-                // for every connection
+                // 对每个连接
                 for (let j = 0; j < output.links.length; j++) {
                     let link_id = output.links[j];
                     let link = this.links[link_id];
@@ -400,7 +407,7 @@ export class LGraph {
                         continue;
                     }
 
-                    // already visited link (ignore it)
+                    // 已访问的链接（忽略它）
                     if (visited_links[link.id]) {
                         continue;
                     }
@@ -419,43 +426,43 @@ export class LGraph {
                         target_node._level = node._level + 1;
                     }
 
-                    visited_links[link.id] = true; // mark as visited
-                    remaining_links[target_node.id] -= 1; // reduce the number of links remaining
+                    visited_links[link.id] = true; // 标记为已访问
+                    remaining_links[target_node.id] -= 1; // 减少剩余链接数
                     if (remaining_links[target_node.id] == 0) {
                         S.push(target_node);
-                    } // if no more links, then add to starters array
+                    } // 如果没有更多链接，则添加到起始数组
                 }
             }
         }
 
-        // the remaining ones (loops)
+        // 剩余的节点（循环）
         for (let i in M) {
             L.push(M[i]);
         }
 
         if (L.length != this._nodes.length && LiteGraph.debug) {
-            LiteGraph.warn?.("something went wrong, nodes missing");
+            LiteGraph.warn?.("出现问题，节点缺失");
         }
 
         var l = L.length;
 
-        // save order number in the node
+        // 在节点中保存顺序编号
         for (let i = 0; i < l; ++i) {
             L[i].order = i;
         }
 
-        // sort now by priority
+        // 现在按优先级排序
         L = L.sort((A, B) => {
             let Ap = A.constructor.priority || A.priority || 0;
             let Bp = B.constructor.priority || B.priority || 0;
             if (Ap == Bp) {
-                // if same priority, sort by order
+                // 如果优先级相同，按顺序排序
                 return A.order - B.order;
             }
-            return Ap - Bp; // sort by priority
+            return Ap - Bp; // 按优先级排序
         });
 
-        // save order number in the node, again...
+        // 再次在节点中保存顺序编号
         for (let i = 0; i < l; ++i) {
             L[i].order = i;
         }
@@ -683,12 +690,13 @@ export class LGraph {
     }
 
     /**
-     * Adds a new node instance to this graph
+     * 向图中添加一个新的节点实例
      * @method add
-     * @param {LiteGraph.LGraphNode} node the instance of the node
+     * @param {LiteGraph.LGraphNode} node 节点的实例
      */
     add(node, skip_compute_order, optsIn = {}) {
 
+        // 默认选项
         var optsDef = {
             doProcessChange: true,
             doCalcSize: true,
@@ -699,7 +707,7 @@ export class LGraph {
             return;
         }
 
-        // groups
+        // 处理组
         if (node.constructor === LiteGraph.LGraphGroup) {
             this._groups.push(node);
             this.setDirtyCanvas(true);
@@ -709,9 +717,10 @@ export class LGraph {
             return;
         }
 
-        // nodes
+        // 处理节点
+        // 检查ID是否已存在
         if (node.id != -1 && this._nodes_by_id[node.id] != null) {
-            LiteGraph.warn?.("LiteGraph: there is already a node with this ID, changing it");
+            LiteGraph.warn?.("LiteGraph: 已存在具有此ID的节点，正在更改ID");
             if (LiteGraph.use_uuids) {
                 node.id = LiteGraph.uuidv4();
             } else {
@@ -719,11 +728,12 @@ export class LGraph {
             }
         }
 
+        // 检查节点数量是否超过最大限制
         if (this._nodes.length >= LiteGraph.MAX_NUMBER_OF_NODES) {
-            throw new Error("LiteGraph: max number of nodes in a graph reached");
+            throw new Error("LiteGraph: 图中的节点数量已达到最大值");
         }
 
-        // give him an id
+        // 分配ID
         if (LiteGraph.use_uuids) {
             if (node.id == null || node.id == -1)
                 node.id = LiteGraph.uuidv4();
@@ -741,33 +751,40 @@ export class LGraph {
         this._nodes.push(node);
         this._nodes_by_id[node.id] = node;
 
+        // 调用节点的onAdded方法（如果存在）
         node.onAdded?.(this);
 
+        // 如果配置了对齐网格，则对齐节点
         if (this.config.align_to_grid) {
             node.alignToGrid();
         }
 
+        // 更新执行顺序（如果需要）
         if (!skip_compute_order) {
             this.updateExecutionOrder();
         }
 
+        // 调用onNodeAdded回调（如果存在）
         this.onNodeAdded?.(node);
 
+        // 计算节点大小（如果需要）
         if (opts.doCalcSize) {
             node.setSize( node.computeSize() );
         }
+        
         this.setDirtyCanvas(true);
         this.change();
 
-        return node; // to chain actions
+        return node; // 返回节点以支持链式操作
     }
 
     /**
-     * Removes a node from the graph
+     * 从图中移除一个节点
      * @method remove
-     * @param {LiteGraph.LGraphNode} node the instance of the node
+     * @param {LiteGraph.LGraphNode} node 要移除的节点实例
      */
     remove(node) {
+        // 如果是组节点，特殊处理
         if (node.constructor === LiteGraph.LGraphGroup) {
             var index = this._groups.indexOf(node);
             if (index != -1) {
@@ -780,17 +797,17 @@ export class LGraph {
             return;
         }
 
+        // 检查节点是否存在
         if (this._nodes_by_id[node.id] == null) {
             return;
-        } // not found
+        } // 未找到节点
 
+        // 检查节点是否可以被移除
         if (node.ignore_remove) {
             return;
-        } // cannot be removed
+        } // 不能被移除
 
-        // this.beforeChange(); // sure? - almost sure is wrong
-
-        // disconnect inputs
+        // 断开输入连接
         if (node.inputs) {
             for (let i = 0; i < node.inputs.length; i++) {
                 let slot = node.inputs[i];
@@ -800,7 +817,7 @@ export class LGraph {
             }
         }
 
-        // disconnect outputs
+        // 断开输出连接
         if (node.outputs) {
             for (let i = 0; i < node.outputs.length; i++) {
                 let slot = node.outputs[i];
@@ -810,14 +827,12 @@ export class LGraph {
             }
         }
 
-        // node.id = -1; //why?
-
-        // callback
+        // 调用节点的onRemoved回调
         node.onRemoved?.();
         node.graph = null;
         this.onGraphChanged({action: "nodeRemove"});
 
-        // remove from canvas render
+        // 从画布渲染中移除
         if (this.list_of_graphcanvas) {
             for (let i = 0; i < this.list_of_graphcanvas.length; ++i) {
                 let canvas = this.list_of_graphcanvas[i];
@@ -830,22 +845,23 @@ export class LGraph {
             }
         }
 
-        // remove from containers
+        // 从容器中移除
         var pos = this._nodes.indexOf(node);
         if (pos != -1) {
             this._nodes.splice(pos, 1);
         }
         delete this._nodes_by_id[node.id];
 
+        // 调用onNodeRemoved回调
         this.onNodeRemoved?.(node);
 
-        // close panels
+        // 关闭面板
         this.sendActionToCanvas("checkPanels");
 
         this.setDirtyCanvas(true, true);
-        // this.afterChange(); // sure? - almost sure is wrong
         this.change();
 
+        // 更新执行顺序
         this.updateExecutionOrder();
     }
 

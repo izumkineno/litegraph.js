@@ -37,10 +37,10 @@ LiteGraph.pointerevents_method = "mouse"; // "mouse"|"pointer" use mouse for com
 LiteGraph.ctrl_shift_v_paste_connect_unselected_outputs = true; //[true!] allows ctrl + shift + v to paste nodes with the outputs of the unselected nodes connected with the inputs of the newly pasted nodes
 LiteGraph.backspace_delete = false;  // [false!] delete key is enough, don't mess with text edit and custom
 
-LiteGraph.actionHistory_enabled = false; // [true!] cntrlZ, cntrlY
+LiteGraph.actionHistory_enabled = true; // [true!] cntrlZ, cntrlY
 LiteGraph.actionHistoryMaxSave = 40;
 
-LiteGraph.showCanvasOptions = true;// enable canvas options panel, customize in LiteGrpah.availableCanvasOptions
+LiteGraph.showCanvasOptions = false;// enable canvas options panel, customize in LiteGrpah.availableCanvasOptions
 
 LiteGraph.use_uuids = false; // why not? maybe not good for comparison?
 

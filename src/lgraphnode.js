@@ -51,6 +51,59 @@ supported callbacks:
     + getExtraMenuOptions: to add option to context menu
 */
 
+/*
+中文注释：
+
+title: 字符串
+pos: [x,y]坐标
+size: [x,y]尺寸
+
+input|output: 每个连接
+    +  { name:字符串, type:字符串, pos: [x,y]=可选, direction: "input"|"output", links: 数组 });
+
+通用属性：
+    + clip_area: 如果在节点外渲染，将被裁剪
+    + unsafe_execution: 不允许安全执行
+    + skip_repeated_outputs: 添加新输出时，如果已有连接则不显示
+    + resizable: 如果设为false，则不能用鼠标调整大小
+    + horizontal: 插槽水平分布
+    + widgets_start_y: 小部件从节点顶部的y距离开始
+
+flags对象：
+    + collapsed: 是否折叠
+
+支持的回调：
+    + onAdded: 添加到图时（警告：加载时在节点配置之前调用）
+    + onRemoved: 从图中移除时
+    + onStart: 图开始播放时
+    + onStop: 图停止播放时
+    + onDrawForeground: 在节点内渲染内部小部件
+    + onDrawBackground: 在节点内渲染背景区域（仅在编辑模式下）
+    + onMouseDown: 鼠标按下
+    + onMouseMove: 鼠标移动
+    + onMouseUp: 鼠标抬起
+    + onMouseEnter: 鼠标进入
+    + onMouseLeave: 鼠标离开
+    + onExecute: 执行节点
+    + onPropertyChanged: 面板中属性更改时（返回true跳过默认行为）
+    + onGetInputs: 返回可能的输入数组
+    + onGetOutputs: 返回可能的输出数组
+    + onBounding: 节点有比自身更大的边界时（回调接收边界为[x,y,w,h]）
+    + onDblClick: 节点被双击
+    + onInputDblClick: 输入插槽被双击（可用于自动创建连接的节点）
+    + onOutputDblClick: 输出插槽被双击（可用于自动创建连接的节点）
+    + onConfigure: 节点配置后调用
+    + onSerialize: 序列化时添加额外信息（回调接收应填充数据的对象）
+    + onSelected: 被选中
+    + onDeselected: 取消选中
+    + onDropItem: DOM项被拖放到节点上
+    + onDropFile: 文件被拖放到节点上
+    + onConnectInput: 如果返回false，传入连接将被取消
+    + onConnectionsChange: 连接改变（新增或移除）(LiteGraph.INPUT 或 LiteGraph.OUTPUT, 插槽, 是否连接, 链接信息, 输入信息)
+    + onAction: 动作插槽触发
+    + getExtraMenuOptions: 向上下文菜单添加选项
+*/
+
 /**
  * Base Class for all the node type classes
  * @class LGraphNode
