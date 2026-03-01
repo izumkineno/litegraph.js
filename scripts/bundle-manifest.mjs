@@ -28,6 +28,7 @@ export const bundleManifest = {
     "src/nodes/midi.js",
     "src/nodes/audio.js",
     "src/nodes/network.js",
+    "src/nodes/others.js",
   ],
 };
 

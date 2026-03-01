@@ -1,4 +1,4 @@
-import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { copyFile, mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { transformWithEsbuild } from "vite";
@@ -7,6 +7,8 @@ import { bundleManifest, outputNames } from "./bundle-manifest.mjs";
 const scriptDir = fileURLToPath(new URL(".", import.meta.url));
 const rootDir = resolve(scriptDir, "..");
 const distDir = resolve(rootDir, "dist");
+const sourceCssDir = resolve(rootDir, "src", "css");
+const distCssDir = resolve(distDir, "css");
 
 async function getBundleSource(inputFiles) {
   const sections = [];
@@ -43,6 +45,21 @@ async function buildBundle(bundleName, inputFiles) {
   console.log(`Built ${outputStem}.js and ${outputStem}.min.js`);
 }
 
+async function copyCssAssets() {
+  await mkdir(distCssDir, { recursive: true });
+  const cssFiles = await readdir(sourceCssDir, { withFileTypes: true });
+
+  await Promise.all(
+    cssFiles
+      .filter((entry) => entry.isFile())
+      .map((entry) =>
+        copyFile(resolve(sourceCssDir, entry.name), resolve(distCssDir, entry.name))
+      )
+  );
+
+  console.log(`Copied CSS assets to ${distCssDir}`);
+}
+
 async function main() {
   await rm(distDir, { recursive: true, force: true });
   await mkdir(distDir, { recursive: true });
@@ -51,6 +68,7 @@ async function main() {
     buildBundle(bundleName, inputFiles)
   );
   await Promise.all(tasks);
+  await copyCssAssets();
 }
 
 main().catch((error) => {

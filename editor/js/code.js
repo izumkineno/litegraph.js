@@ -122,14 +122,7 @@ function enableWebGL()
 		return;
 	}
 
-	var libs = [
-		"js/libs/gl-matrix-min.js",
-		"js/libs/litegl.js",
-		"../src/nodes/gltextures.js",
-		"../src/nodes/glfx.js",
-		"../src/nodes/glshaders.js",
-		"../src/nodes/geometry.js"
-	];
+	var libs = [];
 
 	function fetchJS()
 	{

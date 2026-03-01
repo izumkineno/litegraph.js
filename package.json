@@ -9,7 +9,7 @@
         "./core": "./dist/litegraph.core.js",
         "./basic": "./dist/litegraph.basic.js",
         "./extended": "./dist/litegraph.extended.js",
-        "./css": "./css/litegraph.css",
+        "./css": "./dist/css/litegraph.css",
         "./package.json": "./package.json"
     },
     "directories": {
@@ -34,7 +34,6 @@
     "license": "MIT",
     "files": [
         "dist",
-        "css/litegraph.css",
         "src/litegraph.d.ts"
     ],
     "devDependencies": {
