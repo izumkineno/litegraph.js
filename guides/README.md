@@ -1,6 +1,12 @@
 # LiteGraph
 
 Here is a list of useful info when working with LiteGraph.
+
+## Additional guides
+
+- [LiteGraph 渲染机制与基础操作时序图](./rendering-and-operations.md)
+- [LiteGraph 节点注册、可调用 API 与生命周期指南](./node-registration-and-lifecycle.md)
+
 The library is divided in four levels:
 * **LGraphNode**: the base class of a node (this library uses is own system of inheritance)
 * **LGraph**: the container of a whole graph made of nodes
