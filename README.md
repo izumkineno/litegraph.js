@@ -181,7 +181,6 @@ The demo includes some examples of graphs. You can visit the [demo site](http://
 For local editor usage, use any static file server (for example VSCode Go Live) from the repository root and open:
 
 - `editor/index.html`
-- `editor/editor_mobile.html`
 
 To build distributable bundles first:
 ```sh
