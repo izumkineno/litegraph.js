@@ -13,7 +13,7 @@
 
 - 分析对象：
   - `src/litegraph.js`
-  - `src/litegraph-editor.js`
+  - `editor/js/litegraph-editor.js`
   - `editor/js/code.js`
 - 目标：
   - 讲清“函数调用链 + 状态字段变化”
@@ -36,7 +36,7 @@
 - `LGraphCanvas` 构造入口：`src/litegraph.js:5325`
 - 渲染循环：`LGraphCanvas.startRendering` -> `draw`
 - 执行循环：`LGraph.start` -> `runStep`
-- 编辑器联动：`src/litegraph-editor.js:25` 的 `graph.onAfterExecute = () => graphcanvas.draw(true)`
+- 编辑器联动：`editor/js/litegraph-editor.js:25` 的 `graph.onAfterExecute = () => graphcanvas.draw(true)`
 
 ## 2. 渲染系统总览
 
@@ -538,7 +538,7 @@ sequenceDiagram
 | LGraphCanvas | `processNodeWidgets`                             | `src/litegraph.js:10090`     |
 | LGraphCanvas | `onMenuAdd`                                      | `src/litegraph.js:10592`     |
 | LGraphCanvas | `showSearchBox`                                  | `src/litegraph.js:11508`     |
-| Editor       | `graph.onAfterExecute -> graphcanvas.draw(true)` | `src/litegraph-editor.js:25` |
+| Editor       | `graph.onAfterExecute -> graphcanvas.draw(true)` | `editor/js/litegraph-editor.js:25` |
 
 ## 8. 开关分支速查
 

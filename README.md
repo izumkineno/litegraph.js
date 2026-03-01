@@ -36,7 +36,17 @@ You can install it using npm
 npm install litegraph.js
 ```
 
-Or downloading the ```build/litegraph.js``` and ```css/litegraph.css``` version from this repository.
+Or downloading one of the bundled outputs from `dist/` and `css/litegraph.css` from this repository:
+
+- `dist/litegraph.core.js` (core engine)
+- `dist/litegraph.basic.js` (core + basic nodes)
+- `dist/litegraph.extended.js` (core + extended nodes)
+
+For repository development (editor/frontend workflows), use Bun:
+```sh
+bun install
+bun run build
+```
 
 ## First project ##
 
@@ -120,7 +130,7 @@ LiteGraph.wrapFunctionAsNode("math/sum",sum, ["Number","Number"],"Number");
 It also works server-side using NodeJS although some nodes do not work in server (audio, graphics, input, etc).
 
 ```js
-var LiteGraph = require("./litegraph.js").LiteGraph;
+var LiteGraph = require("litegraph.js/core").LiteGraph;
 
 var graph = new LiteGraph.LGraph();
 
@@ -157,20 +167,39 @@ graph.start()
 ## Utils
 -----
 
-It includes several commands in the utils folder to generate doc, check errors and build minifyed version.
+Build outputs are generated through a Vite-based script:
+
+```sh
+bun run build
+```
 
 
 ## Demo
 -----
-The demo includes some examples of graphs. In order to try them you can visit [demo site](http://tamats.com/projects/litegraph/editor) or install it on your local computer, to do so you need `git`, `node` and `npm`. Given those dependencies are installed, run the following commands to try it out:
+The demo includes some examples of graphs. You can visit the [demo site](http://tamats.com/projects/litegraph/editor) or run it locally.
+
+For local editor usage, use any static file server (for example VSCode Go Live) from the repository root and open:
+
+- `editor/index.html`
+- `editor/editor_mobile.html`
+
+To build distributable bundles first:
 ```sh
 $ git clone https://github.com/jagenjo/litegraph.js.git
 $ cd litegraph.js
-$ npm install
-$ node utils/server.js
-Example app listening on port 80!
+$ bun install
+$ bun run build
 ```
-Open your browser and point it to http://localhost:8000/. You can select a demo from the dropdown at the top of the page.
+
+## AI and Tooling
+-----
+
+- AI calls should go through a backend proxy endpoint. Do not expose AI API keys in browser code.
+- Frontend/package workflows are managed with Bun (`bun run ...`).
+- Library bundling is generated into `dist/` with the Vite build script.
+
+Detailed guide:
+- [guides/ai-calling-bun-uv.md](guides/ai-calling-bun-uv.md)
 
 ## Feedback
 --------
