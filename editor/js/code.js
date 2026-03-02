@@ -40,7 +40,7 @@ var elem = document.createElement("span");
 elem.id = "LGEditorTopBarSelector";
 elem.className = "selector";
 elem.innerHTML = "";
-elem.innerHTML += "Demo <select><option>Empty</option></select> <button class='btn' id='save'>Save</button><button class='btn' id='load'>Load</button><button class='btn' id='download'>Download</button> | <button class='btn' id='webgl'>WebGL</button> <button class='btn' id='multiview'>Multiview</button>";
+elem.innerHTML += "Demo <select id='lg-demo-selector' name='lg-demo-selector'><option>Empty</option></select> <button class='btn' id='save'>Save</button><button class='btn' id='load'>Load</button><button class='btn' id='download'>Download</button> | <button class='btn' id='webgl'>WebGL</button> <button class='btn' id='multiview'>Multiview</button>";
 editor.tools.appendChild(elem);
 var select = elem.querySelector("select");
 select.addEventListener("change", function(e){
