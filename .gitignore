@@ -4,6 +4,9 @@ npm-debug.log
 temp/
 temp/*
 coverage/
+playwright-report/
+test-results/
+.playwright/
 
 # Editors
 /.vscode/*

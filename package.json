@@ -21,6 +21,9 @@
         "build": "bun run build:dist",
         "build:dist": "node scripts/build-dist.mjs",
         "test": "bunx jest",
+        "test:e2e": "npx playwright test",
+        "test:e2e:ui": "npx playwright test --ui",
+        "test:e2e:headed": "npx playwright test --headed",
         "test:allVersions": "./utils/test.sh",
         "prettier": "bunx prettier --write src/**/*.* css/**/*.* editor/**/*.* tests/**/*.* guides/**/*.* scripts/**/*.*",
         "lint": "bunx eslint src tests scripts",
@@ -41,6 +44,7 @@
         "eslint": "^10.0.2",
         "@eslint/js": "^10.0.1",
         "eslint-plugin-jest": "^29.15.0",
+        "@playwright/test": "^1.55.0",
         "jest": "^30.2.0",
         "@types/jest": "^30.0.0"
     }

@@ -2,8 +2,26 @@ describe("register node types", () => {
     let lg;
     let Sum;
 
+    const resetModulesCompat = () => {
+        if (typeof jest !== "undefined" && typeof jest.resetModules === "function") {
+            jest.resetModules();
+            return;
+        }
+
+        if (typeof require !== "undefined" && require.cache) {
+            Object.keys(require.cache).forEach((cacheKey) => {
+                if (
+                    cacheKey.includes("\\src\\litegraph") ||
+                    cacheKey.includes("/src/litegraph")
+                ) {
+                    delete require.cache[cacheKey];
+                }
+            });
+        }
+    };
+
     beforeEach(() => {
-        jest.resetModules();
+        resetModulesCompat();
         lg = require("../src/litegraph");
         Sum = function Sum() {
             this.addInput("a", "number");
@@ -175,8 +193,26 @@ describe("unregister node types", () => {
     let lg;
     let Sum;
 
+    const resetModulesCompat = () => {
+        if (typeof jest !== "undefined" && typeof jest.resetModules === "function") {
+            jest.resetModules();
+            return;
+        }
+
+        if (typeof require !== "undefined" && require.cache) {
+            Object.keys(require.cache).forEach((cacheKey) => {
+                if (
+                    cacheKey.includes("\\src\\litegraph") ||
+                    cacheKey.includes("/src/litegraph")
+                ) {
+                    delete require.cache[cacheKey];
+                }
+            });
+        }
+    };
+
     beforeEach(() => {
-        jest.resetModules();
+        resetModulesCompat();
         lg = require("../src/litegraph");
         Sum = function Sum() {
             this.addInput("a", "number");
