@@ -1,8 +1,9 @@
 const base = require("@playwright/test");
 const { LiteGraphCanvasPage } = require("../page-objects/litegraph-canvas.po.cjs");
+const staticNodeManifest = require("../data/static-node-manifest.cjs");
 
-async function installHarness(page) {
-  await page.evaluate(() => {
+async function installHarness(page, manifest) {
+  await page.evaluate((staticManifest) => {
     if (!window.graph || !window.graphcanvas) {
       throw new Error("LiteGraph globals are missing on editor page");
     }
@@ -20,12 +21,31 @@ async function installHarness(page) {
     if (!window.__lgHarnessBootstrap) {
       window.__lgHarnessBootstrap = bootstrap;
     }
+    if (!bootstrap.executionTrace) {
+      bootstrap.executionTrace = [];
+    }
+    if (!bootstrap.groupSeq) {
+      bootstrap.groupSeq = 1;
+    }
+    if (!bootstrap.staticManifest && staticManifest) {
+      bootstrap.staticManifest = staticManifest;
+    }
 
     function pushErrorRecord(payload) {
       bootstrap.errors.push({
         at: Date.now(),
         ...payload,
       });
+    }
+
+    function pushExecutionTrace(payload) {
+      bootstrap.executionTrace.push({
+        at: Date.now(),
+        ...payload,
+      });
+      if (bootstrap.executionTrace.length > 5000) {
+        bootstrap.executionTrace.splice(0, bootstrap.executionTrace.length - 5000);
+      }
     }
 
     function cloneSerializable(value) {
@@ -51,6 +71,105 @@ async function installHarness(page) {
         screenPos.x - rect.left,
         screenPos.y - rect.top,
       ]);
+    }
+
+    const DEFAULT_BY_TYPE = {
+      "": 1,
+      "*": 1,
+      number: 42,
+      float: 0.5,
+      int: 7,
+      integer: 7,
+      bool: true,
+      boolean: true,
+      string: "lg-test",
+      object: { foo: "bar", n: 1 },
+      array: [1, 2, 3],
+      vec2: [0.1, 0.2],
+      vec3: [0.1, 0.2, 0.3],
+      vec4: [0.1, 0.2, 0.3, 0.4],
+      mat4: [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1],
+      event: { event: "tick" },
+      action: { action: "tick" },
+      texture: { kind: "mock-texture" },
+      image: { kind: "mock-image" },
+      audio: { kind: "mock-audio" },
+    };
+
+    function normalizeType(type) {
+      const raw = String(type == null ? "" : type).trim().toLowerCase();
+      if (!raw) {
+        return "*";
+      }
+      if (raw.includes("|")) {
+        return normalizeType(raw.split("|")[0]);
+      }
+      if (raw.endsWith("[]")) {
+        return "array";
+      }
+      if (raw === "_event_") {
+        return "event";
+      }
+      if (raw === "_action_") {
+        return "action";
+      }
+      if (raw.includes("vec2")) {
+        return "vec2";
+      }
+      if (raw.includes("vec3")) {
+        return "vec3";
+      }
+      if (raw.includes("vec4")) {
+        return "vec4";
+      }
+      if (raw.includes("mat4")) {
+        return "mat4";
+      }
+      if (raw.includes("bool")) {
+        return "boolean";
+      }
+      if (raw.includes("int")) {
+        return "int";
+      }
+      if (raw.includes("float") || raw.includes("double")) {
+        return "float";
+      }
+      if (raw.includes("num")) {
+        return "number";
+      }
+      if (raw.includes("string") || raw.includes("text")) {
+        return "string";
+      }
+      if (raw.includes("event")) {
+        return "event";
+      }
+      if (raw.includes("action")) {
+        return "action";
+      }
+      if (raw.includes("texture")) {
+        return "texture";
+      }
+      if (raw.includes("audio")) {
+        return "audio";
+      }
+      if (raw.includes("image")) {
+        return "image";
+      }
+      if (raw.includes("array") || raw.includes("list")) {
+        return "array";
+      }
+      if (raw.includes("object") || raw.includes("json") || raw.includes("dict")) {
+        return "object";
+      }
+      return raw;
+    }
+
+    function pickDefaultValue(slotType) {
+      const normalized = normalizeType(slotType);
+      if (Object.prototype.hasOwnProperty.call(DEFAULT_BY_TYPE, normalized)) {
+        return DEFAULT_BY_TYPE[normalized];
+      }
+      return DEFAULT_BY_TYPE["*"];
     }
 
     function makeGraphDiff(beforeValue, afterValue) {
@@ -389,6 +508,187 @@ async function installHarness(page) {
       graphcanvas.__lgHarnessDrawPatched = true;
     }
 
+    function getModeIndex(modeName) {
+      if (typeof modeName === "number") {
+        return modeName;
+      }
+      const value = String(modeName || "").trim().toLowerCase();
+      const fromLabels = LiteGraph.NODE_MODES.findIndex(
+        (label) => String(label || "").trim().toLowerCase() === value
+      );
+      if (fromLabels !== -1) {
+        return fromLabels;
+      }
+      if (value === "on event" || value === "on_event" || value === "event") {
+        return LiteGraph.ON_EVENT;
+      }
+      if (value === "on trigger" || value === "on_trigger" || value === "trigger") {
+        return LiteGraph.ON_TRIGGER;
+      }
+      if (value === "always") {
+        return LiteGraph.ALWAYS;
+      }
+      if (value === "never") {
+        return LiteGraph.NEVER;
+      }
+      return -1;
+    }
+
+    function getActionInput(node) {
+      if (!node || !Array.isArray(node.inputs)) {
+        return { index: -1, name: "action" };
+      }
+      for (let i = 0; i < node.inputs.length; i += 1) {
+        const input = node.inputs[i];
+        const type = input ? input.type : null;
+        const isAction =
+          type === LiteGraph.ACTION ||
+          type === LiteGraph.EVENT ||
+          String(type || "").toLowerCase().includes("action") ||
+          String(type || "").toLowerCase().includes("event");
+        if (isAction) {
+          return { index: i, name: input && input.name ? input.name : "action" };
+        }
+      }
+      return { index: 0, name: node.inputs[0] && node.inputs[0].name ? node.inputs[0].name : "action" };
+    }
+
+    function findGroupById(groupId) {
+      const groups = graph._groups || [];
+      const numeric = Number(groupId);
+      for (let i = 0; i < groups.length; i += 1) {
+        const group = groups[i];
+        if (!group) {
+          continue;
+        }
+        if (group.__lgGroupId === groupId || group.__lgGroupId === numeric) {
+          return group;
+        }
+      }
+      if (Number.isFinite(numeric)) {
+        if (groups[numeric]) {
+          return groups[numeric];
+        }
+        const byOneBased = numeric - 1;
+        if (groups[byOneBased]) {
+          return groups[byOneBased];
+        }
+      }
+      return null;
+    }
+
+    function getGroupsState() {
+      const groups = graph._groups || [];
+      const out = [];
+      for (let i = 0; i < groups.length; i += 1) {
+        const group = groups[i];
+        if (!group) {
+          continue;
+        }
+        if (!group.__lgGroupId) {
+          group.__lgGroupId = bootstrap.groupSeq++;
+        }
+        if (typeof group.recomputeInsideNodes === "function") {
+          group.recomputeInsideNodes();
+        }
+        out.push({
+          groupId: group.__lgGroupId,
+          index: i,
+          title: group.title,
+          bounding: Array.from(group._bounding || [group.pos[0], group.pos[1], group.size[0], group.size[1]]),
+          nodeIds: (group._nodes || []).map((node) => node.id),
+        });
+      }
+      return out;
+    }
+
+    function makeSyntheticCanvasEvent(at, options = {}) {
+      const rect = canvas.getBoundingClientRect();
+      let screen = null;
+      let graphPos = null;
+      if (Array.isArray(at)) {
+        graphPos = [at[0], at[1]];
+        screen = toScreen(graphPos);
+      } else if (at && typeof at === "object" && typeof at.gx === "number" && typeof at.gy === "number") {
+        graphPos = [at.gx, at.gy];
+        screen = toScreen(graphPos);
+      } else if (at && typeof at === "object" && typeof at.x === "number" && typeof at.y === "number") {
+        screen = { x: at.x, y: at.y };
+        graphPos = toGraph(screen);
+      } else {
+        screen = { x: rect.left + rect.width * 0.5, y: rect.top + rect.height * 0.5 };
+        graphPos = toGraph(screen);
+      }
+
+      return {
+        type: "mousedown",
+        clientX: screen.x,
+        clientY: screen.y,
+        canvasX: graphPos[0],
+        canvasY: graphPos[1],
+        pageX: screen.x,
+        pageY: screen.y,
+        layerX: screen.x - rect.left,
+        layerY: screen.y - rect.top,
+        isPrimary: true,
+        button: options.button || 0,
+        buttons: options.buttons || 1,
+        shiftKey: !!options.shiftKey,
+        ctrlKey: !!options.ctrlKey,
+        altKey: !!options.altKey,
+        metaKey: !!options.metaKey,
+        preventDefault() {},
+        stopPropagation() {},
+        stopImmediatePropagation() {},
+      };
+    }
+
+    if (!LiteGraph.LGraphNode.prototype.__lgHarnessTracePatched) {
+      const proto = LiteGraph.LGraphNode.prototype;
+      const originalDoExecute = proto.doExecute;
+      const originalActionDo = proto.actionDo;
+      const originalTriggerSlot = proto.triggerSlot;
+
+      proto.doExecute = function tracedDoExecute(param, options) {
+        pushExecutionTrace({
+          kind: "doExecute",
+          nodeId: this.id,
+          nodeType: this.type,
+          nodeTitle: this.title,
+          mode: this.mode,
+        });
+        return originalDoExecute.call(this, param, options);
+      };
+
+      proto.actionDo = function tracedActionDo(action, param, options, actionSlot) {
+        pushExecutionTrace({
+          kind: "actionDo",
+          nodeId: this.id,
+          nodeType: this.type,
+          nodeTitle: this.title,
+          mode: this.mode,
+          action: action || "",
+          actionSlot: typeof actionSlot === "number" ? actionSlot : null,
+        });
+        return originalActionDo.call(this, action, param, options, actionSlot);
+      };
+
+      proto.triggerSlot = function tracedTriggerSlot(slot, param, linkId, options) {
+        pushExecutionTrace({
+          kind: "triggerSlot",
+          nodeId: this.id,
+          nodeType: this.type,
+          nodeTitle: this.title,
+          mode: this.mode,
+          slot,
+          linkId: linkId == null ? null : linkId,
+        });
+        return originalTriggerSlot.call(this, slot, param, linkId, options);
+      };
+
+      LiteGraph.LGraphNode.prototype.__lgHarnessTracePatched = true;
+    }
+
     window.__lgHarness = {
       __installed: true,
       getState() {
@@ -398,6 +698,9 @@ async function installHarness(page) {
           offset: [graphcanvas.ds.offset[0], graphcanvas.ds.offset[1]],
           visibleNodeIds: (graphcanvas.visible_nodes || []).map((node) => node.id),
         };
+      },
+      getStaticNodeManifest() {
+        return cloneSerializable(bootstrap.staticManifest || null);
       },
       graphSnapshot() {
         return cloneSerializable(graph.serialize());
@@ -451,6 +754,404 @@ async function installHarness(page) {
           isInput: Boolean(isInput),
         };
       },
+      createNodeByType(type, pos = null, title = null) {
+        const graphPos = Array.isArray(pos) ? [pos[0], pos[1]] : [80, 80];
+        try {
+          const node = LiteGraph.createNode(type, title || undefined);
+          if (!node) {
+            return { created: false, type, reason: "createNode returned null" };
+          }
+          node.pos = graphPos.slice();
+          if (title) {
+            node.title = title;
+          }
+          graph.add(node);
+          graphcanvas.setDirty(true, true);
+          graphcanvas.draw(true, true);
+          return {
+            created: true,
+            nodeId: node.id,
+            type: node.type,
+            title: node.title,
+            pos: [node.pos[0], node.pos[1]],
+            inputs: (node.inputs || []).map((slot, index) => ({
+              index,
+              name: slot && slot.name ? slot.name : "",
+              type: slot && slot.type != null ? slot.type : "",
+            })),
+            outputs: (node.outputs || []).map((slot, index) => ({
+              index,
+              name: slot && slot.name ? slot.name : "",
+              type: slot && slot.type != null ? slot.type : "",
+            })),
+          };
+        } catch (error) {
+          pushErrorRecord({
+            source: "createNodeByType",
+            nodeType: type,
+            message: error && error.message ? error.message : String(error),
+            stack: error && error.stack ? String(error.stack) : "",
+          });
+          return {
+            created: false,
+            type,
+            reason: error && error.message ? error.message : String(error),
+          };
+        }
+      },
+      invokeNode(nodeId, mode = "auto") {
+        const node = graph.getNodeById(nodeId);
+        if (!node) {
+          return {
+            nodeId,
+            invokedExecute: false,
+            invokedAction: false,
+            reason: "node not found",
+          };
+        }
+
+        const result = {
+          nodeId,
+          nodeType: node.type,
+          modeRequested: mode,
+          modeLabel: LiteGraph.NODE_MODES[node.mode] || String(node.mode),
+          invokedExecute: false,
+          invokedAction: false,
+          reason: "",
+        };
+
+        const shouldExecute = mode === "auto" || mode === "execute" || mode === "both";
+        const shouldAction = mode === "auto" || mode === "action" || mode === "both";
+        const payload = {};
+        for (let i = 0; i < (node.inputs || []).length; i += 1) {
+          const input = node.inputs[i];
+          const key = input && input.name ? input.name : `in_${i}`;
+          payload[key] = pickDefaultValue(input ? input.type : "");
+        }
+
+        try {
+          if (shouldExecute && typeof node.doExecute === "function") {
+            pushExecutionTrace({
+              kind: "doExecute",
+              nodeId: node.id,
+              nodeType: node.type,
+              nodeTitle: node.title,
+              mode: node.mode,
+              source: "invokeNode",
+            });
+            node.doExecute(payload, { action_call: `${node.id}_invoke_exec` });
+            result.invokedExecute = true;
+          } else if (shouldExecute && typeof node.onExecute === "function") {
+            pushExecutionTrace({
+              kind: "doExecute",
+              nodeId: node.id,
+              nodeType: node.type,
+              nodeTitle: node.title,
+              mode: node.mode,
+              source: "invokeNode.fallback",
+            });
+            node.onExecute(payload, { action_call: `${node.id}_invoke_exec_fallback` });
+            result.invokedExecute = true;
+          }
+        } catch (error) {
+          result.reason = `execute:${error && error.message ? error.message : String(error)}`;
+          pushErrorRecord({
+            source: "invokeNode.execute",
+            nodeId: node.id,
+            nodeType: node.type,
+            message: error && error.message ? error.message : String(error),
+            stack: error && error.stack ? String(error.stack) : "",
+          });
+        }
+
+        try {
+          if (shouldAction && typeof node.actionDo === "function") {
+            const action = getActionInput(node);
+            pushExecutionTrace({
+              kind: "actionDo",
+              nodeId: node.id,
+              nodeType: node.type,
+              nodeTitle: node.title,
+              mode: node.mode,
+              action: action.name || "action",
+              source: "invokeNode",
+            });
+            node.actionDo(
+              action.name || "action",
+              payload,
+              { action_call: `${node.id}_invoke_action` },
+              action.index
+            );
+            result.invokedAction = true;
+          } else if (shouldAction && typeof node.onAction === "function") {
+            const action = getActionInput(node);
+            pushExecutionTrace({
+              kind: "actionDo",
+              nodeId: node.id,
+              nodeType: node.type,
+              nodeTitle: node.title,
+              mode: node.mode,
+              action: action.name || "action",
+              source: "invokeNode.fallback",
+            });
+            node.onAction(action.name || "action", payload, { action_call: `${node.id}_invoke_action_fallback` }, action.index);
+            result.invokedAction = true;
+          }
+        } catch (error) {
+          result.reason = result.reason
+            ? `${result.reason};action:${error && error.message ? error.message : String(error)}`
+            : `action:${error && error.message ? error.message : String(error)}`;
+          pushErrorRecord({
+            source: "invokeNode.action",
+            nodeId: node.id,
+            nodeType: node.type,
+            message: error && error.message ? error.message : String(error),
+            stack: error && error.stack ? String(error.stack) : "",
+          });
+        }
+
+        try {
+          graph.runStep(1, false);
+        } catch (error) {
+          pushErrorRecord({
+            source: "invokeNode.runStep",
+            nodeId: node.id,
+            nodeType: node.type,
+            message: error && error.message ? error.message : String(error),
+            stack: error && error.stack ? String(error.stack) : "",
+          });
+        }
+
+        graphcanvas.setDirty(true, true);
+        graphcanvas.draw(true, true);
+        result.modeLabel = LiteGraph.NODE_MODES[node.mode] || String(node.mode);
+        return result;
+      },
+      setNodeMode(nodeId, modeName) {
+        const node = graph.getNodeById(nodeId);
+        if (!node) {
+          return { ok: false, reason: "node not found", nodeId };
+        }
+        const modeIndex = getModeIndex(modeName);
+        if (modeIndex < 0) {
+          return { ok: false, reason: `invalid mode ${modeName}`, nodeId };
+        }
+        node.changeMode(modeIndex);
+        graphcanvas.setDirty(true, true);
+        graphcanvas.draw(true, true);
+        return {
+          ok: true,
+          nodeId,
+          mode: node.mode,
+          modeLabel: LiteGraph.NODE_MODES[node.mode] || String(node.mode),
+        };
+      },
+      openSearchBox(at = null, options = {}) {
+        const eventLike = makeSyntheticCanvasEvent(at);
+        const searchOptions = Object.assign({}, options || {});
+        if (typeof searchOptions.node_from === "number") {
+          searchOptions.node_from = graph.getNodeById(searchOptions.node_from);
+        }
+        if (typeof searchOptions.node_to === "number") {
+          searchOptions.node_to = graph.getNodeById(searchOptions.node_to);
+        }
+        LiteGraph.LGraphCanvas.active_canvas = graphcanvas;
+        graphcanvas.constructor.active_canvas = graphcanvas;
+        graphcanvas.showSearchBox(eventLike, searchOptions);
+        return {
+          x: eventLike.clientX,
+          y: eventLike.clientY,
+          gx: eventLike.canvasX,
+          gy: eventLike.canvasY,
+        };
+      },
+      getSearchBoxResults() {
+        const root = document.querySelector(".litesearchbox");
+        if (!root) {
+          return [];
+        }
+        return Array.from(root.querySelectorAll(".lite-search-item"))
+          .map((item) => (item.textContent || "").trim())
+          .filter(Boolean);
+      },
+      selectSearchResult(label, exact = true) {
+        const root = document.querySelector(".litesearchbox");
+        if (!root) {
+          return { selected: false, reason: "searchbox not open" };
+        }
+        const entries = Array.from(root.querySelectorAll(".lite-search-item"));
+        const needle = String(label || "").trim().toLowerCase();
+        const entry = entries.find((el) => {
+          const text = (el.textContent || "").trim().toLowerCase();
+          return exact ? text === needle : text.includes(needle);
+        });
+        if (!entry) {
+          return { selected: false, reason: `item not found: ${label}` };
+        }
+        const before = graph._nodes ? graph._nodes.length : 0;
+        entry.click();
+        graphcanvas.setDirty(true, true);
+        graphcanvas.draw(true, true);
+        const after = graph._nodes ? graph._nodes.length : 0;
+        const node = after > before ? graph._nodes[graph._nodes.length - 1] : null;
+        return {
+          selected: true,
+          createdNodeId: node ? node.id : null,
+          createdNodeType: node ? node.type : null,
+        };
+      },
+      createGroup(bbox = null, title = "Group") {
+        const group = new LiteGraph.LGraphGroup(title || "Group");
+        if (bbox) {
+          if (Array.isArray(bbox)) {
+            group.pos = [bbox[0], bbox[1]];
+            group.size = [bbox[2], bbox[3]];
+          } else {
+            group.pos = [bbox.x, bbox.y];
+            group.size = [bbox.w, bbox.h];
+          }
+        }
+        graph.add(group);
+        group.__lgGroupId = bootstrap.groupSeq++;
+        if (typeof group.recomputeInsideNodes === "function") {
+          group.recomputeInsideNodes();
+        }
+        graphcanvas.setDirty(true, true);
+        graphcanvas.draw(true, true);
+        return {
+          ok: true,
+          groupId: group.__lgGroupId,
+          title: group.title,
+          bounding: Array.from(group._bounding),
+          nodeIds: (group._nodes || []).map((node) => node.id),
+        };
+      },
+      renameGroup(groupId, title) {
+        const group = findGroupById(groupId);
+        if (!group) {
+          return { ok: false, reason: "group not found", groupId };
+        }
+        group.title = title;
+        graphcanvas.setDirty(true, true);
+        graphcanvas.draw(true, true);
+        return { ok: true, groupId: group.__lgGroupId, title: group.title };
+      },
+      moveGroup(groupId, dx, dy, ignoreNodes = false) {
+        const group = findGroupById(groupId);
+        if (!group) {
+          return { ok: false, reason: "group not found", groupId };
+        }
+        if (typeof group.recomputeInsideNodes === "function") {
+          group.recomputeInsideNodes();
+        }
+        group.move(dx, dy, ignoreNodes);
+        graphcanvas.setDirty(true, true);
+        graphcanvas.draw(true, true);
+        return {
+          ok: true,
+          groupId: group.__lgGroupId,
+          bounding: Array.from(group._bounding),
+          nodeIds: (group._nodes || []).map((node) => node.id),
+        };
+      },
+      deleteGroup(groupId) {
+        const group = findGroupById(groupId);
+        if (!group) {
+          return { ok: false, reason: "group not found", groupId };
+        }
+        graph.remove(group);
+        graphcanvas.setDirty(true, true);
+        graphcanvas.draw(true, true);
+        return { ok: true, groupId };
+      },
+      getGroupsState,
+      runGraphFrames(frameCount = 1) {
+        const steps = Math.max(1, Number(frameCount) || 1);
+        for (let i = 0; i < steps; i += 1) {
+          const prevExec = {};
+          const prevAction = {};
+          for (const node of graph._nodes) {
+            prevExec[node.id] = node.exec_version || null;
+            prevAction[node.id] = node.action_call || null;
+          }
+          graph.runStep(1, false);
+          for (const node of graph._nodes) {
+            if (
+              node.exec_version != null &&
+              node.exec_version === graph.iteration &&
+              prevExec[node.id] !== node.exec_version
+            ) {
+              pushExecutionTrace({
+                kind: "doExecute",
+                nodeId: node.id,
+                nodeType: node.type,
+                nodeTitle: node.title,
+                mode: node.mode,
+                source: "runGraphFrames",
+              });
+            }
+            if (
+              node.action_call &&
+              prevAction[node.id] !== node.action_call
+            ) {
+              pushExecutionTrace({
+                kind: "actionDo",
+                nodeId: node.id,
+                nodeType: node.type,
+                nodeTitle: node.title,
+                mode: node.mode,
+                action_call: node.action_call,
+                source: "runGraphFrames",
+              });
+            }
+          }
+        }
+        graphcanvas.setDirty(true, true);
+        graphcanvas.draw(true, true);
+        return { frameCount: steps, iteration: graph.iteration };
+      },
+      startGraph() {
+        graph.start();
+        return { status: graph.status };
+      },
+      stopGraph() {
+        graph.stop();
+        return { status: graph.status };
+      },
+      getExecutionTrace() {
+        return cloneSerializable(bootstrap.executionTrace);
+      },
+      clearExecutionTrace() {
+        bootstrap.executionTrace.length = 0;
+      },
+      getGraphCounts() {
+        return {
+          nodeCount: graph._nodes.length,
+          linkCount: Object.keys(graph.links || {}).length,
+          groupCount: (graph._groups || []).length,
+        };
+      },
+      openNodePanel(nodeId) {
+        const node = graph.getNodeById(nodeId);
+        if (!node) {
+          return { ok: false, reason: "node not found", nodeId };
+        }
+        graphcanvas.showShowNodePanel(node);
+        return { ok: true, nodeId };
+      },
+      openGraphOptionsPanel() {
+        if (!Array.isArray(LiteGraph.availableCanvasOptions)) {
+          LiteGraph.availableCanvasOptions = [
+            "allow_dragcanvas",
+            "allow_dragnodes",
+            "allow_interaction",
+            "allow_reconnect_links",
+            "allow_searchbox",
+          ];
+        }
+        graphcanvas.showShowGraphOptionsPanel();
+        return { ok: true };
+      },
       triggerContextMenuAtGraphPos(graphPos, button = "right") {
         const screenPos = toScreen(graphPos);
         const buttonCode = button === "right" ? 2 : 0;
@@ -480,11 +1181,16 @@ async function installHarness(page) {
       },
       restoreGraph(snapshot) {
         graph.configure(cloneSerializable(snapshot));
+        for (const group of graph._groups || []) {
+          if (!group.__lgGroupId) {
+            group.__lgGroupId = bootstrap.groupSeq++;
+          }
+        }
         graphcanvas.setDirty(true, true);
         graphcanvas.draw(true, true);
       },
     };
-  });
+  }, manifest);
 }
 
 const test = base.test.extend({
@@ -545,11 +1251,93 @@ const test = base.test.extend({
       };
 
       window.alert = () => {};
+      window.confirm = () => true;
+      window.prompt = (_message, defaultValue = "") => defaultValue;
+
+      let mediaDevices = navigator.mediaDevices;
+      if (!mediaDevices) {
+        mediaDevices = {};
+        try {
+          Object.defineProperty(navigator, "mediaDevices", {
+            configurable: true,
+            value: mediaDevices,
+          });
+        } catch (error) {
+          // ignore readonly navigator quirks
+        }
+      }
+      if (navigator.mediaDevices) {
+        navigator.mediaDevices.getUserMedia = async () => ({
+          id: "mock-stream",
+          active: true,
+          getTracks: () => [],
+          getAudioTracks: () => [],
+          getVideoTracks: () => [],
+        });
+      }
+
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        mediaDevices.getUserMedia = async () => ({
+          id: "mock-stream",
+          active: true,
+          getTracks: () => [],
+          getAudioTracks: () => [],
+          getVideoTracks: () => [],
+        });
+      }
+
+      if (!navigator.requestMIDIAccess) {
+        navigator.requestMIDIAccess = async () => ({
+          inputs: new Map(),
+          outputs: new Map(),
+          sysexEnabled: false,
+        });
+      }
+
+      if (!window.__lgHarnessOriginalWebSocket) {
+        window.__lgHarnessOriginalWebSocket = window.WebSocket;
+      }
+      class MockWebSocket {
+        constructor(url) {
+          this.url = url;
+          this.readyState = 1;
+          this.bufferedAmount = 0;
+          this.extensions = "";
+          this.protocol = "";
+          this.onopen = null;
+          this.onmessage = null;
+          this.onerror = null;
+          this.onclose = null;
+          setTimeout(() => {
+            if (typeof this.onopen === "function") {
+              this.onopen({ type: "open", target: this });
+            }
+          }, 0);
+        }
+
+        send(data) {
+          if (typeof this.onmessage === "function") {
+            this.onmessage({ data, target: this });
+          }
+        }
+
+        close() {
+          this.readyState = 3;
+          if (typeof this.onclose === "function") {
+            this.onclose({ type: "close", target: this });
+          }
+        }
+
+        addEventListener() {}
+
+        removeEventListener() {}
+      }
+      window.WebSocket = MockWebSocket;
     });
 
     const lgPage = new LiteGraphCanvasPage(page);
     await lgPage.gotoEditor();
-    await installHarness(page);
+    await installHarness(page, staticNodeManifest);
     await lgPage.waitForReady();
     await lgPage.clearRuntimeErrors();
 

@@ -259,6 +259,106 @@ class LiteGraphCanvasPage {
     }, nodes);
   }
 
+  async getStaticNodeManifest() {
+    return this.page.evaluate(() => window.__lgHarness.getStaticNodeManifest());
+  }
+
+  async createNodeByType(type, pos = null, title = null) {
+    return this.page.evaluate(
+      ({ nodeType, graphPos, nodeTitle }) => window.__lgHarness.createNodeByType(nodeType, graphPos, nodeTitle),
+      { nodeType: type, graphPos: pos, nodeTitle: title }
+    );
+  }
+
+  async invokeNode(nodeId, mode = "auto") {
+    return this.page.evaluate(
+      ({ id, invokeMode }) => window.__lgHarness.invokeNode(id, invokeMode),
+      { id: nodeId, invokeMode: mode }
+    );
+  }
+
+  async setNodeMode(nodeId, modeName) {
+    return this.page.evaluate(
+      ({ id, mode }) => window.__lgHarness.setNodeMode(id, mode),
+      { id: nodeId, mode: modeName }
+    );
+  }
+
+  async openSearchBox(at = null, options = {}) {
+    return this.page.evaluate(
+      ({ position, searchOptions }) => window.__lgHarness.openSearchBox(position, searchOptions),
+      { position: at, searchOptions: options }
+    );
+  }
+
+  async getSearchBoxResults() {
+    return this.page.evaluate(() => window.__lgHarness.getSearchBoxResults());
+  }
+
+  async selectSearchResult(label, exact = true) {
+    return this.page.evaluate(
+      ({ value, exactMatch }) => window.__lgHarness.selectSearchResult(value, exactMatch),
+      { value: label, exactMatch: exact }
+    );
+  }
+
+  async createGroup(bbox, title = "Group") {
+    return this.page.evaluate(
+      ({ groupBbox, groupTitle }) => window.__lgHarness.createGroup(groupBbox, groupTitle),
+      { groupBbox: bbox, groupTitle: title }
+    );
+  }
+
+  async renameGroup(groupId, title) {
+    return this.page.evaluate(
+      ({ id, groupTitle }) => window.__lgHarness.renameGroup(id, groupTitle),
+      { id: groupId, groupTitle: title }
+    );
+  }
+
+  async moveGroup(groupId, dx, dy, ignoreNodes = false) {
+    return this.page.evaluate(
+      ({ id, deltaX, deltaY, ignore }) => window.__lgHarness.moveGroup(id, deltaX, deltaY, ignore),
+      { id: groupId, deltaX: dx, deltaY: dy, ignore: ignoreNodes }
+    );
+  }
+
+  async deleteGroup(groupId) {
+    return this.page.evaluate((id) => window.__lgHarness.deleteGroup(id), groupId);
+  }
+
+  async getGroupsState() {
+    return this.page.evaluate(() => window.__lgHarness.getGroupsState());
+  }
+
+  async runGraphFrames(frameCount = 1) {
+    return this.page.evaluate((count) => window.__lgHarness.runGraphFrames(count), frameCount);
+  }
+
+  async startGraph() {
+    return this.page.evaluate(() => window.__lgHarness.startGraph());
+  }
+
+  async stopGraph() {
+    return this.page.evaluate(() => window.__lgHarness.stopGraph());
+  }
+
+  async getExecutionTrace() {
+    return this.page.evaluate(() => window.__lgHarness.getExecutionTrace());
+  }
+
+  async clearExecutionTrace() {
+    await this.page.evaluate(() => window.__lgHarness.clearExecutionTrace());
+  }
+
+  async openGraphOptionsPanel() {
+    return this.page.evaluate(() => window.__lgHarness.openGraphOptionsPanel());
+  }
+
+  async openNodePanelById(nodeId) {
+    return this.page.evaluate((id) => window.__lgHarness.openNodePanel(id), nodeId);
+  }
+
   async getNodeByTitle(title) {
     return this.page.evaluate((nodeTitle) => {
       const node = window.graph.findNodeByTitle(nodeTitle);
@@ -274,10 +374,16 @@ class LiteGraphCanvasPage {
   }
 
   async getGraphCounts() {
-    return this.page.evaluate(() => ({
-      nodeCount: window.graph._nodes.length,
-      linkCount: Object.keys(window.graph.links || {}).length,
-    }));
+    return this.page.evaluate(() => {
+      if (window.__lgHarness && typeof window.__lgHarness.getGraphCounts === "function") {
+        return window.__lgHarness.getGraphCounts();
+      }
+      return {
+        nodeCount: window.graph._nodes.length,
+        linkCount: Object.keys(window.graph.links || {}).length,
+        groupCount: (window.graph._groups || []).length,
+      };
+    });
   }
 
   async getRuntimeErrors() {

@@ -10,6 +10,7 @@ process.env.no_proxy = process.env.NO_PROXY;
 module.exports = defineConfig({
   testDir: "./tests/playwright/specs",
   testMatch: /.*\.spec\.cjs$/,
+  workers: process.env.CI ? 1 : 1,
   timeout: 120000,
   expect: {
     timeout: 10000,
@@ -27,7 +28,7 @@ module.exports = defineConfig({
   webServer: {
     command: "node tests/playwright/static-server.cjs",
     port: 4173,
-    reuseExistingServer: false,
+    reuseExistingServer: true,
     timeout: 120000,
   },
   projects: [

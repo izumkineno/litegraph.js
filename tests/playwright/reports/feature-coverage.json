@@ -1,0 +1,88 @@
+{
+  "generatedAt": "2026-03-02T14:12:42.734Z",
+  "records": [
+    {
+      "featureKey": "group.lifecycle",
+      "passed": true,
+      "diffPaths": [
+        "nodes[0].pos[0]",
+        "nodes[0].pos[1]",
+        "nodes[2].pos[0]",
+        "nodes[2].pos[1]",
+        "groups[0]"
+      ],
+      "runtimeErrors": []
+    },
+    {
+      "featureKey": "panel.searchbox",
+      "passed": true,
+      "diffPaths": [
+        "last_node_id",
+        "last_node_id",
+        "last_node_id"
+      ],
+      "runtimeErrors": []
+    },
+    {
+      "featureKey": "connection.disconnection",
+      "passed": true,
+      "diffPaths": [
+        "last_link_id",
+        "nodes[0].order",
+        "nodes[0].inputs[0].link",
+        "nodes[1].id",
+        "nodes[1].type",
+        "nodes[1].pos[0]",
+        "nodes[1].order",
+        "nodes[1].title",
+        "nodes[2].id",
+        "nodes[2].type",
+        "nodes[2].pos[0]",
+        "nodes[2].pos[1]",
+        "nodes[2].size.0",
+        "nodes[2].size.1",
+        "nodes[2].order",
+        "nodes[2].title",
+        "nodes[3].id",
+        "nodes[3].type",
+        "nodes[3].pos[1]",
+        "nodes[3].size.0",
+        "nodes[3].size.1",
+        "nodes[3].order",
+        "nodes[3].outputs[0].name",
+        "nodes[3].outputs[0].type",
+        "nodes[3].outputs[0].links",
+        "nodes[3].title",
+        "nodes[1].inputs",
+        "nodes[2].properties.value",
+        "nodes[2].properties.min",
+        "nodes[2].properties.max",
+        "nodes[2].properties.text",
+        "nodes[2].outputs",
+        "nodes[3].outputs[0].slot_index",
+        "nodes[3].properties.interval",
+        "nodes[3].properties.event",
+        "nodes[3].boxcolor",
+        "links[0]",
+        "links[1]",
+        "nodes[1].outputs",
+        "nodes[1].properties.interval",
+        "nodes[1].properties.event",
+        "nodes[1].boxcolor",
+        "nodes[2].inputs",
+        "nodes[3].properties.value",
+        "nodes[3].properties.min",
+        "nodes[3].properties.max",
+        "nodes[3].properties.text"
+      ],
+      "runtimeErrors": []
+    },
+    {
+      "featureKey": "runtime.controls.play-step-live",
+      "passed": true,
+      "diffPaths": [],
+      "runtimeErrors": []
+    }
+  ],
+  "failures": []
+}

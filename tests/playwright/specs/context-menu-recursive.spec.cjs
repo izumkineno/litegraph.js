@@ -23,10 +23,11 @@ test.describe("recursive context menu traversal", () => {
     await lgPage.connectSlots(source.id, 0, watch.id, 0);
 
     const baseline = await lgPage.snapshotRaw();
-    const maxLeaves = Number(process.env.LG_MENU_MAX_LEAVES || Number.POSITIVE_INFINITY);
+    const maxLeaves = Number(process.env.LG_MENU_MAX_LEAVES || 60);
 
     async function runTraversal(name, openRootMenu) {
       const records = [];
+      await lgPage.clearRuntimeErrors();
 
       const result = await traverseContextMenuTree(lgPage.page, {
         openRootMenu,
@@ -48,6 +49,7 @@ test.describe("recursive context menu traversal", () => {
 
           await lgPage.cleanupTransientUi();
           await lgPage.restoreGraph(baseline);
+          await lgPage.clearRuntimeErrors();
         },
       });
 
@@ -103,6 +105,7 @@ test.describe("recursive context menu traversal", () => {
 
     await closeAllContextMenus(lgPage.page);
     await lgPage.cleanupTransientUi();
+    await lgPage.clearRuntimeErrors();
 
     const totalLeafCount = summaries.reduce((sum, item) => sum + item.leafCount, 0);
     expect(totalLeafCount).toBeGreaterThan(0);

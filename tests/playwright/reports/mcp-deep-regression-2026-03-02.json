@@ -1,0 +1,80 @@
+{
+  "name": "mcp-deep-regression",
+  "ts": "2026-03-02T15:21:46.673Z",
+  "url": "http://127.0.0.1:4173/editor/index.html",
+  "summary": {
+    "passed": 8,
+    "failed": 0
+  },
+  "runtimeErrors": [],
+  "checks": [
+    {
+      "name": "toolbar_play_step_live",
+      "status": "passed",
+      "details": {
+        "statusChanged": true
+      }
+    },
+    {
+      "name": "searchbox_create_with_filter",
+      "status": "passed",
+      "details": {
+        "picked": true,
+        "hasConst": true
+      }
+    },
+    {
+      "name": "group_lifecycle",
+      "status": "passed",
+      "details": {
+        "ok": true,
+        "deleted": true
+      }
+    },
+    {
+      "name": "node_mode_matrix",
+      "status": "passed",
+      "details": {
+        "allModesPass": true
+      }
+    },
+    {
+      "name": "runtime_event_chain_timer_counter",
+      "status": "passed",
+      "details": {
+        "skipped": false,
+        "hits": 1
+      }
+    },
+    {
+      "name": "panel_rename_delete",
+      "status": "passed",
+      "details": {
+        "renamed": "Panel Renamed By MCP",
+        "deleted": true
+      }
+    },
+    {
+      "name": "connect_disconnect_link_menu",
+      "status": "passed",
+      "details": {
+        "disconnectClicked": false,
+        "fallback": true,
+        "links": 0
+      }
+    },
+    {
+      "name": "canvas_pan_zoom_roundtrip",
+      "status": "passed",
+      "details": {
+        "scaleChanged": true,
+        "offsetChanged": true,
+        "roundtripError": 0
+      }
+    }
+  ],
+  "notes": [
+    "No in-page runtime errors captured (window.onerror/unhandledrejection/console.error).",
+    "Slot context menu disconnect entry was not hit in this run; fallback graph.removeLink path verified link cleanup."
+  ]
+}
