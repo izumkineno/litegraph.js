@@ -1,7 +1,9 @@
 # CORE_INDEX
 
 文件：`src/litegraph.js`  
-范围：`L1-L14424`
+范围：`L1-L14809`
+
+> 更新说明（2026-03-03）：本页已补齐近期 P1 修复相关索引。历史区段范围可能有小幅漂移，建议优先按函数名检索定位。
 
 ## 1. 核心类与原型定义 (Class & Prototype Map)
 
@@ -28,7 +30,7 @@
 | 几何与颜色工具函数组 | 通用比较、距离、包围盒、颜色转换等基础工具 | `L13519-L13646` |
 | ContextMenu（上下文菜单组件） | 菜单构建、子菜单层级、事件派发、关闭机制 | `L13662-L14115` |
 | CurveEditor（曲线编辑器） | 节点内曲线型 Widget 绘制与点编辑交互 | `L14117-L14293` |
-| 运行时辅助与导出桥 | 参数名解析、指针事件兼容层、`requestAnimationFrame` 兜底、CommonJS 导出 | `L14294-L14423` |
+| 运行时辅助与导出桥 | 参数名解析、指针事件兼容层、`requestAnimationFrame` 兜底、CommonJS 导出 | `L14563-L14808` |
 
 ## 2. 静态常量与注册中心 (Constants & Registry)
 
@@ -40,21 +42,21 @@
 | LiteGraph 时间函数适配块 | `performance` / `Date` / `process.hrtime` 兼容选择 | `L803-L817` |
 | LGraph 静态状态码与支持类型 | 图运行状态常量、默认支持类型 | `L849-L858` |
 | LGraphCanvas 静态默认资源与颜色映射 | 默认背景、链路类型颜色、渐变缓存 | `L5449-L5457` |
-| CommonJS 导出清单 | 模块级对象导出契约 | `L14414-L14423` |
+| CommonJS 导出清单 | 模块级对象导出契约 | `L14798-L14808` |
 
 ### 2.2 注册机制
 
 | 注册机制 | 作用 | 物理坐标 |
 |---|---|---|
-| `registerNodeType` | 注册节点类型并注入 `LGraphNode` 原型能力 | `L157-L259` |
-| `unregisterNodeType` | 反注册节点类型 | `L260-L279` |
-| `registerNodeAndSlotType` | 维护槽位类型到节点类型映射 | `L280-L335` |
-| `buildNodeClassFromObject` | 对象描述转节点类并注册 | `L336-L387` |
-| `wrapFunctionAsNode` | 函数签名封装为节点类并注册 | `L388-L443` |
-| `addNodeMethod` | 运行时向全部节点类型批量注入方法 | `L457-L475` |
-| `createNode` | 基于已注册类型进行节点工厂创建 | `L476-L549` |
-| `registerSearchboxExtra` | 注册搜索框扩展入口 | `L730-L746` |
-| `extendClass` | 原型层级扩展/混入辅助 | `L14073-L14115` |
+| `registerNodeType` | 注册节点类型并注入 `LGraphNode` 原型能力 | `L196-L313` |
+| `unregisterNodeType` | 反注册节点类型 | `L314-L333` |
+| `registerNodeAndSlotType` | 维护槽位类型到节点类型映射 | `L334-L387` |
+| `buildNodeClassFromObject` | 对象描述转节点类并注册 | `L390-L441` |
+| `wrapFunctionAsNode` | 函数签名封装为节点类并注册 | `L442-L497` |
+| `addNodeMethod` | 运行时向全部节点类型批量注入方法 | `L511-L529` |
+| `createNode` | 基于已注册类型进行节点工厂创建 | `L530-L603` |
+| `registerSearchboxExtra` | 注册搜索框扩展入口 | `L784-L800` |
+| `extendClass` | 原型层级扩展/混入辅助 | `L14341-L14383` |
 
 ## 3. 核心流转路径 (Critical Execution Flows)
 
@@ -65,8 +67,8 @@
 | 全局对象初始化（IIFE + LiteGraph 构建） | `L2-L801` |
 | 图实例初始化（构造 + `clear`） | `L835-L845`, `L865-L934` |
 | 画布实例初始化（构造 + 图绑定 + canvas 绑定） | `L5325-L5445`, `L5510-L5538`, `L5615-L5685` |
-| 交互系统挂载（`bindEvents`） | `L5700-L5764` |
-| 节点实例创建并挂入图（`createNode` + `add`） | `L476-L549`, `L1469-L1547` |
+| 交互系统挂载（`bindEvents`） | `L5758-L5822` |
+| 节点实例创建并挂入图（`createNode` + `add`） | `L530-L603`, `L1523-L1601` |
 | 子图挂载与切换（open/close subgraph） | `L5552-L5604` |
 
 ### 3.2 渲染与更新循环
@@ -76,7 +78,7 @@
 | 图执行循环启动（`start` + `on_frame`） | `L975-L1018` |
 | 单步执行（`runStep`） | `L1054-L1149` |
 | 执行顺序刷新（`updateExecutionOrder` / `computeExecutionOrder`） | `L1150-L1306` |
-| 画布渲染循环启动（`startRendering` + `renderFrame`） | `L5881-L5899` |
+| 画布渲染循环启动（`startRendering` + `renderFrame`） | `L6037-L6056` |
 | 画布主绘制入口（`draw`） | `L7814-L7850` |
 | 前景/背景拆分绘制 | `L7851-L8117`, `L8351-L8538` |
 | 节点与连接渲染主链路 | `L8539-L9767` |
@@ -138,7 +140,7 @@
 | 依赖对象 | 耦合位置 | 物理坐标 |
 |---|---|---|
 | `global` / `window` | 全局对象注入、运行时能力探测、`requestAnimationFrame` 使用 | `L2-L14`, `L975-L1005`, `L14404-L14411` |
-| `document` / DOM API | 脚本重载、Canvas 选择、事件绑定、菜单与对话框 DOM 构建 | `L610-L652`, `L5325-L5334`, `L5700-L5764`, `L12209-L12305`, `L13694-L14115` |
+| `document` / DOM API | 脚本重载、Canvas 选择、事件绑定、菜单与对话框 DOM 构建 | `L664-L708`, `L5383-L5392`, `L5758-L5822`, `L12431-L12570`, `L13972-L14118` |
 | `fetch` / `FileReader` / `XMLHttpRequest` | 文件加载与图配置入口 | `L747-L799`, `L2334-L2370` |
 | `process.hrtime` | Node 侧时间源适配 | `L808-L812` |
 | CommonJS `exports` | 模块导出适配层 | `L14414-L14423` |
@@ -147,13 +149,13 @@
 
 | 扩展模式 | 机制描述 | 物理坐标 |
 |---|---|---|
-| 注册中心模式 | 节点类型/槽位类型注册与检索 | `L157-L335`, `L550-L607` |
-| 工厂模式 | 统一节点实例化入口 | `L476-L549` |
-| 动态类生成模式 | 函数/对象即时封装为节点类并注册 | `L336-L443` |
-| 原型注入模式 | 运行时向节点类型注入新方法 | `L457-L475` |
-| 类扩展混入模式 | 目标类/原型从来源类复制能力 | `L14073-L14115` |
+| 注册中心模式 | 节点类型/槽位类型注册与检索 | `L196-L389`, `L604-L653` |
+| 工厂模式 | 统一节点实例化入口 | `L530-L603` |
+| 动态类生成模式 | 函数/对象即时封装为节点类并注册 | `L390-L497` |
+| 原型注入模式 | 运行时向节点类型注入新方法 | `L511-L529` |
+| 类扩展混入模式 | 目标类/原型从来源类复制能力 | `L14341-L14383` |
 | 回调钩子扩展面 | 图、节点、画布多层事件回调注入点 | `L1416-L1449`, `L2531-L2618`, `L5325-L5419`, `L10339-L13516` |
-| 搜索扩展面 | 搜索框附加条目注册 | `L730-L746` |
+| 搜索扩展面 | 搜索框附加条目注册 | `L784-L800` |
 
 ## 6. 细粒度方法索引 (Method-Level Atlas)
 
@@ -161,26 +163,26 @@
 
 | API 组 | 方法 | 物理坐标 |
 |---|---|---|
-| 类型注册与工厂 | `registerNodeType` | `L157-L259` |
-| 类型注册与工厂 | `unregisterNodeType` | `L260-L279` |
-| 类型注册与工厂 | `registerNodeAndSlotType` | `L280-L335` |
-| 类型注册与工厂 | `buildNodeClassFromObject` | `L336-L387` |
-| 类型注册与工厂 | `wrapFunctionAsNode` | `L388-L443` |
-| 类型注册与工厂 | `clearRegisteredTypes` | `L444-L456` |
-| 类型注册与工厂 | `addNodeMethod` | `L457-L475` |
-| 类型注册与工厂 | `createNode` | `L476-L549` |
-| 类型查询与分类 | `getNodeType` | `L550-L560` |
-| 类型查询与分类 | `getNodeTypesInCategory` | `L561-L590` |
-| 类型查询与分类 | `getNodeTypesCategories` | `L591-L609` |
-| 运行时维护 | `reloadNodes` | `L610-L654` |
-| 运行时维护 | `cloneObject` | `L655-L672` |
-| 运行时维护 | `uuidv4` | `L673-L683` |
-| 协议判定 | `isValidConnection` | `L684-L729` |
-| 搜索扩展 | `registerSearchboxExtra` | `L730-L746` |
-| 外部资源装载 | `fetchFile` | `L747-L800` |
-| 工具函数 | `getParameterNames` | `L14295-L14305` |
-| 交互兼容层 | `pointerListenerAdd` | `L14309-L14372` |
-| 交互兼容层 | `pointerListenerRemove` | `L14373-L14397` |
+| 类型注册与工厂 | `registerNodeType` | `L196-L313` |
+| 类型注册与工厂 | `unregisterNodeType` | `L314-L333` |
+| 类型注册与工厂 | `registerNodeAndSlotType` | `L334-L387` |
+| 类型注册与工厂 | `buildNodeClassFromObject` | `L390-L441` |
+| 类型注册与工厂 | `wrapFunctionAsNode` | `L442-L497` |
+| 类型注册与工厂 | `clearRegisteredTypes` | `L498-L510` |
+| 类型注册与工厂 | `addNodeMethod` | `L511-L529` |
+| 类型注册与工厂 | `createNode` | `L530-L603` |
+| 类型查询与分类 | `getNodeType` | `L604-L614` |
+| 类型查询与分类 | `getNodeTypesInCategory` | `L615-L644` |
+| 类型查询与分类 | `getNodeTypesCategories` | `L645-L663` |
+| 运行时维护 | `reloadNodes` | `L664-L708` |
+| 运行时维护 | `cloneObject` | `L709-L726` |
+| 运行时维护 | `uuidv4` | `L727-L737` |
+| 协议判定 | `isValidConnection` | `L738-L783` |
+| 搜索扩展 | `registerSearchboxExtra` | `L784-L800` |
+| 外部资源装载 | `fetchFile` | `L801-L854` |
+| 工具函数 | `getParameterNames` | `L14563-L14573` |
+| 交互兼容层 | `pointerListenerAdd` | `L14694-L14754` |
+| 交互兼容层 | `pointerListenerRemove` | `L14755-L14779` |
 
 ### 6.2 LGraph.prototype 全量索引
 
@@ -206,10 +208,10 @@
 | 节点检索 | `findNodesByClass` | `L1654-L1670` |
 | 节点检索 | `findNodesByType` | `L1671-L1688` |
 | 节点检索 | `findNodeByTitle` / `findNodesByTitle` | `L1689-L1721` |
-| 命中检测 | `getNodeOnPos` | `L1722-L1745` |
-| 命中检测 | `getGroupOnPos` | `L1746-L1760` |
-| 类型一致性 | `checkNodeTypes` | `L1761-L1787` |
-| 图动作入口 | `onAction` / `trigger` | `L1788-L1816` |
+| 命中检测 | `getNodeOnPos` | `L1776-L1799` |
+| 命中检测 | `getGroupOnPos` | `L1804-L1818` |
+| 类型一致性 | `checkNodeTypes` | `L1819-L1845` |
+| 图动作入口 | `onAction` / `trigger` | `L1846-L1885` |
 | 子图 I/O | `addInput` / `setInputData` / `getInputData` | `L1817-L1871` |
 | 子图 I/O | `renameInput` / `changeInputType` / `removeInput` | `L1872-L1955` |
 | 子图 I/O | `addOutput` / `setOutputData` / `getOutputData` | `L1956-L2002` |
@@ -267,10 +269,10 @@
 | Widget 绘制与输入 | `drawNodeWidgets` / `processNodeWidgets` | `L9863-L10294` |
 | 分组与尺寸 | `drawGroups` / `adjustNodesSize` / `resize` | `L10295-L10373` |
 | 运行视图状态 | `switchLiveMode` / `onNodeSelectionChange` / `boundaryNodesForSelection` | `L10374-L10977` |
-| 连线/搜索/创建 | `showLinkMenu` / `createDefaultNodeForSlot` / `showConnectionMenu` / `prompt` / `showSearchBox` | `L10978-L12074` |
-| 面板系统 | `showEditPropertyValue` / `createDialog` / `createPanel` / `closePanels` | `L12075-L12538` |
+| 连线/搜索/创建 | `showLinkMenu` / `createDefaultNodeForSlot` / `showConnectionMenu` / `prompt` / `showSearchBox` | `L11151-L12430` |
+| 面板系统 | `showEditPropertyValue` / `createDialog` / `createPanel` / `closePanels` | `L12297-L12795` |
 | 面板系统 | `showShowGraphOptionsPanel` / `showShowNodePanel` / `showSubgraphPropertiesDialog` / `showSubgraphPropertiesDialogRight` / `checkPanels` | `L12539-L13173` |
-| 菜单系统 | `getCanvasMenuOptions` / `getNodeMenuOptions` / `getGroupMenuOptions` / `processContextMenu` | `L13174-L13516` |
+| 菜单系统 | `getCanvasMenuOptions` / `getNodeMenuOptions` / `getGroupMenuOptions` / `processContextMenu` | `L13439-L13623` |
 
 ### 6.5 其他类与工具全量索引
 
@@ -302,7 +304,7 @@
 
 | 步骤 | 调用点 | 物理坐标 |
 |---|---|---|
-| 1 | 启动渲染循环 `startRendering` | `L5881-L5899` |
+| 1 | 启动渲染循环 `startRendering` | `L6037-L6056` |
 | 2 | 每帧进入 `draw` | `L7814-L7850` |
 | 3 | 分离前景/背景渲染 `drawFrontCanvas` + `drawBackCanvas` | `L7851-L8117`, `L8351-L8538` |
 | 4 | 节点、连线与执行序绘制 | `L8539-L9862` |
@@ -372,3 +374,19 @@
 | Node 序列化对象 | `id`, `type`, `pos`, `size`, `flags`, `order`, `mode`, `inputs`, `outputs`, `title`, `properties`, `widgets_values`, `color/bgcolor/boxcolor/shape` | `L2627-L2687` |
 | Link 序列化对象 | `[id, origin_id, origin_slot, target_id, target_slot, type]` | `L2406-L2415` |
 | Group 序列化对象 | `title`, `bounding`, `color`, `font_size` | `L5044-L5056` |
+
+## 9. 近期修复索引（P1 TODO，2026-03-03）
+
+| 能力域 | 关键入口 | 当前坐标 |
+|---|---|---|
+| 断线修饰键策略 | `click_do_break_link_from_key` / `isBreakLinkModifierPressed` / `processMouseDown` 输出槽断线分支 | `L115`, `L116-L132`, `L6231` |
+| 触摸设备识别 | `isTouchDevice` | `L170-L179` |
+| 节点注册自动收集槽位类型 | `registerNodeType` / `registerNodeAndSlotType` | `L196-L313`, `L334-L387` |
+| 重叠节点命中优先级 | `LGraph.getNodeOnPos` | `L1776-L1799` |
+| Pointer/Touch 事件闭环 | `bindEvents` / `unbindEvents` / `processPointerCancel` / `processTouch` | `L5758-L5822`, `L5823-L5878`, `L5879-L5894`, `L5895-L6036` |
+| 渲染颜色兜底 | `drawNode`（标题渐变/非法颜色防护） | `L8699-L9532` |
+| 搜索框关闭策略与类型过滤 guard | `showSearchBox` | `L11681-L12296` |
+| Dialog 统一关闭策略 | `createDialog` | `L12431-L12570` |
+| 节点菜单子图入口 | `getNodeMenuOptions`（`To Subgraph`） | `L13486-L13601` |
+| ContextMenu 桌面/触摸分流关闭 | `ContextMenu` 构造中的 `close_on_leave` 逻辑 | `L14042-L14055` |
+| 指针兼容层（防重复绑定） | `pointerListenerAdd` / `pointerListenerRemove` | `L14694-L14754`, `L14755-L14779` |

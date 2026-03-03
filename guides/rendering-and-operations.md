@@ -502,43 +502,49 @@ sequenceDiagram
 
 ## 7. 源码索引（函数 -> 文件行号）
 
-> 说明：行号基于当前仓库版本，后续改动可能导致偏移。建议配合函数名检索。
+> 说明：行号基于 `2026-03-03` 当前仓库版本，后续改动可能导致偏移。建议配合函数名检索。
 
 | 角色         | 函数                                               | 位置                           |
 | ------------ | -------------------------------------------------- | ------------------------------ |
-| LiteGraph    | `createNode`                                     | `src/litegraph.js:476`       |
-| LGraph       | `start`                                          | `src/litegraph.js:975`       |
-| LGraph       | `runStep`                                        | `src/litegraph.js:1054`      |
-| LGraph       | `add`                                            | `src/litegraph.js:1469`      |
-| LGraph       | `remove`                                         | `src/litegraph.js:1548`      |
-| LGraph       | `change`                                         | `src/litegraph.js:2149`      |
-| LGraph       | `serialize`                                      | `src/litegraph.js:2185`      |
-| LGraph       | `configure`                                      | `src/litegraph.js:2240`      |
-| LGraphNode   | `doExecute`                                      | `src/litegraph.js:3222`      |
-| LGraphNode   | `triggerSlot`                                    | `src/litegraph.js:3306`      |
-| LGraphNode   | `connect`                                        | `src/litegraph.js:4293`      |
-| LGraphNode   | `disconnectOutput`                               | `src/litegraph.js:4503`      |
-| LGraphNode   | `disconnectInput`                                | `src/litegraph.js:4659`      |
-| DragAndScale | `computeVisibleArea`                             | `src/litegraph.js:5131`      |
-| DragAndScale | `changeScale`                                    | `src/litegraph.js:5257`      |
-| LGraphCanvas | `constructor`                                    | `src/litegraph.js:5325`      |
-| LGraphCanvas | `openSubgraph`                                   | `src/litegraph.js:5552`      |
-| LGraphCanvas | `closeSubgraph`                                  | `src/litegraph.js:5581`      |
-| LGraphCanvas | `setCanvas`                                      | `src/litegraph.js:5615`      |
-| LGraphCanvas | `bindEvents`                                     | `src/litegraph.js:5700`      |
-| LGraphCanvas | `startRendering`                                 | `src/litegraph.js:5881`      |
-| LGraphCanvas | `processMouseDown`                               | `src/litegraph.js:5926`      |
-| LGraphCanvas | `processMouseMove`                               | `src/litegraph.js:6423`      |
-| LGraphCanvas | `processMouseUp`                                 | `src/litegraph.js:6680`      |
-| LGraphCanvas | `draw`                                           | `src/litegraph.js:7814`      |
-| LGraphCanvas | `drawFrontCanvas`                                | `src/litegraph.js:7851`      |
-| LGraphCanvas | `drawBackCanvas`                                 | `src/litegraph.js:8351`      |
-| LGraphCanvas | `drawConnections`                                | `src/litegraph.js:9360`      |
-| LGraphCanvas | `renderLink`                                     | `src/litegraph.js:9494`      |
-| LGraphCanvas | `processNodeWidgets`                             | `src/litegraph.js:10090`     |
-| LGraphCanvas | `onMenuAdd`                                      | `src/litegraph.js:10592`     |
-| LGraphCanvas | `showSearchBox`                                  | `src/litegraph.js:11508`     |
-| Editor       | `graph.onAfterExecute -> graphcanvas.draw(true)` | `editor/js/litegraph-editor.js:25` |
+| LiteGraph    | `createNode`                                     | `src/litegraph.js:530`       |
+| LGraph       | `start`                                          | `src/litegraph.js:1029`      |
+| LGraph       | `runStep`                                        | `src/litegraph.js:1108`      |
+| LGraph       | `add`                                            | `src/litegraph.js:1523`      |
+| LGraph       | `remove`                                         | `src/litegraph.js:1602`      |
+| LGraph       | `change`                                         | `src/litegraph.js:2207`      |
+| LGraph       | `serialize`                                      | `src/litegraph.js:2243`      |
+| LGraph       | `configure`                                      | `src/litegraph.js:2298`      |
+| LGraphNode   | `doExecute`                                      | `src/litegraph.js:3280`      |
+| LGraphNode   | `triggerSlot`                                    | `src/litegraph.js:3364`      |
+| LGraphNode   | `connect`                                        | `src/litegraph.js:4351`      |
+| LGraphNode   | `disconnectOutput`                               | `src/litegraph.js:4561`      |
+| LGraphNode   | `disconnectInput`                                | `src/litegraph.js:4717`      |
+| DragAndScale | `computeVisibleArea`                             | `src/litegraph.js:5189`      |
+| DragAndScale | `changeScale`                                    | `src/litegraph.js:5315`      |
+| LGraphCanvas | `constructor`                                    | `src/litegraph.js:5383`      |
+| LGraphCanvas | `openSubgraph`                                   | `src/litegraph.js:5610`      |
+| LGraphCanvas | `closeSubgraph`                                  | `src/litegraph.js:5639`      |
+| LGraphCanvas | `setCanvas`                                      | `src/litegraph.js:5673`      |
+| LGraphCanvas | `bindEvents`                                     | `src/litegraph.js:5758`      |
+| LGraphCanvas | `processPointerCancel`                           | `src/litegraph.js:5879`      |
+| LGraphCanvas | `processTouch`                                   | `src/litegraph.js:5895`      |
+| LGraphCanvas | `startRendering`                                 | `src/litegraph.js:6037`      |
+| LGraphCanvas | `processMouseDown`                               | `src/litegraph.js:6082`      |
+| LGraphCanvas | `processMouseMove`                               | `src/litegraph.js:6577`      |
+| LGraphCanvas | `processMouseUp`                                 | `src/litegraph.js:6834`      |
+| LGraphCanvas | `draw`                                           | `src/litegraph.js:7974`      |
+| LGraphCanvas | `drawFrontCanvas`                                | `src/litegraph.js:8011`      |
+| LGraphCanvas | `drawBackCanvas`                                 | `src/litegraph.js:8511`      |
+| LGraphCanvas | `drawConnections`                                | `src/litegraph.js:9533`      |
+| LGraphCanvas | `renderLink`                                     | `src/litegraph.js:9667`      |
+| LGraphCanvas | `processNodeWidgets`                             | `src/litegraph.js:10263`     |
+| LGraphCanvas | `onMenuAdd`                                      | `src/litegraph.js:10765`     |
+| LGraphCanvas | `showSearchBox`                                  | `src/litegraph.js:11681`     |
+| LGraphCanvas | `createDialog`                                   | `src/litegraph.js:12431`     |
+| LGraphCanvas | `getNodeMenuOptions`                             | `src/litegraph.js:13486`     |
+| LiteGraph    | `pointerListenerAdd`                             | `src/litegraph.js:14694`     |
+| LiteGraph    | `pointerListenerRemove`                          | `src/litegraph.js:14755`     |
+| Editor       | `graph.onAfterExecute -> graphcanvas.draw(true)` | `editor/js/litegraph-editor.js:26` |
 
 ## 8. 开关分支速查
 
