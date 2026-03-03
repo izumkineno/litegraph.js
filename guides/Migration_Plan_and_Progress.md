@@ -92,7 +92,7 @@
 
 - [x] **Task 09: LLink 类迁移** — 来源：`function LLink` 与 `LLink.prototype.configure/serialize`；目标产物：`models/LLink.ts`。
 - [x] **Task 10: LGraph 生命周期迁移** — 来源：`LGraph` 构造、`clear/start/stop/getTime*`；目标产物：`models/LGraph.lifecycle.ts`。
-- [ ] **Task 11: LGraph 执行调度迁移** — 来源：`runStep/updateExecutionOrder/computeExecutionOrder/getAncestors/arrange`；目标产物：`models/LGraph.execution.ts`。
+- [x] **Task 11: LGraph 执行调度迁移** — 来源：`runStep/updateExecutionOrder/computeExecutionOrder/getAncestors/arrange`；目标产物：`models/LGraph.execution.ts`。
 - [ ] **Task 12: LGraph 结构管理迁移** — 来源：`add/remove/getNodeById/find*`、`getNodeOnPos/getGroupOnPos`；目标产物：`models/LGraph.structure.ts`。
 - [ ] **Task 13: LGraph 图级 I/O 与事件迁移** — 来源：`addInput/addOutput/triggerInput/sendEventToAllNodes/connectionChange`；目标产物：`models/LGraph.io-events.ts`。
 - [ ] **Task 14: LGraph 序列化与加载迁移** — 来源：`serialize/configure/load/removeLink/onNodeTrace`；目标产物：`models/LGraph.persistence.ts`。
@@ -172,11 +172,11 @@
 
 ## 进度快照
 
-- 当前阶段：`Phase B 执行中（Task 10 已完成）`
+- 当前阶段：`Phase B 执行中（Task 11 已完成）`
 - 总任务数：`44`
-- 已完成：`10`
+- 已完成：`11`
 - 进行中：`0`
-- 待开始：`34`
+- 待开始：`33`
 
 ## 进度日志（模板）
 
@@ -193,3 +193,4 @@
 | 2026-03-03 | 执行 | Task 08 | 提取兼容辅助到 `compat/time-source.ts`、`compat/pointer-events.ts` 与 `utils/function-signature.ts`，保留时间源回退、触摸归一化与监听器注册行为 | Pointer 兼容分支依赖浏览器环境，需在后续 UI/E2E 阶段做跨输入模式回归 | 执行 Task 09 |
 | 2026-03-03 | 执行 | Task 09 | 迁移 `LLink` 到 `models/LLink.ts`，实现 `configure/serialize` 并兼容声明元组与运行时元组顺序 | `SerializedLLink` 顺序冲突仍需在兼容专项任务中统一出口策略 | 执行 Task 10 |
 | 2026-03-03 | 执行 | Task 10 | 迁移 `LGraph` 生命周期到 `models/LGraph.lifecycle.ts`（构造、`clear/start/stop/getTime*`），并保留原 JSDoc | `runStep/sendEventToAllNodes/change/sendActionToCanvas` 由后续任务实现，当前以占位方法维持可编译与增量落地 | 执行 Task 11 |
+| 2026-03-03 | 执行 | Task 11 | 迁移 `LGraph` 执行调度到 `models/LGraph.execution.ts`（`runStep/updateExecutionOrder/computeExecutionOrder/getAncestors/arrange`）并保留原 JSDoc | 当前采用继承 `LGraph` 的增量结构，后续需在模型收敛阶段统一单一导出入口 | 执行 Task 12 |
