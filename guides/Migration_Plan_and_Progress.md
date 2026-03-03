@@ -82,7 +82,7 @@
 - [x] **Task 01: 迁移目录与入口骨架** — 来源：迁移约束与模块划分；目标产物：`src/ts-migration/index.ts`、目录结构占位。
 - [x] **Task 02: 核心类型契约提取** — 来源：`litegraph.d.ts` 的 `Vector*`、`INode*`、`IWidget*`、`IContextMenu*`；目标产物：`types/core-types.ts`。
 - [x] **Task 03: 序列化契约提取** — 来源：`serializedLGraph`、`SerializedLLink`、`SerializedLGraphNode`、`SerializedLGraphGroup`；目标产物：`types/serialization.ts`。
-- [ ] **Task 04: LiteGraph 常量与枚举迁移** — 来源：`src/litegraph.js` LiteGraph 常量区；目标产物：`core/litegraph.constants.ts`。
+- [x] **Task 04: LiteGraph 常量与枚举迁移** — 来源：`src/litegraph.js` LiteGraph 常量区；目标产物：`core/litegraph.constants.ts`。
 - [ ] **Task 05: LiteGraph 注册与工厂 API 迁移** — 来源：`registerNodeType`、`unregisterNodeType`、`createNode`、`getNodeType*`、`addNodeMethod`；目标产物：`core/litegraph.registry.ts`。
 - [ ] **Task 06: LiteGraph 运行辅助 API 迁移** — 来源：`registerNodeAndSlotType`、`buildNodeClassFromObject`、`wrapFunctionAsNode`、`isValidConnection`、`fetchFile` 等；目标产物：`core/litegraph.runtime.ts`。
 - [ ] **Task 07: 通用函数组迁移** — 来源：`compareObjects`、`distance`、`colorToString`、包围盒、`hex2num/num2hex`、`clamp`；目标产物：`utils/math-geometry.ts`、`utils/color.ts`、`utils/clamp.ts`。
@@ -172,11 +172,11 @@
 
 ## 进度快照
 
-- 当前阶段：`Phase A 执行中（Task 03 已完成）`
+- 当前阶段：`Phase A 执行中（Task 04 已完成）`
 - 总任务数：`44`
-- 已完成：`3`
+- 已完成：`4`
 - 进行中：`0`
-- 待开始：`41`
+- 待开始：`40`
 
 ## 进度日志（模板）
 
@@ -186,3 +186,4 @@
 | 2026-03-03 | 执行 | Task 01 | 创建 `src/ts-migration/` 目录骨架与 `index.ts` 聚合入口占位 | 暂无；后续需从 `litegraph.d.ts` 精确抽取类型 | 执行 Task 02 |
 | 2026-03-03 | 执行 | Task 02 | 提取 `Vector*`、`INode*`、`IWidget*`、`IContextMenu*` 到 `types/core-types.ts`，并保留相关注释与依赖 TODO | `Like` 占位类型需在后续模型迁移阶段替换为真实类型导入 | 执行 Task 03 |
 | 2026-03-03 | 执行 | Task 03 | 提取 `serializedLGraph`、`SerializedLLink`、`SerializedLGraphNode`、`SerializedLGraphGroup` 到 `types/serialization.ts`，并保留 issue 注释与依赖 TODO | `SerializedLLink` 元组顺序存在实现差异，后续在兼容层任务处理 | 执行 Task 04 |
+| 2026-03-03 | 执行 | Task 04 | 提取 LiteGraph 常量与枚举配置到 `core/litegraph.constants.ts`，保留配置注释与修饰键/触摸检测逻辑 | `GRID_SHAPE` 与旧声明 `SQUARE_SHAPE` 的兼容命名差异留待兼容层任务处理 | 执行 Task 05 |
