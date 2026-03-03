@@ -84,7 +84,7 @@
 - [x] **Task 03: 序列化契约提取** — 来源：`serializedLGraph`、`SerializedLLink`、`SerializedLGraphNode`、`SerializedLGraphGroup`；目标产物：`types/serialization.ts`。
 - [x] **Task 04: LiteGraph 常量与枚举迁移** — 来源：`src/litegraph.js` LiteGraph 常量区；目标产物：`core/litegraph.constants.ts`。
 - [x] **Task 05: LiteGraph 注册与工厂 API 迁移** — 来源：`registerNodeType`、`unregisterNodeType`、`createNode`、`getNodeType*`、`addNodeMethod`；目标产物：`core/litegraph.registry.ts`。
-- [ ] **Task 06: LiteGraph 运行辅助 API 迁移** — 来源：`registerNodeAndSlotType`、`buildNodeClassFromObject`、`wrapFunctionAsNode`、`isValidConnection`、`fetchFile` 等；目标产物：`core/litegraph.runtime.ts`。
+- [x] **Task 06: LiteGraph 运行辅助 API 迁移** — 来源：`registerNodeAndSlotType`、`buildNodeClassFromObject`、`wrapFunctionAsNode`、`isValidConnection`、`fetchFile` 等；目标产物：`core/litegraph.runtime.ts`。
 - [ ] **Task 07: 通用函数组迁移** — 来源：`compareObjects`、`distance`、`colorToString`、包围盒、`hex2num/num2hex`、`clamp`；目标产物：`utils/math-geometry.ts`、`utils/color.ts`、`utils/clamp.ts`。
 - [ ] **Task 08: 运行时兼容辅助迁移** — 来源：`getTime` 适配、`pointerListenerAdd/Remove`、`getParameterNames`；目标产物：`compat/time-source.ts`、`compat/pointer-events.ts`、`utils/function-signature.ts`。
 
@@ -172,11 +172,11 @@
 
 ## 进度快照
 
-- 当前阶段：`Phase A 执行中（Task 05 已完成）`
+- 当前阶段：`Phase A 执行中（Task 06 已完成）`
 - 总任务数：`44`
-- 已完成：`5`
+- 已完成：`6`
 - 进行中：`0`
-- 待开始：`39`
+- 待开始：`38`
 
 ## 进度日志（模板）
 
@@ -188,3 +188,4 @@
 | 2026-03-03 | 执行 | Task 03 | 提取 `serializedLGraph`、`SerializedLLink`、`SerializedLGraphNode`、`SerializedLGraphGroup` 到 `types/serialization.ts`，并保留 issue 注释与依赖 TODO | `SerializedLLink` 元组顺序存在实现差异，后续在兼容层任务处理 | 执行 Task 04 |
 | 2026-03-03 | 执行 | Task 04 | 提取 LiteGraph 常量与枚举配置到 `core/litegraph.constants.ts`，保留配置注释与修饰键/触摸检测逻辑 | `GRID_SHAPE` 与旧声明 `SQUARE_SHAPE` 的兼容命名差异留待兼容层任务处理 | 执行 Task 05 |
 | 2026-03-03 | 执行 | Task 05 | 提取注册与工厂 API 到 `core/litegraph.registry.ts`（`register/unregister/createNode/getNodeType*`、`addNodeMethod`），保留原 JSDoc 与行为分支 | 依赖 `LGraphNode` 真实类型与 `registerNodeAndSlotType` 的完整契约待后续任务收敛 | 执行 Task 06 |
+| 2026-03-03 | 执行 | Task 06 | 提取运行辅助 API 到 `core/litegraph.runtime.ts`（`registerNodeAndSlotType/buildNodeClassFromObject/wrapFunctionAsNode/reloadNodes/cloneObject/uuidv4/isValidConnection/registerSearchboxExtra/fetchFile`） | `fetchFile` 在 `FileReader` 分支保留原返回行为（`void`），以及 DOM/浏览器依赖需在后续兼容层测试验证 | 执行 Task 07 |
