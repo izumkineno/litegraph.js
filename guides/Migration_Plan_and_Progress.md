@@ -94,7 +94,7 @@
 - [x] **Task 10: LGraph 生命周期迁移** — 来源：`LGraph` 构造、`clear/start/stop/getTime*`；目标产物：`models/LGraph.lifecycle.ts`。
 - [x] **Task 11: LGraph 执行调度迁移** — 来源：`runStep/updateExecutionOrder/computeExecutionOrder/getAncestors/arrange`；目标产物：`models/LGraph.execution.ts`。
 - [x] **Task 12: LGraph 结构管理迁移** — 来源：`add/remove/getNodeById/find*`、`getNodeOnPos/getGroupOnPos`；目标产物：`models/LGraph.structure.ts`。
-- [ ] **Task 13: LGraph 图级 I/O 与事件迁移** — 来源：`addInput/addOutput/triggerInput/sendEventToAllNodes/connectionChange`；目标产物：`models/LGraph.io-events.ts`。
+- [x] **Task 13: LGraph 图级 I/O 与事件迁移** — 来源：`addInput/addOutput/triggerInput/sendEventToAllNodes/connectionChange`；目标产物：`models/LGraph.io-events.ts`。
 - [ ] **Task 14: LGraph 序列化与加载迁移** — 来源：`serialize/configure/load/removeLink/onNodeTrace`；目标产物：`models/LGraph.persistence.ts`。
 - [ ] **Task 15: LGraphNode 构造与状态层迁移** — 来源：`_ctor/configure/serialize/clone/toString/getTitle/setProperty`；目标产物：`models/LGraphNode.state.ts`。
 - [ ] **Task 16: LGraphNode 数据通道与执行层迁移** — 来源：`setOutputData/getInputData/doExecute/actionDo/trigger/triggerSlot/clearTriggeredSlot`；目标产物：`models/LGraphNode.execution.ts`。
@@ -172,11 +172,11 @@
 
 ## 进度快照
 
-- 当前阶段：`Phase B 执行中（Task 12 已完成）`
+- 当前阶段：`Phase B 执行中（Task 13 已完成）`
 - 总任务数：`44`
-- 已完成：`12`
+- 已完成：`13`
 - 进行中：`0`
-- 待开始：`32`
+- 待开始：`31`
 
 ## 进度日志（模板）
 
@@ -195,3 +195,4 @@
 | 2026-03-03 | 执行 | Task 10 | 迁移 `LGraph` 生命周期到 `models/LGraph.lifecycle.ts`（构造、`clear/start/stop/getTime*`），并保留原 JSDoc | `runStep/sendEventToAllNodes/change/sendActionToCanvas` 由后续任务实现，当前以占位方法维持可编译与增量落地 | 执行 Task 11 |
 | 2026-03-03 | 执行 | Task 11 | 迁移 `LGraph` 执行调度到 `models/LGraph.execution.ts`（`runStep/updateExecutionOrder/computeExecutionOrder/getAncestors/arrange`）并保留原 JSDoc | 当前采用继承 `LGraph` 的增量结构，后续需在模型收敛阶段统一单一导出入口 | 执行 Task 12 |
 | 2026-03-03 | 执行 | Task 12 | 迁移 `LGraph` 结构管理到 `models/LGraph.structure.ts`（`add/remove/getNodeById/find*/getNodeOnPos/getGroupOnPos`），并保留原 JSDoc 与 `beforeChange/afterChange` 注释语义 | `id` 在 UUID/数字双模式下依赖后续模型类型统一，`setDirtyCanvas` 仍为占位等待后续任务落地 | 执行 Task 13 |
+| 2026-03-03 | 执行 | Task 13 | 迁移 `LGraph` 图级 I/O 与事件到 `models/LGraph.io-events.ts`（`sendEventToAllNodes/onAction/trigger/addInput/addOutput/triggerInput/connectionChange` 及相关变更通知）并保留原 JSDoc 与变更前后钩子语义 | 事件分发依赖 `LiteGraph.Subgraph/GraphInput` 运行时注入，后续需在聚合导出阶段统一宿主绑定 | 执行 Task 14 |
