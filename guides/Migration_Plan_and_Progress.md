@@ -79,7 +79,7 @@
 
 ### Phase A：基础与契约冻结
 
-- [ ] **Task 01: 迁移目录与入口骨架** — 来源：迁移约束与模块划分；目标产物：`src/ts-migration/index.ts`、目录结构占位。
+- [x] **Task 01: 迁移目录与入口骨架** — 来源：迁移约束与模块划分；目标产物：`src/ts-migration/index.ts`、目录结构占位。
 - [ ] **Task 02: 核心类型契约提取** — 来源：`litegraph.d.ts` 的 `Vector*`、`INode*`、`IWidget*`、`IContextMenu*`；目标产物：`types/core-types.ts`。
 - [ ] **Task 03: 序列化契约提取** — 来源：`serializedLGraph`、`SerializedLLink`、`SerializedLGraphNode`、`SerializedLGraphGroup`；目标产物：`types/serialization.ts`。
 - [ ] **Task 04: LiteGraph 常量与枚举迁移** — 来源：`src/litegraph.js` LiteGraph 常量区；目标产物：`core/litegraph.constants.ts`。
@@ -172,14 +172,15 @@
 
 ## 进度快照
 
-- 当前阶段：`规划完成，待执行`
+- 当前阶段：`Phase A 执行中（Task 01 已完成）`
 - 总任务数：`44`
-- 已完成：`0`
+- 已完成：`1`
 - 进行中：`0`
-- 待开始：`44`
+- 待开始：`43`
 
 ## 进度日志（模板）
 
 | 日期       | 阶段 | 完成任务 | 变更摘要                                   | 风险/阻塞                         | 下一步              |
 | ---------- | ---- | -------- | ------------------------------------------ | --------------------------------- | ------------------- |
 | 2026-03-03 | 规划 | 蓝图建立 | 完成模块拆分、依赖顺序、任务清单与验收标准 | d.ts 与实现存在命名差异，需兼容层 | 从 Task 01 开始执行 |
+| 2026-03-03 | 执行 | Task 01 | 创建 `src/ts-migration/` 目录骨架与 `index.ts` 聚合入口占位 | 暂无；后续需从 `litegraph.d.ts` 精确抽取类型 | 执行 Task 02 |
