@@ -284,6 +284,52 @@ class LiteGraphCanvasPage {
     );
   }
 
+  async getSelectedNodeIds() {
+    return this.page.evaluate(() => window.__lgHarness.getSelectedNodeIds());
+  }
+
+  async getNodeFlags(nodeId) {
+    return this.page.evaluate((id) => window.__lgHarness.getNodeFlags(id), nodeId);
+  }
+
+  async getNodeStyle(nodeId) {
+    return this.page.evaluate((id) => window.__lgHarness.getNodeStyle(id), nodeId);
+  }
+
+  async cloneNodeByMenu(nodeId) {
+    return this.page.evaluate((id) => window.__lgHarness.cloneNodeByMenu(id), nodeId);
+  }
+
+  async toggleNodeMenuOption(nodeId, optionText, optionValue = null) {
+    return this.page.evaluate(
+      ({ id, option, value }) => window.__lgHarness.toggleNodeMenuOption(id, option, value),
+      { id: nodeId, option: optionText, value: optionValue }
+    );
+  }
+
+  async openSubgraph(nodeId) {
+    return this.page.evaluate((id) => window.__lgHarness.openSubgraph(id), nodeId);
+  }
+
+  async closeSubgraph() {
+    return this.page.evaluate(() => window.__lgHarness.closeSubgraph());
+  }
+
+  async getCurrentGraphDepth() {
+    return this.page.evaluate(() => window.__lgHarness.getCurrentGraphDepth());
+  }
+
+  async dispatchCanvasKeyChord(chord) {
+    return this.page.evaluate((value) => window.__lgHarness.dispatchCanvasKeyChord(value), chord);
+  }
+
+  async addNodeFromCanvasMenu(path, at = null) {
+    return this.page.evaluate(
+      ({ menuPath, position }) => window.__lgHarness.addNodeFromCanvasMenu(menuPath, position),
+      { menuPath: path, position: at }
+    );
+  }
+
   async openSearchBox(at = null, options = {}) {
     return this.page.evaluate(
       ({ position, searchOptions }) => window.__lgHarness.openSearchBox(position, searchOptions),

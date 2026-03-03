@@ -643,6 +643,148 @@ async function installHarness(page, manifest) {
       };
     }
 
+    function ensureActiveCanvas() {
+      LiteGraph.LGraphCanvas.active_canvas = graphcanvas;
+      graphcanvas.constructor.active_canvas = graphcanvas;
+    }
+
+    function getMenuEntriesFor(menu) {
+      if (!menu) {
+        return [];
+      }
+      return Array.from(menu.querySelectorAll(".litemenu-entry")).filter((entry) => {
+        if (entry.classList.contains("separator") || entry.classList.contains("disabled")) {
+          return false;
+        }
+        const text = (entry.textContent || "").trim();
+        return !!text;
+      });
+    }
+
+    function clickLastMenuEntryByText(menuText) {
+      const menus = Array.from(document.querySelectorAll(".litecontextmenu"));
+      const menu = menus[menus.length - 1];
+      if (!menu) {
+        return { clicked: false, hasSubmenu: false };
+      }
+
+      const entries = getMenuEntriesFor(menu);
+      const found = entries.find((entry) => (entry.textContent || "").trim() === menuText);
+      if (!found) {
+        return { clicked: false, hasSubmenu: false };
+      }
+
+      const hasSubmenu = found.classList.contains("has_submenu");
+      found.click();
+      return { clicked: true, hasSubmenu };
+    }
+
+    function invokeCanvasMenuPath(path, at = null) {
+      if (!Array.isArray(path) || !path.length) {
+        return { ok: false, reason: "path must be non-empty array" };
+      }
+
+      ensureActiveCanvas();
+      LiteGraph.closeAllContextMenus(window);
+
+      const evtData = makeSyntheticCanvasEvent(at, { button: 2, buttons: 2 });
+      const eventLike = new MouseEvent("contextmenu", {
+        bubbles: true,
+        cancelable: true,
+        clientX: evtData.clientX,
+        clientY: evtData.clientY,
+        button: 2,
+        buttons: 2,
+        view: window,
+      });
+      eventLike.canvasX = evtData.canvasX;
+      eventLike.canvasY = evtData.canvasY;
+      eventLike.pageX = evtData.pageX;
+      eventLike.pageY = evtData.pageY;
+      eventLike.layerX = evtData.layerX;
+      eventLike.layerY = evtData.layerY;
+      const mouseDown = new MouseEvent("mousedown", {
+        bubbles: true,
+        cancelable: true,
+        clientX: evtData.clientX,
+        clientY: evtData.clientY,
+        button: 2,
+        buttons: 2,
+        view: window,
+      });
+      const mouseUp = new MouseEvent("mouseup", {
+        bubbles: true,
+        cancelable: true,
+        clientX: evtData.clientX,
+        clientY: evtData.clientY,
+        button: 2,
+        buttons: 2,
+        view: window,
+      });
+      canvas.dispatchEvent(mouseDown);
+      canvas.dispatchEvent(mouseUp);
+      canvas.dispatchEvent(eventLike);
+
+      for (let i = 0; i < path.length; i += 1) {
+        const segment = String(path[i] || "").trim();
+        if (!segment) {
+          return { ok: false, reason: `invalid path segment at ${i}` };
+        }
+        const clicked = clickLastMenuEntryByText(segment);
+        if (!clicked.clicked) {
+          LiteGraph.closeAllContextMenus(window);
+          return { ok: false, reason: `menu entry not found: ${segment}`, failedAt: i };
+        }
+      }
+
+      return { ok: true };
+    }
+
+    function findNodeInKnownGraphs(nodeId) {
+      if (nodeId == null) {
+        return null;
+      }
+      const current = graphcanvas.graph ? graphcanvas.graph.getNodeById(nodeId) : null;
+      if (current) {
+        return current;
+      }
+      return graph.getNodeById(nodeId);
+    }
+
+    function keyCodeFromToken(token) {
+      const t = String(token || "").trim().toUpperCase();
+      if (t.length === 1) {
+        return t.charCodeAt(0);
+      }
+      const table = {
+        SPACE: 32,
+        ESC: 27,
+        ESCAPE: 27,
+        DELETE: 46,
+        DEL: 46,
+        BACKSPACE: 8,
+        ENTER: 13,
+        TAB: 9,
+      };
+      return table[t] || 0;
+    }
+
+    function dispatchSyntheticKey(type, keyCode, mods = {}) {
+      const evt = {
+        type,
+        keyCode,
+        ctrlKey: !!mods.ctrlKey,
+        shiftKey: !!mods.shiftKey,
+        altKey: !!mods.altKey,
+        metaKey: !!mods.metaKey,
+        target: canvas,
+        preventDefault() {},
+        stopPropagation() {},
+        stopImmediatePropagation() {},
+      };
+      graphcanvas.processKey(evt);
+    }
+
     if (!LiteGraph.LGraphNode.prototype.__lgHarnessTracePatched) {
       const proto = LiteGraph.LGraphNode.prototype;
       const originalDoExecute = proto.doExecute;
@@ -752,6 +894,30 @@ async function installHarness(page, manifest) {
           nodeId,
           slotIndex,
           isInput: Boolean(isInput),
+        };
+      },
+      getSelectedNodeIds() {
+        return Object.keys(graphcanvas.selected_nodes || {})
+          .map((id) => Number(id))
+          .filter((id) => Number.isFinite(id));
+      },
+      getNodeFlags(nodeId) {
+        const node = findNodeInKnownGraphs(nodeId);
+        if (!node) {
+          return null;
+        }
+        return cloneSerializable(node.flags || {});
+      },
+      getNodeStyle(nodeId) {
+        const node = findNodeInKnownGraphs(nodeId);
+        if (!node) {
+          return null;
+        }
+        return {
+          color: node.color || null,
+          bgcolor: node.bgcolor || null,
+          boxcolor: node.boxcolor || null,
+          shape: node.shape != null ? node.shape : null,
         };
       },
       createNodeByType(type, pos = null, title = null) {
@@ -944,6 +1110,177 @@ async function installHarness(page, manifest) {
           nodeId,
           mode: node.mode,
           modeLabel: LiteGraph.NODE_MODES[node.mode] || String(node.mode),
+        };
+      },
+      cloneNodeByMenu(nodeId) {
+        const node = findNodeInKnownGraphs(nodeId);
+        if (!node || !node.graph) {
+          return { ok: false, reason: "node not found", nodeId };
+        }
+
+        ensureActiveCanvas();
+        const ownerGraph = node.graph;
+        const before = new Set((ownerGraph._nodes || []).map((item) => item.id));
+        LiteGraph.LGraphCanvas.onMenuNodeClone(null, {}, null, null, node);
+        const createdNodes = (ownerGraph._nodes || []).filter((item) => !before.has(item.id));
+        ownerGraph.setDirtyCanvas && ownerGraph.setDirtyCanvas(true, true);
+        graphcanvas.setDirty(true, true);
+        graphcanvas.draw(true, true);
+        return {
+          ok: true,
+          nodeId,
+          createdNodeIds: createdNodes.map((item) => item.id),
+        };
+      },
+      toggleNodeMenuOption(nodeId, optionText, optionValue = null) {
+        const node = findNodeInKnownGraphs(nodeId);
+        if (!node) {
+          return { ok: false, reason: "node not found", nodeId };
+        }
+
+        ensureActiveCanvas();
+        const option = String(optionText || "").trim().toLowerCase();
+
+        if (option === "collapse") {
+          LiteGraph.LGraphCanvas.onMenuNodeCollapse(null, {}, null, null, node);
+        } else if (option === "pin") {
+          LiteGraph.LGraphCanvas.onMenuNodePin(null, {}, null, null, node);
+        } else if (option === "colors" || option === "color") {
+          const colorKey = String(optionValue || "").trim();
+          const color = colorKey ? LiteGraph.LGraphCanvas.node_colors[colorKey] : null;
+          if (color) {
+            if (node.constructor === LiteGraph.LGraphGroup) {
+              node.color = color.groupcolor;
+            } else {
+              node.color = color.color;
+              node.bgcolor = color.bgcolor;
+            }
+          } else {
+            delete node.color;
+            delete node.bgcolor;
+          }
+        } else if (option === "shapes" || option === "shape") {
+          node.shape = optionValue || "default";
+        } else if (option === "remove") {
+          LiteGraph.LGraphCanvas.onMenuNodeRemove(null, {}, null, null, node);
+        } else if (option === "clone") {
+          LiteGraph.LGraphCanvas.onMenuNodeClone(null, {}, null, null, node);
+        } else if (option === "to subgraph" || option === "tosubgraph") {
+          LiteGraph.LGraphCanvas.onMenuNodeToSubgraph(null, {}, null, null, node);
+        } else {
+          return { ok: false, reason: `unsupported option: ${optionText}`, nodeId };
+        }
+
+        graphcanvas.setDirty(true, true);
+        graphcanvas.draw(true, true);
+        return {
+          ok: true,
+          nodeId,
+          option: optionText,
+          flags: cloneSerializable(node.flags || {}),
+          style: {
+            color: node.color || null,
+            bgcolor: node.bgcolor || null,
+            boxcolor: node.boxcolor || null,
+            shape: node.shape != null ? node.shape : null,
+          },
+        };
+      },
+      openSubgraph(nodeId) {
+        const node = findNodeInKnownGraphs(nodeId);
+        if (!node || !node.subgraph) {
+          return { ok: false, reason: "subgraph node not found", nodeId };
+        }
+        ensureActiveCanvas();
+        graphcanvas.openSubgraph(node.subgraph);
+        graphcanvas.setDirty(true, true);
+        graphcanvas.draw(true, true);
+        return {
+          ok: true,
+          nodeId,
+          depth: (graphcanvas._graph_stack || []).length,
+        };
+      },
+      closeSubgraph() {
+        ensureActiveCanvas();
+        if (!graphcanvas._graph_stack || graphcanvas._graph_stack.length === 0) {
+          return { ok: false, reason: "already at root graph", depth: 0 };
+        }
+        graphcanvas.closeSubgraph();
+        graphcanvas.setDirty(true, true);
+        graphcanvas.draw(true, true);
+        return {
+          ok: true,
+          depth: (graphcanvas._graph_stack || []).length,
+        };
+      },
+      getCurrentGraphDepth() {
+        return (graphcanvas._graph_stack || []).length;
+      },
+      dispatchCanvasKeyChord(chord) {
+        const raw = String(chord || "").trim();
+        if (!raw) {
+          return { ok: false, reason: "empty chord" };
+        }
+
+        let suffix = "";
+        let value = raw;
+        const suffixMatch = raw.match(/:(DOWN|UP)$/i);
+        if (suffixMatch) {
+          suffix = suffixMatch[1].toUpperCase();
+          value = raw.slice(0, raw.length - suffixMatch[0].length);
+        }
+
+        const tokens = value.split("+").map((part) => part.trim()).filter(Boolean);
+        const keyToken = tokens[tokens.length - 1];
+        const keyCode = keyCodeFromToken(keyToken);
+        if (!keyCode) {
+          return { ok: false, reason: `unsupported key token: ${keyToken}` };
+        }
+
+        const mods = {
+          ctrlKey: tokens.slice(0, -1).some((token) => /^(CTRL|CONTROL)$/i.test(token)),
+          shiftKey: tokens.slice(0, -1).some((token) => /^SHIFT$/i.test(token)),
+          altKey: tokens.slice(0, -1).some((token) => /^ALT$/i.test(token)),
+          metaKey: tokens.slice(0, -1).some((token) => /^(META|CMD|COMMAND)$/i.test(token)),
+        };
+
+        if (suffix === "DOWN") {
+          dispatchSyntheticKey("keydown", keyCode, mods);
+        } else if (suffix === "UP") {
+          dispatchSyntheticKey("keyup", keyCode, mods);
+        } else {
+          dispatchSyntheticKey("keydown", keyCode, mods);
+          dispatchSyntheticKey("keyup", keyCode, mods);
+        }
+
+        graphcanvas.setDirty(true, true);
+        graphcanvas.draw(true, true);
+        return {
+          ok: true,
+          chord: raw,
+          selectedNodeIds: Object.keys(graphcanvas.selected_nodes || {}).map((id) => Number(id)),
+        };
+      },
+      addNodeFromCanvasMenu(path, at = null) {
+        const activeGraph = graphcanvas.graph || graph;
+        const beforeIds = new Set((activeGraph._nodes || []).map((item) => item.id));
+        const result = invokeCanvasMenuPath(path, at);
+        LiteGraph.closeAllContextMenus(window);
+
+        if (!result.ok) {
+          return result;
+        }
+
+        graphcanvas.setDirty(true, true);
+        graphcanvas.draw(true, true);
+
+        const created = (activeGraph._nodes || []).filter((item) => !beforeIds.has(item.id));
+        return {
+          ok: true,
+          path: cloneSerializable(path),
+          createdNodeIds: created.map((item) => item.id),
+          createdNodeTypes: created.map((item) => item.type),
         };
       },
       openSearchBox(at = null, options = {}) {

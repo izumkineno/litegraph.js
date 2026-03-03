@@ -1,8 +1,10 @@
 const isBunRuntime = typeof Bun !== "undefined";
 
 if (!isBunRuntime) {
+const path = require("path");
 const { test, expect } = require("../fixtures/litegraph-harness.cjs");
 const { diffGraphSnapshots } = require("../utils/graph-diff.cjs");
+const { writeJsonReport } = require("../utils/coverage-recorder.cjs");
 const {
   traverseContextMenuTree,
   closeAllContextMenus,
@@ -23,7 +25,7 @@ test.describe("recursive context menu traversal", () => {
     await lgPage.connectSlots(source.id, 0, watch.id, 0);
 
     const baseline = await lgPage.snapshotRaw();
-    const maxLeaves = Number(process.env.LG_MENU_MAX_LEAVES || 60);
+    const maxLeaves = Number(process.env.LG_MENU_MAX_LEAVES || 100);
 
     async function runTraversal(name, openRootMenu) {
       const records = [];
@@ -63,6 +65,7 @@ test.describe("recursive context menu traversal", () => {
         name,
         records,
         leafCount: result.leafPaths.length,
+        leafPaths: result.leafPaths,
       };
     }
 
@@ -109,6 +112,46 @@ test.describe("recursive context menu traversal", () => {
 
     const totalLeafCount = summaries.reduce((sum, item) => sum + item.leafCount, 0);
     expect(totalLeafCount).toBeGreaterThan(0);
+
+    const byName = summaries.reduce((acc, item) => {
+      acc[item.name] = item;
+      return acc;
+    }, {});
+
+    function containsToken(paths, token) {
+      return paths.some((leafPath) => leafPath.some((segment) => segment === token));
+    }
+
+    const requiredTokens = [
+      { scope: "canvas", token: "Add Node" },
+      { scope: "node", token: "Mode" },
+      { scope: "node", token: "Collapse" },
+      { scope: "node", token: "Pin" },
+      { scope: "node", token: "Clone" },
+      { scope: "node", token: "Remove" },
+    ];
+
+    const requiredChecks = requiredTokens.map((item) => {
+      const scopeSummary = byName[item.scope];
+      const hit = !!scopeSummary && containsToken(scopeSummary.leafPaths || [], item.token);
+      return {
+        ...item,
+        hit,
+      };
+    });
+
+    for (const check of requiredChecks) {
+      expect(check.hit, `Missing required context-menu token: ${check.scope}/${check.token}`).toBe(true);
+    }
+
+    const reportPath = path.resolve(process.cwd(), "tests/playwright/reports/context-menu-recursive-report.json");
+    writeJsonReport(reportPath, {
+      generatedAt: new Date().toISOString(),
+      maxLeaves,
+      totalLeafCount,
+      summaries,
+      requiredChecks,
+    });
   });
 });
 }
