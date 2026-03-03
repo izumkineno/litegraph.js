@@ -1,7 +1,7 @@
 {
-  "generatedAt": "2026-03-03T07:29:16.674Z",
+  "generatedAt": "2026-03-03T09:45:52.014Z",
   "maxLeaves": 100,
-  "totalLeafCount": 227,
+  "totalLeafCount": 228,
   "summaries": [
     {
       "name": "canvas",
@@ -1851,6 +1851,15 @@
         },
         {
           "path": [
+            "To Subgraph"
+          ],
+          "changedPaths": 2,
+          "addedPaths": 1,
+          "removedPaths": 0,
+          "hasChange": true
+        },
+        {
+          "path": [
             "Remove"
           ],
           "changedPaths": 2,
@@ -1859,7 +1868,7 @@
           "hasChange": true
         }
       ],
-      "leafCount": 25,
+      "leafCount": 26,
       "leafPaths": [
         [
           "Properties",
@@ -1951,6 +1960,9 @@
         ],
         [
           "Clone"
+        ],
+        [
+          "To Subgraph"
         ],
         [
           "Remove"
