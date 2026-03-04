@@ -4,20 +4,22 @@
 
 import type { INodeInputSlot, INodeOutputSlot, Vector2, Vector4 } from "./core-types";
 
-export type JSONLikeObject = Record<string, unknown>;
+export type JSONLikeObject = Record<string, any>;
 
 export interface SerializedLGraphNodeLike {
     id: number;
     type: string | null;
     pos: Vector2;
     size: Vector2;
-    flags: JSONLikeObject;
+    flags: Partial<{
+        collapsed: boolean;
+    }>;
     mode?: number;
     inputs: INodeInputSlot[];
     outputs: INodeOutputSlot[];
     title: string;
-    properties: JSONLikeObject;
-    widgets_values?: unknown[];
+    properties: Record<string, any>;
+    widgets_values?: any[];
 }
 
 export type SerializedLGraphNode<
@@ -60,7 +62,7 @@ export type serializedLGraph<
     nodes: TNode[];
     links: TLink[];
     groups: TGroup[];
-    config: JSONLikeObject;
+    config: object;
     version: number;
 };
 

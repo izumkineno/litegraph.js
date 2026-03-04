@@ -92,7 +92,7 @@ Git 提交规则（强制）：
   - 对应原 JS：核心结构约定（节点、槽、widget、菜单）在运行时使用路径。
   - 对应原 d.ts：`Vector*`、`INode*`、`IWidget*`、`IContextMenu*`。
 
-- [ ] **Audit Task 03: `src/ts-migration/types/serialization.ts`**
+- [x] **Audit Task 03: `src/ts-migration/types/serialization.ts`**
   - 对应原 JS：`serialize/configure` 数据结构。
   - 对应原 d.ts：`SerializedLLink/SerializedLGraphNode/SerializedLGraphGroup`。
 
@@ -267,9 +267,9 @@ Git 提交规则（强制）：
 ## 审计进度快照
 
 - 总任务数：`42`
-- 已完成：`2`
+- 已完成：`3`
 - 进行中：`0`
-- 未开始：`40`
+- 未开始：`39`
 - 最新更新时间：`2026-03-04`
 
 ---
@@ -328,3 +328,25 @@ Git 提交规则（强制）：
 - 已实施修复：
   1. 将上述 5 处签名全部改为与 d.ts 一致。
   2. 校验通过：`npx tsc --noEmit src/ts-migration/types/core-types.ts`。
+
+### Audit Task 03 结果
+- 结论：Pass（发现 5 处序列化类型契约偏差并已修复）
+- JS 对照：`src/litegraph.js`
+  - `LGraph.prototype.serialize/configure`（`config`、`extra`、`links/groups/nodes`）
+  - `LLink.prototype.serialize/configure`（`SerializedLLink` 顺序）
+  - `LGraphNode.prototype.serialize`（`flags/properties/widgets_values` 字段语义）
+  - `LGraphGroup.prototype.serialize/configure`（`font_size` 运行时差异）
+- d.ts 对照：`src/litegraph.d.ts`
+  - `SerializedLGraphNode`（`flags/properties/widgets_values` 类型）
+  - `serializedLGraph`（`config` 类型）
+  - `SerializedLLink`、`SerializedLGraphGroup`
+- TS 对照：`src/ts-migration/types/serialization.ts`
+- 发现问题：
+  1. `JSONLikeObject` 使用 `Record<string, unknown>`，导致 `properties` 和 `widgets_values` 相比 d.ts 不必要收窄（应为 `any` 语义）。
+  2. `flags` 被声明成任意对象映射，未与 d.ts 的 `Partial<{ collapsed: boolean }>` 对齐。
+  3. `serializedLGraph.config` 被声明为 `Record<string, unknown>`，与 d.ts 的 `object` 不一致。
+- 已实施修复：
+  1. 将 `JSONLikeObject` 调整为 `Record<string, any>`，并将 `properties/widgets_values` 对齐到 d.ts 的宽类型语义。
+  2. 将 `flags` 调整为 `Partial<{ collapsed: boolean }>`。
+  3. 将 `serializedLGraph.config` 调整为 `object`。
+  4. 校验通过：`npx tsc --noEmit src/ts-migration/types/serialization.ts`。
