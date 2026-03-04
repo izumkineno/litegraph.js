@@ -26,7 +26,7 @@ export interface ContextMenuCloseAllCompatResult {
 }
 
 /**
- * Task 40 compatibility layer:
+ * Task 41 compatibility layer:
  * align `LiteGraph.closeAllContextMenus` and `ContextMenu.closeAllContextMenus`
  * to the same callable reference.
  */

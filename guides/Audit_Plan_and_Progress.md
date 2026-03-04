@@ -254,7 +254,7 @@ Git 提交规则（强制）：
   - 对应原 JS：`function ContextMenu` + `addItem/close/getTopMenu/getFirstEvent`。
   - 对应原 d.ts：`ContextMenu` 类接口。
 
-- [ ] **Audit Task 41: `src/ts-migration/ui/context-menu-compat.ts`**
+- [x] **Audit Task 41: `src/ts-migration/ui/context-menu-compat.ts`**
   - 对应原 JS：`closeAllContextMenus` 的入口归属与行为。
   - 对应原 d.ts：菜单关闭 API 的兼容声明。
 
@@ -267,9 +267,9 @@ Git 提交规则（强制）：
 ## 审计进度快照
 
 - 总任务数：`42`
-- 已完成：`40`
+- 已完成：`41`
 - 进行中：`0`
-- 未开始：`2`
+- 未开始：`1`
 - 最新更新时间：`2026-03-04`
 
 ---
@@ -1125,3 +1125,17 @@ Git 提交规则（强制）：
   4. 回收 `getFirstEvent` 返回语义，并补回 `close` 末尾 TODO 注释。
 - 验证：
   1. 类型校验通过：`npx tsc --noEmit src/ts-migration/ui/ContextMenu.ts`。
+
+### Audit Task 41 结果
+- 结论：Pass（运行语义对齐，发现 1 处可维护性偏差并已修复）
+- JS 对照：`src/litegraph.js`
+  - `LiteGraph.closeAllContextMenus`
+- d.ts 对照：`src/litegraph.d.ts`
+  - `ContextMenu.closeAllContextMenus`
+- TS 对照：`src/ts-migration/ui/context-menu-compat.ts`
+- 发现问题：
+  1. 模块头注释任务编号误写为 `Task 40`，与当前审计任务不一致，影响追踪一致性。
+- 已实施修复：
+  1. 将注释修正为 `Task 41 compatibility layer`，其余运行时绑定语义保持不变。
+- 验证：
+  1. 类型校验通过：`npx tsc --noEmit src/ts-migration/ui/context-menu-compat.ts`。
