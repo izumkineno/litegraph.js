@@ -126,7 +126,7 @@
 
 ### Phase E：契约冲突与兼容收敛（补充）
 
-- [ ] **Task 36: JS 与 d.ts 契约差异矩阵落地** — 来源：`src/litegraph.js` 与 `src/litegraph.d.ts` 差异项；目标产物：`types/contract-diff-matrix.md`、`types/litegraph-compat.d.ts`。
+- [x] **Task 36: JS 与 d.ts 契约差异矩阵落地** — 来源：`src/litegraph.js` 与 `src/litegraph.d.ts` 差异项；目标产物：`types/contract-diff-matrix.md`、`types/litegraph-compat.d.ts`。
 - [ ] **Task 37: 常量别名兼容层** — 来源：`GRID_SHAPE` vs `SQUARE_SHAPE`；目标产物：`core/litegraph.constants.compat.ts`。
 - [ ] **Task 38: LLink 序列化兼容解析器** — 来源：`SerializedLLink` 顺序冲突；目标产物：`models/LLink.serialization.compat.ts`。
 - [ ] **Task 39: LGraphGroup 序列化字段兼容** — 来源：`font` vs `font_size`；目标产物：`models/LGraphGroup.serialization.compat.ts`。
@@ -172,23 +172,23 @@
 
 ## 进度快照
 
-- 当前阶段：`Phase D 已完成（Task 35 已完成）`
+- 当前阶段：`Phase E 进行中（Task 36 已完成）`
 - 总任务数：`44`
-- 已完成：`35`
+- 已完成：`36`
 - 进行中：`0`
-- 待开始：`9`
+- 待开始：`8`
 
 ## 风险清单（当前）
 
 1. `高`：全量 TypeScript 检查仍被既有历史问题阻断（外部依赖缺失与迁移层未收敛类型）。
 2. `中`：`compat/pointer-events.ts` 相关类型收敛问题仍会影响部分单文件 `tsc` 验证链路。
-3. `中`：Phase E（Task 36-44）尚未开始，兼容层“矩阵文档-实现文件-契约测试-E2E 守卫”闭环未建立。
+3. `中`：Phase E 已启动，但 Task 37-44 尚未完成，兼容层“实现-契约测试-E2E 守卫”闭环仍待建立。
 4. `低`：迁移层仍保留一定数量的 `TODO/占位` 注释，需在 Phase E 分批清零并回归验证。
 
 ## 风险处理计划（对应下一阶段）
 
-1. Task 36 先固化差异矩阵文档与路径映射，避免兼容项遗漏。
-2. Task 37-42 按“常量 -> 序列化 -> 菜单关闭 -> hook -> 静态 API”顺序落地实现。
+1. Task 37-42 按“常量 -> 序列化 -> 菜单关闭 -> hook -> 静态 API”顺序落地实现。
+2. 以 Task 36 的矩阵文档作为唯一差异源，新增兼容实现必须绑定矩阵 ID。
 3. Task 43/44 建立契约快照测试与兼容模式 E2E 守卫，形成回归门禁。
 
 ## 进度日志（模板）
@@ -231,3 +231,4 @@
 | 2026-03-04 | 执行 | Task 33 | 新增 `tests/migration-parity/serialization.test.ts`，对比旧版 `src/litegraph.js` 与迁移实现在 `LLink/LGraphGroup` 的 `configure/serialize` 行为一致性，并覆盖 `SerializedLLink` 双输入顺序与 `font/font_size` 双字段兼容路径 | 当前序列化回归覆盖集中在 LLink/LGraphGroup 兼容断面；图级全链路契约快照将在 Task 43 进一步收敛 | 执行 Task 34 |
 | 2026-03-04 | 执行 | Task 34 | 新增 `tests/playwright/specs/migration-ui-keypaths.spec.cjs`，复用现有 Harness/菜单遍历工具补齐 UI 关键链路：菜单对齐、`To Subgraph` 转换与进出子图、属性菜单 printable value 展示；并输出 `tests/playwright/reports/migration-ui-keypaths-report.{json,md}` | 当前回归聚焦关键链路闭环，尚未覆盖所有兼容模式 E2E（Task 44） | 执行 Task 35 |
 | 2026-03-04 | 执行 | Task 35 | 更新进度快照与风险清单：标记 Phase D 完成，补充当前风险等级与处理计划，明确 Phase E 的收敛顺序与门禁目标 | 风险已归档但仍待 Task 36-44 实际消解；本任务不新增代码变更 | 执行 Task 36 |
+| 2026-03-04 | 执行 | Task 36 | 新增 `src/ts-migration/types/contract-diff-matrix.md`，按 JS/d.ts 证据行号固化差异矩阵；并收紧 `types/litegraph-compat.d.ts` 的 `LiteGraphCompatDiffId` 联合类型，确保矩阵项与类型声明一一对应 | 仅完成矩阵固化与声明约束，兼容实现与守卫仍需后续 Task 37-44 收敛 | 执行 Task 37 |

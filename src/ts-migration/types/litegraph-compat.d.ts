@@ -100,8 +100,27 @@ export type LiteGraphCompatArea =
     | "ui"
     | "graph-hooks";
 
+/**
+ * Contract diff identifiers.
+ * Keep this union in sync with:
+ * - `src/ts-migration/types/litegraph-compat.ts` (`LITEGRAPH_API_DIFF_MATRIX`)
+ * - `src/ts-migration/types/contract-diff-matrix.md`
+ */
+export type LiteGraphCompatDiffId =
+    | "constants.grid-square-alias"
+    | "canvas-static.resize"
+    | "canvas-static.subgraph-menu"
+    | "canvas-instance.deselected"
+    | "canvas-instance.slot-graphic"
+    | "canvas-instance.touch-handler"
+    | "serialization.link-tuple-order"
+    | "serialization.group-font-field"
+    | "ui.close-all-context-menus"
+    | "graph-hooks.on-node-added"
+    | "canvas-static.missing-apis";
+
 export interface LiteGraphCompatDiffItem {
-    id: string;
+    id: LiteGraphCompatDiffId;
     area: LiteGraphCompatArea;
     dts: string;
     runtime: string;
