@@ -110,7 +110,7 @@ Git 提交规则（强制）：
   - 对应原 JS：LiteGraph 常量区、枚举、默认配置。
   - 对应原 d.ts：常量声明、枚举值约束。
 
-- [ ] **Audit Task 07: `src/ts-migration/core/litegraph.constants.compat.ts`**
+- [x] **Audit Task 07: `src/ts-migration/core/litegraph.constants.compat.ts`**
   - 对应原 JS：`GRID_SHAPE` 等历史常量语义。
   - 对应原 d.ts：`SQUARE_SHAPE` 等命名差异兼容。
 
@@ -267,9 +267,9 @@ Git 提交规则（强制）：
 ## 审计进度快照
 
 - 总任务数：`42`
-- 已完成：`6`
+- 已完成：`7`
 - 进行中：`0`
-- 未开始：`36`
+- 未开始：`35`
 - 最新更新时间：`2026-03-04`
 
 ---
@@ -401,3 +401,16 @@ Git 提交规则（强制）：
 - 已实施修复：
   1. 将判断改为等价的 `typeof shortcutSetting !== "boolean"` 分支，保持 JS 运行语义不变（布尔值走开关语义，字符串/数组走修饰键语义）。
   2. 校验通过：`npx tsc --noEmit src/ts-migration/core/litegraph.constants.ts`。
+
+### Audit Task 07 结果
+- 结论：Pass（完美匹配，无代码修复）
+- JS 对照：`src/litegraph.js`
+  - 常量来源：`LiteGraph.GRID_SHAPE = 6`（运行时形状常量）
+- d.ts 对照：`src/litegraph.d.ts`
+  - 声明来源：`LiteGraph.SQUARE_SHAPE: 6`
+- TS 对照：`src/ts-migration/core/litegraph.constants.compat.ts`
+- 发现问题：
+  1. 未发现语义缺口。`resolveGridSquareShapeValue/applyGridSquareShapeAlias/isGridSquareShapeAliasSynced` 已完整覆盖 `GRID_SHAPE` 与 `SQUARE_SHAPE` 双向别名收敛。
+  2. 兜底值 `6`、来源优先级（`GRID_SHAPE` > `SQUARE_SHAPE` > fallback）与兼容矩阵一致。
+- 验证：
+  1. 类型校验通过：`npx tsc --noEmit src/ts-migration/core/litegraph.constants.compat.ts`。
