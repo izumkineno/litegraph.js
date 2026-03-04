@@ -11171,10 +11171,17 @@ var LiteGraphTSMigration = (function(exports) {
   const ContextMenu = ContextMenu$1;
   function createPointerListenerCompat(methodRef) {
     const registry2 = /* @__PURE__ */ new WeakMap();
-    function resolveEvent(eventName, method) {
+    function resolveEvent(eventName, methodIn) {
       const requested = String(eventName || "").toLowerCase();
+      let method = methodIn || "mouse";
+      if (method === "pointer" && (typeof window === "undefined" || !window.PointerEvent)) {
+        method = "touch";
+      }
       if (requested.indexOf("mouse") === 0 || requested.indexOf("pointer") === 0 || requested.indexOf("touch") === 0) {
-        return requested;
+        return {
+          domEvent: requested,
+          useTouchWrapper: requested.indexOf("touch") === 0
+        };
       }
       const mapMouse = {
         down: "mousedown",
@@ -11210,14 +11217,24 @@ var LiteGraphTSMigration = (function(exports) {
         gotpointercapture: null,
         lostpointercapture: null
       };
-      if (method === "pointer") {
-        return mapPointer[requested] || requested;
+      const map = method === "pointer" ? mapPointer : method === "touch" ? mapTouch : mapMouse;
+      let domEvent = map[requested];
+      if (!domEvent) {
+        if (method === "touch" && (requested === "enter" || requested === "leave" || requested === "over" || requested === "out")) {
+          return null;
+        }
+        domEvent = requested;
       }
-      if (method === "touch") {
-        const resolved = mapTouch[requested];
-        return resolved === void 0 ? requested : resolved;
+      return {
+        domEvent,
+        useTouchWrapper: domEvent.indexOf("touch") === 0
+      };
+    }
+    function resolveEventOptions(domEvent, capture) {
+      if (domEvent && domEvent.indexOf("touch") === 0) {
+        return { capture: !!capture, passive: false };
       }
-      return mapMouse[requested] || requested;
+      return !!capture;
     }
     function invokeCallback(callback, context, event2) {
       if (typeof callback === "function") {
@@ -11273,12 +11290,13 @@ var LiteGraphTSMigration = (function(exports) {
       }
       const method = methodRef();
       const semanticName = String(eventName || "").toLowerCase();
-      const domEvent = resolveEvent(semanticName, method);
-      if (!domEvent) {
+      const resolved = resolveEvent(semanticName, method);
+      if (!resolved || !resolved.domEvent) {
         return;
       }
+      const domEvent = resolved.domEvent;
       let wrapped = callback;
-      if (domEvent.indexOf("touch") === 0) {
+      if (resolved.useTouchWrapper) {
         wrapped = function(ev) {
           const normalized = normalizeTouchEvent(
             ev,
@@ -11288,22 +11306,31 @@ var LiteGraphTSMigration = (function(exports) {
           if (!normalized) {
             return;
           }
+          if (semanticName === "down" || semanticName === "move" || semanticName === "up" || semanticName === "cancel" || semanticName === "enter" || semanticName === "leave" || semanticName === "over" || semanticName === "out" || semanticName === "gotpointercapture" || semanticName === "lostpointercapture") {
+            normalized.type = (methodRef() || "mouse") + semanticName;
+          }
           invokeCallback(callback, this, normalized);
         };
       }
-      let targetRegistry = registry2.get(dom);
-      if (!targetRegistry) {
-        targetRegistry = /* @__PURE__ */ new Map();
-        registry2.set(dom, targetRegistry);
+      let bucket = registry2.get(dom);
+      if (!bucket) {
+        bucket = {};
+        registry2.set(dom, bucket);
       }
-      const entries = targetRegistry.get(callback) || [];
-      entries.push({
+      const key = domEvent + "|" + (capture ? "1" : "0");
+      if (!bucket[key]) {
+        bucket[key] = [];
+      }
+      const existing = bucket[key].find((entry) => entry.original === callback);
+      if (existing) {
+        return;
+      }
+      bucket[key].push({ original: callback, wrapped });
+      dom.addEventListener(
         domEvent,
         wrapped,
-        capture: !!capture
-      });
-      targetRegistry.set(callback, entries);
-      dom.addEventListener(domEvent, wrapped, !!capture);
+        resolveEventOptions(domEvent, !!capture)
+      );
     }
     function remove(dom, eventName, callback, capture = false) {
       if (!dom || !("removeEventListener" in dom)) {
@@ -11311,35 +11338,35 @@ var LiteGraphTSMigration = (function(exports) {
       }
       const method = methodRef();
       const semanticName = String(eventName || "").toLowerCase();
-      const domEvent = resolveEvent(semanticName, method);
-      if (!domEvent) {
+      const resolved = resolveEvent(semanticName, method);
+      if (!resolved || !resolved.domEvent) {
         return;
       }
+      const domEvent = resolved.domEvent;
       let wrapped = callback;
-      const targetRegistry = registry2.get(dom);
-      if (targetRegistry) {
-        const entries = targetRegistry.get(callback) || [];
-        const idx = entries.findIndex(
-          (entry) => entry.domEvent === domEvent && entry.capture === !!capture
+      const bucket = registry2.get(dom);
+      const key = domEvent + "|" + (capture ? "1" : "0");
+      if (bucket && bucket[key]) {
+        const idx = bucket[key].findIndex(
+          (entry) => entry.original === callback
         );
         if (idx >= 0) {
-          wrapped = entries[idx].wrapped;
-          entries.splice(idx, 1);
-        }
-        if (!entries.length) {
-          targetRegistry.delete(callback);
-        } else {
-          targetRegistry.set(callback, entries);
+          wrapped = bucket[key][idx].wrapped;
+          bucket[key].splice(idx, 1);
         }
       }
-      dom.removeEventListener(domEvent, wrapped, !!capture);
+      dom.removeEventListener(
+        domEvent,
+        wrapped,
+        resolveEventOptions(domEvent, !!capture)
+      );
     }
     return { add, remove };
   }
   function extendClass(target, origin) {
     var _a2, _b2;
     for (const i in origin) {
-      if (target[i] != null) {
+      if (Object.prototype.hasOwnProperty.call(target, i)) {
         continue;
       }
       target[i] = origin[i];
@@ -11350,13 +11377,17 @@ var LiteGraphTSMigration = (function(exports) {
     const targetPrototype = target.prototype;
     const originPrototype = origin.prototype;
     for (const i in originPrototype) {
-      if (targetPrototype[i] != null) {
+      if (!Object.prototype.hasOwnProperty.call(originPrototype, i)) {
         continue;
       }
-      targetPrototype[i] = originPrototype[i];
+      if (Object.prototype.hasOwnProperty.call(targetPrototype, i)) {
+        continue;
+      }
       const getter = (_a2 = originPrototype.__lookupGetter__) == null ? void 0 : _a2.call(originPrototype, i);
       if (getter) {
         targetPrototype.__defineGetter__(i, getter);
+      } else {
+        targetPrototype[i] = originPrototype[i];
       }
       const setter = (_b2 = originPrototype.__lookupSetter__) == null ? void 0 : _b2.call(originPrototype, i);
       if (setter) {

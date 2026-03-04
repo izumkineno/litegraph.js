@@ -221,20 +221,34 @@ function createPointerListenerCompat(methodRef: () => string): {
     ) => void;
 } {
     type Entry = {
-        domEvent: string;
+        original: EventListenerOrEventListenerObject;
         wrapped: EventListenerOrEventListenerObject;
-        capture: boolean;
     };
-    const registry = new WeakMap<EventTarget, Map<EventListenerOrEventListenerObject, Entry[]>>();
+    type RegistryBucket = Record<string, Entry[]>;
+    const registry = new WeakMap<EventTarget, RegistryBucket>();
 
-    function resolveEvent(eventName: string, method: string): string | null {
+    function resolveEvent(
+        eventName: string,
+        methodIn: string
+    ): { domEvent: string; useTouchWrapper: boolean } | null {
         const requested = String(eventName || "").toLowerCase();
+        let method = methodIn || "mouse";
+        if (
+            method === "pointer" &&
+            (typeof window === "undefined" || !(window as unknown as { PointerEvent?: unknown }).PointerEvent)
+        ) {
+            method = "touch";
+        }
+
         if (
             requested.indexOf("mouse") === 0 ||
             requested.indexOf("pointer") === 0 ||
             requested.indexOf("touch") === 0
         ) {
-            return requested;
+            return {
+                domEvent: requested,
+                useTouchWrapper: requested.indexOf("touch") === 0,
+            };
         }
 
         const mapMouse: Record<string, string> = {
@@ -274,14 +288,41 @@ function createPointerListenerCompat(methodRef: () => string): {
             lostpointercapture: null,
         };
 
-        if (method === "pointer") {
-            return mapPointer[requested] || requested;
+        const map =
+            method === "pointer"
+                ? mapPointer
+                : method === "touch"
+                ? mapTouch
+                : mapMouse;
+
+        let domEvent = map[requested];
+        if (!domEvent) {
+            if (
+                method === "touch" &&
+                (requested === "enter" ||
+                    requested === "leave" ||
+                    requested === "over" ||
+                    requested === "out")
+            ) {
+                return null;
+            }
+            domEvent = requested;
         }
-        if (method === "touch") {
-            const resolved = mapTouch[requested];
-            return resolved === undefined ? requested : resolved;
+
+        return {
+            domEvent,
+            useTouchWrapper: domEvent.indexOf("touch") === 0,
+        };
+    }
+
+    function resolveEventOptions(
+        domEvent: string,
+        capture: boolean
+    ): boolean | AddEventListenerOptions {
+        if (domEvent && domEvent.indexOf("touch") === 0) {
+            return { capture: !!capture, passive: false };
         }
-        return mapMouse[requested] || requested;
+        return !!capture;
     }
 
     function invokeCallback(
@@ -355,13 +396,14 @@ function createPointerListenerCompat(methodRef: () => string): {
         }
         const method = methodRef();
         const semanticName = String(eventName || "").toLowerCase();
-        const domEvent = resolveEvent(semanticName, method);
-        if (!domEvent) {
+        const resolved = resolveEvent(semanticName, method);
+        if (!resolved || !resolved.domEvent) {
             return;
         }
+        const domEvent = resolved.domEvent;
 
         let wrapped = callback;
-        if (domEvent.indexOf("touch") === 0) {
+        if (resolved.useTouchWrapper) {
             wrapped = function(this: unknown, ev: Event): void {
                 const normalized = normalizeTouchEvent(
                     ev as TouchEvent,
@@ -371,26 +413,52 @@ function createPointerListenerCompat(methodRef: () => string): {
                 if (!normalized) {
                     return;
                 }
+                if (
+                    semanticName === "down" ||
+                    semanticName === "move" ||
+                    semanticName === "up" ||
+                    semanticName === "cancel" ||
+                    semanticName === "enter" ||
+                    semanticName === "leave" ||
+                    semanticName === "over" ||
+                    semanticName === "out" ||
+                    semanticName === "gotpointercapture" ||
+                    semanticName === "lostpointercapture"
+                ) {
+                    (
+                        normalized as unknown as {
+                            type: string;
+                        }
+                    ).type = (methodRef() || "mouse") + semanticName;
+                }
                 invokeCallback(callback, this, normalized);
             } as EventListener;
         }
 
-        let targetRegistry = registry.get(dom);
-        if (!targetRegistry) {
-            targetRegistry = new Map();
-            registry.set(dom, targetRegistry);
+        let bucket = registry.get(dom);
+        if (!bucket) {
+            bucket = {};
+            registry.set(dom, bucket);
         }
-        const entries = targetRegistry.get(callback) || [];
-        entries.push({
-            domEvent,
-            wrapped,
-            capture: !!capture,
-        });
-        targetRegistry.set(callback, entries);
+        const key = domEvent + "|" + (capture ? "1" : "0");
+        if (!bucket[key]) {
+            bucket[key] = [];
+        }
+
+        const existing = bucket[key].find((entry) => entry.original === callback);
+        if (existing) {
+            return;
+        }
+
+        bucket[key].push({ original: callback, wrapped });
 
         (dom as EventTarget & {
             addEventListener: EventTarget["addEventListener"];
-        }).addEventListener(domEvent, wrapped as EventListener, !!capture);
+        }).addEventListener(
+            domEvent,
+            wrapped as EventListener,
+            resolveEventOptions(domEvent, !!capture)
+        );
     }
 
     function remove(
@@ -404,32 +472,32 @@ function createPointerListenerCompat(methodRef: () => string): {
         }
         const method = methodRef();
         const semanticName = String(eventName || "").toLowerCase();
-        const domEvent = resolveEvent(semanticName, method);
-        if (!domEvent) {
+        const resolved = resolveEvent(semanticName, method);
+        if (!resolved || !resolved.domEvent) {
             return;
         }
+        const domEvent = resolved.domEvent;
 
         let wrapped: EventListenerOrEventListenerObject = callback;
-        const targetRegistry = registry.get(dom);
-        if (targetRegistry) {
-            const entries = targetRegistry.get(callback) || [];
-            const idx = entries.findIndex(
-                (entry) => entry.domEvent === domEvent && entry.capture === !!capture
+        const bucket = registry.get(dom);
+        const key = domEvent + "|" + (capture ? "1" : "0");
+        if (bucket && bucket[key]) {
+            const idx = bucket[key].findIndex(
+                (entry) => entry.original === callback
             );
             if (idx >= 0) {
-                wrapped = entries[idx].wrapped;
-                entries.splice(idx, 1);
-            }
-            if (!entries.length) {
-                targetRegistry.delete(callback);
-            } else {
-                targetRegistry.set(callback, entries);
+                wrapped = bucket[key][idx].wrapped;
+                bucket[key].splice(idx, 1);
             }
         }
 
         (dom as EventTarget & {
             removeEventListener: EventTarget["removeEventListener"];
-        }).removeEventListener(domEvent, wrapped as EventListener, !!capture);
+        }).removeEventListener(
+            domEvent,
+            wrapped as EventListener,
+            resolveEventOptions(domEvent, !!capture)
+        );
     }
 
     return { add, remove };
@@ -440,7 +508,7 @@ function extendClass<TTarget extends object, TOrigin extends object>(
     origin: TOrigin
 ): TTarget & TOrigin {
     for (const i in origin) {
-        if ((target as Record<string, unknown>)[i] != null) {
+        if (Object.prototype.hasOwnProperty.call(target, i)) {
             continue;
         }
         (target as Record<string, unknown>)[i] = (origin as Record<string, unknown>)[i];
@@ -456,13 +524,17 @@ function extendClass<TTarget extends object, TOrigin extends object>(
     const targetPrototype = (target as { prototype: Record<string, unknown> }).prototype;
     const originPrototype = (origin as { prototype: Record<string, unknown> }).prototype;
     for (const i in originPrototype) {
-        if (targetPrototype[i] != null) {
+        if (!Object.prototype.hasOwnProperty.call(originPrototype, i)) {
             continue;
         }
-        targetPrototype[i] = originPrototype[i];
+        if (Object.prototype.hasOwnProperty.call(targetPrototype, i)) {
+            continue;
+        }
         const getter = (originPrototype as any).__lookupGetter__?.(i);
         if (getter) {
             (targetPrototype as any).__defineGetter__(i, getter);
+        } else {
+            targetPrototype[i] = originPrototype[i];
         }
         const setter = (originPrototype as any).__lookupSetter__?.(i);
         if (setter) {

@@ -84,3 +84,82 @@
 - 状态：`Fixed`（已修复并验证）
 - 严重级别：`High`（历史影响）
 - 回归风险：`中`（建议追加 demo 切换门禁用例）
+
+---
+
+## E2E 对标基线（提炼自 `tests/playwright`）
+
+用途：后续每次对比 `index.html`（源版）与 `index-ts.html`（TS 迁移版）时，统一按这份清单记录差异与回归 bug。
+
+### 对标范围（按能力域）
+
+| 能力域 | 标准 spec | 关键断言（应至少满足） |
+|---|---|---|
+| 工具栏与快捷键 | `tests/playwright/specs/toolbar-and-shortcuts.spec.cjs` | `Play/Step/Live/Maximize` 可用；`Ctrl+A/C/V/Shift+V/Delete` 生效；空格拖拽可平移画布 |
+| 连接与断开 | `tests/playwright/specs/connection-disconnection.spec.cjs` | 连接、替换连接、拖拽断开、slot 菜单断开、link 菜单删除均能改变图状态 |
+| 面板与搜索框 | `tests/playwright/specs/panel-searchbox.spec.cjs` | SearchBox 创建节点、类型过滤、Node Panel 重命名/删除可闭环 |
+| 分组生命周期 | `tests/playwright/specs/group-lifecycle.spec.cjs` | 创建/移动/重命名/删除分组，组内节点联动正确 |
+| 节点高级菜单与子图 | `tests/playwright/specs/node-advanced-menu-and-subgraph.spec.cjs` | `Collapse/Pin/Colors/Shapes/Clone/Remove/To Subgraph/Open/Close` 全路径有效 |
+| UI 输入事件传播 | `tests/playwright/specs/ui-input-event-propagation.spec.cjs` | 左键/右键/双击/拖拽/滚轮/上下文菜单链路稳定，无 runtime error |
+| 运行时事件传播 | `tests/playwright/specs/runtime-event-propagation.spec.cjs` | `trigger/sequence/timer/waitAll/delay/once` 链路触发与状态变化正确 |
+| 节点模式矩阵 | `tests/playwright/specs/node-mode-matrix.spec.cjs` | `Always/On Event/Never/On Trigger` 模式切换与执行路径可触达 |
+| 上下文菜单递归覆盖 | `tests/playwright/specs/context-menu-recursive.spec.cjs` | canvas/node/slot/link 四类菜单可遍历；核心 token 命中 |
+| 核心能力门禁 | `tests/playwright/specs/ui-core-coverage-guard.spec.cjs` | `Add Node/Add Group/Search/Mode/Collapse/Pin/Clone/Remove/Delete link/To Subgraph/Close subgraph` 至少命中一次 |
+| 迁移兼容守卫 | `tests/playwright/specs/migration-compat-guard.spec.cjs` | 静态兼容 API、对齐菜单、子图路径、属性可读值路径全部通过 |
+| 迁移 UI 关键路径 | `tests/playwright/specs/migration-ui-keypaths.spec.cjs` | 菜单对齐、子图转换、属性 printable 路径全部通过 |
+| 全量静态节点冒烟 | `tests/playwright/specs/all-nodes-smoke.spec.cjs` | static manifest 节点可创建/调用/模式切换（按白名单处理环境依赖失败） |
+| 全流程闭环与报告 | `tests/playwright/specs/full-normal-usage.spec.cjs` | 生成 node/feature/event coverage 报告，且 feature/event 不失败 |
+| TODO 修复回归集 | `tests/playwright/specs/todo-fix-phase-a.spec.cjs` | Phase-A 5 条用户影响项持续通过 |
+| 生命周期闭环（旧基准） | `tests/playwright/specs/full-lifecycle-closure.spec.cjs` | 菜单创建节点、编辑 widget、连线、菜单删除形成最小闭环 |
+| 核心交互综合（旧基准） | `tests/playwright/specs/interactions-core.spec.cjs` | 节点移动/重命名/连接断开/widget/删除 + 画布平移缩放坐标回环 |
+| 可点击区域扫描（旧基准） | `tests/playwright/specs/self-aware-scan.spec.cjs` | 动态提取 clickable regions 并可交互，不破坏图恢复能力 |
+
+### 当前基线值（2026-03-04）
+
+来源：`tests/playwright/reports/*`
+
+| 报告 | 基线值 | 说明 |
+|---|---|---|
+| `ui-core-coverage-guard.json` | `11/11` 通过 | 核心 UI 能力门禁全绿 |
+| `migration-compat-guard-report.json` | `4/4` 通过 | 迁移兼容关键 API/路径全绿 |
+| `migration-ui-keypaths-report.json` | `3/3` 通过 | 迁移 UI 关键路径全绿 |
+| `context-menu-recursive-report.json` | `totalLeafCount=228`，`requiredHits=6/6` | 菜单覆盖达到预算并命中核心项 |
+| `feature-coverage.json` | `records=4`，`failures=0` | 特性闭环全绿 |
+| `event-coverage.json` | `records=2`，`failures=0` | 事件链路全绿 |
+| `node-coverage.json` | `records=207`，`failures=13` | 静态节点冒烟存在环境依赖失败白名单（见下） |
+
+### 已知白名单（静态节点环境依赖失败）
+
+当前 `node-coverage.json` 中的 13 项失败，默认视为环境依赖/能力缺失导致，不作为 TS 回归判定，除非数量上升或出现新类型。
+
+1. `shader::`
+2. `audio/waveShaper`
+3. `fx/DOF`
+4. `fx/lens`
+5. `fx/vigneting`
+6. `geometry/displace`
+7. `geometry/render_dof`
+8. `texture/clustered_operation`
+9. `texture/edges`
+10. `texture/encode`
+11. `texture/gradient`
+12. `texture/LUT`
+13. `texture/textureChannels`
+
+### TS 对比记录模板（每轮填写）
+
+| 轮次/日期 | 入口 | 运行命令 | 总体结果 | 新增失败 | 关闭失败 | 关联 BUG |
+|---|---|---|---|---|---|---|
+| 示例：R1 / 2026-03-04 | `index-ts.html` | `npx playwright test --project=chromium --grep @core` | 通过 | 0 | 0 | - |
+
+### 建议执行顺序（用于差异定位）
+
+1. 先跑核心门禁：`npx playwright test --project=chromium --grep @core`
+2. 再跑迁移守卫：`migration-compat-guard.spec.cjs` 与 `migration-ui-keypaths.spec.cjs`
+3. 再跑高成本覆盖：`all-nodes-smoke.spec.cjs` + `full-normal-usage.spec.cjs`
+4. 将结果写回本文件，并为每个新增失败创建 `BUG-xxx` 条目（包含复现步骤、栈、根因、修复状态）
+
+### 入口切换说明（源版 vs TS 版）
+
+当前 fixture 默认入口是 `/editor/index.html`。  
+要对比 TS 版，请在执行前切换入口到 `/editor/index-ts.html`（建议后续给 `gotoEditor()` 增加可配置入口参数，避免手改）。
