@@ -210,7 +210,7 @@ Git 提交规则（强制）：
   - 对应原 JS：`alignToGrid/trace/setDirtyCanvas/loadImage/collapse/pin/localToScreen`。
   - 对应原 d.ts：画布协作行为契约。
 
-- [ ] **Audit Task 31: `src/ts-migration/models/LGraphGroup.ts`**
+- [x] **Audit Task 31: `src/ts-migration/models/LGraphGroup.ts`**
   - 对应原 JS：`function LGraphGroup` + `configure/serialize/move/recomputeInsideNodes`。
   - 对应原 d.ts：`LGraphGroup` 声明。
 
@@ -267,9 +267,9 @@ Git 提交规则（强制）：
 ## 审计进度快照
 
 - 总任务数：`42`
-- 已完成：`30`
+- 已完成：`31`
 - 进行中：`0`
-- 未开始：`12`
+- 未开始：`11`
 - 最新更新时间：`2026-03-04`
 
 ---
@@ -879,3 +879,28 @@ Git 提交规则（强制）：
   6. 调整内部 graph 访问桥接与私有方法命名，保证继承层类型检查通过且不改变运行时行为。
 - 验证：
   1. 类型校验通过：`npx tsc --noEmit src/ts-migration/models/LGraphNode.canvas-collab.ts`。
+
+### Audit Task 31 结果
+- 结论：Pass（发现 5 处 LGraphGroup 迁移偏差并已修复）
+- JS 对照：`src/litegraph.js`
+  - `function LGraphGroup`
+  - `LGraphGroup.prototype._ctor/configure/serialize/move/recomputeInsideNodes`
+  - `LGraphGroup.prototype.isPointInside/setDirtyCanvas`（委托）
+- d.ts 对照：`src/litegraph.d.ts`
+  - `LGraphGroup.configure/serialize/move/recomputeInsideNodes`
+  - `LGraphGroup.isPointInside/setDirtyCanvas`
+- TS 对照：`src/ts-migration/models/LGraphGroup.ts`
+- 发现问题：
+  1. `pos/size` 使用 class accessor，未对齐原 JS 在 `_ctor` 中通过 `Object.defineProperty(..., enumerable:true)` 的实例级属性语义。
+  2. `configure` 走 `parseSerializedLGraphGroupInput` 兼容归一化，偏离原 JS 的直接字段赋值语义。
+  3. `serialize` 走 `serializeLGraphGroupShape` 兼容层，偏离原 JS 直接构造运行时对象语义。
+  4. `recomputeInsideNodes` 增加 graph 空值保护，偏离原 JS 的直接访问链（`this.graph._nodes`）。
+  5. `_ctor` 的 `pos/size` 定义路径未完整复刻，导致实例属性可枚举性与原实现不一致。
+- 已实施修复：
+  1. 在 `_ctor` 中恢复 `Object.defineProperty` 方式定义 `pos/size`，并设置 `enumerable: true`。
+  2. 将 `configure` 改回原 JS 等价的直接赋值实现。
+  3. 将 `serialize` 改回原 JS 等价的直接对象构造实现（含 `Math.round`）。
+  4. 将 `recomputeInsideNodes` 恢复为直接读取 `this.graph._nodes` 的路径。
+  5. 移除本文件对 group-serialization compat helper 的依赖，避免兼容层改变核心运行时语义。
+- 验证：
+  1. 类型校验通过：`npx tsc --noEmit src/ts-migration/models/LGraphGroup.ts`。

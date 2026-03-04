@@ -4,12 +4,6 @@
 import type { Vector2, Vector4 } from "../types/core-types";
 import { overlapBounding } from "../utils/math-geometry";
 import { LGraphNodeCanvasCollab } from "./LGraphNode.canvas-collab";
-import {
-    parseSerializedLGraphGroupInput,
-    serializeLGraphGroupShape,
-    type SerializedLGraphGroupCompatInput,
-    type SerializedLGraphGroupRuntime,
-} from "./LGraphGroup.serialization.compat";
 
 interface LGraphGroupNodeLike {
     pos: Vector2;
@@ -57,6 +51,8 @@ export class LGraphGroup {
     private _pos: Float32Array;
     private _size: Float32Array;
     _nodes: LGraphGroupNodeLike[];
+    pos!: Vector2;
+    size!: Vector2;
 
     // kept for delegated `isPointInside` logic compatibility.
     flags: Record<string, unknown>;
@@ -75,30 +71,6 @@ export class LGraphGroup {
         this._ctor(title);
     }
 
-    get pos(): Vector2 {
-        return this._pos as unknown as Vector2;
-    }
-
-    set pos(v: Vector2) {
-        if (!v || v.length < 2) {
-            return;
-        }
-        this._pos[0] = v[0];
-        this._pos[1] = v[1];
-    }
-
-    get size(): Vector2 {
-        return this._size as unknown as Vector2;
-    }
-
-    set size(v: Vector2) {
-        if (!v || v.length < 2) {
-            return;
-        }
-        this._size[0] = Math.max(140, v[0]);
-        this._size[1] = Math.max(80, v[1]);
-    }
-
     _ctor(title?: string): void {
         this.title = title || "Group";
         this.font_size = 24;
@@ -111,32 +83,66 @@ export class LGraphGroup {
         this._size = this._bounding.subarray(2, 4);
         this._nodes = [];
         this.graph = null;
-    }
 
-    configure(o: SerializedLGraphGroupCompatInput): void {
-        const parsed = parseSerializedLGraphGroupInput(o, 24);
-        this.title = parsed.title;
-        this._bounding.set(parsed.bounding);
-        this.color = parsed.color;
-        this.font_size = parsed.font_size;
-    }
-
-    serialize(): SerializedLGraphGroupRuntime {
-        const b = this._bounding;
-        return serializeLGraphGroupShape(
-            {
-                title: this.title,
-                bounding: [
-                    Math.round(b[0]),
-                    Math.round(b[1]),
-                    Math.round(b[2]),
-                    Math.round(b[3]),
-                ] as Vector4,
-                color: this.color,
-                font_size: this.font_size,
+        Object.defineProperty(this, "pos", {
+            set(v: Vector2) {
+                if (!v || v.length < 2) {
+                    return;
+                }
+                (this as LGraphGroup)._pos[0] = v[0];
+                (this as LGraphGroup)._pos[1] = v[1];
             },
-            "runtime"
-        ) as SerializedLGraphGroupRuntime;
+            get() {
+                return (this as LGraphGroup)._pos;
+            },
+            enumerable: true,
+        });
+
+        Object.defineProperty(this, "size", {
+            set(v: Vector2) {
+                if (!v || v.length < 2) {
+                    return;
+                }
+                (this as LGraphGroup)._size[0] = Math.max(140, v[0]);
+                (this as LGraphGroup)._size[1] = Math.max(80, v[1]);
+            },
+            get() {
+                return (this as LGraphGroup)._size;
+            },
+            enumerable: true,
+        });
+    }
+
+    configure(o: {
+        title: string;
+        bounding: Vector4;
+        color: string;
+        font_size?: number;
+    }): void {
+        this.title = o.title;
+        this._bounding.set(o.bounding);
+        this.color = o.color;
+        this.font_size = o.font_size as number;
+    }
+
+    serialize(): {
+        title: string;
+        bounding: [number, number, number, number];
+        color: string;
+        font_size: number;
+    } {
+        const b = this._bounding;
+        return {
+            title: this.title,
+            bounding: [
+                Math.round(b[0]),
+                Math.round(b[1]),
+                Math.round(b[2]),
+                Math.round(b[3]),
+            ],
+            color: this.color,
+            font_size: this.font_size,
+        };
     }
 
     move(deltaX: number, deltaY: number, ignoreNodes?: boolean): void {
@@ -154,11 +160,7 @@ export class LGraphGroup {
 
     recomputeInsideNodes(): void {
         this._nodes.length = 0;
-        const graph = this.graph;
-        if (!graph) {
-            return;
-        }
-        const nodes = graph._nodes;
+        const nodes = (this.graph as LGraphGroupGraphLike)._nodes;
         const node_bounding = new Float32Array(4) as unknown as Vector4;
 
         for (let i = 0; i < nodes.length; ++i) {
