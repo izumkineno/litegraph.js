@@ -77,10 +77,13 @@ export class LGraphNodePortsWidgets extends LGraphNodeExecution {
     onGetPropertyInfo?: (property: string) => PropertyInfo | null;
 
     private getPortsWidgetsHost(): LiteGraphNodePortsWidgetsHost {
-        const host = (this.constructor as typeof LGraphNodePortsWidgets & {
+        const classHost = (LGraphNodePortsWidgets as typeof LGraphNodePortsWidgets & {
             liteGraph?: Partial<LiteGraphNodePortsWidgetsHost>;
         }).liteGraph;
-        return { ...defaultPortsWidgetsHost, ...(host || {}) };
+        const ctorHost = (this.constructor as typeof LGraphNodePortsWidgets & {
+            liteGraph?: Partial<LiteGraphNodePortsWidgetsHost>;
+        }).liteGraph;
+        return { ...defaultPortsWidgetsHost, ...(classHost || {}), ...(ctorHost || {}) };
     }
 
     private getPortsWidgetsClassMeta(): LGraphNodePortsWidgetsClassMetadata {

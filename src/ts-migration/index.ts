@@ -36,6 +36,10 @@ import {
 import { LiteGraphRuntime } from "./core/litegraph.runtime";
 import { LGraphPersistence as LGraphImpl } from "./models/LGraph.persistence";
 import { LGraphGroup as LGraphGroupImpl } from "./models/LGraphGroup";
+import { LGraphNode as LGraphNodeStateImpl } from "./models/LGraphNode.state";
+import { LGraphNodeExecution as LGraphNodeExecutionImpl } from "./models/LGraphNode.execution";
+import { LGraphNodePortsWidgets as LGraphNodePortsWidgetsImpl } from "./models/LGraphNode.ports-widgets";
+import { LGraphNodeConnectGeometry as LGraphNodeConnectGeometryImpl } from "./models/LGraphNode.connect-geometry";
 import {
     hasGraphOnNodeAddedCompatHook,
     invokeGraphOnNodeAddedCompatHook as invokeGraphOnNodeAddedCompatHookModel,
@@ -68,6 +72,10 @@ import {
 import { CurveEditor } from "./ui/CurveEditor";
 import { colorToString, hex2num, num2hex } from "./utils/color";
 import { getParameterNames } from "./utils/function-signature";
+import { LGraphCanvas as LGraphCanvasStaticImpl } from "./canvas/LGraphCanvas.static";
+import { LGraphCanvasLifecycle as LGraphCanvasLifecycleImpl } from "./canvas/LGraphCanvas.lifecycle";
+import { LGraphCanvasInput as LGraphCanvasInputImpl } from "./canvas/LGraphCanvas.input";
+import { LGraphCanvasRender as LGraphCanvasRenderImpl } from "./canvas/LGraphCanvas.render";
 import {
     compareObjects,
     distance,
@@ -609,7 +617,23 @@ function createLiteGraphNamespace(): {
     liteGraph.fetchFile = runtime.fetchFile.bind(runtime);
 
     (LGraph as unknown as { liteGraph: Record<string, unknown> }).liteGraph = liteGraph;
+    (LGraphNodeStateImpl as unknown as { liteGraph: Record<string, unknown> }).liteGraph =
+        liteGraph;
+    (LGraphNodeExecutionImpl as unknown as { liteGraph: Record<string, unknown> }).liteGraph =
+        liteGraph;
+    (LGraphNodePortsWidgetsImpl as unknown as { liteGraph: Record<string, unknown> }).liteGraph =
+        liteGraph;
+    (LGraphNodeConnectGeometryImpl as unknown as { liteGraph: Record<string, unknown> }).liteGraph =
+        liteGraph;
     (LGraphNode as unknown as { liteGraph: Record<string, unknown> }).liteGraph =
+        liteGraph;
+    (LGraphCanvasStaticImpl as unknown as { liteGraph: Record<string, unknown> }).liteGraph =
+        liteGraph;
+    (LGraphCanvasLifecycleImpl as unknown as { liteGraph: Record<string, unknown> }).liteGraph =
+        liteGraph;
+    (LGraphCanvasInputImpl as unknown as { liteGraph: Record<string, unknown> }).liteGraph =
+        liteGraph;
+    (LGraphCanvasRenderImpl as unknown as { liteGraph: Record<string, unknown> }).liteGraph =
         liteGraph;
     (LGraphCanvas as unknown as { liteGraph: Record<string, unknown> }).liteGraph =
         liteGraph;

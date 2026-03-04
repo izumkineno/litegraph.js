@@ -145,9 +145,12 @@ export class LGraphNodeConnectGeometry extends LGraphNodePortsWidgets {
     ) => boolean | void;
 
     private host(): Host {
-        const h = (this.constructor as typeof LGraphNodeConnectGeometry & { liteGraph?: Partial<Host> })
+        const classHost = (LGraphNodeConnectGeometry as typeof LGraphNodeConnectGeometry & {
+            liteGraph?: Partial<Host>;
+        }).liteGraph;
+        const ctorHost = (this.constructor as typeof LGraphNodeConnectGeometry & { liteGraph?: Partial<Host> })
             .liteGraph;
-        return { ...hostDefaults, ...(h || {}) };
+        return { ...hostDefaults, ...(classHost || {}), ...(ctorHost || {}) };
     }
 
     private graphRef(): GraphLike | null {

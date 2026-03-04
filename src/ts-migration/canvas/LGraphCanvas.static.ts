@@ -190,6 +190,17 @@ export class LGraphCanvas {
         return { ...defaultHost, ...(this.liteGraph || {}) };
     }
 
+    private static callbackHost(): LiteGraphCanvasStaticHost {
+        const activeCtor = (
+            (LGraphCanvas.active_canvas as unknown as { constructor?: unknown } | null)
+                ?.constructor as { host?: () => LiteGraphCanvasStaticHost } | undefined
+        );
+        if (activeCtor && typeof activeCtor.host === "function") {
+            return activeCtor.host();
+        }
+        return LGraphCanvas.host();
+    }
+
     /** Create menu for `Add Group` */
     static onGroupAdd(_info: unknown, _entry: unknown, mouse_event: MouseEvent): void {
         const canvas = LGraphCanvas.active_canvas;
@@ -199,7 +210,7 @@ export class LGraphCanvas {
         const ref_window = canvas.getCanvasWindow();
         void ref_window;
 
-        const host = this.host();
+        const host = LGraphCanvas.callbackHost();
         const group = new (host.LGraphGroup as new () => LGraphNodeLike)();
         group.pos = canvas.convertEventToCanvasOffset(mouse_event);
         canvas.graph.add(group);
@@ -314,7 +325,7 @@ export class LGraphCanvas {
         prev_menu: unknown,
         node: LGraphNodeLike
     ): void {
-        const host = this.host();
+        const host = LGraphCanvas.callbackHost();
         new host.ContextMenu(["Top", "Bottom", "Left", "Right"], {
             event,
             callback: inner_clicked,
@@ -336,7 +347,7 @@ export class LGraphCanvas {
         event: MouseEvent,
         prev_menu: unknown
     ): void {
-        const host = this.host();
+        const host = LGraphCanvas.callbackHost();
         new host.ContextMenu(["Top", "Bottom", "Left", "Right"], {
             event,
             callback: inner_clicked,
@@ -362,7 +373,7 @@ export class LGraphCanvas {
         const canvas = LGraphCanvas.active_canvas;
         const ref_window = (canvas as LGraphCanvasRuntimeLike).getCanvasWindow();
         const graph = (canvas as LGraphCanvasRuntimeLike).graph;
-        const host = this.host();
+        const host = LGraphCanvas.callbackHost();
 
         function inner_onMenuAdded(base_category: string, menuRef: unknown): void {
             const categories = host
@@ -459,7 +470,7 @@ export class LGraphCanvas {
             return;
         }
         const ref_window = canvas.getCanvasWindow();
-        const host = this.host();
+        const host = LGraphCanvas.callbackHost();
 
         let optInputs = node.optional_inputs;
         if (node.onGetInputs) {
@@ -557,7 +568,7 @@ export class LGraphCanvas {
             return;
         }
         const ref_window = canvas.getCanvasWindow();
-        const host = this.host();
+        const host = LGraphCanvas.callbackHost();
 
         let optOutputs = node.optional_outputs;
         if (node.onGetOutputs) {
@@ -722,7 +733,7 @@ export class LGraphCanvas {
             return;
         }
 
-        new (this.host().ContextMenu)(
+        new (LGraphCanvas.callbackHost().ContextMenu)(
             entries,
             {
                 event: e,
@@ -873,7 +884,7 @@ export class LGraphCanvas {
         canvas.parentNode?.appendChild(dialog);
         input?.focus();
 
-        const host = this.host();
+        const host = LGraphCanvas.callbackHost();
         let dialogCloseTimer: ReturnType<typeof setTimeout> | null = null;
         dialog.addEventListener("mouseleave", function() {
             if (host.dialog_close_on_mouse_leave) {
@@ -978,7 +989,7 @@ export class LGraphCanvas {
         menu: unknown,
         node: LGraphNodeLike
     ): false {
-        const host = this.host();
+        const host = LGraphCanvas.callbackHost();
         new host.ContextMenu(host.NODE_MODES, {
             event: e,
             callback: inner_clicked,
@@ -1022,7 +1033,7 @@ export class LGraphCanvas {
             throw "no node for color";
         }
 
-        const host = this.host();
+        const host = LGraphCanvas.callbackHost();
         const values: MenuEntryLike[] = [];
         values.push({
             value: null,
@@ -1094,7 +1105,7 @@ export class LGraphCanvas {
         if (!node) {
             throw "no node passed";
         }
-        const host = this.host();
+        const host = LGraphCanvas.callbackHost();
         new host.ContextMenu(host.VALID_SHAPES, {
             event: e,
             callback: inner_clicked,
@@ -1173,8 +1184,8 @@ export class LGraphCanvas {
             nodes_list = [node];
         }
 
-        const subgraph_node = this.host().createNode("graph/subgraph");
-        subgraph_node.pos = node.pos.concat() as Vector2;
+        const subgraph_node = LGraphCanvas.callbackHost().createNode("graph/subgraph");
+        subgraph_node.pos = [node.pos[0], node.pos[1]] as Vector2;
         graph.add(subgraph_node);
         subgraph_node.buildFromNodes!(nodes_list);
         graphcanvas.deselectAllNodes!();
