@@ -110,7 +110,7 @@
 - [x] **Task 23: LGraphCanvas 生命周期与事件绑定迁移** — 来源：构造、`clear/setGraph/openSubgraph/closeSubgraph/setCanvas/bindEvents/unbindEvents`；目标产物：`canvas/LGraphCanvas.lifecycle.ts`。
 - [x] **Task 24: LGraphCanvas 输入交互迁移** — 来源：`processMouse*`、`processKey`、`copy/paste`、`processDrop`、选择与视图控制；目标产物：`canvas/LGraphCanvas.input.ts`。
 - [x] **Task 25: LGraphCanvas 渲染管线迁移** — 来源：`draw/drawFrontCanvas/drawBackCanvas/drawNode/drawConnections/renderLink/drawNodeWidgets/processNodeWidgets`；目标产物：`canvas/LGraphCanvas.render.ts`。
-- [ ] **Task 26: LGraphCanvas 菜单/面板/搜索迁移** — 来源：`showLinkMenu/showConnectionMenu/showSearchBox/createDialog/createPanel/processContextMenu` 等；目标产物：`canvas/LGraphCanvas.menu-panel.ts`。
+- [x] **Task 26: LGraphCanvas 菜单/面板/搜索迁移** — 来源：`showLinkMenu/showConnectionMenu/showSearchBox/createDialog/createPanel/processContextMenu` 等；目标产物：`canvas/LGraphCanvas.menu-panel.ts`。
 - [ ] **Task 27: ContextMenu 组件迁移** — 来源：`ContextMenu` 构造、实例方法、静态 `trigger/isCursorOverElement`；目标产物：`ui/ContextMenu.ts`。
 - [ ] **Task 28: CurveEditor 组件迁移** — 来源：`sampleCurve/draw/onMouse*/getCloserPoint`；目标产物：`ui/CurveEditor.ts`。
 - [ ] **Task 29: 全局与 CommonJS 兼容桥迁移** — 来源：IIFE 全局挂载与末尾 `exports.*`；目标产物：`compat/global-bridge.ts`、`compat/cjs-exports.ts`。
@@ -172,11 +172,11 @@
 
 ## 进度快照
 
-- 当前阶段：`Phase C 执行中（Task 25 已完成）`
+- 当前阶段：`Phase C 执行中（Task 26 已完成）`
 - 总任务数：`44`
-- 已完成：`25`
+- 已完成：`26`
 - 进行中：`0`
-- 待开始：`19`
+- 待开始：`18`
 
 ## 进度日志（模板）
 
@@ -208,3 +208,4 @@
 | 2026-03-04 | 执行 | Task 23 | 迁移 `LGraphCanvas` 生命周期与事件绑定到 `canvas/LGraphCanvas.lifecycle.ts`（构造、`clear/setGraph/openSubgraph/closeSubgraph/setCanvas/bindEvents/unbindEvents`，并补齐 `processTouch/processPointerCancel/getCanvasWindow/setDirty/startRendering` 支撑链路） | 受既有 `compat/pointer-events.ts` 类型问题影响，单文件检查会连带报错；该问题已在前序任务记录，后续集中收敛 | 执行 Task 24 |
 | 2026-03-04 | 执行 | Task 24 | 新增 `canvas/LGraphCanvas.input.ts`，迁移输入交互主链路（`blockClick/processMouse*`、`processKey`、剪贴板、拖放、选择、坐标换算、可见节点计算），并补齐 `isOverNodeBox/isOverNodeInput/isOverNodeOutput` | `npx tsc --noEmit src/ts-migration/canvas/LGraphCanvas.input.ts` 仅剩既有 `compat/pointer-events.ts` 的 `TS2322`，非本任务引入 | 执行 Task 25 |
 | 2026-03-04 | 执行 | Task 25 | 新增 `canvas/LGraphCanvas.render.ts`，迁移渲染主链路（`draw/drawFrontCanvas/drawBackCanvas/drawNode/drawConnections/renderLink/drawNodeWidgets/processNodeWidgets`）并补齐 `renderInfo/drawExecutionOrder/drawGroups/resize/switchLiveMode` 等关联方法 | `npx tsc --noEmit src/ts-migration/canvas/LGraphCanvas.render.ts` 仅剩既有 `compat/pointer-events.ts` 的 `TS2322`；子图面板细节将在后续菜单/面板任务继续收敛 | 执行 Task 26 |
+| 2026-03-04 | 执行 | Task 26 | 新增 `canvas/LGraphCanvas.menu-panel.ts`，迁移菜单/面板/搜索主链路（`showLinkMenu/createDefaultNodeForSlot/showConnectionMenu/prompt/showSearchBox/showEditPropertyValue/createDialog/createPanel/closePanels/showShowGraphOptionsPanel/showShowNodePanel/showSubgraphPropertiesDialog/showSubgraphPropertiesDialogRight/checkPanels/getCanvasMenuOptions/getNodeMenuOptions/getGroupMenuOptions/processContextMenu`） | `npx tsc --noEmit src/ts-migration/canvas/LGraphCanvas.menu-panel.ts` 仅剩既有 `compat/pointer-events.ts` 的 `TS2322`；`showSearchBox` 的类型过滤与扩展项路径已迁移到模块内，后续可在 ContextMenu 任务中继续收敛 UI 细节 | 执行 Task 27 |
