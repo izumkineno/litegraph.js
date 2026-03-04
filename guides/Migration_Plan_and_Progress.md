@@ -102,7 +102,7 @@
 - [x] **Task 18: LGraphNode 连接与几何层迁移** — 来源：`find*Slot*`、`connect*`、`disconnect*`、`getConnectionPos/getBounding/isPointInside`；目标产物：`models/LGraphNode.connect-geometry.ts`。
 - [x] **Task 19: LGraphNode 画布协作层迁移** — 来源：`alignToGrid/trace/setDirtyCanvas/loadImage/executeAction/captureInput/collapse/pin/localToScreen`；目标产物：`models/LGraphNode.canvas-collab.ts`。
 - [x] **Task 20: LGraphGroup 类迁移** — 来源：`_ctor/configure/serialize/move/recomputeInsideNodes` + 复用 `isPointInside/setDirtyCanvas`；目标产物：`models/LGraphGroup.ts`。
-- [ ] **Task 21: DragAndScale 类迁移** — 来源：`bindEvents/computeVisibleArea/onMouse/changeScale/reset`；目标产物：`canvas/DragAndScale.ts`。
+- [x] **Task 21: DragAndScale 类迁移** — 来源：`bindEvents/computeVisibleArea/onMouse/changeScale/reset`；目标产物：`canvas/DragAndScale.ts`。
 
 ### Phase C：Canvas、UI 与兼容桥
 
@@ -172,11 +172,11 @@
 
 ## 进度快照
 
-- 当前阶段：`Phase B 执行中（Task 20 已完成）`
+- 当前阶段：`Phase C 执行中（Task 21 已完成）`
 - 总任务数：`44`
-- 已完成：`20`
+- 已完成：`21`
 - 进行中：`0`
-- 待开始：`24`
+- 待开始：`23`
 
 ## 进度日志（模板）
 
@@ -203,3 +203,4 @@
 | 2026-03-04 | 执行 | Task 18 | 迁移 `LGraphNode` 连接与几何层到 `models/LGraphNode.connect-geometry.ts`（`find*Slot*`、`connect*`、`disconnect*`、`getConnectionPos/getBounding/isPointInside`）并保留类型匹配与连接回调链路 | 当前 `setDirtyCanvas` 继续占位，且 `connectByType` 的过滤扩展位（TODO filter）仍待后续专项收敛 | 执行 Task 19 |
 | 2026-03-04 | 执行 | Task 19 | 迁移 `LGraphNode` 画布协作层到 `models/LGraphNode.canvas-collab.ts`（`alignToGrid/trace/setDirtyCanvas/loadImage/captureInput/collapse/pin/localToScreen`），并保留 `executeAction` 的“源码中禁用”语义说明 | `loadImage` 返回值与现有 `d.ts` 的 `void` 签名存在差异，后续在契约兼容任务统一收敛 | 执行 Task 20 |
 | 2026-03-04 | 执行 | Task 20 | 迁移 `LGraphGroup` 到 `models/LGraphGroup.ts`（`_ctor/configure/serialize/move/recomputeInsideNodes`），并通过委托复用节点 `isPointInside/setDirtyCanvas` 行为 | `SerializedLGraphGroup(font/font_size)` 双字段差异仍属契约兼容范围，后续在 Phase E 统一收敛 | 执行 Task 21 |
+| 2026-03-04 | 执行 | Task 21 | 迁移 `DragAndScale` 到 `canvas/DragAndScale.ts`（`bindEvents/computeVisibleArea/onMouse/toCanvasContext/convert*/mouseDrag/changeScale/changeDeltaScale/reset`），保留指针事件语义与缩放中心偏移补偿逻辑 | `pointer-events` 模块仍存在既有类型收敛问题，不属于本任务范围，后续在兼容层任务统一处理 | 执行 Task 22 |
