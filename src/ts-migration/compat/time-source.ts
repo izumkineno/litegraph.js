@@ -10,7 +10,7 @@ export interface TimeSourceHost {
  * timer that works everywhere
  */
 export function createTimeSource(): TimeSource {
-    if (typeof performance != "undefined" && performance.now) {
+    if (typeof performance != "undefined") {
         return performance.now.bind(performance);
     }
     if (typeof Date != "undefined" && Date.now) {
@@ -18,7 +18,7 @@ export function createTimeSource(): TimeSource {
     }
 
     const processLike = (globalThis as { process?: { hrtime?: () => [number, number] } }).process;
-    if (typeof processLike != "undefined" && processLike?.hrtime) {
+    if (typeof processLike != "undefined") {
         return function(): number {
             const t = processLike.hrtime!();
             return t[0] * 0.001 + t[1] * 1e-6;
@@ -33,4 +33,3 @@ export function createTimeSource(): TimeSource {
 export function attachTimeSource(host: TimeSourceHost): void {
     host.getTime = createTimeSource();
 }
-

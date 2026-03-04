@@ -140,7 +140,7 @@ Git 提交规则（强制）：
   - 对应原 JS：`getParameterNames`。
   - 对应原 d.ts：函数签名工具契约。
 
-- [ ] **Audit Task 14: `src/ts-migration/compat/time-source.ts`**
+- [x] **Audit Task 14: `src/ts-migration/compat/time-source.ts`**
   - 对应原 JS：`getTime` 兼容策略。
   - 对应原 d.ts：时间源函数契约。
 
@@ -267,9 +267,9 @@ Git 提交规则（强制）：
 ## 审计进度快照
 
 - 总任务数：`42`
-- 已完成：`13`
+- 已完成：`14`
 - 进行中：`0`
-- 未开始：`29`
+- 未开始：`28`
 - 最新更新时间：`2026-03-04`
 
 ---
@@ -513,3 +513,18 @@ Git 提交规则（强制）：
   2. 迁移实现额外接受函数输入（`string | function`）用于运行时包装节点路径，保持与 JS 实际调用兼容。
 - 验证：
   1. 类型校验通过：`npx tsc --noEmit src/ts-migration/utils/function-signature.ts`。
+
+### Audit Task 14 结果
+- 结论：Pass（发现 2 处时间源分支语义偏差并已修复）
+- JS 对照：`src/litegraph.js`
+  - `LiteGraph.getTime` 回退链路：`performance` -> `Date.now` -> `process.hrtime` -> `new Date().getTime()`
+- d.ts 对照：`src/litegraph.d.ts`
+  - `getTime(): number`
+- TS 对照：`src/ts-migration/compat/time-source.ts`
+- 发现问题：
+  1. `performance` 分支额外检查了 `performance.now`，比原 JS 更保守。
+  2. `process` 分支额外检查了 `hrtime` 存在性，比原 JS 更保守。
+- 已实施修复：
+  1. 将分支判断对齐为原 JS 语义：`typeof performance != "undefined"` 与 `typeof processLike != "undefined"`。
+  2. 保持回退顺序与返回值计算公式一致。
+  3. 校验通过：`npx tsc --noEmit src/ts-migration/compat/time-source.ts`。
