@@ -166,7 +166,7 @@ Git 提交规则（强制）：
   - 对应原 JS：link 序列化历史顺序兼容。
   - 对应原 d.ts：`SerializedLLink` 顺序兼容语义。
 
-- [ ] **Audit Task 20: `src/ts-migration/models/LGraph.lifecycle.ts`**
+- [x] **Audit Task 20: `src/ts-migration/models/LGraph.lifecycle.ts`**
   - 对应原 JS：`function LGraph` + `clear/start/stop/getTime*`。
   - 对应原 d.ts：`LGraph` 生命周期成员。
 
@@ -267,9 +267,9 @@ Git 提交规则（强制）：
 ## 审计进度快照
 
 - 总任务数：`42`
-- 已完成：`19`
+- 已完成：`20`
 - 进行中：`0`
-- 未开始：`23`
+- 未开始：`22`
 - 最新更新时间：`2026-03-04`
 
 ---
@@ -600,3 +600,21 @@ Git 提交规则（强制）：
   2. `parseSerializedLLinkInput` 与 `serializeLLinkShape` 形成闭环，满足“输入双格式、输出按 order 控制”的兼容目标。
 - 验证：
   1. 类型校验通过：`npx tsc --noEmit src/ts-migration/models/LLink.serialization.compat.ts`。
+
+### Audit Task 20 结果
+- 结论：Pass（发现 3 处生命周期迁移偏差并已修复）
+- JS 对照：`src/litegraph.js`
+  - `LGraph` 构造与生命周期：`clear/attachCanvas/detachCanvas/start/stop/getTime/getFixedTime/getElapsedTime`
+- d.ts 对照：`src/litegraph.d.ts`
+  - `LGraph` 生命周期成员：`constructor/clear/attachCanvas/detachCanvas/start/stop/getTime/getFixedTime/getElapsedTime`
+- TS 对照：`src/ts-migration/models/LGraph.lifecycle.ts`
+- 发现问题：
+  1. `attachCanvas` 未按原 JS 执行 `graphcanvas.constructor != LGraphCanvas` 的构造函数校验，且抛错类型从字符串漂移为 `Error`。
+  2. `attachCanvas` 额外引入了“重复 canvas 去重”逻辑，原 JS 为无条件 `push`。
+  3. `start()` 中块级 `function on_frame()` 触发 `TS1251`（ES5 目标下 strict mode 不允许），阻断单文件类型审计。
+- 已实施修复：
+  1. 为 lifecycle host 增加可选 `LGraphCanvas` 引用并对齐构造函数校验；抛错文案与类型恢复为原 JS 语义：`"attachCanvas expects a LGraphCanvas instance"`。
+  2. 移除去重分支，恢复原 JS 的 `list_of_graphcanvas.push(graphcanvas)`。
+  3. 将 `on_frame` 改为等价箭头函数，保持执行语义不变并消除 `TS1251`。
+- 验证：
+  1. 类型校验通过：`npx tsc --noEmit src/ts-migration/models/LGraph.lifecycle.ts`。

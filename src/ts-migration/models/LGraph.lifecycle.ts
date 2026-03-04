@@ -9,11 +9,13 @@ export interface LGraphNodeLifecycleLike {
 
 export interface LGraphCanvasLifecycleLike {
     graph: LGraph | null;
+    constructor: unknown;
 }
 
 export interface LiteGraphLifecycleHost {
     debug: boolean;
     getTime: () => number;
+    LGraphCanvas?: unknown;
 }
 
 const defaultLiteGraphLifecycleHost: LiteGraphLifecycleHost = {
@@ -190,8 +192,14 @@ export class LGraph {
      * @method attachCanvas
      */
     attachCanvas(graphcanvas: LGraphCanvasLifecycleLike): void {
-        if (!graphcanvas || typeof graphcanvas !== "object") {
-            throw new Error("attachCanvas expects a LGraphCanvas-like instance");
+        const host = this.getLifecycleHost();
+        if (
+            !graphcanvas ||
+            typeof graphcanvas !== "object" ||
+            (host.LGraphCanvas &&
+                graphcanvas.constructor != host.LGraphCanvas)
+        ) {
+            throw "attachCanvas expects a LGraphCanvas instance";
         }
 
         const currentGraph = graphcanvas.graph;
@@ -204,9 +212,7 @@ export class LGraph {
         if (!this.list_of_graphcanvas) {
             this.list_of_graphcanvas = [];
         }
-        if (this.list_of_graphcanvas.indexOf(graphcanvas) === -1) {
-            this.list_of_graphcanvas.push(graphcanvas);
-        }
+        this.list_of_graphcanvas.push(graphcanvas);
     }
 
     /**
@@ -255,7 +261,7 @@ export class LGraph {
             typeof window != "undefined" &&
             window.requestAnimationFrame
         ) {
-            function on_frame(): void {
+            const on_frame = (): void => {
                 if (that.execution_timer_id != -1) {
                     return;
                 }
@@ -267,7 +273,7 @@ export class LGraph {
                 if (that.onAfterStep) {
                     that.onAfterStep();
                 }
-            }
+            };
             this.execution_timer_id = -1;
             on_frame();
         } else {
