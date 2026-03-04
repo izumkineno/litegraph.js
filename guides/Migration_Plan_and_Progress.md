@@ -134,7 +134,7 @@
 - [x] **Task 41: LGraph hook 契约对齐** — 来源：`onNodeAdded` 声明/实现差异；目标产物：`models/LGraph.hooks.ts`。
 - [x] **Task 42: LGraphCanvas 静态 API 补全** — 来源：静态方法声明缺口；目标产物：`canvas/LGraphCanvas.static.compat.ts`。
 - [x] **Task 43: 契约快照测试** — 来源：Phase E 全部兼容点；目标产物：`tests/migration-parity/contracts.test.ts`。
-- [ ] **Task 44: 兼容模式回归 E2E** — 来源：菜单、子图、对齐菜单、属性展示路径；目标产物：`tests/playwright/specs/migration-compat-guard.spec.cjs`。
+- [x] **Task 44: 兼容模式回归 E2E** — 来源：菜单、子图、对齐菜单、属性展示路径；目标产物：`tests/playwright/specs/migration-compat-guard.spec.cjs`。
 
 ## 测试场景与验收标准
 
@@ -172,24 +172,24 @@
 
 ## 进度快照
 
-- 当前阶段：`Phase E 进行中（Task 43 已完成）`
+- 当前阶段：`Phase E 已完成（Task 44 已完成）`
 - 总任务数：`44`
-- 已完成：`43`
+- 已完成：`44`
 - 进行中：`0`
-- 待开始：`1`
+- 待开始：`0`
 
 ## 风险清单（当前）
 
 1. `高`：全量 TypeScript 检查仍被既有历史问题阻断（外部依赖缺失与迁移层未收敛类型）。
 2. `中`：`compat/pointer-events.ts` 相关类型收敛问题仍会影响部分单文件 `tsc` 验证链路。
-3. `中`：Phase E 已启动，但 Task 37-44 尚未完成，兼容层“实现-契约测试-E2E 守卫”闭环仍待建立。
+3. `低`：Phase E 已完成，兼容层“实现-契约测试-E2E 守卫”闭环已建立，后续主要风险转为回归维护成本。
 4. `低`：迁移层仍保留一定数量的 `TODO/占位` 注释，需在 Phase E 分批清零并回归验证。
 
 ## 风险处理计划（对应下一阶段）
 
-1. Task 37-42 按“常量 -> 序列化 -> 菜单关闭 -> hook -> 静态 API”顺序落地实现。
-2. 以 Task 36 的矩阵文档作为唯一差异源，新增兼容实现必须绑定矩阵 ID。
-3. Task 43/44 建立契约快照测试与兼容模式 E2E 守卫，形成回归门禁。
+1. 维持 Task 36 差异矩阵为唯一差异源，新增兼容实现必须绑定矩阵 ID。
+2. 将 Task 43 契约快照测试与 Task 44 兼容 E2E 纳入持续回归门禁。
+3. 对后续新增 API 差异，采用“矩阵登记 -> 兼容实现 -> 单测/Parity -> E2E”闭环流程。
 
 ## 进度日志（模板）
 
@@ -239,3 +239,4 @@
 | 2026-03-04 | 执行 | Task 41 | 新增 `models/LGraph.hooks.ts`，落地 `onNodeAdded` 兼容 helper（可选钩子安全触发、存在性守卫、固定 diff-id）；`LGraph.structure.ts` 改为复用 helper；`types/litegraph-compat.ts` 复用该实现；`index.ts` 聚合导出相关常量与函数；新增 `tests/migration-unit/lgraph-hooks-compat.test.ts` 覆盖触发/跳过/抛错传播 | 图级 hook 契约已独立收敛，下一步 Task 42 需补齐 `LGraphCanvas` 静态 API 兼容守卫层 | 执行 Task 42 |
 | 2026-03-04 | 执行 | Task 42 | 新增 `canvas/LGraphCanvas.static.compat.ts`，落地静态 API 兼容层：`onResizeNode/onMenuResizeNode` 与 `onNodeToSubgraph/onMenuNodeToSubgraph` 双向别名对齐、`getBoundaryNodes/alignNodes/onNodeAlign/onGroupAlign/getPropertyPrintableValue` 缺失守卫；`types/litegraph-compat.ts` 改为复用该层并在统一入口启用；`index.ts` 聚合导出差异常量与检测/应用函数；新增 `tests/migration-unit/lgraphcanvas-static-compat.test.ts` 覆盖别名/守卫/完整性检查 | Canvas 静态兼容守卫已收敛，下一步 Task 43 需建立 Phase E 全量契约快照测试门禁 | 执行 Task 43 |
 | 2026-03-04 | 执行 | Task 43 | 新增 `tests/migration-parity/contracts.test.ts`，建立 Phase E 契约快照门禁：校验 `LITEGRAPH_API_DIFF_MATRIX` ID 快照、`contract-diff-matrix.md` 与运行时矩阵同步、Task 37-42 差异 ID 全量挂接、以及 `applyLiteGraphApiCompatAliases` 的聚合行为快照（含常量别名、菜单关闭对齐、Canvas 静态 API 守卫、钩子触发与序列化规范化） | 契约快照门禁已落地，下一步 Task 44 需补齐兼容模式 E2E 守卫规格 | 执行 Task 44 |
+| 2026-03-04 | 执行 | Task 44 | 新增 `tests/playwright/specs/migration-compat-guard.spec.cjs`，落地兼容模式 E2E 守卫：静态兼容 API 可用性与可调用性、菜单对齐路径、`To Subgraph` 转换与进出子图、属性 printable value 菜单展示；生成 `tests/playwright/reports/migration-compat-guard-report.{json,md}` 报告 | `npx playwright test tests/playwright/specs/migration-compat-guard.spec.cjs --project=chromium` 与 `npx playwright test --project=chromium --grep "@core"` 全绿 | Phase E 收口并转入持续回归维护 |
