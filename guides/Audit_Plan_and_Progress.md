@@ -144,7 +144,7 @@ Git 提交规则（强制）：
   - 对应原 JS：`getTime` 兼容策略。
   - 对应原 d.ts：时间源函数契约。
 
-- [ ] **Audit Task 15: `src/ts-migration/compat/pointer-events.ts`**
+- [x] **Audit Task 15: `src/ts-migration/compat/pointer-events.ts`**
   - 对应原 JS：`pointerListenerAdd/Remove` 与 pointer/touch 映射。
   - 对应原 d.ts：指针事件兼容 API 类型。
 
@@ -267,9 +267,9 @@ Git 提交规则（强制）：
 ## 审计进度快照
 
 - 总任务数：`42`
-- 已完成：`14`
+- 已完成：`15`
 - 进行中：`0`
-- 未开始：`28`
+- 未开始：`27`
 - 最新更新时间：`2026-03-04`
 
 ---
@@ -528,3 +528,19 @@ Git 提交规则（强制）：
   1. 将分支判断对齐为原 JS 语义：`typeof performance != "undefined"` 与 `typeof processLike != "undefined"`。
   2. 保持回退顺序与返回值计算公式一致。
   3. 校验通过：`npx tsc --noEmit src/ts-migration/compat/time-source.ts`。
+
+### Audit Task 15 结果
+- 结论：Pass（完美匹配，无代码修复）
+- JS 对照：`src/litegraph.js`
+  - `LiteGraph._normalizeTouchEvent`
+  - `LiteGraph._resolvePointerEventName`
+  - `LiteGraph._pointerListenerOptions`
+  - `LiteGraph.pointerListenerAdd/remove`
+- d.ts 对照：`src/litegraph.d.ts`
+  - `LiteGraph.pointerListenerAdd/remove` 公开契约（通过入口层挂载）
+- TS 对照：`src/ts-migration/compat/pointer-events.ts`
+- 发现问题：
+  1. 未发现行为差异。pointer 不可用时转 touch、touch 事件包装、listener 去重、remove 时反查 wrapped listener 等关键路径均与原 JS 一致。
+  2. `touch` 事件选项 `{ passive: false }` 与 `capture` 传递语义一致，`enter/leave/over/out` 在 touch 模式下不可映射时返回 `null` 的分支一致。
+- 验证：
+  1. 类型校验通过：`npx tsc --noEmit src/ts-migration/compat/pointer-events.ts`。
