@@ -15,16 +15,18 @@ export function hasGraphOnNodeAddedCompatHook<TNode = unknown>(
 
 /**
  * Task 41 compatibility helper:
- * d.ts 中 `LGraph.onNodeAdded(node)` 为显式契约，运行时实现中则按可选回调触发。
- * 该 helper 统一为“安全触发”：仅当 hook 为函数时调用，且不吞掉用户 hook 抛错。
+ * d.ts 中 `LGraph.onNodeAdded(node)` 为显式契约，运行时实现中按 truthy 回调触发：
+ * `if (this.onNodeAdded) { this.onNodeAdded(node); }`
+ * 为保持与原 JS 一致，这里不对非函数 truthy 值做额外防御，保持原有异常语义。
  */
 export function invokeGraphOnNodeAddedCompatHook<TNode = unknown>(
     graph: LGraphHooksCompatHost<TNode>,
     node: TNode
 ): boolean {
-    if (!hasGraphOnNodeAddedCompatHook(graph)) {
+    const rawHook = (graph as Record<string, unknown>).onNodeAdded;
+    if (!rawHook) {
         return false;
     }
-    graph.onNodeAdded(node);
+    (rawHook as (node: TNode) => void)(node);
     return true;
 }

@@ -186,7 +186,7 @@ Git 提交规则（强制）：
   - 对应原 JS：`serialize/configure/load/removeLink/onNodeTrace`。
   - 对应原 d.ts：序列化/反序列化契约。
 
-- [ ] **Audit Task 25: `src/ts-migration/models/LGraph.hooks.ts`**
+- [x] **Audit Task 25: `src/ts-migration/models/LGraph.hooks.ts`**
   - 对应原 JS：`onNodeAdded` 回调触发点。
   - 对应原 d.ts：`LGraph` hook 声明一致性。
 
@@ -267,9 +267,9 @@ Git 提交规则（强制）：
 ## 审计进度快照
 
 - 总任务数：`42`
-- 已完成：`24`
+- 已完成：`25`
 - 进行中：`0`
-- 未开始：`18`
+- 未开始：`17`
 - 最新更新时间：`2026-03-04`
 
 ---
@@ -724,3 +724,18 @@ Git 提交规则（强制）：
   5. `load` 的 File/Blob 检测恢复为原 JS 条件表达式。
 - 验证：
   1. 类型校验通过：`npx tsc --noEmit src/ts-migration/models/LGraph.persistence.ts`。
+
+### Audit Task 25 结果
+- 结论：Pass（发现 1 处 hook 触发语义偏差并已修复）
+- JS 对照：`src/litegraph.js`
+  - `LGraph.prototype.add` 中触发点：`if (this.onNodeAdded) { this.onNodeAdded(node); }`
+- d.ts 对照：`src/litegraph.d.ts`
+  - `LGraph.onNodeAdded(node: LGraphNode): void`
+- TS 对照：`src/ts-migration/models/LGraph.hooks.ts`
+- 发现问题：
+  1. `invokeGraphOnNodeAddedCompatHook` 使用“仅函数才调用”的安全策略，会吞掉非函数 truthy 值导致的原生异常路径，偏离原 JS。
+- 已实施修复：
+  1. 恢复为 truthy 即尝试调用的语义：仅在 falsy 时返回，truthy 时直接调用并保留原始异常行为。
+  2. 同步更新注释，明确该 helper 追求运行时语义对齐而非额外防御。
+- 验证：
+  1. 类型校验通过：`npx tsc --noEmit src/ts-migration/models/LGraph.hooks.ts`。
