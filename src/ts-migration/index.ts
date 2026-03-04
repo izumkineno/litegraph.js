@@ -28,6 +28,11 @@ import { LiteGraphRuntime } from "./core/litegraph.runtime";
 import { LGraphPersistence as LGraphImpl } from "./models/LGraph.persistence";
 import { LGraphGroup as LGraphGroupImpl } from "./models/LGraphGroup";
 import {
+    hasGraphOnNodeAddedCompatHook,
+    invokeGraphOnNodeAddedCompatHook as invokeGraphOnNodeAddedCompatHookModel,
+    LGRAPH_ON_NODE_ADDED_DIFF_ID,
+} from "./models/LGraph.hooks";
+import {
     denormalizeSerializedLGraphGroup as denormalizeSerializedLGraphGroupCompatShape,
     LGRAPHGROUP_SERIALIZATION_DIFF_ID,
     normalizeSerializedLGraphGroup as normalizeSerializedLGraphGroupCompatShape,
@@ -74,6 +79,7 @@ export {
     LLINK_SERIALIZATION_DIFF_ID,
     LGRAPHGROUP_SERIALIZATION_DIFF_ID,
     CONTEXT_MENU_CLOSE_ALL_DIFF_ID,
+    LGRAPH_ON_NODE_ADDED_DIFF_ID,
     isSerializedLLinkDtsOrderCompat,
     normalizeSerializedLLinkCompatTuple,
     denormalizeSerializedLLinkCompatTuple,
@@ -85,6 +91,8 @@ export {
     serializeLGraphGroupShape,
     applyContextMenuCloseAllCompatUi,
     isContextMenuCloseAllCompatSynced,
+    hasGraphOnNodeAddedCompatHook,
+    invokeGraphOnNodeAddedCompatHookModel,
     LLink,
     CurveEditor,
     colorToString,

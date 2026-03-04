@@ -4,6 +4,7 @@
 
 import { type LiteGraphLifecycleHost } from "./LGraph.lifecycle";
 import { LGraphExecution } from "./LGraph.execution";
+import { invokeGraphOnNodeAddedCompatHook } from "./LGraph.hooks";
 
 interface LiteGraphStructureHost extends LiteGraphLifecycleHost {
     use_uuids: boolean;
@@ -194,9 +195,7 @@ export class LGraphStructure extends LGraphExecution {
             this.updateExecutionOrder();
         }
 
-        if (this.onNodeAdded) {
-            this.onNodeAdded(graphNode);
-        }
+        invokeGraphOnNodeAddedCompatHook(this, graphNode);
 
         this.setDirtyCanvas(true);
         this.change();

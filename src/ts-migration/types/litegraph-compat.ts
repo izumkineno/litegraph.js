@@ -1,5 +1,6 @@
 import type { SerializedLGraphGroup, SerializedLLink } from "./serialization";
 import { applyContextMenuCloseAllCompat as applyContextMenuCloseAllCompatImpl } from "../ui/context-menu-compat";
+import { invokeGraphOnNodeAddedCompatHook as invokeGraphOnNodeAddedCompatHookImpl } from "../models/LGraph.hooks";
 
 export type CompatCallback = (...args: unknown[]) => unknown;
 
@@ -316,9 +317,7 @@ export function invokeGraphOnNodeAddedCompatHook(
     graph: LGraphHooksCompatHost,
     node: unknown
 ): void {
-    if (typeof graph.onNodeAdded === "function") {
-        graph.onNodeAdded(node);
-    }
+    invokeGraphOnNodeAddedCompatHookImpl(graph, node);
 }
 
 export interface LiteGraphApiCompatTargets {

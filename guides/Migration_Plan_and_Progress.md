@@ -131,7 +131,7 @@
 - [x] **Task 38: LLink 序列化兼容解析器** — 来源：`SerializedLLink` 顺序冲突；目标产物：`models/LLink.serialization.compat.ts`。
 - [x] **Task 39: LGraphGroup 序列化字段兼容** — 来源：`font` vs `font_size`；目标产物：`models/LGraphGroup.serialization.compat.ts`。
 - [x] **Task 40: ContextMenu/LiteGraph 菜单关闭 API 对齐** — 来源：`closeAllContextMenus` 归属差异；目标产物：`ui/context-menu-compat.ts`。
-- [ ] **Task 41: LGraph hook 契约对齐** — 来源：`onNodeAdded` 声明/实现差异；目标产物：`models/LGraph.hooks.ts`。
+- [x] **Task 41: LGraph hook 契约对齐** — 来源：`onNodeAdded` 声明/实现差异；目标产物：`models/LGraph.hooks.ts`。
 - [ ] **Task 42: LGraphCanvas 静态 API 补全** — 来源：静态方法声明缺口；目标产物：`canvas/LGraphCanvas.static.compat.ts`。
 - [ ] **Task 43: 契约快照测试** — 来源：Phase E 全部兼容点；目标产物：`tests/migration-parity/contracts.test.ts`。
 - [ ] **Task 44: 兼容模式回归 E2E** — 来源：菜单、子图、对齐菜单、属性展示路径；目标产物：`tests/playwright/specs/migration-compat-guard.spec.cjs`。
@@ -172,11 +172,11 @@
 
 ## 进度快照
 
-- 当前阶段：`Phase E 进行中（Task 40 已完成）`
+- 当前阶段：`Phase E 进行中（Task 41 已完成）`
 - 总任务数：`44`
-- 已完成：`40`
+- 已完成：`41`
 - 进行中：`0`
-- 待开始：`4`
+- 待开始：`3`
 
 ## 风险清单（当前）
 
@@ -236,3 +236,4 @@
 | 2026-03-04 | 执行 | Task 38 | 新增 `models/LLink.serialization.compat.ts`，实现 `SerializedLLink` 双顺序兼容解析/归一化/反归一化与 shape 序列化；`LLink.ts` 改为复用该解析器；`index.ts` 聚合导出解析器能力；新增 `tests/migration-unit/llink-serialization-compat.test.ts` 覆盖核心路径 | LLink 兼容解析已独立化，下一步 Task 39 需对 `LGraphGroup font/font_size` 做同等模块化收敛 | 执行 Task 39 |
 | 2026-03-04 | 执行 | Task 39 | 新增 `models/LGraphGroup.serialization.compat.ts`，实现 `SerializedLGraphGroup` 的 `font/font_size` 双字段兼容归一化与反归一化；`LGraphGroup.ts` 改为复用该解析器；`index.ts` 聚合导出相关接口；新增 `tests/migration-unit/lgraphgroup-serialization-compat.test.ts` 覆盖核心路径 | Group 兼容解析已独立化，下一步 Task 40 需对 `ContextMenu/LiteGraph` 菜单关闭 API 做归属对齐 | 执行 Task 40 |
 | 2026-03-04 | 执行 | Task 40 | 新增 `ui/context-menu-compat.ts`，落地 `closeAllContextMenus` 双入口对齐逻辑与同步检测；`types/litegraph-compat.ts` 复用该实现；`index.ts` 聚合导出兼容常量与函数；新增 `tests/migration-unit/context-menu-compat.test.ts` 覆盖来源优先级/fallback/同步判定 | 菜单关闭 API 归属已独立收敛，下一步 Task 41 需对 `LGraph.onNodeAdded` 声明与实现差异建立 hooks 兼容层 | 执行 Task 41 |
+| 2026-03-04 | 执行 | Task 41 | 新增 `models/LGraph.hooks.ts`，落地 `onNodeAdded` 兼容 helper（可选钩子安全触发、存在性守卫、固定 diff-id）；`LGraph.structure.ts` 改为复用 helper；`types/litegraph-compat.ts` 复用该实现；`index.ts` 聚合导出相关常量与函数；新增 `tests/migration-unit/lgraph-hooks-compat.test.ts` 覆盖触发/跳过/抛错传播 | 图级 hook 契约已独立收敛，下一步 Task 42 需补齐 `LGraphCanvas` 静态 API 兼容守卫层 | 执行 Task 42 |
