@@ -1,4 +1,13 @@
 import { LGraphCanvasMenuPanel as LGraphCanvasImpl } from "./canvas/LGraphCanvas.menu-panel";
+import {
+    applyLGraphCanvasStaticCompat as applyLGraphCanvasStaticCompatLayer,
+    applyLGraphCanvasStaticCompatAliases as applyLGraphCanvasStaticCompatAliasesLayer,
+    applyLGraphCanvasStaticMissingApiGuards,
+    hasRequiredLGraphCanvasStaticApis,
+    LGRAPHCANVAS_STATIC_MISSING_APIS_DIFF_ID,
+    LGRAPHCANVAS_STATIC_RESIZE_DIFF_ID,
+    LGRAPHCANVAS_STATIC_SUBGRAPH_MENU_DIFF_ID,
+} from "./canvas/LGraphCanvas.static.compat";
 import { DragAndScale as DragAndScaleImpl } from "./canvas/DragAndScale";
 import {
     attachLiteGraphCommonJsExports,
@@ -76,6 +85,9 @@ export {
     isGridSquareShapeAliasSynced,
     GRID_SQUARE_SHAPE_DEFAULT,
     GRID_SQUARE_SHAPE_DIFF_ID,
+    LGRAPHCANVAS_STATIC_RESIZE_DIFF_ID,
+    LGRAPHCANVAS_STATIC_SUBGRAPH_MENU_DIFF_ID,
+    LGRAPHCANVAS_STATIC_MISSING_APIS_DIFF_ID,
     LLINK_SERIALIZATION_DIFF_ID,
     LGRAPHGROUP_SERIALIZATION_DIFF_ID,
     CONTEXT_MENU_CLOSE_ALL_DIFF_ID,
@@ -91,6 +103,10 @@ export {
     serializeLGraphGroupShape,
     applyContextMenuCloseAllCompatUi,
     isContextMenuCloseAllCompatSynced,
+    applyLGraphCanvasStaticCompatAliasesLayer,
+    applyLGraphCanvasStaticMissingApiGuards,
+    applyLGraphCanvasStaticCompatLayer,
+    hasRequiredLGraphCanvasStaticApis,
     hasGraphOnNodeAddedCompatHook,
     invokeGraphOnNodeAddedCompatHookModel,
     LLink,

@@ -1,4 +1,8 @@
 import type { SerializedLGraphGroup, SerializedLLink } from "./serialization";
+import {
+    applyLGraphCanvasStaticCompat as applyLGraphCanvasStaticCompatImpl,
+    applyLGraphCanvasStaticCompatAliases as applyLGraphCanvasStaticCompatAliasesImpl,
+} from "../canvas/LGraphCanvas.static.compat";
 import { applyContextMenuCloseAllCompat as applyContextMenuCloseAllCompatImpl } from "../ui/context-menu-compat";
 import { invokeGraphOnNodeAddedCompatHook as invokeGraphOnNodeAddedCompatHookImpl } from "../models/LGraph.hooks";
 
@@ -279,16 +283,13 @@ export function applyLiteGraphConstantAliases(
 export function applyLGraphCanvasStaticCompatAliases(
     host: LGraphCanvasStaticCompatHost
 ): void {
-    if (!host.onResizeNode && host.onMenuResizeNode) {
-        host.onResizeNode = host.onMenuResizeNode;
-    }
-    if (!host.onMenuResizeNode && host.onResizeNode) {
-        host.onMenuResizeNode = host.onResizeNode;
-    }
+    applyLGraphCanvasStaticCompatAliasesImpl(host);
+}
 
-    if (!host.onNodeToSubgraph && host.onMenuNodeToSubgraph) {
-        host.onNodeToSubgraph = host.onMenuNodeToSubgraph;
-    }
+export function applyLGraphCanvasStaticCompat(
+    host: LGraphCanvasStaticCompatHost
+): void {
+    applyLGraphCanvasStaticCompatImpl(host);
 }
 
 export function applyLGraphCanvasPrototypeCompatShims(
@@ -334,7 +335,7 @@ export function applyLiteGraphApiCompatAliases(
         applyContextMenuCloseAllCompat(targets.liteGraph);
     }
     if (targets.canvasStatic) {
-        applyLGraphCanvasStaticCompatAliases(targets.canvasStatic);
+        applyLGraphCanvasStaticCompat(targets.canvasStatic);
     }
     if (targets.canvasPrototype) {
         applyLGraphCanvasPrototypeCompatShims(targets.canvasPrototype);

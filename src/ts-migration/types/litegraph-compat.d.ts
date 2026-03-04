@@ -160,6 +160,10 @@ export declare function applyLGraphCanvasStaticCompatAliases(
     host: LGraphCanvasStaticCompatHost
 ): void;
 
+export declare function applyLGraphCanvasStaticCompat(
+    host: LGraphCanvasStaticCompatHost
+): void;
+
 export declare function applyLGraphCanvasPrototypeCompatShims(
     host: LGraphCanvasPrototypeCompatHost
 ): void;
