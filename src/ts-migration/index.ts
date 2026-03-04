@@ -12,6 +12,13 @@ import {
     type LiteGraphRuntimeConstructors,
 } from "./compat/global-bridge";
 import { createTimeSource } from "./compat/time-source";
+import {
+    applyGridSquareShapeAlias,
+    GRID_SQUARE_SHAPE_DEFAULT,
+    GRID_SQUARE_SHAPE_DIFF_ID,
+    isGridSquareShapeAliasSynced,
+    resolveGridSquareShapeValue,
+} from "./core/litegraph.constants.compat";
 import { LiteGraphConstants, type LiteGraphConstantsShape } from "./core/litegraph.constants";
 import {
     LiteGraphRegistry,
@@ -39,6 +46,11 @@ export {
     LiteGraphConstants,
     LiteGraphRegistry,
     LiteGraphRuntime,
+    applyGridSquareShapeAlias,
+    resolveGridSquareShapeValue,
+    isGridSquareShapeAliasSynced,
+    GRID_SQUARE_SHAPE_DEFAULT,
+    GRID_SQUARE_SHAPE_DIFF_ID,
     LLink,
     CurveEditor,
     colorToString,
@@ -408,6 +420,7 @@ function createLiteGraphNamespace(): {
     runtime: LiteGraphRuntime;
 } {
     const liteGraph = { ...LiteGraphConstants } as LiteGraphNamespace;
+    applyGridSquareShapeAlias(liteGraph);
     const pointerCompat = createPointerListenerCompat(
         () => String(liteGraph.pointerevents_method || "mouse")
     );

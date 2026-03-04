@@ -127,7 +127,7 @@
 ### Phase E：契约冲突与兼容收敛（补充）
 
 - [x] **Task 36: JS 与 d.ts 契约差异矩阵落地** — 来源：`src/litegraph.js` 与 `src/litegraph.d.ts` 差异项；目标产物：`types/contract-diff-matrix.md`、`types/litegraph-compat.d.ts`。
-- [ ] **Task 37: 常量别名兼容层** — 来源：`GRID_SHAPE` vs `SQUARE_SHAPE`；目标产物：`core/litegraph.constants.compat.ts`。
+- [x] **Task 37: 常量别名兼容层** — 来源：`GRID_SHAPE` vs `SQUARE_SHAPE`；目标产物：`core/litegraph.constants.compat.ts`。
 - [ ] **Task 38: LLink 序列化兼容解析器** — 来源：`SerializedLLink` 顺序冲突；目标产物：`models/LLink.serialization.compat.ts`。
 - [ ] **Task 39: LGraphGroup 序列化字段兼容** — 来源：`font` vs `font_size`；目标产物：`models/LGraphGroup.serialization.compat.ts`。
 - [ ] **Task 40: ContextMenu/LiteGraph 菜单关闭 API 对齐** — 来源：`closeAllContextMenus` 归属差异；目标产物：`ui/context-menu-compat.ts`。
@@ -172,11 +172,11 @@
 
 ## 进度快照
 
-- 当前阶段：`Phase E 进行中（Task 36 已完成）`
+- 当前阶段：`Phase E 进行中（Task 37 已完成）`
 - 总任务数：`44`
-- 已完成：`36`
+- 已完成：`37`
 - 进行中：`0`
-- 待开始：`8`
+- 待开始：`7`
 
 ## 风险清单（当前）
 
@@ -232,3 +232,4 @@
 | 2026-03-04 | 执行 | Task 34 | 新增 `tests/playwright/specs/migration-ui-keypaths.spec.cjs`，复用现有 Harness/菜单遍历工具补齐 UI 关键链路：菜单对齐、`To Subgraph` 转换与进出子图、属性菜单 printable value 展示；并输出 `tests/playwright/reports/migration-ui-keypaths-report.{json,md}` | 当前回归聚焦关键链路闭环，尚未覆盖所有兼容模式 E2E（Task 44） | 执行 Task 35 |
 | 2026-03-04 | 执行 | Task 35 | 更新进度快照与风险清单：标记 Phase D 完成，补充当前风险等级与处理计划，明确 Phase E 的收敛顺序与门禁目标 | 风险已归档但仍待 Task 36-44 实际消解；本任务不新增代码变更 | 执行 Task 36 |
 | 2026-03-04 | 执行 | Task 36 | 新增 `src/ts-migration/types/contract-diff-matrix.md`，按 JS/d.ts 证据行号固化差异矩阵；并收紧 `types/litegraph-compat.d.ts` 的 `LiteGraphCompatDiffId` 联合类型，确保矩阵项与类型声明一一对应 | 仅完成矩阵固化与声明约束，兼容实现与守卫仍需后续 Task 37-44 收敛 | 执行 Task 37 |
+| 2026-03-04 | 执行 | Task 37 | 新增 `core/litegraph.constants.compat.ts`，落地 `GRID_SHAPE/SQUARE_SHAPE` 别名兼容层（解析、应用、同步检测）；在 `index.ts` 组装时接入并导出；新增 `tests/migration-unit/constants-compat.test.ts` 覆盖常量别名策略 | 常量别名已具备独立兼容层，但仍需 Task 43/44 将其纳入契约快照与兼容 E2E 守卫 | 执行 Task 38 |
