@@ -194,7 +194,7 @@ Git 提交规则（强制）：
   - 对应原 JS：`function LGraphNode` + `_ctor/configure/serialize/clone/setProperty`。
   - 对应原 d.ts：`LGraphNode` 基础状态与属性 API。
 
-- [ ] **Audit Task 27: `src/ts-migration/models/LGraphNode.execution.ts`**
+- [x] **Audit Task 27: `src/ts-migration/models/LGraphNode.execution.ts`**
   - 对应原 JS：`setOutputData/getInputData/doExecute/actionDo/trigger/triggerSlot`。
   - 对应原 d.ts：节点执行相关 API。
 
@@ -267,9 +267,9 @@ Git 提交规则（强制）：
 ## 审计进度快照
 
 - 总任务数：`42`
-- 已完成：`26`
+- 已完成：`27`
 - 进行中：`0`
-- 未开始：`16`
+- 未开始：`15`
 - 最新更新时间：`2026-03-04`
 
 ---
@@ -768,3 +768,31 @@ Git 提交规则（强制）：
   5. 将 `SerializedLGraphNodeState` 改为 `Omit<Partial<SerializedLGraphNode>, "id"> + id?: number|string`，修复 UUID 场景类型漂移。
 - 验证：
   1. 类型校验通过：`npx tsc --noEmit src/ts-migration/models/LGraphNode.state.ts`。
+
+### Audit Task 27 结果
+- 结论：Pass（发现 9 处节点执行链迁移偏差并已修复）
+- JS 对照：`src/litegraph.js`
+  - `LGraphNode.prototype.setOutputData/setOutputDataType/getInputData/getInputDataType/getInputDataByName`
+  - `LGraphNode.prototype.isInputConnected/getInputInfo/getInputLink/getInputNode/getInputOrProperty/getOutputData/getOutputInfo/isOutputConnected/isAnyOutputConnected/getOutputNodes`
+  - `LGraphNode.prototype.executePendingActions/doExecute/actionDo/trigger/triggerSlot/clearTriggeredSlot`
+- d.ts 对照：`src/litegraph.d.ts`
+  - 节点执行相关 API（`setOutputData*`、输入输出数据访问、`trigger*`）
+- TS 对照：`src/ts-migration/models/LGraphNode.execution.ts`
+- 发现问题：
+  1. `setOutputData/setOutputDataType/getInputData/getInputDataType/clearTriggeredSlot` 对 graph 增加早返回防御，偏离原 JS 直接访问语义。
+  2. `getInputDataByName` 依赖可选 `findInputSlot` 防御路径，偏离原 JS 直接调用语义。
+  3. `executePendingActions` 对 `onAction` 增加存在性保护，偏离原 JS。
+  4. `doExecute/actionDo` 对 `graph.nodes_*` 与 `nodes_executedAction` 增加防御分支，偏离原 JS。
+  5. `triggerSlot` 在 `ON_TRIGGER` 分支对 `doExecute` 增加回退到 `onExecute`，偏离原 JS。
+  6. `triggerSlot` 在 `onAction` 分支对 `target_connection/actionDo/onAction` 增加保护与回退，偏离原 JS。
+  7. d.ts 已声明的一组输入/输出查询方法在迁移层缺失（`isInputConnected/getInputInfo/getInputLink/getInputNode/getInputOrProperty/getOutputData/getOutputInfo/isOutputConnected/isAnyOutputConnected/getOutputNodes`）。
+  8. 运行时 graph 类型桥接不完整，导致单文件审计编译失败（类型互转告警）。
+  9. 部分返回值语义未完全贴近 JS（输入/输出查询方法的 `null/undefined` 约定）。
+- 已实施修复：
+  1. 对齐执行链核心方法的 graph 访问语义，移除多余防御分支。
+  2. 恢复 `getInputDataByName` 的直接 `findInputSlot` 路径。
+  3. 恢复 `executePendingActions/doExecute/actionDo/triggerSlot` 的原始调用链与异常语义。
+  4. 补齐 d.ts 声明所需的输入/输出查询方法并按 JS 行为实现。
+  5. 完善 graph 类型桥接（`unknown` 中转）以通过 TS 审计编译且不改变运行时语义。
+- 验证：
+  1. 类型校验通过：`npx tsc --noEmit src/ts-migration/models/LGraphNode.execution.ts`。

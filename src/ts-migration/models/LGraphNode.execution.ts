@@ -51,6 +51,7 @@ interface LGraphNodeExecutionLike {
     mode?: number;
     inputs?: NodeInputExecutionLike[];
     outputs?: NodeOutputExecutionLike[];
+    properties?: Record<string, unknown>;
     onExecute?: (param?: unknown, options?: TriggerOptions) => void;
     onAction?: (
         action: string | undefined,
@@ -112,7 +113,7 @@ export class LGraphNodeExecution extends LGraphNode {
     }
 
     private getExecutionGraph(): LGraphExecutionStateLike | null {
-        return (this.graph as LGraphExecutionStateLike) || null;
+        return (this.graph as unknown as LGraphExecutionStateLike) || null;
     }
 
     /**
@@ -142,10 +143,7 @@ export class LGraphNodeExecution extends LGraphNode {
         // store data in the output itself in case we want to debug
         output_info._data = data;
 
-        const graph = this.getExecutionGraph();
-        if (!graph) {
-            return;
-        }
+        const graph = this.getExecutionGraph() as LGraphExecutionStateLike;
 
         // if there are connections, pass the data to the connections
         if (output_info.links) {
@@ -179,10 +177,7 @@ export class LGraphNodeExecution extends LGraphNode {
         // store data in the output itself in case we want to debug
         output_info.type = type;
 
-        const graph = this.getExecutionGraph();
-        if (!graph) {
-            return;
-        }
+        const graph = this.getExecutionGraph() as LGraphExecutionStateLike;
 
         // if there are connections, pass the data to the connections
         if (output_info.links) {
@@ -210,10 +205,7 @@ export class LGraphNodeExecution extends LGraphNode {
             return undefined;
         }
 
-        const graph = this.getExecutionGraph();
-        if (!graph) {
-            return undefined;
-        }
+        const graph = this.getExecutionGraph() as LGraphExecutionStateLike;
 
         const link_id = input.link;
         const link = graph.links[String(link_id)];
@@ -257,10 +249,7 @@ export class LGraphNodeExecution extends LGraphNode {
             return null;
         }
 
-        const graph = this.getExecutionGraph();
-        if (!graph) {
-            return null;
-        }
+        const graph = this.getExecutionGraph() as LGraphExecutionStateLike;
 
         const link_id = input.link;
         const link = graph.links[String(link_id)];
@@ -293,16 +282,214 @@ export class LGraphNodeExecution extends LGraphNode {
         force_update?: boolean
     ): T | null | undefined {
         const withFindInputSlot = this as unknown as {
-            findInputSlot?: (name: string) => number;
+            findInputSlot: (name: string) => number;
         };
-        if (!withFindInputSlot.findInputSlot) {
-            return null;
-        }
         const slot = withFindInputSlot.findInputSlot(slot_name);
         if (slot == -1) {
             return null;
         }
         return this.getInputData<T>(slot, force_update);
+    }
+
+    /**
+     * tells you if there is a connection in one input slot
+     * @method isInputConnected
+     * @param {number} slot
+     * @return {boolean}
+     */
+    isInputConnected(slot: number): boolean {
+        if (!this.inputs) {
+            return false;
+        }
+        return slot < this.inputs.length && this.inputs[slot].link != null;
+    }
+
+    /**
+     * tells you info about an input connection (which node, type, etc)
+     * @method getInputInfo
+     * @param {number} slot
+     * @return {Object} object or null { link: id, name: string, type: string or 0 }
+     */
+    getInputInfo(slot: number): NodeInputExecutionLike | null {
+        if (!this.inputs) {
+            return null;
+        }
+        if (slot < this.inputs.length) {
+            return this.inputs[slot];
+        }
+        return null;
+    }
+
+    /**
+     * Returns the link info in the connection of an input slot
+     * @method getInputLink
+     * @param {number} slot
+     * @return {LLink} object or null
+     */
+    getInputLink(slot: number): GraphLinkExecutionLike | null {
+        if (!this.inputs) {
+            return null;
+        }
+        if (slot < this.inputs.length) {
+            const slot_info = this.inputs[slot];
+            const graph = this.getExecutionGraph() as LGraphExecutionStateLike;
+            return graph.links[String(slot_info.link)] || null;
+        }
+        return null;
+    }
+
+    /**
+     * returns the node connected in the input slot
+     * @method getInputNode
+     * @param {number} slot
+     * @return {LGraphNode} node or null
+     */
+    getInputNode(slot: number): LGraphNodeExecutionLike | null {
+        if (!this.inputs) {
+            return null;
+        }
+        if (slot >= this.inputs.length) {
+            return null;
+        }
+        const input = this.inputs[slot];
+        if (!input || input.link === null) {
+            return null;
+        }
+        const graph = this.getExecutionGraph() as LGraphExecutionStateLike;
+        const link_info = graph.links[String(input.link)];
+        if (!link_info) {
+            return null;
+        }
+        return graph.getNodeById(link_info.origin_id);
+    }
+
+    /**
+     * returns the value of an input with this name, otherwise checks if there is a property with that name
+     * @method getInputOrProperty
+     * @param {string} name
+     * @return {*} value
+     */
+    getInputOrProperty<T = unknown>(name: string): T | null | undefined {
+        const properties = (this as unknown as { properties?: Record<string, unknown> })
+            .properties;
+        if (!this.inputs || !this.inputs.length) {
+            return properties ? (properties[name] as T) : null;
+        }
+
+        const graph = this.getExecutionGraph() as LGraphExecutionStateLike;
+        for (let i = 0, l = this.inputs.length; i < l; ++i) {
+            const input_info = this.inputs[i];
+            if (name == input_info.name && input_info.link != null) {
+                const link = graph.links[String(input_info.link)];
+                if (link) {
+                    return link.data as T;
+                }
+            }
+        }
+        return properties ? (properties[name] as T) : undefined;
+    }
+
+    /**
+     * tells you the last output data that went in that slot
+     * @method getOutputData
+     * @param {number} slot
+     * @return {Object}  object or null
+     */
+    getOutputData<T = unknown>(slot: number): T | null {
+        if (!this.outputs) {
+            return null;
+        }
+        if (slot >= this.outputs.length) {
+            return null;
+        }
+
+        const info = this.outputs[slot];
+        return (info._data as T) ?? null;
+    }
+
+    /**
+     * tells you info about an output connection (which node, type, etc)
+     * @method getOutputInfo
+     * @param {number} slot
+     * @return {Object}  object or null { name: string, type: string, links: [ ids of links in number ] }
+     */
+    getOutputInfo(slot: number): NodeOutputExecutionLike | null {
+        if (!this.outputs) {
+            return null;
+        }
+        if (slot < this.outputs.length) {
+            return this.outputs[slot];
+        }
+        return null;
+    }
+
+    /**
+     * tells you if there is a connection in one output slot
+     * @method isOutputConnected
+     * @param {number} slot
+     * @return {boolean}
+     */
+    isOutputConnected(slot: number): boolean {
+        if (!this.outputs) {
+            return false;
+        }
+        return Boolean(
+            slot < this.outputs.length &&
+                this.outputs[slot].links &&
+                this.outputs[slot].links.length
+        );
+    }
+
+    /**
+     * tells you if there is any connection in the output slots
+     * @method isAnyOutputConnected
+     * @return {boolean}
+     */
+    isAnyOutputConnected(): boolean {
+        if (!this.outputs) {
+            return false;
+        }
+        for (let i = 0; i < this.outputs.length; ++i) {
+            if (this.outputs[i].links && this.outputs[i].links.length) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * retrieves all the nodes connected to this output slot
+     * @method getOutputNodes
+     * @param {number} slot
+     * @return {array}
+     */
+    getOutputNodes(slot: number): LGraphNodeExecutionLike[] | null {
+        if (!this.outputs || this.outputs.length == 0) {
+            return null;
+        }
+
+        if (slot >= this.outputs.length) {
+            return null;
+        }
+
+        const output = this.outputs[slot];
+        if (!output.links || output.links.length == 0) {
+            return null;
+        }
+
+        const graph = this.getExecutionGraph() as LGraphExecutionStateLike;
+        const result: LGraphNodeExecutionLike[] = [];
+        for (let i = 0; i < output.links.length; i++) {
+            const link_id = output.links[i];
+            const link = graph.links[String(link_id)];
+            if (link) {
+                const target_node = graph.getNodeById(link.target_id);
+                if (target_node) {
+                    result.push(target_node);
+                }
+            }
+        }
+        return result;
     }
 
     /**
@@ -313,11 +500,15 @@ export class LGraphNodeExecution extends LGraphNode {
         if (!this._waiting_actions || !this._waiting_actions.length) {
             return;
         }
-        if (this.onAction) {
-            for (let i = 0; i < this._waiting_actions.length; ++i) {
-                const p = this._waiting_actions[i];
-                this.onAction(p[0], p[1], p[2], p[3], p[4]);
-            }
+        for (let i = 0; i < this._waiting_actions.length; ++i) {
+            const p = this._waiting_actions[i];
+            (this.onAction as NonNullable<LGraphNodeExecution["onAction"]>)(
+                p[0],
+                p[1],
+                p[2],
+                p[3],
+                p[4]
+            );
         }
         this._waiting_actions.length = 0;
     }
@@ -330,7 +521,7 @@ export class LGraphNodeExecution extends LGraphNode {
      */
     doExecute(param?: unknown, options?: TriggerOptions): void {
         const runtimeOptions = options || {};
-        const graph = this.getExecutionGraph();
+        const graph = this.getExecutionGraph() as LGraphExecutionStateLike;
 
         if (this.onExecute) {
             // enable this to give the event an ID
@@ -339,19 +530,15 @@ export class LGraphNodeExecution extends LGraphNode {
                     this.id + "_exec_" + Math.floor(Math.random() * 9999);
             }
 
-            if (graph) {
-                graph.nodes_executing[String(this.id)] = true; // .push(this.id);
-            }
+            graph.nodes_executing[String(this.id)] = true; // .push(this.id);
 
             this.onExecute(param, runtimeOptions);
 
-            if (graph) {
-                graph.nodes_executing[String(this.id)] = false; // .pop();
-            }
+            graph.nodes_executing[String(this.id)] = false; // .pop();
 
             // save execution/action ref
-            this.exec_version = graph ? graph.iteration : this.exec_version;
-            if (runtimeOptions.action_call && graph) {
+            this.exec_version = graph.iteration;
+            if (runtimeOptions.action_call) {
                 this.action_call = runtimeOptions.action_call; // if (param)
                 graph.nodes_executedAction[String(this.id)] =
                     runtimeOptions.action_call;
@@ -378,7 +565,7 @@ export class LGraphNodeExecution extends LGraphNode {
         action_slot?: number
     ): void {
         const runtimeOptions = options || {};
-        const graph = this.getExecutionGraph();
+        const graph = this.getExecutionGraph() as LGraphExecutionStateLike;
 
         if (this.onAction) {
             // enable this to give the event an ID
@@ -391,20 +578,16 @@ export class LGraphNodeExecution extends LGraphNode {
                     Math.floor(Math.random() * 9999);
             }
 
-            if (graph) {
-                graph.nodes_actioning[String(this.id)] = action
-                    ? action
-                    : "actioning"; // .push(this.id);
-            }
+            graph.nodes_actioning[String(this.id)] = action
+                ? action
+                : "actioning"; // .push(this.id);
 
             this.onAction(action, param, runtimeOptions, action_slot);
 
-            if (graph) {
-                graph.nodes_actioning[String(this.id)] = false; // .pop();
-            }
+            graph.nodes_actioning[String(this.id)] = false; // .pop();
 
             // save execution/action ref
-            if (runtimeOptions.action_call && graph) {
+            if (runtimeOptions.action_call) {
                 this.action_call = runtimeOptions.action_call; // if (param)
                 graph.nodes_executedAction[String(this.id)] =
                     runtimeOptions.action_call;
@@ -492,11 +675,10 @@ export class LGraphNodeExecution extends LGraphNode {
         }
 
         const host = this.getExecutionHost();
-        const graph = this.getExecutionGraph();
-        if (!graph) {
-            return;
+        const graph = this.getExecutionGraph() as LGraphExecutionStateLike | null;
+        if (graph) {
+            graph._last_trigger_time = host.getTime();
         }
-        graph._last_trigger_time = host.getTime();
 
         // for every link attached here
         for (let k = 0; k < links.length; ++k) {
@@ -505,7 +687,9 @@ export class LGraphNodeExecution extends LGraphNode {
                 // to skip links
                 continue;
             }
-            const link_info = graph.links[String(links[k])];
+            const link_info = (graph as LGraphExecutionStateLike).links[
+                String(links[k])
+            ];
             if (!link_info) {
                 // not connected
                 continue;
@@ -525,11 +709,10 @@ export class LGraphNodeExecution extends LGraphNode {
                 }
                 if (node.onExecute) {
                     // -- wrapping node.onExecute(param); --
-                    if (node.doExecute) {
-                        node.doExecute(param, runtimeOptions);
-                    } else {
-                        node.onExecute(param, runtimeOptions);
-                    }
+                    (node.doExecute as NonNullable<LGraphNodeExecutionLike["doExecute"]>)(
+                        param,
+                        runtimeOptions
+                    );
                 }
             } else if (node.onAction) {
                 // generate unique action ID if not present
@@ -538,9 +721,8 @@ export class LGraphNodeExecution extends LGraphNode {
                         this.id + "_act_" + Math.floor(Math.random() * 9999);
                 }
                 // pass the action name
-                const target_connection = node.inputs
-                    ? node.inputs[link_info.target_slot]
-                    : undefined;
+                const target_connection =
+                    node.inputs![link_info.target_slot];
 
                 // instead of executing them now, it will be executed in the next graph loop, to ensure data flow
                 if (host.use_deferred_actions && node.onExecute) {
@@ -548,22 +730,17 @@ export class LGraphNodeExecution extends LGraphNode {
                         node._waiting_actions = [];
                     }
                     node._waiting_actions.push([
-                        target_connection ? target_connection.name : undefined,
+                        target_connection.name,
                         param,
                         runtimeOptions,
                         link_info.target_slot,
                     ]);
-                } else if (node.actionDo) {
-                    // wrap node.onAction(target_connection.name, param);
-                    node.actionDo(
-                        target_connection ? target_connection.name : undefined,
-                        param,
-                        runtimeOptions,
-                        link_info.target_slot
-                    );
                 } else {
-                    node.onAction(
-                        target_connection ? target_connection.name : undefined,
+                    // wrap node.onAction(target_connection.name, param);
+                    (
+                        node.actionDo as NonNullable<LGraphNodeExecutionLike["actionDo"]>
+                    )(
+                        target_connection.name,
                         param,
                         runtimeOptions,
                         link_info.target_slot
@@ -594,10 +771,7 @@ export class LGraphNodeExecution extends LGraphNode {
             return;
         }
 
-        const graph = this.getExecutionGraph();
-        if (!graph) {
-            return;
-        }
+        const graph = this.getExecutionGraph() as LGraphExecutionStateLike;
 
         // for every link attached here
         for (let k = 0; k < links.length; ++k) {
