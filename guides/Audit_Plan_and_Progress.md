@@ -198,7 +198,7 @@ Git 提交规则（强制）：
   - 对应原 JS：`setOutputData/getInputData/doExecute/actionDo/trigger/triggerSlot`。
   - 对应原 d.ts：节点执行相关 API。
 
-- [ ] **Audit Task 28: `src/ts-migration/models/LGraphNode.ports-widgets.ts`**
+- [x] **Audit Task 28: `src/ts-migration/models/LGraphNode.ports-widgets.ts`**
   - 对应原 JS：`addInput/addOutput/addWidget/computeSize/getPropertyInfo`。
   - 对应原 d.ts：端口与 widget 相关定义。
 
@@ -267,9 +267,9 @@ Git 提交规则（强制）：
 ## 审计进度快照
 
 - 总任务数：`42`
-- 已完成：`27`
+- 已完成：`28`
 - 进行中：`0`
-- 未开始：`15`
+- 未开始：`14`
 - 最新更新时间：`2026-03-04`
 
 ---
@@ -796,3 +796,29 @@ Git 提交规则（强制）：
   5. 完善 graph 类型桥接（`unknown` 中转）以通过 TS 审计编译且不改变运行时语义。
 - 验证：
   1. 类型校验通过：`npx tsc --noEmit src/ts-migration/models/LGraphNode.execution.ts`。
+
+### Audit Task 28 结果
+- 结论：Pass（发现 8 处端口/Widget 迁移偏差并已修复）
+- JS 对照：`src/litegraph.js`
+  - `LGraphNode.prototype.addProperty/addOutput/addOutputs/removeOutput/addInput/addInputs/removeInput/addConnection/computeSize/getPropertyInfo/addWidget/addCustomWidget`
+- d.ts 对照：`src/litegraph.d.ts`
+  - 节点端口与 Widget API（含 `addProperty/removeOutput/removeInput/addConnection`）
+- TS 对照：`src/ts-migration/models/LGraphNode.ports-widgets.ts`
+- 发现问题：
+  1. 迁移层缺失 `addProperty` 方法。
+  2. 迁移层缺失 `removeOutput` 方法。
+  3. 迁移层缺失 `removeInput` 方法。
+  4. 迁移层缺失 `addConnection` 方法。
+  5. `addInput/addInputs` 对 `registerNodeAndSlotType` 增加可选保护，偏离原 JS 直接调用语义。
+  6. `addOutput/addOutputs` 在自动注册分支也引入可选保护，偏离原 JS。
+  7. `computeSize` 默认 `out` 容器与原 JS 的 `Float32Array([0,0])` 语义不一致。
+  8. `addWidget` 的 `type` 处理加入了额外字符串兜底，偏离原 JS 的直接 `toLowerCase()` 路径。
+- 已实施修复：
+  1. 补齐 `addProperty/removeOutput/removeInput/addConnection`，按原 JS 链路实现（含链接索引重排逻辑与回调触发）。
+  2. 恢复端口类型注册调用语义：输入路径直接调用，输出路径在 `auto_load_slot_types` 下直接调用。
+  3. `addOutputs` 保留原 JS 的输出槽对象形态（`link` 字段路径）以维持运行时兼容。
+  4. `computeSize` 默认输出容器恢复为 `Float32Array([0,0])` 语义。
+  5. `addWidget` 的 `type` 处理恢复直接 `toLowerCase()` 路径。
+  6. 同步处理继承私有方法重名与类型桥接，保证不改运行语义。
+- 验证：
+  1. 类型校验通过：`npx tsc --noEmit src/ts-migration/models/LGraphNode.ports-widgets.ts`。

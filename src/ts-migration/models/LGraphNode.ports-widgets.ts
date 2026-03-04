@@ -39,12 +39,13 @@ interface LGraphNodePortsWidgetsClassMetadata extends Function {
 }
 
 type InputSlot = INodeInputSlot & { link: number | null };
-type OutputSlot = INodeOutputSlot & { links: number[] | null };
+type OutputSlot = INodeOutputSlot & { links: number[] | null; link?: number | null };
 
 type PropertyInfo = Record<string, unknown> & {
     name?: string;
     type?: string;
     widget?: string;
+    default_value?: unknown;
 };
 
 type WidgetOptions = Record<string, unknown> & {
@@ -82,8 +83,15 @@ export class LGraphNodePortsWidgets extends LGraphNodeExecution {
         return { ...defaultPortsWidgetsHost, ...(host || {}) };
     }
 
-    private getClassMeta(): LGraphNodePortsWidgetsClassMetadata {
+    private getPortsWidgetsClassMeta(): LGraphNodePortsWidgetsClassMetadata {
         return this.constructor as LGraphNodePortsWidgetsClassMetadata;
+    }
+
+    private getGraphLinksMap(): Record<string, Record<string, unknown>> {
+        const graphLike = this.graph as unknown as {
+            links?: Record<string, Record<string, unknown>>;
+        };
+        return graphLike.links || {};
     }
 
     /**
@@ -96,6 +104,39 @@ export class LGraphNodePortsWidgets extends LGraphNodeExecution {
         if (this.onResize) {
             this.onResize(this.size);
         }
+    }
+
+    /**
+     * add a new property to this node
+     * @method addProperty
+     * @param {string} name
+     * @param {*} default_value
+     * @param {string} type string defining the output type ("vec3","number",...)
+     * @param {Object} extra_info this can be used to have special properties of the property (like values, etc)
+     */
+    addProperty<T = unknown>(
+        name: string,
+        default_value: unknown,
+        type: string,
+        extra_info?: object
+    ): T {
+        const o: PropertyInfo = { name, type, default_value };
+        if (extra_info) {
+            for (const i in extra_info as Record<string, unknown>) {
+                (o as Record<string, unknown>)[i] = (
+                    extra_info as Record<string, unknown>
+                )[i];
+            }
+        }
+        if (!this.properties_info) {
+            this.properties_info = [];
+        }
+        this.properties_info.push(o);
+        if (!this.properties) {
+            this.properties = {};
+        }
+        this.properties[name] = default_value;
+        return o as unknown as T;
     }
 
     /**
@@ -117,7 +158,7 @@ export class LGraphNodePortsWidgets extends LGraphNodeExecution {
         };
         if (extra_info) {
             for (const i in extra_info) {
-                (output as Record<string, unknown>)[i] = (
+                (output as unknown as Record<string, unknown>)[i] = (
                     extra_info as Record<string, unknown>
                 )[i];
             }
@@ -132,8 +173,12 @@ export class LGraphNodePortsWidgets extends LGraphNodeExecution {
         }
 
         const host = this.getPortsWidgetsHost();
-        if (host.auto_load_slot_types && host.registerNodeAndSlotType) {
-            host.registerNodeAndSlotType(this, type, true);
+        if (host.auto_load_slot_types) {
+            (
+                host.registerNodeAndSlotType as NonNullable<
+                    LiteGraphNodePortsWidgetsHost["registerNodeAndSlotType"]
+                >
+            )(this, type, true);
         }
 
         this.setSize(this.computeSize());
@@ -152,10 +197,14 @@ export class LGraphNodePortsWidgets extends LGraphNodeExecution {
         const host = this.getPortsWidgetsHost();
         for (let i = 0; i < array.length; ++i) {
             const info = array[i];
-            const o: OutputSlot = { name: info[0], type: info[1], links: null };
+            const o = {
+                name: info[0],
+                type: info[1],
+                link: null,
+            } as unknown as OutputSlot;
             if (array[2]) {
                 for (const j in info[2]) {
-                    (o as Record<string, unknown>)[j] = (
+                    (o as unknown as Record<string, unknown>)[j] = (
                         info[2] as Record<string, unknown>
                     )[j];
                 }
@@ -169,12 +218,47 @@ export class LGraphNodePortsWidgets extends LGraphNodeExecution {
                 this.onOutputAdded(o);
             }
 
-            if (host.auto_load_slot_types && host.registerNodeAndSlotType) {
-                host.registerNodeAndSlotType(this, info[1], true);
+            if (host.auto_load_slot_types) {
+                (
+                    host.registerNodeAndSlotType as NonNullable<
+                        LiteGraphNodePortsWidgetsHost["registerNodeAndSlotType"]
+                    >
+                )(this, info[1], true);
             }
         }
 
         this.setSize(this.computeSize());
+        this.setDirtyCanvas(true, true);
+    }
+
+    /**
+     * remove an existing output slot
+     * @method removeOutput
+     * @param {number} slot
+     */
+    removeOutput(slot: number): void {
+        (this as unknown as { disconnectOutput: (slot: number) => void }).disconnectOutput(
+            slot
+        );
+        this.outputs.splice(slot, 1);
+        for (let i = slot; i < this.outputs.length; ++i) {
+            if (!this.outputs[i] || !this.outputs[i].links) {
+                continue;
+            }
+            const links = this.outputs[i].links!;
+            for (let j = 0; j < links.length; ++j) {
+                const link = this.getGraphLinksMap()[String(links[j])];
+                if (!link) {
+                    continue;
+                }
+                link.origin_slot = (link.origin_slot as number) - 1;
+            }
+        }
+
+        this.setSize(this.computeSize());
+        if (this.onOutputRemoved) {
+            this.onOutputRemoved(slot);
+        }
         this.setDirtyCanvas(true, true);
     }
 
@@ -201,7 +285,7 @@ export class LGraphNodePortsWidgets extends LGraphNodeExecution {
         };
         if (extra_info) {
             for (const i in extra_info) {
-                (input as Record<string, unknown>)[i] = (
+                (input as unknown as Record<string, unknown>)[i] = (
                     extra_info as Record<string, unknown>
                 )[i];
             }
@@ -219,9 +303,11 @@ export class LGraphNodePortsWidgets extends LGraphNodeExecution {
         }
 
         const host = this.getPortsWidgetsHost();
-        if (host.registerNodeAndSlotType) {
-            host.registerNodeAndSlotType(this, normalizedType);
-        }
+        (
+            host.registerNodeAndSlotType as NonNullable<
+                LiteGraphNodePortsWidgetsHost["registerNodeAndSlotType"]
+            >
+        )(this, normalizedType);
 
         this.setDirtyCanvas(true, true);
         return input;
@@ -241,7 +327,7 @@ export class LGraphNodePortsWidgets extends LGraphNodeExecution {
             const o: InputSlot = { name: info[0], type: info[1], link: null };
             if (array[2]) {
                 for (const j in info[2]) {
-                    (o as Record<string, unknown>)[j] = (
+                    (o as unknown as Record<string, unknown>)[j] = (
                         info[2] as Record<string, unknown>
                     )[j];
                 }
@@ -255,13 +341,68 @@ export class LGraphNodePortsWidgets extends LGraphNodeExecution {
                 this.onInputAdded(o);
             }
 
-            if (host.registerNodeAndSlotType) {
-                host.registerNodeAndSlotType(this, info[1]);
-            }
+            (
+                host.registerNodeAndSlotType as NonNullable<
+                    LiteGraphNodePortsWidgetsHost["registerNodeAndSlotType"]
+                >
+            )(this, info[1]);
         }
 
         this.setSize(this.computeSize());
         this.setDirtyCanvas(true, true);
+    }
+
+    /**
+     * remove an existing input slot
+     * @method removeInput
+     * @param {number} slot
+     */
+    removeInput(slot: number): void {
+        (this as unknown as { disconnectInput: (slot: number) => void }).disconnectInput(
+            slot
+        );
+        const slot_info = this.inputs.splice(slot, 1);
+        for (let i = slot; i < this.inputs.length; ++i) {
+            if (!this.inputs[i]) {
+                continue;
+            }
+            const link = this.getGraphLinksMap()[String(this.inputs[i].link)];
+            if (!link) {
+                continue;
+            }
+            link.target_slot = (link.target_slot as number) - 1;
+        }
+        this.setSize(this.computeSize());
+        if (this.onInputRemoved) {
+            this.onInputRemoved(slot, slot_info[0] as InputSlot);
+        }
+        this.setDirtyCanvas(true, true);
+    }
+
+    /**
+     * add an special connection to this node (used for special kinds of graphs)
+     * @method addConnection
+     * @param {string} name
+     * @param {string} type string defining the input type ("vec3","number",...)
+     * @param {[x,y]} pos position of the connection inside the node
+     * @param {string} direction if is input or output
+     */
+    addConnection(name: string, type: string, pos: Vector2, direction: string): {
+        name: string;
+        type: string;
+        pos: Vector2;
+        direction: string;
+        links: null;
+    } {
+        const o = {
+            name,
+            type,
+            pos,
+            direction,
+            links: null,
+        };
+        this.connections.push(o);
+        return o;
     }
 
     /**
@@ -271,7 +412,7 @@ export class LGraphNodePortsWidgets extends LGraphNodeExecution {
      * @return {vec2} the total size
      */
     computeSize(out?: Vector2): Vector2 {
-        const classMeta = this.getClassMeta();
+        const classMeta = this.getPortsWidgetsClassMeta();
         const host = this.getPortsWidgetsHost();
         if (classMeta.size) {
             return classMeta.size.concat() as Vector2;
@@ -281,7 +422,7 @@ export class LGraphNodePortsWidgets extends LGraphNodeExecution {
             this.inputs ? this.inputs.length : 1,
             this.outputs ? this.outputs.length : 1
         );
-        const size = out || ([0, 0] as Vector2);
+        const size = out || (new Float32Array([0, 0]) as unknown as Vector2);
         rows = Math.max(rows, 1);
         const font_size = host.NODE_TEXT_SIZE; // although it should be graphcanvas.inner_text_font size
 
@@ -382,7 +523,7 @@ export class LGraphNodePortsWidgets extends LGraphNodeExecution {
             }
         }
         // litescene mode using the constructor
-        const classMeta = this.getClassMeta();
+        const classMeta = this.getPortsWidgetsClassMeta();
         if (classMeta["@" + property]) {
             info = classMeta["@" + property] as PropertyInfo;
         }
@@ -478,10 +619,10 @@ export class LGraphNodePortsWidgets extends LGraphNodeExecution {
         }
 
         const w = {
-            type: String(type || "").toLowerCase(),
+            type: (type as string).toLowerCase(),
             name,
             value,
-            callback: widgetCallback || undefined,
+            callback: widgetCallback as WidgetCallback<T> | null | undefined,
             options: (widgetOptions || {}) as WidgetOptions,
         } as WidgetLike;
 
