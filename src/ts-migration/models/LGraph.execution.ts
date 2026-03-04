@@ -62,7 +62,18 @@ export class LGraphExecution extends LGraph {
     onAfterExecute?: () => void;
 
     private getExecutionHost(): LiteGraphExecutionHost {
-        const host = (LGraph.liteGraph || {}) as Partial<LiteGraphExecutionHost>;
+        const ctor = this.constructor as {
+            liteGraph?: Partial<LiteGraphExecutionHost>;
+        };
+        const host =
+            (ctor.liteGraph ||
+                (LGraphExecution as unknown as {
+                    liteGraph?: Partial<LiteGraphExecutionHost>;
+                }).liteGraph ||
+                (LGraph as unknown as {
+                    liteGraph?: Partial<LiteGraphExecutionHost>;
+                }).liteGraph ||
+                {}) as Partial<LiteGraphExecutionHost>;
         return { ...defaultExecutionHost, ...host };
     }
 
@@ -430,4 +441,3 @@ export class LGraphExecution extends LGraph {
         }
     }
 }
-

@@ -83,8 +83,18 @@ export class LGraphIOEvents extends LGraphStructure {
     private _input_nodes: GraphNodeEventLike[] = [];
 
     private getIOEventsHost(): LiteGraphIOEventsHost {
-        const host = (LGraphStructure.liteGraph ||
-            {}) as Partial<LiteGraphIOEventsHost>;
+        const ctor = this.constructor as {
+            liteGraph?: Partial<LiteGraphIOEventsHost>;
+        };
+        const host =
+            (ctor.liteGraph ||
+                (LGraphIOEvents as unknown as {
+                    liteGraph?: Partial<LiteGraphIOEventsHost>;
+                }).liteGraph ||
+                (LGraphStructure as unknown as {
+                    liteGraph?: Partial<LiteGraphIOEventsHost>;
+                }).liteGraph ||
+                {}) as Partial<LiteGraphIOEventsHost>;
         return { ...defaultIOEventsHost, ...host };
     }
 

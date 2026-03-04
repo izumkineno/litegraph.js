@@ -79,8 +79,18 @@ export class LGraphStructure extends LGraphExecution {
     onNodeRemoved?: (node: GraphNodeStructureLike) => void;
 
     private getStructureHost(): LiteGraphStructureHost {
-        const host = (LGraphExecution.liteGraph ||
-            {}) as Partial<LiteGraphStructureHost>;
+        const ctor = this.constructor as {
+            liteGraph?: Partial<LiteGraphStructureHost>;
+        };
+        const host =
+            (ctor.liteGraph ||
+                (LGraphStructure as unknown as {
+                    liteGraph?: Partial<LiteGraphStructureHost>;
+                }).liteGraph ||
+                (LGraphExecution as unknown as {
+                    liteGraph?: Partial<LiteGraphStructureHost>;
+                }).liteGraph ||
+                {}) as Partial<LiteGraphStructureHost>;
         return { ...defaultStructureHost, ...host };
     }
 

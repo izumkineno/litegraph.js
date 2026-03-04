@@ -6380,17 +6380,31 @@ var LiteGraphTSMigration = (function(exports) {
       if (!baseClass.title) {
         baseClass.title = className;
       }
-      for (const i in this.lGraphNodePrototype) {
-        const basePrototype2 = baseClass.prototype;
-        if (basePrototype2[i] === void 0) {
-          basePrototype2[i] = this.lGraphNodePrototype[i];
+      const basePrototype = baseClass.prototype;
+      const visited = /* @__PURE__ */ new Set();
+      let cursor = this.lGraphNodePrototype;
+      while (cursor && cursor !== Object.prototype) {
+        const names = Object.getOwnPropertyNames(cursor);
+        for (const name of names) {
+          if (name === "constructor" || name === "__proto__" || visited.has(name)) {
+            continue;
+          }
+          visited.add(name);
+          if (basePrototype[name] !== void 0) {
+            continue;
+          }
+          const descriptor = Object.getOwnPropertyDescriptor(cursor, name);
+          if (!descriptor) {
+            continue;
+          }
+          Object.defineProperty(basePrototype, name, descriptor);
         }
+        cursor = Object.getPrototypeOf(cursor);
       }
       const prev = this.host.registered_node_types[type];
       if (prev) {
         console.log("replacing node type: " + type);
       }
-      const basePrototype = baseClass.prototype;
       const host = this.host;
       if (!Object.prototype.hasOwnProperty.call(basePrototype, "shape")) {
         Object.defineProperty(basePrototype, "shape", {
@@ -7108,7 +7122,7 @@ var LiteGraphTSMigration = (function(exports) {
       this.inputs = {};
       this.outputs = {};
       this.execution_timer_id = null;
-      if (_b.liteGraph.debug) {
+      if (this.getLifecycleHost().debug) {
         console.log("Graph created");
       }
       this.list_of_graphcanvas = null;
@@ -7116,6 +7130,11 @@ var LiteGraphTSMigration = (function(exports) {
       if (o) {
         this.configure(o);
       }
+    }
+    getLifecycleHost() {
+      const ctor = this.constructor;
+      const host = ctor.liteGraph || _b.liteGraph || {};
+      return { ...defaultLiteGraphLifecycleHost, ...host };
     }
     getSupportedTypes() {
       return this.supported_types || _b.supported_types;
@@ -7213,7 +7232,7 @@ var LiteGraphTSMigration = (function(exports) {
         this.onPlayEvent();
       }
       this.sendEventToAllNodes("onStart");
-      this.starttime = _b.liteGraph.getTime();
+      this.starttime = this.getLifecycleHost().getTime();
       this.last_update_time = this.starttime;
       interval = interval || 0;
       const that = this;
@@ -7319,7 +7338,8 @@ var LiteGraphTSMigration = (function(exports) {
       this.execution_time = 0;
     }
     getExecutionHost() {
-      const host = LGraph$1.liteGraph || {};
+      const ctor = this.constructor;
+      const host = ctor.liteGraph || LGraphExecution.liteGraph || LGraph$1.liteGraph || {};
       return { ...defaultExecutionHost$1, ...host };
     }
     getNodeByIdExecution(id) {
@@ -7619,7 +7639,8 @@ var LiteGraphTSMigration = (function(exports) {
   };
   class LGraphStructure extends LGraphExecution {
     getStructureHost() {
-      const host = LGraphExecution.liteGraph || {};
+      const ctor = this.constructor;
+      const host = ctor.liteGraph || LGraphStructure.liteGraph || LGraphExecution.liteGraph || {};
       return { ...defaultStructureHost, ...host };
     }
     getNodesByIdMap() {
@@ -7918,7 +7939,8 @@ var LiteGraphTSMigration = (function(exports) {
       this._input_nodes = [];
     }
     getIOEventsHost() {
-      const host = LGraphStructure.liteGraph || {};
+      const ctor = this.constructor;
+      const host = ctor.liteGraph || LGraphIOEvents.liteGraph || LGraphStructure.liteGraph || {};
       return { ...defaultIOEventsHost, ...host };
     }
     getNodesInEventOrder() {
@@ -8336,7 +8358,8 @@ var LiteGraphTSMigration = (function(exports) {
   };
   class LGraphPersistence extends LGraphIOEvents {
     getPersistenceHost() {
-      const host = LGraphIOEvents.liteGraph || {};
+      const ctor = this.constructor;
+      const host = ctor.liteGraph || LGraphPersistence.liteGraph || LGraphIOEvents.liteGraph || {};
       return { ...defaultPersistenceHost, ...host };
     }
     createFallbackNode(nInfo) {
@@ -8590,11 +8613,17 @@ var LiteGraphTSMigration = (function(exports) {
       this._ctor(title);
     }
     get pos() {
+      if (!this._pos) {
+        this._pos = new Float32Array(10);
+      }
       return this._pos;
     }
     set pos(v) {
       if (!v || v.length < 2) {
         return;
+      }
+      if (!this._pos) {
+        this._pos = new Float32Array(10);
       }
       this._pos[0] = v[0];
       this._pos[1] = v[1];

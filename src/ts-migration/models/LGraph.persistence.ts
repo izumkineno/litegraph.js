@@ -77,8 +77,18 @@ export class LGraphPersistence extends LGraphIOEvents {
     onConfigure?: (data: SerializedGraphPersistenceLike) => void;
 
     private getPersistenceHost(): LiteGraphPersistenceHost {
-        const host = (LGraphIOEvents.liteGraph ||
-            {}) as Partial<LiteGraphPersistenceHost>;
+        const ctor = this.constructor as {
+            liteGraph?: Partial<LiteGraphPersistenceHost>;
+        };
+        const host =
+            (ctor.liteGraph ||
+                (LGraphPersistence as unknown as {
+                    liteGraph?: Partial<LiteGraphPersistenceHost>;
+                }).liteGraph ||
+                (LGraphIOEvents as unknown as {
+                    liteGraph?: Partial<LiteGraphPersistenceHost>;
+                }).liteGraph ||
+                {}) as Partial<LiteGraphPersistenceHost>;
         return { ...defaultPersistenceHost, ...host };
     }
 

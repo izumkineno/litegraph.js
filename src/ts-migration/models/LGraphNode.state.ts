@@ -180,12 +180,18 @@ export class LGraphNode {
     }
 
     get pos(): Vector2 {
+        if (!this._pos) {
+            this._pos = new Float32Array(10);
+        }
         return this._pos as unknown as Vector2;
     }
 
     set pos(v: Vector2) {
         if (!v || v.length < 2) {
             return;
+        }
+        if (!this._pos) {
+            this._pos = new Float32Array(10);
         }
         this._pos[0] = v[0];
         this._pos[1] = v[1];

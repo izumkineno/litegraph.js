@@ -111,12 +111,29 @@ export class LiteGraphRegistry {
             baseClass.title = className;
         }
 
-        // extend class
-        for (const i in this.lGraphNodePrototype) {
-            const basePrototype = baseClass.prototype;
-            if (basePrototype[i] === undefined) {
-                basePrototype[i] = this.lGraphNodePrototype[i];
+        // extend class:
+        // in TS class-based migration, prototype methods are non-enumerable and split across
+        // the inheritance chain, so we need descriptor-based copying instead of `for...in`.
+        const basePrototype = baseClass.prototype;
+        const visited = new Set<string>();
+        let cursor: object | null = this.lGraphNodePrototype;
+        while (cursor && cursor !== Object.prototype) {
+            const names = Object.getOwnPropertyNames(cursor);
+            for (const name of names) {
+                if (name === "constructor" || name === "__proto__" || visited.has(name)) {
+                    continue;
+                }
+                visited.add(name);
+                if (basePrototype[name] !== undefined) {
+                    continue;
+                }
+                const descriptor = Object.getOwnPropertyDescriptor(cursor, name);
+                if (!descriptor) {
+                    continue;
+                }
+                Object.defineProperty(basePrototype, name, descriptor);
             }
+            cursor = Object.getPrototypeOf(cursor);
         }
 
         const prev = this.host.registered_node_types[type];
@@ -124,7 +141,6 @@ export class LiteGraphRegistry {
             console.log("replacing node type: " + type);
         }
 
-        const basePrototype = baseClass.prototype;
         const host = this.host;
         if (!Object.prototype.hasOwnProperty.call(basePrototype, "shape")) {
             Object.defineProperty(basePrototype, "shape", {

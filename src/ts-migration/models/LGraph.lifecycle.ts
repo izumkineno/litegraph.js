@@ -89,8 +89,21 @@ export class LGraph {
     onBeforeStep?: () => void;
     onAfterStep?: () => void;
 
+    protected getLifecycleHost(): LiteGraphLifecycleHost {
+        const ctor = this.constructor as {
+            liteGraph?: Partial<LiteGraphLifecycleHost>;
+        };
+        const host =
+            (ctor.liteGraph ||
+                (LGraph as unknown as {
+                    liteGraph?: Partial<LiteGraphLifecycleHost>;
+                }).liteGraph ||
+                {}) as Partial<LiteGraphLifecycleHost>;
+        return { ...defaultLiteGraphLifecycleHost, ...host };
+    }
+
     constructor(o?: object) {
-        if (LGraph.liteGraph.debug) {
+        if (this.getLifecycleHost().debug) {
             console.log("Graph created");
         }
         this.list_of_graphcanvas = null;
@@ -231,7 +244,7 @@ export class LGraph {
         this.sendEventToAllNodes("onStart");
 
         // launch
-        this.starttime = LGraph.liteGraph.getTime();
+        this.starttime = this.getLifecycleHost().getTime();
         this.last_update_time = this.starttime;
         interval = interval || 0;
         const that = this;
