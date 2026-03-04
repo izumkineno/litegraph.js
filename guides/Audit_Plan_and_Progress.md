@@ -96,7 +96,7 @@ Git 提交规则（强制）：
   - 对应原 JS：`serialize/configure` 数据结构。
   - 对应原 d.ts：`SerializedLLink/SerializedLGraphNode/SerializedLGraphGroup`。
 
-- [ ] **Audit Task 04: `src/ts-migration/types/litegraph-compat.ts`**
+- [x] **Audit Task 04: `src/ts-migration/types/litegraph-compat.ts`**
   - 对应原 JS：实现与声明差异兼容映射点。
   - 对应原 d.ts：差异 API 的类型对齐策略。
 
@@ -267,9 +267,9 @@ Git 提交规则（强制）：
 ## 审计进度快照
 
 - 总任务数：`42`
-- 已完成：`3`
+- 已完成：`4`
 - 进行中：`0`
-- 未开始：`39`
+- 未开始：`38`
 - 最新更新时间：`2026-03-04`
 
 ---
@@ -350,3 +350,21 @@ Git 提交规则（强制）：
   2. 将 `flags` 调整为 `Partial<{ collapsed: boolean }>`。
   3. 将 `serializedLGraph.config` 调整为 `object`。
   4. 校验通过：`npx tsc --noEmit src/ts-migration/types/serialization.ts`。
+
+### Audit Task 04 结果
+- 结论：Pass（发现 3 处兼容层类型约束偏差并已修复）
+- JS 对照：`src/litegraph.js`
+  - `GRID_SHAPE`、`onMenuResizeNode`、`onMenuNodeToSubgraph`、`closeAllContextMenus`、`onNodeAdded` 等差异调用点
+  - `LLink.serialize/configure`、`LGraphGroup.serialize/configure` 的序列化差异路径
+- d.ts 对照：`src/litegraph.d.ts`
+  - `SQUARE_SHAPE`、`onResizeNode`、`processNodeDeselected/drawSlotGraphic/touchHandler`
+  - `ContextMenu.closeAllContextMenus`、`LGraph.onNodeAdded`
+- TS 对照：`src/ts-migration/types/litegraph-compat.ts`
+- 发现问题：
+  1. `LiteGraphCompatDiffItem.id` 被声明为 `string`，相比兼容声明层（`litegraph-compat.d.ts`）的字面量联合 `LiteGraphCompatDiffId` 过宽，弱化了差异矩阵的静态可追踪性与枚举约束。
+  2. `LiteGraphContextMenuCompatHost` 缺少字符串索引签名，导致包装层 `applyContextMenuCloseAllCompat` 与 `ui/context-menu-compat.ts` 的 host 类型不兼容。
+  3. `LGraphHooksCompatHost` 缺少字符串索引签名，导致包装层 `invokeGraphOnNodeAddedCompatHook` 与 `models/LGraph.hooks.ts` 的 host 类型不兼容。
+- 已实施修复：
+  1. 在实现文件中补充 `LiteGraphCompatDiffId` 联合类型，并将 `LiteGraphCompatDiffItem.id` 收敛到该联合类型。
+  2. 为 `LiteGraphContextMenuCompatHost`、`LGraphHooksCompatHost` 补充 `[key: string]: unknown`，与被委托兼容模块签名对齐。
+  3. 校验通过：`npx tsc --noEmit src/ts-migration/types/litegraph-compat.ts`。

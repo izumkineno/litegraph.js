@@ -71,10 +71,12 @@ export interface ContextMenuCloseCompatHost {
 export interface LiteGraphContextMenuCompatHost {
     closeAllContextMenus?: (refWindow?: Window) => void;
     ContextMenu?: ContextMenuCloseCompatHost;
+    [key: string]: unknown;
 }
 
 export interface LGraphHooksCompatHost {
     onNodeAdded?: ((node: unknown) => void) | null;
+    [key: string]: unknown;
 }
 
 export type LiteGraphCompatArea =
@@ -85,8 +87,21 @@ export type LiteGraphCompatArea =
     | "ui"
     | "graph-hooks";
 
+export type LiteGraphCompatDiffId =
+    | "constants.grid-square-alias"
+    | "canvas-static.resize"
+    | "canvas-static.subgraph-menu"
+    | "canvas-instance.deselected"
+    | "canvas-instance.slot-graphic"
+    | "canvas-instance.touch-handler"
+    | "serialization.link-tuple-order"
+    | "serialization.group-font-field"
+    | "ui.close-all-context-menus"
+    | "graph-hooks.on-node-added"
+    | "canvas-static.missing-apis";
+
 export interface LiteGraphCompatDiffItem {
-    id: string;
+    id: LiteGraphCompatDiffId;
     area: LiteGraphCompatArea;
     dts: string;
     runtime: string;
