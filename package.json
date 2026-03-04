@@ -20,6 +20,8 @@
     "scripts": {
         "build": "bun run build:dist",
         "build:dist": "node scripts/build-dist.mjs",
+        "build:ts-migration": "node scripts/build-ts-migration.mjs",
+        "build:all": "bun run build:dist && bun run build:ts-migration",
         "test": "bunx jest",
         "test:e2e": "npx playwright test",
         "test:e2e:full": "npx playwright test",

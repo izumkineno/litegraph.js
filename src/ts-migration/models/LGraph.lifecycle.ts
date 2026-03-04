@@ -173,6 +173,47 @@ export class LGraph {
     }
 
     /**
+     * Attach Canvas to this graph
+     * @method attachCanvas
+     */
+    attachCanvas(graphcanvas: LGraphCanvasLifecycleLike): void {
+        if (!graphcanvas || typeof graphcanvas !== "object") {
+            throw new Error("attachCanvas expects a LGraphCanvas-like instance");
+        }
+
+        const currentGraph = graphcanvas.graph;
+        if (currentGraph && currentGraph !== this) {
+            currentGraph.detachCanvas(graphcanvas);
+        }
+
+        graphcanvas.graph = this;
+
+        if (!this.list_of_graphcanvas) {
+            this.list_of_graphcanvas = [];
+        }
+        if (this.list_of_graphcanvas.indexOf(graphcanvas) === -1) {
+            this.list_of_graphcanvas.push(graphcanvas);
+        }
+    }
+
+    /**
+     * Detach Canvas from this graph
+     * @method detachCanvas
+     */
+    detachCanvas(graphcanvas: LGraphCanvasLifecycleLike): void {
+        if (!this.list_of_graphcanvas) {
+            return;
+        }
+
+        const pos = this.list_of_graphcanvas.indexOf(graphcanvas);
+        if (pos === -1) {
+            return;
+        }
+        graphcanvas.graph = null;
+        this.list_of_graphcanvas.splice(pos, 1);
+    }
+
+    /**
      * Starts running this graph every interval milliseconds.
      * @method start
      * @param {number} interval amount of milliseconds between executions, if 0 then it renders to the monitor refresh rate
@@ -308,4 +349,3 @@ export class LGraph {
         // implemented in later tasks
     }
 }
-
