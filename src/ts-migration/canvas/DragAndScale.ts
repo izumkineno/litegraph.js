@@ -102,7 +102,6 @@ export class DragAndScale {
 
     bindEvents(element: HTMLElement): void {
         this.last_mouse = new Float32Array(2) as unknown as Vector2;
-        this.element = element;
 
         this._binded_mouse_callback = this.onMouse.bind(this) as (
             event: Event | TouchNormalizedEvent
@@ -128,8 +127,8 @@ export class DragAndScale {
             return;
         }
 
-        let width = element.width ?? element.clientWidth;
-        let height = element.height ?? element.clientHeight;
+        let width = element.width as number;
+        let height = element.height as number;
         let startx = -this.offset[0];
         let starty = -this.offset[1];
         if (viewport) {
@@ -151,10 +150,7 @@ export class DragAndScale {
             return;
         }
 
-        const canvas = this.element as CanvasElementLike | null;
-        if (!canvas) {
-            return;
-        }
+        const canvas = this.element as CanvasElementLike;
 
         const host = this.getHost();
         const rect = canvas.getBoundingClientRect();
@@ -178,11 +174,9 @@ export class DragAndScale {
 
         if (e.type == host.pointerevents_method + "down" && is_inside) {
             this.dragging = true;
-            if (this._binded_mouse_callback) {
-                host.pointerListenerRemove(canvas, "move", this._binded_mouse_callback);
-                host.pointerListenerAdd(document, "move", this._binded_mouse_callback);
-                host.pointerListenerAdd(document, "up", this._binded_mouse_callback);
-            }
+            host.pointerListenerRemove(canvas, "move", this._binded_mouse_callback!);
+            host.pointerListenerAdd(document, "move", this._binded_mouse_callback!);
+            host.pointerListenerAdd(document, "up", this._binded_mouse_callback!);
         } else if (e.type == host.pointerevents_method + "move") {
             if (!ignore) {
                 const deltax = x - this.last_mouse[0];
@@ -193,20 +187,18 @@ export class DragAndScale {
             }
         } else if (e.type == host.pointerevents_method + "up") {
             this.dragging = false;
-            if (this._binded_mouse_callback) {
-                host.pointerListenerRemove(document, "move", this._binded_mouse_callback);
-                host.pointerListenerRemove(document, "up", this._binded_mouse_callback);
-                host.pointerListenerAdd(canvas, "move", this._binded_mouse_callback);
-            }
+            host.pointerListenerRemove(document, "move", this._binded_mouse_callback!);
+            host.pointerListenerRemove(document, "up", this._binded_mouse_callback!);
+            host.pointerListenerAdd(canvas, "move", this._binded_mouse_callback!);
         } else if (
             is_inside &&
             (e.type == "mousewheel" || e.type == "wheel" || e.type == "DOMMouseScroll")
         ) {
             e.eventType = "mousewheel";
             if (e.type == "wheel") {
-                e.wheel = -(e.deltaY || 0);
+                e.wheel = -e.deltaY!;
             } else {
-                e.wheel = e.wheelDeltaY != null ? e.wheelDeltaY : (e.detail || 0) * -60;
+                e.wheel = e.wheelDeltaY != null ? e.wheelDeltaY : e.detail! * -60;
             }
 
             // from stack overflow

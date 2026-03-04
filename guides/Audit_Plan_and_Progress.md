@@ -220,7 +220,7 @@ Git 提交规则（强制）：
 
 ### E. 画布层：DragAndScale / LGraphCanvas
 
-- [ ] **Audit Task 33: `src/ts-migration/canvas/DragAndScale.ts`**
+- [x] **Audit Task 33: `src/ts-migration/canvas/DragAndScale.ts`**
   - 对应原 JS：`function DragAndScale` + 缩放平移换算链路。
   - 对应原 d.ts：`DragAndScale` 类声明。
 
@@ -267,9 +267,9 @@ Git 提交规则（强制）：
 ## 审计进度快照
 
 - 总任务数：`42`
-- 已完成：`32`
+- 已完成：`33`
 - 进行中：`0`
-- 未开始：`10`
+- 未开始：`9`
 - 最新更新时间：`2026-03-04`
 
 ---
@@ -921,3 +921,24 @@ Git 提交规则（强制）：
   2. `serializeLGraphGroupShape` 仅执行结构映射与字段名转换（`font_size <-> font`），移除多余类型强转。
 - 验证：
   1. 类型校验通过：`npx tsc --noEmit src/ts-migration/models/LGraphGroup.serialization.compat.ts`。
+
+### Audit Task 33 结果
+- 结论：Pass（发现 4 处 DragAndScale 迁移偏差并已修复）
+- JS 对照：`src/litegraph.js`
+  - `function DragAndScale`
+  - `DragAndScale.prototype.bindEvents/computeVisibleArea/onMouse/changeScale`
+- d.ts 对照：`src/litegraph.d.ts`
+  - `DragAndScale` 全部实例方法签名
+- TS 对照：`src/ts-migration/canvas/DragAndScale.ts`
+- 发现问题：
+  1. `bindEvents` 额外写入 `this.element = element`，偏离原 JS 行为。
+  2. `computeVisibleArea` 对 `width/height` 使用 `clientWidth/clientHeight` 回退，偏离原 JS 仅使用 `element.width/height`。
+  3. `onMouse` 增加了 `canvas` 空值防御与 `_binded_mouse_callback` 存在性防御，改变原 JS 的异常路径与调用语义。
+  4. `onMouse` 的滚轮分支为 `deltaY/detail` 增加了 `0` 兜底，偏离原 JS 的直接数值运算路径。
+- 已实施修复：
+  1. 移除 `bindEvents` 中对 `this.element` 的额外赋值。
+  2. `computeVisibleArea` 恢复 `element.width/element.height` 路径。
+  3. `onMouse` 恢复原 JS 直接调用语义（去掉多余防御分支）。
+  4. 滚轮计算恢复为原 JS 等价表达（不引入额外默认值）。
+- 验证：
+  1. 类型校验通过：`npx tsc --noEmit src/ts-migration/canvas/DragAndScale.ts`。
