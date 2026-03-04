@@ -136,6 +136,10 @@
 - [x] **Task 43: 契约快照测试** — 来源：Phase E 全部兼容点；目标产物：`tests/migration-parity/contracts.test.ts`。
 - [x] **Task 44: 兼容模式回归 E2E** — 来源：菜单、子图、对齐菜单、属性展示路径；目标产物：`tests/playwright/specs/migration-compat-guard.spec.cjs`。
 
+### Phase F：风险收敛（增量）
+
+- [x] **Task 45: Pointer Events 类型收敛修复** — 来源：`compat/pointer-events.ts` 的 `TS2322` 导致单文件 `tsc` 验证链路受阻；目标产物：`src/ts-migration/compat/pointer-events.ts`。
+
 ## 测试场景与验收标准
 
 1. **注册与节点创建**：`registerNodeType/createNode/getNodeType*` 行为与旧实现一致。
@@ -172,16 +176,16 @@
 
 ## 进度快照
 
-- 当前阶段：`Phase E 已完成（Task 44 已完成）`
-- 总任务数：`44`
-- 已完成：`44`
+- 当前阶段：`Phase F 进行中（Task 45 已完成）`
+- 总任务数：`45`
+- 已完成：`45`
 - 进行中：`0`
 - 待开始：`0`
 
 ## 风险清单（当前）
 
 1. `高`：全量 TypeScript 检查仍被既有历史问题阻断（外部依赖缺失与迁移层未收敛类型）。
-2. `中`：`compat/pointer-events.ts` 相关类型收敛问题仍会影响部分单文件 `tsc` 验证链路。
+2. `低`：`compat/pointer-events.ts` 的已知 `TS2322` 已修复；后续需持续防止同类“字面量联合过窄”回归。
 3. `低`：Phase E 已完成，兼容层“实现-契约测试-E2E 守卫”闭环已建立，后续主要风险转为回归维护成本。
 4. `低`：迁移层仍保留一定数量的 `TODO/占位` 注释，需在 Phase E 分批清零并回归验证。
 
@@ -190,6 +194,7 @@
 1. 维持 Task 36 差异矩阵为唯一差异源，新增兼容实现必须绑定矩阵 ID。
 2. 将 Task 43 契约快照测试与 Task 44 兼容 E2E 纳入持续回归门禁。
 3. 对后续新增 API 差异，采用“矩阵登记 -> 兼容实现 -> 单测/Parity -> E2E”闭环流程。
+4. 增量收敛编译风险：优先修复迁移层可定位的类型错误，并为后续建立 `tsconfig` 编译基线预留条件。
 
 ## 进度日志（模板）
 
@@ -240,3 +245,4 @@
 | 2026-03-04 | 执行 | Task 42 | 新增 `canvas/LGraphCanvas.static.compat.ts`，落地静态 API 兼容层：`onResizeNode/onMenuResizeNode` 与 `onNodeToSubgraph/onMenuNodeToSubgraph` 双向别名对齐、`getBoundaryNodes/alignNodes/onNodeAlign/onGroupAlign/getPropertyPrintableValue` 缺失守卫；`types/litegraph-compat.ts` 改为复用该层并在统一入口启用；`index.ts` 聚合导出差异常量与检测/应用函数；新增 `tests/migration-unit/lgraphcanvas-static-compat.test.ts` 覆盖别名/守卫/完整性检查 | Canvas 静态兼容守卫已收敛，下一步 Task 43 需建立 Phase E 全量契约快照测试门禁 | 执行 Task 43 |
 | 2026-03-04 | 执行 | Task 43 | 新增 `tests/migration-parity/contracts.test.ts`，建立 Phase E 契约快照门禁：校验 `LITEGRAPH_API_DIFF_MATRIX` ID 快照、`contract-diff-matrix.md` 与运行时矩阵同步、Task 37-42 差异 ID 全量挂接、以及 `applyLiteGraphApiCompatAliases` 的聚合行为快照（含常量别名、菜单关闭对齐、Canvas 静态 API 守卫、钩子触发与序列化规范化） | 契约快照门禁已落地，下一步 Task 44 需补齐兼容模式 E2E 守卫规格 | 执行 Task 44 |
 | 2026-03-04 | 执行 | Task 44 | 新增 `tests/playwright/specs/migration-compat-guard.spec.cjs`，落地兼容模式 E2E 守卫：静态兼容 API 可用性与可调用性、菜单对齐路径、`To Subgraph` 转换与进出子图、属性 printable value 菜单展示；生成 `tests/playwright/reports/migration-compat-guard-report.{json,md}` 报告 | `npx playwright test tests/playwright/specs/migration-compat-guard.spec.cjs --project=chromium` 与 `npx playwright test --project=chromium --grep "@core"` 全绿 | Phase E 收口并转入持续回归维护 |
+| 2026-03-04 | 执行 | Task 45 | 修复 `src/ts-migration/compat/pointer-events.ts` 中 `resolvePointerEventName` 的类型收敛问题（`dom_event` 由字面量联合放宽为 `string \| undefined`），消除 `TS2322` | `npx tsc --noEmit src/ts-migration/compat/pointer-events.ts` 通过；`LGraphCanvas.input/render/menu-panel.ts` 单文件 `tsc` 复测通过 | 下一步处理高风险：建立迁移层全量 `tsc -p` 编译基线 |

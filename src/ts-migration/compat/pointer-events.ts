@@ -211,7 +211,7 @@ export function resolvePointerEventName(
     }
 
     const map = maps[(method as keyof typeof maps) || "mouse"] || maps.mouse;
-    let dom_event = map[requested as keyof typeof map];
+    let dom_event: string | undefined = map[requested as keyof typeof map];
     if (!dom_event) {
         if (
             method == "touch" &&
@@ -355,4 +355,3 @@ export function pointerListenerRemove(
         host._pointerListenerOptions(dom_event, capture)
     );
 }
-
