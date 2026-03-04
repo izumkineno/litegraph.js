@@ -152,7 +152,7 @@ Git 提交规则（强制）：
   - 对应原 JS：IIFE 全局桥接。
   - 对应原 d.ts：全局对象可见成员。
 
-- [ ] **Audit Task 17: `src/ts-migration/compat/cjs-exports.ts`**
+- [x] **Audit Task 17: `src/ts-migration/compat/cjs-exports.ts`**
   - 对应原 JS：CommonJS 导出段落。
   - 对应原 d.ts：模块导出命名一致性。
 
@@ -267,9 +267,9 @@ Git 提交规则（强制）：
 ## 审计进度快照
 
 - 总任务数：`42`
-- 已完成：`16`
+- 已完成：`17`
 - 进行中：`0`
-- 未开始：`26`
+- 未开始：`25`
 - 最新更新时间：`2026-03-04`
 
 ---
@@ -559,3 +559,16 @@ Git 提交规则（强制）：
   2. `attachLiteGraphGlobalBridgeToGlobalThis` 作为便利入口不改变核心桥接语义。
 - 验证：
   1. 类型校验通过：`npx tsc --noEmit src/ts-migration/compat/global-bridge.ts`。
+
+### Audit Task 17 结果
+- 结论：Pass（完美匹配，无代码修复）
+- JS 对照：`src/litegraph.js`
+  - CommonJS 导出段：`exports.LiteGraph/LGraph/LLink/LGraphNode/LGraphGroup/DragAndScale/LGraphCanvas/ContextMenu`
+- d.ts 对照：`src/litegraph.d.ts`
+  - 对应命名导出声明（模块使用场景）
+- TS 对照：`src/ts-migration/compat/cjs-exports.ts`
+- 发现问题：
+  1. 未发现缺失导出项。迁移导出集合与原 JS CommonJS 段一致。
+  2. 兼容增强（顶层别名缺失时回退到 `LiteGraph.*`）不破坏原行为，仅扩展健壮性。
+- 验证：
+  1. 类型校验通过：`npx tsc --noEmit src/ts-migration/compat/cjs-exports.ts`。
