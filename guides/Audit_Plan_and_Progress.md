@@ -224,7 +224,7 @@ Git 提交规则（强制）：
   - 对应原 JS：`function DragAndScale` + 缩放平移换算链路。
   - 对应原 d.ts：`DragAndScale` 类声明。
 
-- [ ] **Audit Task 34: `src/ts-migration/canvas/LGraphCanvas.static.ts`**
+- [x] **Audit Task 34: `src/ts-migration/canvas/LGraphCanvas.static.ts`**
   - 对应原 JS：`LGraphCanvas.*` 静态方法与静态字段。
   - 对应原 d.ts：`LGraphCanvas` 静态 API。
 
@@ -267,9 +267,9 @@ Git 提交规则（强制）：
 ## 审计进度快照
 
 - 总任务数：`42`
-- 已完成：`33`
+- 已完成：`34`
 - 进行中：`0`
-- 未开始：`9`
+- 未开始：`8`
 - 最新更新时间：`2026-03-04`
 
 ---
@@ -942,3 +942,31 @@ Git 提交规则（强制）：
   4. 滚轮计算恢复为原 JS 等价表达（不引入额外默认值）。
 - 验证：
   1. 类型校验通过：`npx tsc --noEmit src/ts-migration/canvas/DragAndScale.ts`。
+
+### Audit Task 34 结果
+- 结论：Pass（发现 8 处 LGraphCanvas 静态区迁移偏差并已修复）
+- JS 对照：`src/litegraph.js`
+  - `LGraphCanvas.onGroupAdd/alignNodes/onNodeAlign/onGroupAlign/onMenuAdd`
+  - `LGraphCanvas.showMenuNodeOptionalInputs/showMenuNodeOptionalOutputs`
+  - `LGraphCanvas.onShowMenuNodeProperties/onMenuResizeNode`
+  - `LGraphCanvas.onMenuNodeCollapse/onMenuNodePin/onMenuNodeMode/onMenuNodeShapes`
+  - `LGraphCanvas.onMenuNodeRemove/onMenuNodeToSubgraph/onMenuNodeClone`
+- d.ts 对照：`src/litegraph.d.ts`
+  - `LGraphCanvas` 静态菜单相关回调与工具方法签名
+- TS 对照：`src/ts-migration/canvas/LGraphCanvas.static.ts`
+- 发现问题：
+  1. `onGroupAdd` 增加了 `canvas.graph` 防御与 `LGraphGroup` 缺失 fallback，对齐性弱于原 JS。
+  2. `alignNodes` 增加 `active_canvas` 为空保护与边界节点空值保护，偏离原 JS 直接赋值路径。
+  3. `onNodeAlign/onGroupAlign` 使用可选链与字符串兜底，偏离原 JS 的 `value.toLowerCase()` 与直接读取 `active_canvas.selected_nodes`。
+  4. `onMenuAdd` 对 `getFirstEvent/beforeChange/afterChange` 使用防御调用，偏离原 JS。
+  5. `showMenuNodeOptionalInputs/Outputs` 对 `beforeChange/afterChange/addInput/addOutput/setDirtyCanvas` 使用可选调用，偏离原 JS。
+  6. `onShowMenuNodeProperties` 对 `getPropertyInfo` 增加 fallback，偏离原 JS 直接调用。
+  7. `onMenuResizeNode` 把 `computeSize` 改成“有则调用”分支，偏离原 JS 直接调用。
+  8. `onMenuNodeCollapse/Pin/Mode/Shapes/Remove/ToSubgraph/Clone` 多处引入可选链与提前返回，偏离原 JS 直接调用链。
+- 已实施修复：
+  1. 收敛 `onGroupAdd/alignNodes/onNodeAlign/onGroupAlign/onMenuAdd` 到原 JS 直接访问语义。
+  2. 收敛可选输入/输出菜单与属性菜单逻辑，恢复关键回调的直接调用路径。
+  3. `onMenuResizeNode` 恢复 `computeSize()` 直接调用语义。
+  4. 收敛节点菜单动作相关方法中的可选链，恢复原 JS 的变更链与调用时序。
+- 验证：
+  1. 类型校验通过：`npx tsc --noEmit src/ts-migration/canvas/LGraphCanvas.static.ts`。
