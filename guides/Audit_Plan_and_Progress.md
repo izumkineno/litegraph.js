@@ -124,7 +124,7 @@ Git 提交规则（强制）：
 
 ### C. 通用工具与环境兼容
 
-- [ ] **Audit Task 10: `src/ts-migration/utils/math-geometry.ts`**
+- [x] **Audit Task 10: `src/ts-migration/utils/math-geometry.ts`**
   - 对应原 JS：`distance/compareObjects/isInside* / growBounding`。
   - 对应原 d.ts：相关工具函数签名。
 
@@ -267,9 +267,9 @@ Git 提交规则（强制）：
 ## 审计进度快照
 
 - 总任务数：`42`
-- 已完成：`9`
+- 已完成：`10`
 - 进行中：`0`
-- 未开始：`33`
+- 未开始：`32`
 - 最新更新时间：`2026-03-04`
 
 ---
@@ -453,3 +453,21 @@ Git 提交规则（强制）：
   3. 将事件槽与连接判断中的关键比较对齐为 JS 的宽松相等语义（`==`）。
   4. 删除 `fetchFile` 未知类型的 `response.text()` 回退，恢复 JS 语义。
   5. 校验通过：`npx tsc --noEmit src/ts-migration/core/litegraph.runtime.ts`。
+
+### Audit Task 10 结果
+- 结论：Pass（完美匹配，无代码修复）
+- JS 对照：`src/litegraph.js`
+  - `compareObjects`、`distance`、`isInsideRectangle`、`growBounding`、`isInsideBounding`
+  - `overlapBounding`（迁移层额外导出给 Canvas/Group 内部复用）
+- d.ts 对照：`src/litegraph.d.ts`
+  - `compareObjects(a: object, b: object)`
+  - `distance(a: Vector2, b: Vector2)`
+  - `isInsideRectangle(...)`
+  - `growBounding(bounding: Vector4, x: number, y: number): Vector4`
+  - `isInsideBounding(p: Vector2, bb: Vector4): boolean`
+- TS 对照：`src/ts-migration/utils/math-geometry.ts`
+- 发现问题：
+  1. 未发现行为差异。核心几何函数的判断分支与原 JS 一致。
+  2. `isInsideBounding` 兼容了 `[[min],[max]]` 与 `[min,max]` 两种表示，保持对旧调用路径与 d.ts 声明的双向兼容。
+- 验证：
+  1. 类型校验通过：`npx tsc --noEmit src/ts-migration/utils/math-geometry.ts`。
