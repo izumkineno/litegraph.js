@@ -148,7 +148,7 @@ Git 提交规则（强制）：
   - 对应原 JS：`pointerListenerAdd/Remove` 与 pointer/touch 映射。
   - 对应原 d.ts：指针事件兼容 API 类型。
 
-- [ ] **Audit Task 16: `src/ts-migration/compat/global-bridge.ts`**
+- [x] **Audit Task 16: `src/ts-migration/compat/global-bridge.ts`**
   - 对应原 JS：IIFE 全局桥接。
   - 对应原 d.ts：全局对象可见成员。
 
@@ -267,9 +267,9 @@ Git 提交规则（强制）：
 ## 审计进度快照
 
 - 总任务数：`42`
-- 已完成：`15`
+- 已完成：`16`
 - 进行中：`0`
-- 未开始：`27`
+- 未开始：`26`
 - 最新更新时间：`2026-03-04`
 
 ---
@@ -544,3 +544,18 @@ Git 提交规则（强制）：
   2. `touch` 事件选项 `{ passive: false }` 与 `capture` 传递语义一致，`enter/leave/over/out` 在 touch 模式下不可映射时返回 `null` 的分支一致。
 - 验证：
   1. 类型校验通过：`npx tsc --noEmit src/ts-migration/compat/pointer-events.ts`。
+
+### Audit Task 16 结果
+- 结论：Pass（完美匹配，无代码修复）
+- JS 对照：`src/litegraph.js`
+  - IIFE 全局挂载：`global.LiteGraph`、`global.LGraph`、`global.LGraphNode`、`global.LGraphGroup`、`global.LGraphCanvas`
+  - 命名空间挂载：`LiteGraph.LLink`、`LiteGraph.DragAndScale`、`LiteGraph.ContextMenu`、`LiteGraph.CurveEditor`
+  - 全局辅助：`global.clamp = clamp`、`window.requestAnimationFrame` shim
+- d.ts 对照：`src/litegraph.d.ts`
+  - `LiteGraph` 聚合 API 与 `getTime` / 工具函数可见成员契约
+- TS 对照：`src/ts-migration/compat/global-bridge.ts`
+- 发现问题：
+  1. 未发现行为缺口。桥接函数对全局与命名空间挂载位置、`clamp` 暴露、`requestAnimationFrame` shim 行为均与原 JS 语义一致。
+  2. `attachLiteGraphGlobalBridgeToGlobalThis` 作为便利入口不改变核心桥接语义。
+- 验证：
+  1. 类型校验通过：`npx tsc --noEmit src/ts-migration/compat/global-bridge.ts`。
