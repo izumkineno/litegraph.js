@@ -132,7 +132,7 @@ Git 提交规则（强制）：
   - 对应原 JS：`colorToString/hex2num/num2hex`。
   - 对应原 d.ts：颜色工具类型。
 
-- [ ] **Audit Task 12: `src/ts-migration/utils/clamp.ts`**
+- [x] **Audit Task 12: `src/ts-migration/utils/clamp.ts`**
   - 对应原 JS：`clamp` 实现。
   - 对应原 d.ts：数学工具函数契约。
 
@@ -267,9 +267,9 @@ Git 提交规则（强制）：
 ## 审计进度快照
 
 - 总任务数：`42`
-- 已完成：`11`
+- 已完成：`12`
 - 进行中：`0`
-- 未开始：`31`
+- 未开始：`30`
 - 最新更新时间：`2026-03-04`
 
 ---
@@ -486,3 +486,17 @@ Git 提交规则（强制）：
 - 已实施修复：
   1. 为 `colorToString` 增加重载：`(c: string)` 与 `(c: ReadonlyArray<number>)`，实现保持原 JS 运行语义不变。
   2. 校验通过：`npx tsc --noEmit src/ts-migration/utils/color.ts`。
+
+### Audit Task 12 结果
+- 结论：Pass（完美匹配，无代码修复）
+- JS 对照：`src/litegraph.js`
+  - `function clamp(v, a, b) { return a > v ? a : b < v ? b : v; }`
+  - `global.clamp = clamp` 全局暴露
+- d.ts 对照：`src/litegraph.d.ts`
+  - `declare function clamp(v: number, min: number, max: number): number`
+- TS 对照：`src/ts-migration/utils/clamp.ts`
+- 发现问题：
+  1. 未发现行为差异。`clamp` 核心表达式与 JS 完全一致。
+  2. 全局暴露路径由 `compat/global-bridge.ts` 负责（`globalScope.clamp = clamp`），与原运行时挂载语义一致。
+- 验证：
+  1. 类型校验通过：`npx tsc --noEmit src/ts-migration/utils/clamp.ts`。
