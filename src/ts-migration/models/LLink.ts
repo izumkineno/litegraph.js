@@ -1,4 +1,9 @@
-import type { SerializedLLink } from "../types/serialization";
+import {
+    parseSerializedLLinkInput,
+    serializeLLinkShape,
+    type LLinkSerializedInput,
+    type SerializedLLinkRuntime,
+} from "./LLink.serialization.compat";
 
 /**
  * this is the class in charge of storing link information
@@ -33,57 +38,27 @@ export class LLink {
         this._pos = new Float32Array(2); // center
     }
 
-    configure(o: LLink | SerializedLLinkCompatible): void {
-        if (Array.isArray(o)) {
-            this.id = Number(o[0] ?? 0);
-
-            // d.ts tuple: [id, type, origin_id, origin_slot, target_id, target_slot]
-            if (typeof o[1] === "string") {
-                this.type = o[1];
-                this.origin_id = Number(o[2] ?? 0);
-                this.origin_slot = Number(o[3] ?? 0);
-                this.target_id = Number(o[4] ?? 0);
-                this.target_slot = Number(o[5] ?? 0);
-                return;
-            }
-
-            // runtime tuple: [id, origin_id, origin_slot, target_id, target_slot, type]
-            this.origin_id = Number(o[1] ?? 0);
-            this.origin_slot = Number(o[2] ?? 0);
-            this.target_id = Number(o[3] ?? 0);
-            this.target_slot = Number(o[4] ?? 0);
-            this.type = String(o[5] ?? "");
-            return;
-        }
-
-        this.id = o.id;
-        this.type = o.type;
-        this.origin_id = o.origin_id;
-        this.origin_slot = o.origin_slot;
-        this.target_id = o.target_id;
-        this.target_slot = o.target_slot;
+    configure(o: LLink | LLinkSerializedInput): void {
+        const parsed = parseSerializedLLinkInput(o as LLinkSerializedInput);
+        this.id = parsed.id;
+        this.type = parsed.type;
+        this.origin_id = parsed.origin_id;
+        this.origin_slot = parsed.origin_slot;
+        this.target_id = parsed.target_id;
+        this.target_slot = parsed.target_slot;
     }
 
     serialize(): SerializedLLinkRuntime {
-        return [
-            this.id,
-            this.origin_id,
-            this.origin_slot,
-            this.target_id,
-            this.target_slot,
-            this.type,
-        ];
+        return serializeLLinkShape(
+            {
+                id: this.id,
+                type: this.type,
+                origin_id: this.origin_id,
+                origin_slot: this.origin_slot,
+                target_id: this.target_id,
+                target_slot: this.target_slot,
+            },
+            "runtime"
+        ) as SerializedLLinkRuntime;
     }
 }
-
-export type SerializedLLinkRuntime = [
-    number,
-    number,
-    number,
-    number,
-    number,
-    string
-];
-
-export type SerializedLLinkCompatible = SerializedLLink | SerializedLLinkRuntime;
-

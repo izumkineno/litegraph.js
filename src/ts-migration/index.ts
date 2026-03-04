@@ -28,6 +28,14 @@ import { LiteGraphRuntime } from "./core/litegraph.runtime";
 import { LGraphPersistence as LGraphImpl } from "./models/LGraph.persistence";
 import { LGraphGroup as LGraphGroupImpl } from "./models/LGraphGroup";
 import { LGraphNodeCanvasCollab as LGraphNodeImpl } from "./models/LGraphNode.canvas-collab";
+import {
+    denormalizeSerializedLLinkTuple as denormalizeSerializedLLinkCompatTuple,
+    isSerializedLLinkDtsOrder as isSerializedLLinkDtsOrderCompat,
+    LLINK_SERIALIZATION_DIFF_ID,
+    normalizeSerializedLLinkTuple as normalizeSerializedLLinkCompatTuple,
+    parseSerializedLLinkInput,
+    serializeLLinkShape,
+} from "./models/LLink.serialization.compat";
 import { LLink } from "./models/LLink";
 import { applyLiteGraphApiCompatAliases } from "./types/litegraph-compat";
 import { ContextMenu as ContextMenuImpl } from "./ui/ContextMenu";
@@ -51,6 +59,12 @@ export {
     isGridSquareShapeAliasSynced,
     GRID_SQUARE_SHAPE_DEFAULT,
     GRID_SQUARE_SHAPE_DIFF_ID,
+    LLINK_SERIALIZATION_DIFF_ID,
+    isSerializedLLinkDtsOrderCompat,
+    normalizeSerializedLLinkCompatTuple,
+    denormalizeSerializedLLinkCompatTuple,
+    parseSerializedLLinkInput,
+    serializeLLinkShape,
     LLink,
     CurveEditor,
     colorToString,
