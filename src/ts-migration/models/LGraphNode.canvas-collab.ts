@@ -19,7 +19,7 @@ interface LGraphNodeCanvasCollabGraphLike {
     _version: number;
     list_of_graphcanvas?: LGraphNodeCanvasLike[];
     onNodeTrace?: (node: LGraphNodeCanvasCollab, msg: string) => void;
-    sendActionToCanvas?: (
+    sendActionToCanvas: (
         action: string,
         params: [boolean | undefined, boolean | undefined]
     ) => void;
@@ -51,8 +51,8 @@ export class LGraphNodeCanvasCollab extends LGraphNodeConnectGeometry {
         return { ...defaultCanvasCollabHost, ...(host || {}) };
     }
 
-    private graphRef(): LGraphNodeCanvasCollabGraphLike | null {
-        return (this.graph as LGraphNodeCanvasCollabGraphLike) || null;
+    private canvasGraphRef(): LGraphNodeCanvasCollabGraphLike | null {
+        return (this.graph as unknown as LGraphNodeCanvasCollabGraphLike) || null;
     }
 
     /* Force align to grid */
@@ -73,14 +73,15 @@ export class LGraphNodeCanvasCollab extends LGraphNodeConnectGeometry {
         }
 
         this.console.push(msg);
-        const maxConsole = (this.constructor as LGraphNodeCanvasCollabClassMeta)
-            .MAX_CONSOLE;
-        if (maxConsole != null && this.console.length > maxConsole) {
+        if (
+            this.console.length >
+            (this.constructor as LGraphNodeCanvasCollabClassMeta).MAX_CONSOLE
+        ) {
             this.console.shift();
         }
 
-        const graph = this.graphRef();
-        if (graph?.onNodeTrace) {
+        const graph = this.graph as unknown as LGraphNodeCanvasCollabGraphLike;
+        if (graph.onNodeTrace) {
             graph.onNodeTrace(this, msg);
         }
     }
@@ -90,11 +91,11 @@ export class LGraphNodeCanvasCollab extends LGraphNodeConnectGeometry {
         dirty_foreground: boolean,
         dirty_background?: boolean
     ): void {
-        const graph = this.graphRef();
+        const graph = this.canvasGraphRef();
         if (!graph) {
             return;
         }
-        graph.sendActionToCanvas?.("setDirty", [
+        graph.sendActionToCanvas("setDirty", [
             dirty_foreground,
             dirty_background,
         ]);
@@ -122,8 +123,8 @@ export class LGraphNodeCanvasCollab extends LGraphNodeConnectGeometry {
     */
 
     /* Allows to get onMouseMove and onMouseUp events even if the mouse is out of focus */
-    captureInput(v: unknown): void {
-        const graph = this.graphRef();
+    captureInput(v: any): void {
+        const graph = this.canvasGraphRef();
         if (!graph || !graph.list_of_graphcanvas) {
             return;
         }
@@ -146,10 +147,8 @@ export class LGraphNodeCanvasCollab extends LGraphNodeConnectGeometry {
      * @method collapse
      **/
     collapse(force: boolean): void {
-        const graph = this.graphRef();
-        if (graph) {
-            graph._version++;
-        }
+        const graph = this.graph as unknown as LGraphNodeCanvasCollabGraphLike;
+        graph._version++;
         if (
             (this.constructor as LGraphNodeCanvasCollabClassMeta).collapsable ===
                 false &&
@@ -166,10 +165,8 @@ export class LGraphNodeCanvasCollab extends LGraphNodeConnectGeometry {
      * @method pin
      **/
     pin(v?: boolean): void {
-        const graph = this.graphRef();
-        if (graph) {
-            graph._version++;
-        }
+        const graph = this.graph as unknown as LGraphNodeCanvasCollabGraphLike;
+        graph._version++;
         if (v === undefined) {
             this.flags.pinned = !this.flags.pinned;
         } else {

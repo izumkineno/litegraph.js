@@ -206,7 +206,7 @@ Git 提交规则（强制）：
   - 对应原 JS：`find*Slot* / connect* / disconnect* / getConnectionPos / getBounding / isPointInside`。
   - 对应原 d.ts：连接与几何 API。
 
-- [ ] **Audit Task 30: `src/ts-migration/models/LGraphNode.canvas-collab.ts`**
+- [x] **Audit Task 30: `src/ts-migration/models/LGraphNode.canvas-collab.ts`**
   - 对应原 JS：`alignToGrid/trace/setDirtyCanvas/loadImage/collapse/pin/localToScreen`。
   - 对应原 d.ts：画布协作行为契约。
 
@@ -267,9 +267,9 @@ Git 提交规则（强制）：
 ## 审计进度快照
 
 - 总任务数：`42`
-- 已完成：`29`
+- 已完成：`30`
 - 进行中：`0`
-- 未开始：`13`
+- 未开始：`12`
 - 最新更新时间：`2026-03-04`
 
 ---
@@ -851,3 +851,31 @@ Git 提交规则（强制）：
   6. 补充必要类型桥接（不改变运行时语义），保证单文件审计可编译。
 - 验证：
   1. 类型校验通过：`npx tsc --noEmit src/ts-migration/models/LGraphNode.connect-geometry.ts`。
+
+### Audit Task 30 结果
+- 结论：Pass（发现 6 处画布协作迁移偏差并已修复）
+- JS 对照：`src/litegraph.js`
+  - `LGraphNode.prototype.alignToGrid`
+  - `LGraphNode.prototype.trace`
+  - `LGraphNode.prototype.setDirtyCanvas`
+  - `LGraphNode.prototype.captureInput`
+  - `LGraphNode.prototype.collapse/pin/localToScreen`
+- d.ts 对照：`src/litegraph.d.ts`
+  - `LGraphNode.alignToGrid/trace/setDirtyCanvas/loadImage/captureInput/collapse/pin/localToScreen`
+- TS 对照：`src/ts-migration/models/LGraphNode.canvas-collab.ts`
+- 发现问题：
+  1. `trace` 对 `MAX_CONSOLE` 加了 `!= null` 保护，偏离原 JS 的直接比较语义。
+  2. `trace` 使用了 `graph?.onNodeTrace` 可选调用，吞掉了原 JS 在无 graph 场景下的异常路径。
+  3. `setDirtyCanvas` 对 `sendActionToCanvas` 使用可选调用，偏离原 JS 直接调用语义。
+  4. `captureInput` 参数类型使用 `unknown`，与 d.ts 的 `any` 契约不一致。
+  5. `collapse` 对 `graph._version++` 增加 graph 存在性保护，偏离原 JS。
+  6. `pin` 对 `graph._version++` 增加 graph 存在性保护，偏离原 JS。
+- 已实施修复：
+  1. 恢复 `trace` 的 `MAX_CONSOLE` 直接比较语义。
+  2. 恢复 `trace` 对 `graph.onNodeTrace` 的原始访问/调用链。
+  3. `setDirtyCanvas` 恢复 `sendActionToCanvas("setDirty", ...)` 直接调用。
+  4. `captureInput` 参数签名对齐为 `any`。
+  5. `collapse/pin` 恢复 `graph._version++` 的直接执行语义。
+  6. 调整内部 graph 访问桥接与私有方法命名，保证继承层类型检查通过且不改变运行时行为。
+- 验证：
+  1. 类型校验通过：`npx tsc --noEmit src/ts-migration/models/LGraphNode.canvas-collab.ts`。
