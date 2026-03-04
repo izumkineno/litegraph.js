@@ -31,8 +31,8 @@ export interface LGraphCanvasStaticMissingApiFallbackResult {
 }
 
 /**
- * Task 42 compatibility layer:
- * static alias alignment between d.ts/runtime names.
+ * Static compatibility layer:
+ * alias alignment between d.ts/runtime names.
  */
 export function applyLGraphCanvasStaticCompatAliases(
     host: LGraphCanvasStaticCompatHost
@@ -84,7 +84,7 @@ export function applyLGraphCanvasStaticMissingApiGuards(
 
     if (!host.getPropertyPrintableValue) {
         host.getPropertyPrintableValue = (value: unknown): string =>
-            String(value ?? "");
+            String(value);
         filled.push("getPropertyPrintableValue");
     }
 

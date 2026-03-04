@@ -228,7 +228,7 @@ Git 提交规则（强制）：
   - 对应原 JS：`LGraphCanvas.*` 静态方法与静态字段。
   - 对应原 d.ts：`LGraphCanvas` 静态 API。
 
-- [ ] **Audit Task 35: `src/ts-migration/canvas/LGraphCanvas.static.compat.ts`**
+- [x] **Audit Task 35: `src/ts-migration/canvas/LGraphCanvas.static.compat.ts`**
   - 对应原 JS：静态 API 历史命名差异与缺口补齐策略。
   - 对应原 d.ts：静态兼容别名与补丁类型。
 
@@ -267,9 +267,9 @@ Git 提交规则（强制）：
 ## 审计进度快照
 
 - 总任务数：`42`
-- 已完成：`34`
+- 已完成：`35`
 - 进行中：`0`
-- 未开始：`8`
+- 未开始：`7`
 - 最新更新时间：`2026-03-04`
 
 ---
@@ -970,3 +970,20 @@ Git 提交规则（强制）：
   4. 收敛节点菜单动作相关方法中的可选链，恢复原 JS 的变更链与调用时序。
 - 验证：
   1. 类型校验通过：`npx tsc --noEmit src/ts-migration/canvas/LGraphCanvas.static.ts`。
+
+### Audit Task 35 结果
+- 结论：Pass（发现 2 处静态兼容层偏差并已修复）
+- JS 对照：`src/litegraph.js`
+  - 运行时仅存在 `onMenuResizeNode/onMenuNodeToSubgraph`，缺失声明别名场景
+  - `getPropertyPrintableValue` 默认路径语义为 `String(value)`
+- d.ts 对照：`src/litegraph.d.ts`
+  - `LGraphCanvas.onResizeNode` 声明存在，需由兼容层桥接到 runtime
+- TS 对照：`src/ts-migration/canvas/LGraphCanvas.static.compat.ts`
+- 发现问题：
+  1. fallback `getPropertyPrintableValue` 使用 `String(value ?? "")`，会把 `undefined` 归一为空字符串，偏离原 JS 默认语义。
+  2. 模块头注释错误写为 “Task 42 compatibility layer”，与当前职责不符，存在维护误导。
+- 已实施修复：
+  1. 将 fallback 调整为 `String(value)`，对齐原 JS 默认转换语义。
+  2. 修正文档注释为通用静态兼容层说明。
+- 验证：
+  1. 类型校验通过：`npx tsc --noEmit src/ts-migration/canvas/LGraphCanvas.static.compat.ts`。
