@@ -1056,7 +1056,16 @@ export class LGraphCanvasInput extends LGraphCanvasLifecycle {
             return;
         }
 
-        const delta = e.wheelDeltaY != null ? e.wheelDeltaY : e.detail * -60;
+        const delta =
+            e.wheelDeltaY != null
+                ? e.wheelDeltaY
+                : e.wheelDelta != null
+                  ? e.wheelDelta
+                  : e.deltaY != null
+                    ? -e.deltaY
+                    : e.detail != null
+                      ? e.detail * -60
+                      : 0;
         this.adjustMouseEvent(e);
 
         const x = e.clientX;

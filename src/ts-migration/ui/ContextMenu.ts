@@ -198,8 +198,23 @@ export class ContextMenu {
         if (!this.options.scroll_speed) {
             this.options.scroll_speed = 0.1;
         }
-        root.addEventListener("wheel", wheelHandler as EventListener, true);
-        root.addEventListener("mousewheel", wheelHandler as EventListener, true);
+        const wheelEventOptions: AddEventListenerOptions = {
+            capture: true,
+            passive: false,
+        };
+        root.addEventListener(
+            "wheel",
+            wheelHandler as EventListener,
+            wheelEventOptions
+        );
+        // `mousewheel` is deprecated; keep it only as a legacy fallback.
+        if (!("onwheel" in root)) {
+            root.addEventListener(
+                "mousewheel",
+                wheelHandler as EventListener,
+                wheelEventOptions
+            );
+        }
 
         this.root = root;
 
@@ -441,9 +456,18 @@ export class ContextMenu {
         params: any,
         origin?: HTMLElement
     ): CustomEvent {
-        const evt = document.createEvent("CustomEvent");
-        evt.initCustomEvent(event_name, true, true, params);
-        (evt as any).srcElement = origin;
+        const detail =
+            origin === undefined
+                ? params
+                : {
+                      params,
+                      origin,
+                  };
+        const evt = new CustomEvent(event_name, {
+            bubbles: true,
+            cancelable: true,
+            detail,
+        });
         if (element.dispatchEvent) {
             element.dispatchEvent(evt);
         } else if ((element as any).__events) {

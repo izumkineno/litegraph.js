@@ -112,8 +112,19 @@ export class DragAndScale {
         host.pointerListenerAdd(element, "move", this._binded_mouse_callback);
         host.pointerListenerAdd(element, "up", this._binded_mouse_callback);
 
-        element.addEventListener("mousewheel", this._binded_mouse_callback as EventListener, false);
-        element.addEventListener("wheel", this._binded_mouse_callback as EventListener, false);
+        const wheelEventOptions = { passive: false } as AddEventListenerOptions;
+        element.addEventListener(
+            "wheel",
+            this._binded_mouse_callback as EventListener,
+            wheelEventOptions
+        );
+        if (!("onwheel" in element)) {
+            element.addEventListener(
+                "mousewheel",
+                this._binded_mouse_callback as EventListener,
+                wheelEventOptions
+            );
+        }
     }
 
     computeVisibleArea(viewport?: Vector4): void {

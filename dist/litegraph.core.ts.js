@@ -1135,8 +1135,19 @@ var LiteGraphTSMigration = (function(exports) {
       host.pointerListenerAdd(element, "down", this._binded_mouse_callback);
       host.pointerListenerAdd(element, "move", this._binded_mouse_callback);
       host.pointerListenerAdd(element, "up", this._binded_mouse_callback);
-      element.addEventListener("mousewheel", this._binded_mouse_callback, false);
-      element.addEventListener("wheel", this._binded_mouse_callback, false);
+      const wheelEventOptions = { passive: false };
+      element.addEventListener(
+        "wheel",
+        this._binded_mouse_callback,
+        wheelEventOptions
+      );
+      if (!("onwheel" in element)) {
+        element.addEventListener(
+          "mousewheel",
+          this._binded_mouse_callback,
+          wheelEventOptions
+        );
+      }
     }
     computeVisibleArea(viewport) {
       const element = this.element;
@@ -1693,7 +1704,19 @@ var LiteGraphTSMigration = (function(exports) {
       this._pointercapture_callback = this.processPointerCapture.bind(this);
       this._touch_callback = this.processTouch.bind(this);
       host.pointerListenerAdd(canvas, "down", this._mousedown_callback, true);
-      canvas.addEventListener("mousewheel", this._mousewheel_callback, false);
+      const wheelEventOptions = { passive: false };
+      canvas.addEventListener(
+        "wheel",
+        this._mousewheel_callback,
+        wheelEventOptions
+      );
+      if (!("onwheel" in canvas)) {
+        canvas.addEventListener(
+          "mousewheel",
+          this._mousewheel_callback,
+          wheelEventOptions
+        );
+      }
       host.pointerListenerAdd(canvas, "up", this._mouseup_callback, true);
       host.pointerListenerAdd(canvas, "move", this._mousemove_callback);
       host.pointerListenerAdd(
@@ -1715,11 +1738,13 @@ var LiteGraphTSMigration = (function(exports) {
         true
       );
       canvas.addEventListener("contextmenu", this._doNothing);
-      canvas.addEventListener(
-        "DOMMouseScroll",
-        this._mousewheel_callback,
-        false
-      );
+      if (!("onwheel" in canvas)) {
+        canvas.addEventListener(
+          "DOMMouseScroll",
+          this._mousewheel_callback,
+          wheelEventOptions
+        );
+      }
       if (host.pointerevents_method === "mouse" && host.isTouchDevice()) {
         const options = { capture: true, passive: false };
         canvas.addEventListener(
@@ -1797,6 +1822,10 @@ var LiteGraphTSMigration = (function(exports) {
         "lostpointercapture",
         this._pointercancel_callback,
         true
+      );
+      canvas.removeEventListener(
+        "wheel",
+        this._mousewheel_callback
       );
       canvas.removeEventListener(
         "mousewheel",
@@ -2824,7 +2853,7 @@ var LiteGraphTSMigration = (function(exports) {
       if (!this.graph || !this.allow_dragcanvas) {
         return;
       }
-      const delta2 = e.wheelDeltaY != null ? e.wheelDeltaY : e.detail * -60;
+      const delta2 = e.wheelDeltaY != null ? e.wheelDeltaY : e.wheelDelta != null ? e.wheelDelta : e.deltaY != null ? -e.deltaY : e.detail != null ? e.detail * -60 : 0;
       this.adjustMouseEvent(e);
       const x2 = e.clientX;
       const y2 = e.clientY;
@@ -11608,7 +11637,8 @@ var LiteGraphTSMigration = (function(exports) {
     }
     /* Forces to redraw or the main canvas (LGraphNode) or the bg canvas (links) */
     setDirtyCanvas(dirty_foreground, dirty_background) {
-      const graph = this.canvasGraphRef();
+      const anyThis = this;
+      const graph = typeof anyThis.canvasGraphRef === "function" && anyThis.canvasGraphRef() || typeof anyThis.graphRef === "function" && anyThis.graphRef() || anyThis.graph || null;
       if (!graph) {
         return;
       }
@@ -12107,8 +12137,22 @@ var LiteGraphTSMigration = (function(exports) {
       if (!this.options.scroll_speed) {
         this.options.scroll_speed = 0.1;
       }
-      root.addEventListener("wheel", wheelHandler, true);
-      root.addEventListener("mousewheel", wheelHandler, true);
+      const wheelEventOptions = {
+        capture: true,
+        passive: false
+      };
+      root.addEventListener(
+        "wheel",
+        wheelHandler,
+        wheelEventOptions
+      );
+      if (!("onwheel" in root)) {
+        root.addEventListener(
+          "mousewheel",
+          wheelHandler,
+          wheelEventOptions
+        );
+      }
       this.root = root;
       if (this.options.title) {
         const title = document.createElement("div");
@@ -12322,9 +12366,15 @@ var LiteGraphTSMigration = (function(exports) {
       }
     }
     static trigger(element, event_name, params, origin) {
-      const evt = document.createEvent("CustomEvent");
-      evt.initCustomEvent(event_name, true, true, params);
-      evt.srcElement = origin;
+      const detail = origin === void 0 ? params : {
+        params,
+        origin
+      };
+      const evt = new CustomEvent(event_name, {
+        bubbles: true,
+        cancelable: true,
+        detail
+      });
       if (element.dispatchEvent) {
         element.dispatchEvent(evt);
       } else if (element.__events) {

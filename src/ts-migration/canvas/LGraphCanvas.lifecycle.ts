@@ -694,7 +694,19 @@ export class LGraphCanvasLifecycle extends LGraphCanvasStatic {
         this._touch_callback = this.processTouch.bind(this) as CanvasPointerListener;
 
         host.pointerListenerAdd(canvas, "down", this._mousedown_callback, true);
-        canvas.addEventListener("mousewheel", this._mousewheel_callback as EventListener, false);
+        const wheelEventOptions = { passive: false } as AddEventListenerOptions;
+        canvas.addEventListener(
+            "wheel",
+            this._mousewheel_callback as EventListener,
+            wheelEventOptions
+        );
+        if (!("onwheel" in canvas)) {
+            canvas.addEventListener(
+                "mousewheel",
+                this._mousewheel_callback as EventListener,
+                wheelEventOptions
+            );
+        }
         host.pointerListenerAdd(canvas, "up", this._mouseup_callback, true);
         host.pointerListenerAdd(canvas, "move", this._mousemove_callback);
         host.pointerListenerAdd(
@@ -717,11 +729,13 @@ export class LGraphCanvasLifecycle extends LGraphCanvasStatic {
         );
 
         canvas.addEventListener("contextmenu", this._doNothing);
-        canvas.addEventListener(
-            "DOMMouseScroll",
-            this._mousewheel_callback as EventListener,
-            false
-        );
+        if (!("onwheel" in canvas)) {
+            canvas.addEventListener(
+                "DOMMouseScroll",
+                this._mousewheel_callback as EventListener,
+                wheelEventOptions
+            );
+        }
 
         if (host.pointerevents_method === "mouse" && host.isTouchDevice()) {
             const options = { capture: true, passive: false } as AddEventListenerOptions;
@@ -805,6 +819,10 @@ export class LGraphCanvasLifecycle extends LGraphCanvasStatic {
             "lostpointercapture",
             this._pointercancel_callback as CanvasPointerListener,
             true
+        );
+        canvas.removeEventListener(
+            "wheel",
+            this._mousewheel_callback as EventListener
         );
         canvas.removeEventListener(
             "mousewheel",

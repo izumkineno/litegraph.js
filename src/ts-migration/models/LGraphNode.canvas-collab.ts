@@ -91,7 +91,17 @@ export class LGraphNodeCanvasCollab extends LGraphNodeConnectGeometry {
         dirty_foreground: boolean,
         dirty_background?: boolean
     ): void {
-        const graph = this.canvasGraphRef();
+        const anyThis = this as unknown as {
+            canvasGraphRef?: () => LGraphNodeCanvasCollabGraphLike | null;
+            graphRef?: () => LGraphNodeCanvasCollabGraphLike | null;
+            graph?: LGraphNodeCanvasCollabGraphLike | null;
+        };
+        const graph =
+            (typeof anyThis.canvasGraphRef === "function" &&
+                anyThis.canvasGraphRef()) ||
+            (typeof anyThis.graphRef === "function" && anyThis.graphRef()) ||
+            anyThis.graph ||
+            null;
         if (!graph) {
             return;
         }
