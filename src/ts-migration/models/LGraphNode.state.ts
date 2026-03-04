@@ -70,7 +70,10 @@ interface NodeOutputSlotState extends INodeOutputSlot {
 type NodePropertyMap = Record<string, unknown>;
 type NodeFlagMap = Record<string, unknown>;
 
-export type SerializedLGraphNodeState = Partial<SerializedLGraphNode> &
+export type SerializedLGraphNodeState = Omit<
+    Partial<SerializedLGraphNode>,
+    "id"
+> &
     Record<string, unknown> & {
         id?: number | string;
         type?: string | null;
@@ -211,8 +214,18 @@ export class LGraphNode {
         this.size = [this.getHost().NODE_WIDTH, 60];
         this.graph = null;
 
-        // matches runtime behavior: internal typed-array storage for position.
         this._pos = new Float32Array(10);
+        Object.defineProperty(this, "pos", {
+            set: (v: Vector2) => {
+                if (!v || v.length < 2) {
+                    return;
+                }
+                this._pos[0] = v[0];
+                this._pos[1] = v[1];
+            },
+            get: () => this._pos as unknown as Vector2,
+            enumerable: true,
+        });
 
         if (this.getHost().use_uuids) {
             this.id = this.getHost().uuidv4();
@@ -247,7 +260,7 @@ export class LGraphNode {
         for (const j in infoRecord) {
             if (j == "properties") {
                 // i don't want to clone properties, I want to reuse the old container
-                const properties = (info.properties || {}) as NodePropertyMap;
+                const properties = info.properties as NodePropertyMap;
                 for (const k in properties) {
                     this.properties[k] = properties[k];
                     if (this.onPropertyChanged) {
@@ -281,7 +294,7 @@ export class LGraphNode {
         }
 
         if (!info.title) {
-            this.title = this.getClassMeta().title || "Unnamed";
+            this.title = this.getClassMeta().title as string;
         }
 
         if (this.inputs) {
@@ -289,7 +302,9 @@ export class LGraphNode {
                 const input = this.inputs[i];
                 const link_info =
                     this.graph && input
-                        ? this.graph.links[String(input.link)]
+                        ? (this.graph.links as Record<string, unknown>)[
+                              input.link as unknown as string
+                          ]
                         : null;
                 if (this.onConnectionsChange) {
                     this.onConnectionsChange(
@@ -315,7 +330,9 @@ export class LGraphNode {
                 }
                 for (let j = 0; j < output.links.length; ++j) {
                     const link_info = this.graph
-                        ? this.graph.links[String(output.links[j])]
+                        ? (this.graph.links as Record<string, unknown>)[
+                              output.links[j] as unknown as string
+                          ]
                         : null;
                     if (this.onConnectionsChange) {
                         this.onConnectionsChange(
@@ -344,7 +361,7 @@ export class LGraphNode {
                     ?.property;
                 if (
                     propertyName &&
-                    this.properties[propertyName] !== undefined
+                    this.properties[propertyName] != undefined
                 ) {
                     widget.value = JSON.parse(
                         JSON.stringify(this.properties[propertyName])
@@ -399,7 +416,7 @@ export class LGraphNode {
             o.outputs = this.outputs;
         }
 
-        if (this.title && this.title != (this.getClassMeta().title || "Unnamed")) {
+        if (this.title && this.title != this.getClassMeta().title) {
             o.title = this.title;
         }
 
@@ -419,7 +436,7 @@ export class LGraphNode {
         }
 
         if (!o.type) {
-            o.type = this.getClassMeta().type || null;
+            o.type = this.getClassMeta().type as string | null;
         }
 
         if (this.color) {
@@ -448,9 +465,10 @@ export class LGraphNode {
 
     /* Creates a clone of this node */
     clone(): this | null {
-        const node = this.getHost().createNode
-            ? this.getHost().createNode(this.type)
-            : null;
+        const createNode = this.getHost().createNode as (
+            type: string | null
+        ) => LGraphNode | null;
+        const node = createNode(this.type);
         if (!node) {
             return null;
         }
@@ -500,7 +518,7 @@ export class LGraphNode {
      * @method getTitle
      */
     getTitle(): string {
-        return this.title || this.getClassMeta().title || "Unnamed";
+        return (this.title || this.getClassMeta().title) as string;
     }
 
     /**

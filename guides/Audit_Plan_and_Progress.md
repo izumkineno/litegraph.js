@@ -190,7 +190,7 @@ Git 提交规则（强制）：
   - 对应原 JS：`onNodeAdded` 回调触发点。
   - 对应原 d.ts：`LGraph` hook 声明一致性。
 
-- [ ] **Audit Task 26: `src/ts-migration/models/LGraphNode.state.ts`**
+- [x] **Audit Task 26: `src/ts-migration/models/LGraphNode.state.ts`**
   - 对应原 JS：`function LGraphNode` + `_ctor/configure/serialize/clone/setProperty`。
   - 对应原 d.ts：`LGraphNode` 基础状态与属性 API。
 
@@ -267,9 +267,9 @@ Git 提交规则（强制）：
 ## 审计进度快照
 
 - 总任务数：`42`
-- 已完成：`25`
+- 已完成：`26`
 - 进行中：`0`
-- 未开始：`17`
+- 未开始：`16`
 - 最新更新时间：`2026-03-04`
 
 ---
@@ -739,3 +739,32 @@ Git 提交规则（强制）：
   2. 同步更新注释，明确该 helper 追求运行时语义对齐而非额外防御。
 - 验证：
   1. 类型校验通过：`npx tsc --noEmit src/ts-migration/models/LGraph.hooks.ts`。
+
+### Audit Task 26 结果
+- 结论：Pass（发现 7 处节点状态层迁移偏差并已修复）
+- JS 对照：`src/litegraph.js`
+  - `function LGraphNode`
+  - `LGraphNode.prototype._ctor`
+  - `LGraphNode.prototype.configure`
+  - `LGraphNode.prototype.serialize`
+  - `LGraphNode.prototype.clone`
+  - `LGraphNode.prototype.setProperty`
+- d.ts 对照：`src/litegraph.d.ts`
+  - `LGraphNode.configure/serialize/clone/setProperty` 及节点基础状态字段
+- TS 对照：`src/ts-migration/models/LGraphNode.state.ts`
+- 发现问题：
+  1. `_ctor` 未复刻运行时对 `pos` 的 `Object.defineProperty(..., enumerable: true)` 语义。
+  2. `configure` 在 `properties` 路径使用了 `|| {}` 防御，偏离原 JS 的直接迭代语义。
+  3. `configure` 中标题回退使用了 `"Unnamed"` 兜底，偏离原 JS 的 `this.constructor.title` 赋值语义。
+  4. `configure` 中 widget 属性同步对 `null` 的判定使用 `!== undefined`，与原 JS 的 `!= undefined` 不一致。
+  5. `serialize` 的 `title/type` 回退逻辑加入了额外兜底（`"Unnamed"`/`null`），偏离原 JS。
+  6. `clone` 对 `createNode` 增加可选保护，偏离原 JS 的直接调用路径。
+  7. `SerializedLGraphNodeState` 使用交叉类型导致 `id` 被意外收窄为 `number`，与 UUID 语义冲突。
+- 已实施修复：
+  1. 在 `_ctor` 中恢复 `pos` 的 `defineProperty` 可枚举访问器语义。
+  2. `configure` 的 `properties/title/widget` 分支恢复为原 JS 等价判断和赋值路径。
+  3. `serialize/getTitle` 的 `constructor.title/type` 回退逻辑恢复到原 JS 语义。
+  4. `clone` 恢复直接调用 `createNode(this.type)`（用类型桥接保证可编译）。
+  5. 将 `SerializedLGraphNodeState` 改为 `Omit<Partial<SerializedLGraphNode>, "id"> + id?: number|string`，修复 UUID 场景类型漂移。
+- 验证：
+  1. 类型校验通过：`npx tsc --noEmit src/ts-migration/models/LGraphNode.state.ts`。
