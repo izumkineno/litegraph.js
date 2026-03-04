@@ -182,7 +182,7 @@ Git 提交规则（强制）：
   - 对应原 JS：`addInput/addOutput/triggerInput/sendEventToAllNodes/connectionChange`。
   - 对应原 d.ts：图级 I/O 与事件接口。
 
-- [ ] **Audit Task 24: `src/ts-migration/models/LGraph.persistence.ts`**
+- [x] **Audit Task 24: `src/ts-migration/models/LGraph.persistence.ts`**
   - 对应原 JS：`serialize/configure/load/removeLink/onNodeTrace`。
   - 对应原 d.ts：序列化/反序列化契约。
 
@@ -267,9 +267,9 @@ Git 提交规则（强制）：
 ## 审计进度快照
 
 - 总任务数：`42`
-- 已完成：`23`
+- 已完成：`24`
 - 进行中：`0`
-- 未开始：`19`
+- 未开始：`18`
 - 最新更新时间：`2026-03-04`
 
 ---
@@ -695,3 +695,32 @@ Git 提交规则（强制）：
   6. 调整类型桥接以满足继承约束，不改变上述运行时行为。
 - 验证：
   1. 类型校验通过：`npx tsc --noEmit src/ts-migration/models/LGraph.io-events.ts`。
+
+### Audit Task 24 结果
+- 结论：Pass（发现 8 处持久化链路迁移偏差并已修复）
+- JS 对照：`src/litegraph.js`
+  - `LGraph.prototype.removeLink`
+  - `LGraph.prototype.serialize`
+  - `LGraph.prototype.configure`
+  - `LGraph.prototype.load`
+  - `LGraph.prototype.onNodeTrace`
+- d.ts 对照：`src/litegraph.d.ts`
+  - `removeLink/serialize/configure/load`
+- TS 对照：`src/ts-migration/models/LGraph.persistence.ts`
+- 发现问题：
+  1. `removeLink` 对 `disconnectInput` 增加存在性保护，偏离原 JS 直接调用语义。
+  2. `serialize` 对节点/分组 `serialize()` 增加存在性保护，偏离原 JS。
+  3. `serialize/configure` 中 `LLink` 实例化使用有参构造，偏离原 JS 的 `new LLink()` 语义。
+  4. `configure` 对 `createNode` 调用增加可选保护，偏离原 JS 直接调用路径。
+  5. `configure` 在节点二次配置与分组配置路径增加方法存在性保护，偏离原 JS。
+  6. `configure` 的 `links` 解码容器使用对象形态，和原 JS 的数组索引容器语义不一致。
+  7. `load` 对 `File/Blob` 判断增加 `typeof` 防御，偏离原 JS。
+  8. 迁移层 fallback 节点构造路径与原 JS 的 `new LGraphNode()` 语义不一致。
+- 已实施修复：
+  1. 对齐 `removeLink/serialize/configure` 的直接调用语义，移除额外防御分支。
+  2. 将 `LLink` 实例化改为无参构造语义（通过构造签名桥接），对齐原 JS。
+  3. `configure` 的 links 解码容器恢复为数组索引形式。
+  4. `createNode/LGraphNode/LGraphGroup` 路径改为与原 JS 一致的直接调用链（通过类型桥接保证可编译）。
+  5. `load` 的 File/Blob 检测恢复为原 JS 条件表达式。
+- 验证：
+  1. 类型校验通过：`npx tsc --noEmit src/ts-migration/models/LGraph.persistence.ts`。

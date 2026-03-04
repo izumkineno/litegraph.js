@@ -39,19 +39,19 @@ interface SerializedGraphPersistenceLike extends Record<string, unknown> {
 
 interface GraphNodePersistenceLike {
     id: number | string;
-    graph?: LGraphPersistence | null;
-    serialize?: () => unknown;
-    configure?: (info: SerializedNodePersistenceLike) => void;
-    disconnectInput?: (slot: number) => void;
+    graph: LGraphPersistence | null;
+    serialize: () => unknown;
+    configure: (info: SerializedNodePersistenceLike) => void;
+    disconnectInput: (slot: number) => void;
     last_serialization?: SerializedNodePersistenceLike;
     has_errors?: boolean;
     [key: string]: unknown;
 }
 
 interface GraphGroupPersistenceLike {
-    graph?: LGraphPersistence | null;
-    configure?: (data: unknown) => void;
-    serialize?: () => unknown;
+    graph: LGraphPersistence | null;
+    configure: (data: unknown) => void;
+    serialize: () => unknown;
     [key: string]: unknown;
 }
 
@@ -59,7 +59,7 @@ interface GraphLinkPersistenceLike {
     id: number;
     target_id: number | string;
     target_slot: number;
-    serialize?: () => unknown;
+    serialize: () => unknown;
     [key: string]: unknown;
 }
 
@@ -96,24 +96,11 @@ export class LGraphPersistence extends LGraphIOEvents {
         nInfo: SerializedNodePersistenceLike
     ): GraphNodePersistenceLike {
         const host = this.getPersistenceHost();
-        if (host.LGraphNode) {
-            const node = new host.LGraphNode();
-            node.last_serialization = nInfo;
-            node.has_errors = true;
-            return node;
-        }
-        return {
-            id: -1,
-            last_serialization: nInfo,
-            has_errors: true,
-            configure: () => {
-                // placeholder fallback when LGraphNode migration is not ready
-            },
-            disconnectInput: () => {
-                // placeholder fallback when LGraphNode migration is not ready
-            },
-            isPointInside: () => false,
-        };
+        const LGraphNodeCtor = host.LGraphNode as new () => GraphNodePersistenceLike;
+        const node = new LGraphNodeCtor();
+        node.last_serialization = nInfo;
+        node.has_errors = true;
+        return node;
     }
 
     /**
@@ -128,8 +115,10 @@ export class LGraphPersistence extends LGraphIOEvents {
         if (!link) {
             return;
         }
-        const node = this.getNodeById<GraphNodePersistenceLike>(link.target_id);
-        if (node && node.disconnectInput) {
+        const node = this.getNodeById(
+            link.target_id
+        ) as unknown as GraphNodePersistenceLike | null | undefined;
+        if (node) {
             node.disconnectInput(link.target_slot);
         }
     }
@@ -144,9 +133,7 @@ export class LGraphPersistence extends LGraphIOEvents {
         const nodesInfo: unknown[] = [];
         const nodes = this._nodes as unknown as GraphNodePersistenceLike[];
         for (let i = 0, l = nodes.length; i < l; ++i) {
-            if (nodes[i].serialize) {
-                nodesInfo.push(nodes[i].serialize());
-            }
+            nodesInfo.push(nodes[i].serialize());
         }
 
         // pack link info into a non-verbose format
@@ -160,10 +147,9 @@ export class LGraphPersistence extends LGraphIOEvents {
                 console.warn(
                     "weird LLink bug, link info is not a LLink but a regular object"
                 );
-                const link2 = new LLink(0, "", 0, 0, 0, 0) as unknown as Record<
-                    string,
-                    unknown
-                >;
+                const link2 = new (LLink as unknown as {
+                    new (): LLink;
+                })() as unknown as Record<string, unknown>;
                 for (const j in link) {
                     link2[j] = link[j];
                 }
@@ -177,9 +163,7 @@ export class LGraphPersistence extends LGraphIOEvents {
         const groupsInfo: unknown[] = [];
         const groups = this._groups as unknown as GraphGroupPersistenceLike[];
         for (let i = 0; i < groups.length; ++i) {
-            if (groups[i].serialize) {
-                groupsInfo.push(groups[i].serialize());
-            }
+            groupsInfo.push(groups[i].serialize());
         }
 
         const data: GraphDataForSerialize = {
@@ -222,7 +206,7 @@ export class LGraphPersistence extends LGraphIOEvents {
 
         // decode links info (they are very verbose)
         if (data.links && (data.links as { constructor?: unknown }).constructor === Array) {
-            const links: Record<number, LLink> = {};
+            const links: LLink[] = [];
             for (let i = 0; i < (data.links as unknown[]).length; ++i) {
                 const linkData = (data.links as unknown[])[i];
                 if (!linkData) {
@@ -230,11 +214,11 @@ export class LGraphPersistence extends LGraphIOEvents {
                     console.warn("serialized graph link data contains errors, skipping.");
                     continue;
                 }
-                const link = new LLink(0, "", 0, 0, 0, 0);
+                const link = new (LLink as unknown as { new (): LLink })();
                 link.configure(linkData as unknown as Parameters<LLink["configure"]>[0]);
                 links[link.id] = link;
             }
-            data.links = links;
+            data.links = links as unknown as Record<number, unknown>;
         }
 
         // copy all stored fields
@@ -254,15 +238,16 @@ export class LGraphPersistence extends LGraphIOEvents {
             const host = this.getPersistenceHost();
             for (let i = 0, l = nodes.length; i < l; ++i) {
                 const nInfo = nodes[i]; // stored info
-                let node =
-                    host.createNode && nInfo
-                        ? host.createNode(nInfo.type, nInfo.title)
-                        : null;
+                const createNode = host.createNode as (
+                    type: string | null | undefined,
+                    title?: string
+                ) => GraphNodePersistenceLike | null;
+                let node = createNode(nInfo.type, nInfo.title);
                 if (!node) {
                     if (host.debug) {
                         console.log(
                             "Node not found or has errors: " +
-                                String(nInfo ? nInfo.type : undefined)
+                                nInfo.type
                         );
                     }
 
@@ -282,8 +267,10 @@ export class LGraphPersistence extends LGraphIOEvents {
             // configure nodes afterwards so they can reach each other
             for (let i = 0, l = nodes.length; i < l; ++i) {
                 const nInfo = nodes[i];
-                const node = this.getNodeById<GraphNodePersistenceLike>(nInfo.id);
-                if (node && node.configure) {
+                const node = this.getNodeById(
+                    nInfo.id
+                ) as unknown as GraphNodePersistenceLike | null | undefined;
+                if (node) {
                     node.configure(nInfo);
                 }
             }
@@ -293,14 +280,10 @@ export class LGraphPersistence extends LGraphIOEvents {
         this._groups.length = 0;
         if (data.groups) {
             const host = this.getPersistenceHost();
+            const LGraphGroupCtor = host.LGraphGroup as new () => GraphGroupPersistenceLike;
             for (let i = 0; i < data.groups.length; ++i) {
-                if (!host.LGraphGroup) {
-                    continue;
-                }
-                const group = new host.LGraphGroup();
-                if (group.configure) {
-                    group.configure(data.groups[i]);
-                }
+                const group = new LGraphGroupCtor();
+                group.configure(data.groups[i]);
                 this.add(group as unknown as Parameters<LGraphPersistence["add"]>[0]);
             }
         }
@@ -325,8 +308,7 @@ export class LGraphPersistence extends LGraphIOEvents {
         const that = this;
 
         const isFileLike =
-            (typeof File !== "undefined" && url.constructor === File) ||
-            (typeof Blob !== "undefined" && url.constructor === Blob);
+            url.constructor === File || url.constructor === Blob;
 
         // from file
         if (isFileLike) {
