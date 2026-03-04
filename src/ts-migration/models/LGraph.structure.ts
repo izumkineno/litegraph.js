@@ -11,6 +11,11 @@ interface LiteGraphStructureHost extends LiteGraphLifecycleHost {
     uuidv4: () => string;
     MAX_NUMBER_OF_NODES: number;
     LGraphGroup?: unknown;
+    registered_node_types?: Record<string, Function>;
+    createNode?: (
+        type: string,
+        title?: string
+    ) => GraphNodeStructureLike | null;
 }
 
 const defaultStructureHost: LiteGraphStructureHost = {
@@ -42,9 +47,11 @@ interface GraphNodeStructureLike {
     ignore_remove?: boolean;
     onAdded?: (graph: LGraphStructure) => void;
     onRemoved?: () => void;
-    alignToGrid?: () => void;
-    disconnectInput?: (slot: number) => void;
-    disconnectOutput?: (slot: number) => void;
+    alignToGrid: () => void;
+    disconnectInput: (slot: number) => void;
+    disconnectOutput: (slot: number) => void;
+    serialize: () => unknown;
+    configure: (data: unknown) => void;
     isPointInside: (
         x: number,
         y: number,
@@ -175,12 +182,11 @@ export class LGraphStructure extends LGraphExecution {
         } else {
             if (
                 graphNode.id == null ||
-                graphNode.id == -1 ||
-                typeof graphNode.id !== "number"
+                graphNode.id == -1
             ) {
                 graphNode.id = ++this.last_node_id;
-            } else if (this.last_node_id < graphNode.id) {
-                this.last_node_id = graphNode.id;
+            } else if (this.last_node_id < (graphNode.id as number)) {
+                this.last_node_id = graphNode.id as number;
             }
         }
 
@@ -194,10 +200,7 @@ export class LGraphStructure extends LGraphExecution {
             graphNode.onAdded(this);
         }
 
-        if (
-            (this.config as Record<string, unknown>).align_to_grid &&
-            graphNode.alignToGrid
-        ) {
+        if ((this.config as Record<string, unknown>).align_to_grid) {
             graphNode.alignToGrid();
         }
 
@@ -205,7 +208,12 @@ export class LGraphStructure extends LGraphExecution {
             this.updateExecutionOrder();
         }
 
-        invokeGraphOnNodeAddedCompatHook(this, graphNode);
+        invokeGraphOnNodeAddedCompatHook(
+            this as unknown as Record<string, unknown> & {
+                onNodeAdded?: (node: GraphNodeStructureLike) => void;
+            },
+            graphNode
+        );
 
         this.setDirtyCanvas(true);
         this.change();
@@ -250,7 +258,7 @@ export class LGraphStructure extends LGraphExecution {
         if (graphNode.inputs) {
             for (let i = 0; i < graphNode.inputs.length; i++) {
                 const slot = graphNode.inputs[i];
-                if (slot && slot.link != null && graphNode.disconnectInput) {
+                if (slot && slot.link != null) {
                     graphNode.disconnectInput(i);
                 }
             }
@@ -263,8 +271,7 @@ export class LGraphStructure extends LGraphExecution {
                 if (
                     slot &&
                     slot.links != null &&
-                    slot.links.length &&
-                    graphNode.disconnectOutput
+                    slot.links.length
                 ) {
                     graphNode.disconnectOutput(i);
                 }
@@ -286,11 +293,11 @@ export class LGraphStructure extends LGraphExecution {
         if (canvasList) {
             for (let i = 0; i < canvasList.length; ++i) {
                 const canvas = canvasList[i];
-                if (
-                    canvas.selected_nodes &&
-                    canvas.selected_nodes[String(graphNode.id)]
-                ) {
-                    delete canvas.selected_nodes[String(graphNode.id)];
+                const selectedNodes = canvas.selected_nodes as
+                    | Record<string, GraphNodeStructureLike>
+                    | undefined;
+                if (selectedNodes && selectedNodes[String(graphNode.id)]) {
+                    delete selectedNodes[String(graphNode.id)];
                 }
                 if (canvas.node_dragged == graphNode) {
                     canvas.node_dragged = null;
@@ -327,11 +334,11 @@ export class LGraphStructure extends LGraphExecution {
      */
     getNodeById<T extends GraphNodeStructureLike = GraphNodeStructureLike>(
         id: GraphNodeId | null | undefined
-    ): T | null {
+    ): T | null | undefined {
         if (id == null) {
             return null;
         }
-        return (this.getNodesByIdMap()[String(id)] as T) || null;
+        return this.getNodesByIdMap()[String(id)] as T | undefined;
     }
 
     /**
@@ -466,6 +473,47 @@ export class LGraphStructure extends LGraphExecution {
             }
         }
         return null;
+    }
+
+    /**
+     * Checks that the node type matches the node type registered, used when replacing a nodetype by a newer version during execution
+     * this replaces the ones using the old version with the new version
+     * @method checkNodeTypes
+     */
+    checkNodeTypes(): void {
+        const host = this.getStructureHost();
+        const nodes = this.getNodeArray();
+        const nodesById = this.getNodesByIdMap();
+        let changes = false;
+
+        for (let i = 0; i < nodes.length; i++) {
+            const node = nodes[i];
+            const ctor = host.registered_node_types
+                ? host.registered_node_types[node.type]
+                : undefined;
+            if (node.constructor == ctor) {
+                continue;
+            }
+            console.log("node being replaced by newer version: " + node.type);
+            const newnode = (
+                host.createNode as (type: string) => GraphNodeStructureLike
+            )(node.type);
+            changes = true;
+            nodes[i] = newnode;
+            newnode.configure(node.serialize());
+            newnode.graph = this;
+            nodesById[String(newnode.id)] = newnode;
+            if (node.inputs) {
+                newnode.inputs = node.inputs.concat();
+            }
+            if (node.outputs) {
+                newnode.outputs = node.outputs.concat();
+            }
+        }
+        if (!changes) {
+            // preserve original local variable semantics without altering behavior
+        }
+        this.updateExecutionOrder();
     }
 
     // placeholders to keep this module self-contained during incremental migration.

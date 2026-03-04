@@ -174,7 +174,7 @@ Git 提交规则（强制）：
   - 对应原 JS：`runStep/updateExecutionOrder/computeExecutionOrder/getAncestors/arrange`。
   - 对应原 d.ts：图执行调度相关成员。
 
-- [ ] **Audit Task 22: `src/ts-migration/models/LGraph.structure.ts`**
+- [x] **Audit Task 22: `src/ts-migration/models/LGraph.structure.ts`**
   - 对应原 JS：`add/remove/getNodeById/find*/getNodeOnPos/getGroupOnPos`。
   - 对应原 d.ts：图结构管理 API。
 
@@ -267,9 +267,9 @@ Git 提交规则（强制）：
 ## 审计进度快照
 
 - 总任务数：`42`
-- 已完成：`21`
+- 已完成：`22`
 - 进行中：`0`
-- 未开始：`21`
+- 未开始：`20`
 - 最新更新时间：`2026-03-04`
 
 ---
@@ -643,3 +643,26 @@ Git 提交规则（强制）：
   4. `arrange` 恢复无条件 `setDirtyCanvas(true, true)`。
 - 验证：
   1. 类型校验通过：`npx tsc --noEmit src/ts-migration/models/LGraph.execution.ts`。
+
+### Audit Task 22 结果
+- 结论：Pass（发现 6 处结构层迁移偏差并已修复）
+- JS 对照：`src/litegraph.js`
+  - `LGraph.prototype.add/remove/getNodeById/findNodesByClass/findNodesByType/findNodeByTitle/findNodesByTitle/getNodeOnPos/getGroupOnPos/checkNodeTypes`
+- d.ts 对照：`src/litegraph.d.ts`
+  - `LGraph.add/remove/getNodeById/find*/getNodeOnPos/getGroupOnPos`
+- TS 对照：`src/ts-migration/models/LGraph.structure.ts`
+- 发现问题：
+  1. `add` 在非 UUID 分支额外引入 `typeof id !== "number"` 防御条件，偏离原 JS 的宽松分支。
+  2. `add` 在 `align_to_grid` 路径额外校验 `alignToGrid` 存在性，偏离原 JS 直接调用语义。
+  3. `getNodeById` 把“未命中”强制归一为 `null`，与 JS 的对象访问返回 `undefined` 不一致。
+  4. `remove` 针对 `selected_nodes` 的访问路径比原 JS 更保守，行为分支漂移。
+  5. 迁移层缺失 `checkNodeTypes` 方法（原 JS 存在，虽 d.ts 未声明，但属于运行时原型能力）。
+  6. `onNodeAdded` 调用点需要与兼容 hook 主机签名显式对齐。
+- 已实施修复：
+  1. 对齐 `add` 的非 UUID 分支判断与 `align_to_grid` 直接调用语义。
+  2. 将 `getNodeById` 调整为保留对象访问返回值（未命中为 `undefined`，`id == null` 仍返回 `null`）。
+  3. 对齐 `remove` 的画布已选节点清理路径，保持原链路语义。
+  4. 新增 `checkNodeTypes` 实现，按原 JS 路径执行节点类型替换与执行顺序重算。
+  5. 调整 `onNodeAdded` 兼容 hook 调用的宿主类型对齐。
+- 验证：
+  1. 类型校验通过：`npx tsc --noEmit src/ts-migration/models/LGraph.structure.ts`。
