@@ -184,7 +184,7 @@ export class LiteGraphRegistry {
         }
 
         this.host.registered_node_types[type] = baseClass;
-        if (baseClass.name) {
+        if ((baseClass as { constructor?: { name?: string } }).constructor?.name) {
             this.host.Nodes[className] = baseClass;
         }
         if (this.host.onNodeTypeRegistered) {
@@ -248,8 +248,11 @@ export class LiteGraphRegistry {
         if (baseClass.type) {
             delete this.host.registered_node_types[baseClass.type];
         }
-        if (baseClass.name) {
-            delete this.host.Nodes[baseClass.name];
+        const constructorName = (
+            baseClass as { constructor?: { name?: string } }
+        ).constructor?.name;
+        if (constructorName) {
+            delete this.host.Nodes[constructorName];
         }
     }
 
@@ -329,8 +332,12 @@ export class LiteGraphRegistry {
         if (!node.flags) {
             node.flags = {};
         }
-        if (!node.size && node.computeSize) {
-            node.size = node.computeSize();
+        if (!node.size) {
+            node.size = (
+                node as unknown as {
+                    computeSize: () => Vector2;
+                }
+            ).computeSize();
             // call onresize?
         }
         if (!node.pos) {
@@ -342,8 +349,9 @@ export class LiteGraphRegistry {
 
         // extra options
         if (options) {
+            const mutableNode = node as unknown as Record<string, unknown>;
             for (const i in options) {
-                node[i] = options[i];
+                mutableNode[i] = options[i];
             }
         }
 
@@ -380,7 +388,7 @@ export class LiteGraphRegistry {
         const result: LGraphNodeConstructorLike[] = [];
         for (const i in this.host.registered_node_types) {
             const type = this.host.registered_node_types[i];
-            if (type.filter !== filter) {
+            if (type.filter != filter) {
                 continue;
             }
 
@@ -411,9 +419,9 @@ export class LiteGraphRegistry {
         for (const i in this.host.registered_node_types) {
             const type = this.host.registered_node_types[i];
             if (type.category && !type.skip_list) {
-                if (type.filter !== filter) {
-                    continue;
-                }
+                    if (type.filter != filter) {
+                        continue;
+                    }
                 categories[type.category] = 1;
             }
         }

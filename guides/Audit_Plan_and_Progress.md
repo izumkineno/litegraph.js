@@ -114,7 +114,7 @@ Git 提交规则（强制）：
   - 对应原 JS：`GRID_SHAPE` 等历史常量语义。
   - 对应原 d.ts：`SQUARE_SHAPE` 等命名差异兼容。
 
-- [ ] **Audit Task 08: `src/ts-migration/core/litegraph.registry.ts`**
+- [x] **Audit Task 08: `src/ts-migration/core/litegraph.registry.ts`**
   - 对应原 JS：`registerNodeType/unregisterNodeType/createNode/getNodeType*`。
   - 对应原 d.ts：LiteGraph 工厂 API 与节点注册契约。
 
@@ -267,9 +267,9 @@ Git 提交规则（强制）：
 ## 审计进度快照
 
 - 总任务数：`42`
-- 已完成：`7`
+- 已完成：`8`
 - 进行中：`0`
-- 未开始：`35`
+- 未开始：`34`
 - 最新更新时间：`2026-03-04`
 
 ---
@@ -414,3 +414,21 @@ Git 提交规则（强制）：
   2. 兜底值 `6`、来源优先级（`GRID_SHAPE` > `SQUARE_SHAPE` > fallback）与兼容矩阵一致。
 - 验证：
   1. 类型校验通过：`npx tsc --noEmit src/ts-migration/core/litegraph.constants.compat.ts`。
+
+### Audit Task 08 结果
+- 结论：Pass（发现 4 处迁移偏差并已修复）
+- JS 对照：`src/litegraph.js`
+  - `registerNodeType/unregisterNodeType/createNode/getNodeTypesInCategory/getNodeTypesCategories`
+- d.ts 对照：`src/litegraph.d.ts`
+  - LiteGraph 工厂与节点注册 API 契约（`registerNodeType/unregisterNodeType/createNode/getNodeType*`）
+- TS 对照：`src/ts-migration/core/litegraph.registry.ts`
+- 发现问题：
+  1. `createNode` 的 `options` 合并路径触发 `TS2862`（泛型实例索引写入不合法），导致单文件类型校验失败。
+  2. `getNodeTypesInCategory/getNodeTypesCategories` 过滤比较使用了 `!==`，与原 JS 的 `!=` 语义不一致。
+  3. `unregisterNodeType` 从 `Nodes` 删除时使用 `baseClass.name`，与原 JS 的 `base_class.constructor.name` 删除键语义不一致。
+  4. `registerNodeType` 写入 `Nodes` 前置判断使用 `baseClass.name`，与原 JS 的 `base_class.constructor.name` 检查语义不一致。
+- 已实施修复：
+  1. 将 `options` 合并写入改为通过 `Record<string, unknown>` 可写视图，消除 `TS2862`。
+  2. 将两个分类过滤比较调整为 `!=`，与 JS 运行时一致。
+  3. 对齐 `registerNodeType/unregisterNodeType` 的 `Nodes` 检查与删除键语义到原 JS 行为。
+  4. 校验通过：`npx tsc --noEmit src/ts-migration/core/litegraph.registry.ts`。
