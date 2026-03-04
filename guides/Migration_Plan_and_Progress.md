@@ -114,7 +114,7 @@
 - [x] **Task 27: ContextMenu 组件迁移** — 来源：`ContextMenu` 构造、实例方法、静态 `trigger/isCursorOverElement`；目标产物：`ui/ContextMenu.ts`。
 - [x] **Task 28: CurveEditor 组件迁移** — 来源：`sampleCurve/draw/onMouse*/getCloserPoint`；目标产物：`ui/CurveEditor.ts`。
 - [x] **Task 29: 全局与 CommonJS 兼容桥迁移** — 来源：IIFE 全局挂载与末尾 `exports.*`；目标产物：`compat/global-bridge.ts`、`compat/cjs-exports.ts`。
-- [ ] **Task 30: API 差异对齐与兼容别名** — 来源：`d.ts` 与 JS 命名/存在性差异；需产出“差异矩阵 + 兼容映射”，覆盖常量、静态 API、序列化字段顺序与字段名冲突；目标产物：`types/litegraph-compat.d.ts`、兼容别名映射模块。
+- [x] **Task 30: API 差异对齐与兼容别名** — 来源：`d.ts` 与 JS 命名/存在性差异；需产出“差异矩阵 + 兼容映射”，覆盖常量、静态 API、序列化字段顺序与字段名冲突；目标产物：`types/litegraph-compat.d.ts`、兼容别名映射模块。
 - [ ] **Task 31: 聚合导出与装配** — 来源：全部迁移模块；目标产物：`src/ts-migration/index.ts`。
 
 ### Phase D：验证与回归门禁
@@ -172,11 +172,11 @@
 
 ## 进度快照
 
-- 当前阶段：`Phase C 执行中（Task 29 已完成）`
+- 当前阶段：`Phase C 执行中（Task 30 已完成）`
 - 总任务数：`44`
-- 已完成：`29`
+- 已完成：`30`
 - 进行中：`0`
-- 待开始：`15`
+- 待开始：`14`
 
 ## 进度日志（模板）
 
@@ -212,3 +212,4 @@
 | 2026-03-04 | 执行 | Task 27 | 新增 `ui/ContextMenu.ts`，迁移 `ContextMenu` 构造流程、`addItem/close/getTopMenu/getFirstEvent` 与静态 `trigger/isCursorOverElement`，并补充 `closeAllContextMenus` 静态兼容入口 | `npx tsc --noEmit src/ts-migration/ui/ContextMenu.ts` 通过；菜单与画布层之间的最终宿主装配将随后续聚合任务收敛 | 执行 Task 28 |
 | 2026-03-04 | 执行 | Task 28 | 新增 `ui/CurveEditor.ts`，迁移 `CurveEditor` 组件（`sampleCurve/draw/onMouseDown/onMouseMove/onMouseUp/getCloserPoint`），并复用迁移层 `clamp/distance` 工具保持原算法行为 | `src/litegraph.d.ts` 未提供 `CurveEditor` 独立声明，当前以局部类型接口承接 `graphcanvas.ds.scale` 依赖；最终类型收敛留待后续兼容与聚合任务处理 | 执行 Task 29 |
 | 2026-03-04 | 执行 | Task 29 | 新增 `compat/global-bridge.ts` 与 `compat/cjs-exports.ts`，迁移 IIFE 全局挂载与 CommonJS 导出桥接逻辑，并补充 `requestAnimationFrame` shim 与 `exports` 回退到 `LiteGraph.*` 的兼容分支 | 当前仅完成桥接函数，最终装配到入口与聚合导出将在 Task 31 统一收敛 | 执行 Task 30 |
+| 2026-03-04 | 执行 | Task 30 | 新增 `types/litegraph-compat.ts` 与 `types/litegraph-compat.d.ts`，落地 API 差异矩阵与兼容别名映射（`GRID_SHAPE/SQUARE_SHAPE`、`onResizeNode/onMenuResizeNode`、`closeAllContextMenus`、`SerializedLLink` 顺序、`SerializedLGraphGroup(font/font_size)` 双字段等） | 兼容入口当前为可调用 helper，最终在 Task 31 聚合装配时统一挂接到迁移入口 | 执行 Task 31 |
