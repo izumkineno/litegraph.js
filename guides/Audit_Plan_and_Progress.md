@@ -136,7 +136,7 @@ Git 提交规则（强制）：
   - 对应原 JS：`clamp` 实现。
   - 对应原 d.ts：数学工具函数契约。
 
-- [ ] **Audit Task 13: `src/ts-migration/utils/function-signature.ts`**
+- [x] **Audit Task 13: `src/ts-migration/utils/function-signature.ts`**
   - 对应原 JS：`getParameterNames`。
   - 对应原 d.ts：函数签名工具契约。
 
@@ -267,9 +267,9 @@ Git 提交规则（强制）：
 ## 审计进度快照
 
 - 总任务数：`42`
-- 已完成：`12`
+- 已完成：`13`
 - 进行中：`0`
-- 未开始：`30`
+- 未开始：`29`
 - 最新更新时间：`2026-03-04`
 
 ---
@@ -500,3 +500,16 @@ Git 提交规则（强制）：
   2. 全局暴露路径由 `compat/global-bridge.ts` 负责（`globalScope.clamp = clamp`），与原运行时挂载语义一致。
 - 验证：
   1. 类型校验通过：`npx tsc --noEmit src/ts-migration/utils/clamp.ts`。
+
+### Audit Task 13 结果
+- 结论：Pass（完美匹配，无代码修复）
+- JS 对照：`src/litegraph.js`
+  - `LiteGraph.getParameterNames = function(func) { ... }`
+- d.ts 对照：`src/litegraph.d.ts`
+  - `getParameterNames(func: string): string[]`
+- TS 对照：`src/ts-migration/utils/function-signature.ts`
+- 发现问题：
+  1. 未发现行为差异。注释剥离、默认值剥离、参数切分流程与原 JS 完全一致。
+  2. 迁移实现额外接受函数输入（`string | function`）用于运行时包装节点路径，保持与 JS 实际调用兼容。
+- 验证：
+  1. 类型校验通过：`npx tsc --noEmit src/ts-migration/utils/function-signature.ts`。
