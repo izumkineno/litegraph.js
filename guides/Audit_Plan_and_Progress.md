@@ -232,7 +232,7 @@ Git 提交规则（强制）：
   - 对应原 JS：静态 API 历史命名差异与缺口补齐策略。
   - 对应原 d.ts：静态兼容别名与补丁类型。
 
-- [ ] **Audit Task 36: `src/ts-migration/canvas/LGraphCanvas.lifecycle.ts`**
+- [x] **Audit Task 36: `src/ts-migration/canvas/LGraphCanvas.lifecycle.ts`**
   - 对应原 JS：构造、`setGraph/openSubgraph/closeSubgraph/bindEvents/unbindEvents`。
   - 对应原 d.ts：生命周期与绑定 API。
 
@@ -267,9 +267,9 @@ Git 提交规则（强制）：
 ## 审计进度快照
 
 - 总任务数：`42`
-- 已完成：`35`
+- 已完成：`36`
 - 进行中：`0`
-- 未开始：`7`
+- 未开始：`6`
 - 最新更新时间：`2026-03-04`
 
 ---
@@ -987,3 +987,30 @@ Git 提交规则（强制）：
   2. 修正文档注释为通用静态兼容层说明。
 - 验证：
   1. 类型校验通过：`npx tsc --noEmit src/ts-migration/canvas/LGraphCanvas.static.compat.ts`。
+
+### Audit Task 36 结果
+- 结论：Pass（发现 8 处生命周期迁移偏差并已修复）
+- JS 对照：`src/litegraph.js`
+  - `LGraphCanvas.prototype.setGraph/getTopGraph/openSubgraph/closeSubgraph`
+  - `LGraphCanvas.prototype.bindEvents/unbindEvents`
+  - `LGraphCanvas.prototype.getCanvasWindow/startRendering`
+- d.ts 对照：`src/litegraph.d.ts`
+  - `LGraphCanvas.setGraph/openSubgraph/closeSubgraph/setCanvas/bindEvents/unbindEvents/getCanvasWindow/startRendering/stopRendering`
+- TS 对照：`src/ts-migration/canvas/LGraphCanvas.lifecycle.ts`
+- 发现问题：
+  1. `setGraph` 额外写入 `this.graph = null` 且存在 `!graph` 早返回，吞掉了原 JS 在空参路径的原始调用语义。
+  2. `getTopGraph` 使用空保护分支，偏离原 JS 直接访问 `_graph_stack.length` 的路径。
+  3. `openSubgraph` 对 `checkPanels` 使用可选调用，偏离原 JS 直接调用语义。
+  4. `closeSubgraph` 对 `this.graph._subgraph_node` 和 `centerOnNode/selectNodes` 使用防御式分支，偏离原 JS。
+  5. `bindEvents` 对 `canvas` 增加空值提前返回，偏离原 JS 调用链。
+  6. `unbindEvents` 对 `canvas` 与回调移除流程增加存在性判断，偏离原 JS 的直接 remove 语义。
+  7. `getCanvasWindow` 缺少 `doc.parentWindow` 回退且引入异常抛出分支，与原 JS 不一致。
+  8. `startRendering` 使用 `draw?.()` 与 `requestAnimationFrame` fallback，偏离原 JS 的直接渲染循环语义。
+- 已实施修复：
+  1. `setGraph/getTopGraph/openSubgraph/closeSubgraph` 全部回收到原 JS 等价调用路径。
+  2. `bindEvents/unbindEvents` 移除多余防御分支，恢复事件绑定与解绑链路。
+  3. `getCanvasWindow` 恢复 `window` 与 `ownerDocument.defaultView || parentWindow` 语义。
+  4. `startRendering` 恢复原 JS 的 `renderFrame.call(this)` + `requestAnimationFrame(renderFrame.bind(this))` 循环。
+  5. `processTouch.target` 补齐 `event.target || this.canvas` 回退行为。
+- 验证：
+  1. 类型校验通过：`npx tsc --noEmit src/ts-migration/canvas/LGraphCanvas.lifecycle.ts`。

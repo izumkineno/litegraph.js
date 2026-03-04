@@ -524,15 +524,10 @@ export class LGraphCanvasLifecycle extends LGraphCanvasStatic {
 
         if (!graph && this.graph) {
             this.graph.detachCanvas(this);
-            this.graph = null;
             return;
         }
 
-        if (!graph) {
-            return;
-        }
-
-        graph.attachCanvas(this);
+        (graph as GraphLike).attachCanvas(this);
         if (this._graph_stack) {
             this._graph_stack = null;
         }
@@ -541,8 +536,8 @@ export class LGraphCanvasLifecycle extends LGraphCanvasStatic {
     }
 
     getTopGraph(): GraphLike | null {
-        if (this._graph_stack && this._graph_stack.length) {
-            return this._graph_stack[0];
+        if ((this._graph_stack as GraphLike[]).length) {
+            return (this._graph_stack as GraphLike[])[0];
         }
         return this.graph;
     }
@@ -564,7 +559,7 @@ export class LGraphCanvasLifecycle extends LGraphCanvasStatic {
         }
 
         graph.attachCanvas(this);
-        (this as unknown as { checkPanels?: () => void }).checkPanels?.();
+        (this as unknown as { checkPanels: () => void }).checkPanels();
         this.setDirty(true, true);
     }
 
@@ -572,8 +567,7 @@ export class LGraphCanvasLifecycle extends LGraphCanvasStatic {
         if (!this._graph_stack || this._graph_stack.length == 0) {
             return;
         }
-        const currentGraph = this.graph as GraphLike | null;
-        const subgraph_node = currentGraph ? currentGraph._subgraph_node : null;
+        const subgraph_node = (this.graph as GraphLike)._subgraph_node;
         const graph = this._graph_stack.pop() as GraphLike;
         this.selected_nodes = {};
         this.highlighted_links = {};
@@ -581,11 +575,11 @@ export class LGraphCanvasLifecycle extends LGraphCanvasStatic {
         this.setDirty(true, true);
         if (subgraph_node) {
             const self = this as unknown as {
-                centerOnNode?: (node: unknown) => void;
-                selectNodes?: (nodes: unknown) => void;
+                centerOnNode: (node: unknown) => void;
+                selectNodes: (nodes: unknown) => void;
             };
-            self.centerOnNode?.(subgraph_node);
-            self.selectNodes?.([subgraph_node]);
+            self.centerOnNode(subgraph_node);
+            self.selectNodes([subgraph_node]);
         }
         this.ds.offset = [0, 0];
         this.ds.scale = 1;
@@ -685,10 +679,7 @@ export class LGraphCanvasLifecycle extends LGraphCanvasStatic {
             console.warn("LGraphCanvas: events already binded");
             return;
         }
-        const canvas = this.canvas;
-        if (!canvas) {
-            return;
-        }
+        const canvas = this.canvas as CanvasLike;
 
         const ref_window = this.getCanvasWindow();
         const doc = ref_window.document;
@@ -775,93 +766,79 @@ export class LGraphCanvasLifecycle extends LGraphCanvasStatic {
             console.warn("LGraphCanvas: no events binded");
             return;
         }
-        if (!this.canvas) {
-            return;
-        }
-
+        const canvas = this.canvas as CanvasLike;
         const ref_window = this.getCanvasWindow();
         const doc = ref_window.document;
         const host = this.host();
 
-        if (this._mousemove_callback) {
-            host.pointerListenerRemove(this.canvas, "move", this._mousemove_callback);
-        }
-        if (this._mouseup_callback) {
-            host.pointerListenerRemove(this.canvas, "up", this._mouseup_callback, true);
-        }
-        if (this._mousedown_callback) {
-            host.pointerListenerRemove(this.canvas, "down", this._mousedown_callback, true);
-        }
-        if (this._pointercancel_callback) {
-            host.pointerListenerRemove(
-                this.canvas,
-                "cancel",
-                this._pointercancel_callback,
-                true
-            );
-            host.pointerListenerRemove(
-                this.canvas,
-                "lostpointercapture",
-                this._pointercancel_callback,
-                true
-            );
-        }
-        if (this._pointercapture_callback) {
-            host.pointerListenerRemove(
-                this.canvas,
-                "gotpointercapture",
-                this._pointercapture_callback,
-                true
-            );
-        }
-        if (this._mousewheel_callback) {
-            this.canvas.removeEventListener(
-                "mousewheel",
-                this._mousewheel_callback as EventListener
-            );
-            this.canvas.removeEventListener(
-                "DOMMouseScroll",
-                this._mousewheel_callback as EventListener
-            );
-        }
-        if (this._key_callback) {
-            this.canvas.removeEventListener(
-                "keydown",
-                this._key_callback as EventListener
-            );
-            doc.removeEventListener("keyup", this._key_callback as EventListener);
-        }
-
-        this.canvas.removeEventListener("contextmenu", this._doNothing);
-        if (this._ondrop_callback) {
-            this.canvas.removeEventListener(
-                "drop",
-                this._ondrop_callback as EventListener
-            );
-        }
-        this.canvas.removeEventListener("dragenter", this._doReturnTrue);
-        if (this._touch_callback) {
-            this.canvas.removeEventListener(
-                "touchstart",
-                this._touch_callback as EventListener,
-                true
-            );
-            this.canvas.removeEventListener(
-                "touchmove",
-                this._touch_callback as EventListener,
-                true
-            );
-            this.canvas.removeEventListener(
-                "touchend",
-                this._touch_callback as EventListener,
-                true
-            );
-            this.canvas.removeEventListener(
-                "touchcancel",
-                this._touch_callback as EventListener,
-                true
-            );
-        }
+        host.pointerListenerRemove(
+            canvas,
+            "move",
+            this._mousemove_callback as CanvasPointerListener
+        );
+        host.pointerListenerRemove(
+            canvas,
+            "up",
+            this._mouseup_callback as CanvasPointerListener,
+            true
+        );
+        host.pointerListenerRemove(
+            canvas,
+            "down",
+            this._mousedown_callback as CanvasPointerListener,
+            true
+        );
+        host.pointerListenerRemove(
+            canvas,
+            "cancel",
+            this._pointercancel_callback as CanvasPointerListener,
+            true
+        );
+        host.pointerListenerRemove(
+            canvas,
+            "gotpointercapture",
+            this._pointercapture_callback as CanvasPointerListener,
+            true
+        );
+        host.pointerListenerRemove(
+            canvas,
+            "lostpointercapture",
+            this._pointercancel_callback as CanvasPointerListener,
+            true
+        );
+        canvas.removeEventListener(
+            "mousewheel",
+            this._mousewheel_callback as EventListener
+        );
+        canvas.removeEventListener(
+            "DOMMouseScroll",
+            this._mousewheel_callback as EventListener
+        );
+        canvas.removeEventListener("keydown", this._key_callback as EventListener);
+        doc.removeEventListener("keyup", this._key_callback as EventListener);
+        canvas.removeEventListener("contextmenu", this._doNothing);
+        canvas.removeEventListener("drop", this._ondrop_callback as EventListener);
+        canvas.removeEventListener("dragenter", this._doReturnTrue);
+        canvas.removeEventListener(
+            "touchstart",
+            this._touch_callback as EventListener,
+            true
+        );
+        canvas.removeEventListener(
+            "touchmove",
+            this._touch_callback as EventListener,
+            true
+        );
+        canvas.removeEventListener(
+            "touchend",
+            this._touch_callback as EventListener,
+            true
+        );
+        canvas.removeEventListener(
+            "touchcancel",
+            this._touch_callback as EventListener,
+            true
+        );
 
         this._mousedown_callback = null;
         this._mousewheel_callback = null;
@@ -948,7 +925,7 @@ export class LGraphCanvasLifecycle extends LGraphCanvasStatic {
             ctrlKey: event.ctrlKey,
             altKey: event.altKey,
             metaKey: event.metaKey,
-            target: event.target,
+            target: event.target || this.canvas,
             originalEvent: event,
             preventDefault: () => {
                 if (event.cancelable && event.preventDefault) {
@@ -977,13 +954,13 @@ export class LGraphCanvasLifecycle extends LGraphCanvasStatic {
     }
 
     getCanvasWindow(): Window {
-        if (this.canvas && this.canvas.ownerDocument && this.canvas.ownerDocument.defaultView) {
-            return this.canvas.ownerDocument.defaultView;
-        }
-        if (typeof window !== "undefined") {
+        if (!this.canvas) {
             return window;
         }
-        throw new Error("No window available for canvas");
+        const doc = this.canvas.ownerDocument as Document & {
+            parentWindow?: Window;
+        };
+        return (doc.defaultView || doc.parentWindow) as Window;
     }
 
     setDirty(fgcanvas: boolean, bgcanvas: boolean): void {
@@ -1000,23 +977,18 @@ export class LGraphCanvasLifecycle extends LGraphCanvasStatic {
             return;
         }
         this.is_rendering = true;
-        const renderFrame = (): void => {
-            if (!this.is_rendering) {
-                return;
-            }
+        const renderFrame = function (this: LGraphCanvasLifecycle): void {
             if (!this.pause_rendering) {
                 (this as unknown as {
-                    draw?: (force_canvas?: boolean, force_bgcanvas?: boolean) => void;
-                }).draw?.();
+                    draw: (force_canvas?: boolean, force_bgcanvas?: boolean) => void;
+                }).draw();
             }
-            const win = this.getCanvasWindow();
-            const raf =
-                win.requestAnimationFrame ||
-                ((cb: FrameRequestCallback) =>
-                    setTimeout(() => cb(Date.now()), 16) as unknown as number);
-            raf.call(win, renderFrame);
+            const windowRef = this.getCanvasWindow();
+            if (this.is_rendering) {
+                windowRef.requestAnimationFrame(renderFrame.bind(this));
+            }
         };
-        renderFrame();
+        renderFrame.call(this);
     }
 
     stopRendering(): void {
