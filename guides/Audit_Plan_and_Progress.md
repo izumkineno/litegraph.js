@@ -100,7 +100,7 @@ Git 提交规则（强制）：
   - 对应原 JS：实现与声明差异兼容映射点。
   - 对应原 d.ts：差异 API 的类型对齐策略。
 
-- [ ] **Audit Task 05: `src/ts-migration/types/litegraph-compat.d.ts`**
+- [x] **Audit Task 05: `src/ts-migration/types/litegraph-compat.d.ts`**
   - 对应原 JS：兼容补丁可见 API。
   - 对应原 d.ts：补充声明是否无冲突、无破坏。
 
@@ -267,9 +267,9 @@ Git 提交规则（强制）：
 ## 审计进度快照
 
 - 总任务数：`42`
-- 已完成：`4`
+- 已完成：`5`
 - 进行中：`0`
-- 未开始：`38`
+- 未开始：`37`
 - 最新更新时间：`2026-03-04`
 
 ---
@@ -368,3 +368,22 @@ Git 提交规则（强制）：
   1. 在实现文件中补充 `LiteGraphCompatDiffId` 联合类型，并将 `LiteGraphCompatDiffItem.id` 收敛到该联合类型。
   2. 为 `LiteGraphContextMenuCompatHost`、`LGraphHooksCompatHost` 补充 `[key: string]: unknown`，与被委托兼容模块签名对齐。
   3. 校验通过：`npx tsc --noEmit src/ts-migration/types/litegraph-compat.ts`。
+
+### Audit Task 05 结果
+- 结论：Pass（发现 4 处声明层与实现层漂移并已修复）
+- JS 对照：`src/litegraph.js`
+  - `LiteGraph.closeAllContextMenus`、`LGraph.onNodeAdded` 可选调用链
+  - 序列化差异路径（`LLink` 元组顺序、`LGraphGroup.font_size`）
+- d.ts 对照：`src/litegraph.d.ts`
+  - `SerializedLLink`、`SerializedLGraphGroup`
+  - `ContextMenu.closeAllContextMenus`、`LGraph.onNodeAdded`
+- TS 对照：`src/ts-migration/types/litegraph-compat.d.ts`
+- 发现问题：
+  1. `LiteGraphContextMenuCompatHost` 缺少字符串索引签名，低于实现层 host 契约（`litegraph-compat.ts` / `ui/context-menu-compat.ts`）。
+  2. `LGraphHooksCompatHost` 缺少字符串索引签名，低于实现层 host 契约（`litegraph-compat.ts` / `models/LGraph.hooks.ts`）。
+  3. 声明层仅暴露 `SerializedLLinkRuntimeOrder`，未提供实现层同名导出 `SerializedLLinkRuntime` 的类型别名。
+  4. 声明层仅暴露 `SerializedLGraphGroupRuntimeShape`，未提供实现层同名导出 `SerializedLGraphGroupRuntime` 的类型别名。
+- 已实施修复：
+  1. 为 `LiteGraphContextMenuCompatHost`、`LGraphHooksCompatHost` 增加 `[key: string]: unknown`。
+  2. 增加 `SerializedLLinkRuntime` 与 `SerializedLGraphGroupRuntime` 别名导出，确保声明层与实现导出命名兼容。
+  3. 校验通过：`npx tsc --noEmit src/ts-migration/types/litegraph-compat.ts` 与 `npx tsc --noEmit src/ts-migration/types/litegraph-compat.d.ts`。

@@ -27,6 +27,8 @@ export type SerializedLLinkCompatInput =
     | SerializedLLinkDtsOrder
     | SerializedLLinkRuntimeOrder;
 
+export type SerializedLLinkRuntime = SerializedLLinkRuntimeOrder;
+
 export interface SerializedLGraphGroupDtsShape {
     title: string;
     bounding: [number, number, number, number];
@@ -40,6 +42,8 @@ export interface SerializedLGraphGroupRuntimeShape {
     color: string;
     font_size: number;
 }
+
+export type SerializedLGraphGroupRuntime = SerializedLGraphGroupRuntimeShape;
 
 export type SerializedLGraphGroupCompatInput =
     | SerializedLGraphGroupDtsShape
@@ -86,10 +90,12 @@ export interface ContextMenuCloseCompatHost {
 export interface LiteGraphContextMenuCompatHost {
     closeAllContextMenus?: (refWindow?: Window) => void;
     ContextMenu?: ContextMenuCloseCompatHost;
+    [key: string]: unknown;
 }
 
 export interface LGraphHooksCompatHost {
     onNodeAdded?: ((node: unknown) => void) | null;
+    [key: string]: unknown;
 }
 
 export type LiteGraphCompatArea =
