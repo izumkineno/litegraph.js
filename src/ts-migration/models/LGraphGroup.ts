@@ -4,6 +4,12 @@
 import type { Vector2, Vector4 } from "../types/core-types";
 import { overlapBounding } from "../utils/math-geometry";
 import { LGraphNodeCanvasCollab } from "./LGraphNode.canvas-collab";
+import {
+    parseSerializedLGraphGroupInput,
+    serializeLGraphGroupShape,
+    type SerializedLGraphGroupCompatInput,
+    type SerializedLGraphGroupRuntime,
+} from "./LGraphGroup.serialization.compat";
 
 interface LGraphGroupNodeLike {
     pos: Vector2;
@@ -26,14 +32,6 @@ interface LGraphGroupCanvasColorsLike {
         };
     };
 }
-
-type SerializedLGraphGroupCompatible = {
-    title: string;
-    bounding: Vector4;
-    color: string;
-    font_size?: number;
-    font?: string;
-};
 
 const defaultCanvasColors: LGraphGroupCanvasColorsLike = {
     node_colors: {
@@ -115,36 +113,30 @@ export class LGraphGroup {
         this.graph = null;
     }
 
-    configure(o: SerializedLGraphGroupCompatible): void {
-        this.title = o.title;
-        this._bounding.set(o.bounding);
-        this.color = o.color;
-        if (o.font_size != null) {
-            this.font_size = o.font_size;
-            return;
-        }
-        // d.ts compatibility field; runtime source uses font_size.
-        if (o.font != null) {
-            const parsed = Number.parseFloat(o.font);
-            if (!Number.isNaN(parsed)) {
-                this.font_size = parsed;
-            }
-        }
+    configure(o: SerializedLGraphGroupCompatInput): void {
+        const parsed = parseSerializedLGraphGroupInput(o, 24);
+        this.title = parsed.title;
+        this._bounding.set(parsed.bounding);
+        this.color = parsed.color;
+        this.font_size = parsed.font_size;
     }
 
-    serialize(): SerializedLGraphGroupCompatible {
+    serialize(): SerializedLGraphGroupRuntime {
         const b = this._bounding;
-        return {
-            title: this.title,
-            bounding: [
-                Math.round(b[0]),
-                Math.round(b[1]),
-                Math.round(b[2]),
-                Math.round(b[3]),
-            ] as Vector4,
-            color: this.color,
-            font_size: this.font_size,
-        };
+        return serializeLGraphGroupShape(
+            {
+                title: this.title,
+                bounding: [
+                    Math.round(b[0]),
+                    Math.round(b[1]),
+                    Math.round(b[2]),
+                    Math.round(b[3]),
+                ] as Vector4,
+                color: this.color,
+                font_size: this.font_size,
+            },
+            "runtime"
+        ) as SerializedLGraphGroupRuntime;
     }
 
     move(deltaX: number, deltaY: number, ignoreNodes?: boolean): void {

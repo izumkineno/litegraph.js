@@ -129,7 +129,7 @@
 - [x] **Task 36: JS 与 d.ts 契约差异矩阵落地** — 来源：`src/litegraph.js` 与 `src/litegraph.d.ts` 差异项；目标产物：`types/contract-diff-matrix.md`、`types/litegraph-compat.d.ts`。
 - [x] **Task 37: 常量别名兼容层** — 来源：`GRID_SHAPE` vs `SQUARE_SHAPE`；目标产物：`core/litegraph.constants.compat.ts`。
 - [x] **Task 38: LLink 序列化兼容解析器** — 来源：`SerializedLLink` 顺序冲突；目标产物：`models/LLink.serialization.compat.ts`。
-- [ ] **Task 39: LGraphGroup 序列化字段兼容** — 来源：`font` vs `font_size`；目标产物：`models/LGraphGroup.serialization.compat.ts`。
+- [x] **Task 39: LGraphGroup 序列化字段兼容** — 来源：`font` vs `font_size`；目标产物：`models/LGraphGroup.serialization.compat.ts`。
 - [ ] **Task 40: ContextMenu/LiteGraph 菜单关闭 API 对齐** — 来源：`closeAllContextMenus` 归属差异；目标产物：`ui/context-menu-compat.ts`。
 - [ ] **Task 41: LGraph hook 契约对齐** — 来源：`onNodeAdded` 声明/实现差异；目标产物：`models/LGraph.hooks.ts`。
 - [ ] **Task 42: LGraphCanvas 静态 API 补全** — 来源：静态方法声明缺口；目标产物：`canvas/LGraphCanvas.static.compat.ts`。
@@ -172,11 +172,11 @@
 
 ## 进度快照
 
-- 当前阶段：`Phase E 进行中（Task 38 已完成）`
+- 当前阶段：`Phase E 进行中（Task 39 已完成）`
 - 总任务数：`44`
-- 已完成：`38`
+- 已完成：`39`
 - 进行中：`0`
-- 待开始：`6`
+- 待开始：`5`
 
 ## 风险清单（当前）
 
@@ -234,3 +234,4 @@
 | 2026-03-04 | 执行 | Task 36 | 新增 `src/ts-migration/types/contract-diff-matrix.md`，按 JS/d.ts 证据行号固化差异矩阵；并收紧 `types/litegraph-compat.d.ts` 的 `LiteGraphCompatDiffId` 联合类型，确保矩阵项与类型声明一一对应 | 仅完成矩阵固化与声明约束，兼容实现与守卫仍需后续 Task 37-44 收敛 | 执行 Task 37 |
 | 2026-03-04 | 执行 | Task 37 | 新增 `core/litegraph.constants.compat.ts`，落地 `GRID_SHAPE/SQUARE_SHAPE` 别名兼容层（解析、应用、同步检测）；在 `index.ts` 组装时接入并导出；新增 `tests/migration-unit/constants-compat.test.ts` 覆盖常量别名策略 | 常量别名已具备独立兼容层，但仍需 Task 43/44 将其纳入契约快照与兼容 E2E 守卫 | 执行 Task 38 |
 | 2026-03-04 | 执行 | Task 38 | 新增 `models/LLink.serialization.compat.ts`，实现 `SerializedLLink` 双顺序兼容解析/归一化/反归一化与 shape 序列化；`LLink.ts` 改为复用该解析器；`index.ts` 聚合导出解析器能力；新增 `tests/migration-unit/llink-serialization-compat.test.ts` 覆盖核心路径 | LLink 兼容解析已独立化，下一步 Task 39 需对 `LGraphGroup font/font_size` 做同等模块化收敛 | 执行 Task 39 |
+| 2026-03-04 | 执行 | Task 39 | 新增 `models/LGraphGroup.serialization.compat.ts`，实现 `SerializedLGraphGroup` 的 `font/font_size` 双字段兼容归一化与反归一化；`LGraphGroup.ts` 改为复用该解析器；`index.ts` 聚合导出相关接口；新增 `tests/migration-unit/lgraphgroup-serialization-compat.test.ts` 覆盖核心路径 | Group 兼容解析已独立化，下一步 Task 40 需对 `ContextMenu/LiteGraph` 菜单关闭 API 做归属对齐 | 执行 Task 40 |
