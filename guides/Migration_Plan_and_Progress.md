@@ -120,7 +120,7 @@
 ### Phase D：验证与回归门禁
 
 - [x] **Task 32: 行为对齐测试（单元）** — 来源：核心方法行为；目标产物：`tests/migration-unit/*.test.ts`。
-- [ ] **Task 33: 序列化回归测试（对比旧实现）** — 来源：`serialize/configure` 结果一致性；需覆盖 `SerializedLLink` 双输入顺序与 `SerializedLGraphGroup(font/font_size)` 双输入字段；目标产物：`tests/migration-parity/serialization.test.ts`。
+- [x] **Task 33: 序列化回归测试（对比旧实现）** — 来源：`serialize/configure` 结果一致性；需覆盖 `SerializedLLink` 双输入顺序与 `SerializedLGraphGroup(font/font_size)` 双输入字段；目标产物：`tests/migration-parity/serialization.test.ts`。
 - [ ] **Task 34: UI 关键链路回归（E2E）** — 来源：现有 Playwright `@core` 用例；需补充菜单对齐、子图转换、属性打印值路径；目标产物：`tests/playwright` 增补/复用用例与报告。
 - [ ] **Task 35: 进度与风险更新** — 来源：每个阶段完成后；目标产物：更新本文件“进度快照/风险清单”。
 
@@ -172,11 +172,11 @@
 
 ## 进度快照
 
-- 当前阶段：`Phase D 进行中（Task 32 已完成）`
+- 当前阶段：`Phase D 进行中（Task 33 已完成）`
 - 总任务数：`44`
-- 已完成：`32`
+- 已完成：`33`
 - 进行中：`0`
-- 待开始：`12`
+- 待开始：`11`
 
 ## 进度日志（模板）
 
@@ -215,3 +215,4 @@
 | 2026-03-04 | 执行 | Task 30 | 新增 `types/litegraph-compat.ts` 与 `types/litegraph-compat.d.ts`，落地 API 差异矩阵与兼容别名映射（`GRID_SHAPE/SQUARE_SHAPE`、`onResizeNode/onMenuResizeNode`、`closeAllContextMenus`、`SerializedLLink` 顺序、`SerializedLGraphGroup(font/font_size)` 双字段等） | 兼容入口当前为可调用 helper，最终在 Task 31 聚合装配时统一挂接到迁移入口 | 执行 Task 31 |
 | 2026-03-04 | 执行 | Task 31 | 重写 `src/ts-migration/index.ts`，完成聚合导出与装配：提供标准类导出别名（`LGraph/LGraphNode/LGraphCanvas`）、`assembleLiteGraph` 入口、LiteGraph 命名空间组装、Task29/30 兼容桥接挂载（全局与 CommonJS 可选） | 全量 TS 检查仍被既有历史问题阻断（依赖缺失、`compat/pointer-events.ts` 与多处模型类型收敛项）；本任务未新增新的入口层类型错误，并顺带修复了 `LGraph.structure.ts` 注释中的 `find*/` 语法陷阱 | 执行 Task 32 |
 | 2026-03-04 | 执行 | Task 32 | 新增 `tests/migration-unit` 行为对齐单元测试（`litegraph-compat.test.ts`、`compat-bridge.test.ts`、`utils-parity.test.ts`），覆盖序列化兼容、别名映射、全局/CommonJS 桥接与工具函数行为；并新增 Jest TS 转换器以执行迁移层 `.ts` 测试 | 当前仅验证迁移层低依赖纯函数与兼容 helper；图执行/序列化全链路对比将在 Task 33 继续完善 | 执行 Task 33 |
+| 2026-03-04 | 执行 | Task 33 | 新增 `tests/migration-parity/serialization.test.ts`，对比旧版 `src/litegraph.js` 与迁移实现在 `LLink/LGraphGroup` 的 `configure/serialize` 行为一致性，并覆盖 `SerializedLLink` 双输入顺序与 `font/font_size` 双字段兼容路径 | 当前序列化回归覆盖集中在 LLink/LGraphGroup 兼容断面；图级全链路契约快照将在 Task 43 进一步收敛 | 执行 Task 34 |
