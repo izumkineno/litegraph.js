@@ -202,7 +202,7 @@ Git 提交规则（强制）：
   - 对应原 JS：`addInput/addOutput/addWidget/computeSize/getPropertyInfo`。
   - 对应原 d.ts：端口与 widget 相关定义。
 
-- [ ] **Audit Task 29: `src/ts-migration/models/LGraphNode.connect-geometry.ts`**
+- [x] **Audit Task 29: `src/ts-migration/models/LGraphNode.connect-geometry.ts`**
   - 对应原 JS：`find*Slot* / connect* / disconnect* / getConnectionPos / getBounding / isPointInside`。
   - 对应原 d.ts：连接与几何 API。
 
@@ -267,9 +267,9 @@ Git 提交规则（强制）：
 ## 审计进度快照
 
 - 总任务数：`42`
-- 已完成：`28`
+- 已完成：`29`
 - 进行中：`0`
-- 未开始：`14`
+- 未开始：`13`
 - 最新更新时间：`2026-03-04`
 
 ---
@@ -822,3 +822,32 @@ Git 提交规则（强制）：
   6. 同步处理继承私有方法重名与类型桥接，保证不改运行语义。
 - 验证：
   1. 类型校验通过：`npx tsc --noEmit src/ts-migration/models/LGraphNode.ports-widgets.ts`。
+
+### Audit Task 29 结果
+- 结论：Pass（发现 8 处连接与几何迁移偏差并已修复）
+- JS 对照：`src/litegraph.js`
+  - `LGraphNode.prototype.findSlotByType`
+  - `LGraphNode.prototype.connectByType/connectByTypeOutput/connect`
+  - `LGraphNode.prototype.disconnectOutput/disconnectInput`
+  - `LGraphNode.prototype.getConnectionPos`
+- d.ts 对照：`src/litegraph.d.ts`
+  - `LGraphNode.findInputSlot/findOutputSlot/connect/disconnectOutput/disconnectInput/getConnectionPos`
+- TS 对照：`src/ts-migration/models/LGraphNode.connect-geometry.ts`
+- 发现问题：
+  1. `findSlotByType` 将“preferFreeSlot 回退匹配”抽成统一 helper，导致第二轮匹配错误继承 `_event_` 归一化，偏离原 JS 分支语义。
+  2. `connectByType/connectByTypeOutput` 增加了多处可选防御分支（`?.`/存在性判断），与原 JS 的直接调用路径不一致。
+  3. `connect` 在 `target_slot` 变更后的校验链加入了额外空值保护，改变了原 JS 的异常路径。
+  4. `connect` 缺少 `this.outputs[slot]` 稀疏槽位检查，与原 JS 不一致。
+  5. `disconnectOutput` 对目标分支的 `link/input` 增加保护，导致回调触发链与异常路径偏离。
+  6. `disconnectOutput` 全量断开分支中 `onNodeConnectionChange(INPUT, target, ...)` 的二次通知条件与原 JS 不一致。
+  7. `disconnectInput` 缺少原 JS 的 `input` 空槽位返回分支，且对 origin 节点路径增加了额外防御。
+  8. `getConnectionPos` 额外支持字符串槽名解析，偏离原 JS 的原始槽位计算语义。
+- 已实施修复：
+  1. 将 `findSlotByType` 改为两段式匹配流程，对齐原 JS 两轮循环行为。
+  2. 收敛 `connectByType/connectByTypeOutput` 到原 JS 的直接调用语义。
+  3. 对齐 `connect` 的目标槽位分支、输出槽位检查、回调与连接变更调用链。
+  4. 对齐 `disconnectOutput/disconnectInput` 的链接移除、回调触发、版本递增与通知顺序。
+  5. 移除 `getConnectionPos` 的字符串槽名转换，恢复原 JS 计算路径。
+  6. 补充必要类型桥接（不改变运行时语义），保证单文件审计可编译。
+- 验证：
+  1. 类型校验通过：`npx tsc --noEmit src/ts-migration/models/LGraphNode.connect-geometry.ts`。

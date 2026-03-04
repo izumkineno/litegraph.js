@@ -87,7 +87,7 @@ type GraphLike = {
     connectionChange?: (node: NodeLike, link?: LinkLike) => void;
     onNodeConnectionChange?: (
         io: number,
-        node: NodeLike,
+        node: NodeLike | null,
         slot: number,
         otherNode?: NodeLike,
         otherSlot?: number
@@ -328,8 +328,35 @@ export class LGraphNodeConnectGeometry extends LGraphNodePortsWidgets {
         if (src == "" || src == "*") {
             src = 0;
         }
-
-        const tryMatch = (avoidOccupied: boolean): number | InSlot | OutSlot => {
+        for (let i = 0; i < slots.length; ++i) {
+            const aSource = (src + "").toLowerCase().split(",");
+            let aDest: string | number = ((slots[i] as OutSlot).type || 0) as string | number;
+            aDest = aDest == "0" || aDest == "*" ? "0" : aDest;
+            const aDestArr = (aDest + "").toLowerCase().split(",");
+            for (let sI = 0; sI < aSource.length; sI++) {
+                for (let dI = 0; dI < aDestArr.length; dI++) {
+                    if (aSource[sI] == "_event_") {
+                        aSource[sI] = String(h.EVENT);
+                    }
+                    if (aDestArr[sI] == "_event_") {
+                        aDestArr[sI] = String(h.EVENT);
+                    }
+                    if (aSource[sI] == "*") {
+                        aSource[sI] = "0";
+                    }
+                    if (aDestArr[sI] == "*") {
+                        aDestArr[sI] = "0";
+                    }
+                    if (aSource[sI] == aDestArr[dI]) {
+                        if (preferFreeSlot && (slots[i] as OutSlot).links && (slots[i] as OutSlot).links !== null) {
+                            continue;
+                        }
+                        return !returnObj ? i : slots[i];
+                    }
+                }
+            }
+        }
+        if (preferFreeSlot && !doNotUseOccupied) {
             for (let i = 0; i < slots.length; ++i) {
                 const aSource = (src + "").toLowerCase().split(",");
                 let aDest: string | number = ((slots[i] as OutSlot).type || 0) as string | number;
@@ -337,12 +364,6 @@ export class LGraphNodeConnectGeometry extends LGraphNodePortsWidgets {
                 const aDestArr = (aDest + "").toLowerCase().split(",");
                 for (let sI = 0; sI < aSource.length; sI++) {
                     for (let dI = 0; dI < aDestArr.length; dI++) {
-                        if (aSource[sI] == "_event_") {
-                            aSource[sI] = String(h.EVENT);
-                        }
-                        if (aDestArr[sI] == "_event_") {
-                            aDestArr[sI] = String(h.EVENT);
-                        }
                         if (aSource[sI] == "*") {
                             aSource[sI] = "0";
                         }
@@ -350,23 +371,11 @@ export class LGraphNodeConnectGeometry extends LGraphNodePortsWidgets {
                             aDestArr[sI] = "0";
                         }
                         if (aSource[sI] == aDestArr[dI]) {
-                            if (avoidOccupied && (slots[i] as OutSlot).links && (slots[i] as OutSlot).links !== null) {
-                                continue;
-                            }
-                            return returnObj ? slots[i] : i;
+                            return !returnObj ? i : slots[i];
                         }
                     }
                 }
             }
-            return -1;
-        };
-
-        const first = tryMatch(!!preferFreeSlot);
-        if (first !== -1) {
-            return first;
-        }
-        if (preferFreeSlot && !doNotUseOccupied) {
-            return tryMatch(false);
         }
         return -1;
     }
@@ -382,10 +391,7 @@ export class LGraphNodeConnectGeometry extends LGraphNodePortsWidgets {
             { createEventInCase: true, firstFreeIfOutputGeneralInCase: true, generalTypeInCase: true },
             optsIn || {}
         );
-        const target = this.toNode(target_node);
-        if (!target?.findInputSlotByType) {
-            return null;
-        }
+        const target = this.toNode(target_node) as NodeLike;
         const typed = target.findInputSlotByType(target_slotType, false, true);
         if (typeof typed === "number" && typed >= 0) {
             return this.connect(slot, target, typed);
@@ -399,7 +405,7 @@ export class LGraphNodeConnectGeometry extends LGraphNodePortsWidgets {
                 return this.connect(slot, target, generic);
             }
         }
-        if (opts.firstFreeIfOutputGeneralInCase && (target_slotType == 0 || target_slotType == "*" || target_slotType == "") && target.findInputSlotFree) {
+        if (opts.firstFreeIfOutputGeneralInCase && (target_slotType == 0 || target_slotType == "*" || target_slotType == "")) {
             const free = target.findInputSlotFree({ typesNotAccepted: [h.EVENT] });
             if (typeof free === "number" && free >= 0) {
                 return this.connect(slot, target, free);
@@ -420,27 +426,24 @@ export class LGraphNodeConnectGeometry extends LGraphNodePortsWidgets {
             { createEventInCase: true, firstFreeIfInputGeneralInCase: true, generalTypeInCase: true },
             optsIn || {}
         );
-        const source = this.toNode(source_node);
-        if (!source?.findOutputSlotByType) {
-            return null;
-        }
+        const source = this.toNode(source_node) as NodeLike;
         const typed = source.findOutputSlotByType(source_slotType, false, true);
         if (typeof typed === "number" && typed >= 0) {
-            return source.connect ? source.connect(typed, this, slot) : null;
+            return source.connect(typed, this as unknown as NodeLike, slot);
         }
         if (opts.generalTypeInCase) {
             const generic = source.findOutputSlotByType(0, false, true, true);
             if (typeof generic === "number" && generic >= 0) {
-                return source.connect ? source.connect(generic, this, slot) : null;
+                return source.connect(generic, this as unknown as NodeLike, slot);
             }
         }
         if (opts.createEventInCase && source_slotType == h.EVENT && h.do_add_triggers_slots && source.addOnExecutedOutput) {
-            return source.connect ? source.connect(source.addOnExecutedOutput(), this, slot) : null;
+            return source.connect(source.addOnExecutedOutput(), this as unknown as NodeLike, slot);
         }
-        if (opts.firstFreeIfInputGeneralInCase && (source_slotType == 0 || source_slotType == "*" || source_slotType == "") && source.findOutputSlotFree) {
+        if (opts.firstFreeIfInputGeneralInCase && (source_slotType == 0 || source_slotType == "*" || source_slotType == "")) {
             const free = source.findOutputSlotFree({ typesNotAccepted: [h.EVENT] });
             if (typeof free === "number" && free >= 0) {
-                return source.connect ? source.connect(free, this, slot) : null;
+                return source.connect(free, this as unknown as NodeLike, slot);
             }
         }
         console.debug("no way to connect byOUT type: ", source_slotType, " to sourceNODE ", source);
@@ -468,13 +471,13 @@ export class LGraphNodeConnectGeometry extends LGraphNodePortsWidgets {
         if (!target) {
             throw "target node is null";
         }
-        if (target == this) {
+        if (target == (this as unknown as NodeLike)) {
             return null;
         }
 
-        let targetSlot: SlotId = target_slot || 0;
+        let targetSlot: SlotId | false | null = target_slot || 0;
         if (typeof targetSlot === "string") {
-            targetSlot = target.findInputSlot ? (target.findInputSlot(targetSlot) as number) : -1;
+            targetSlot = target.findInputSlot(targetSlot) as number;
             if (targetSlot === -1) {
                 if (h.debug) {
                     console.log("Connect: Error, no slot of name " + target_slot);
@@ -485,8 +488,8 @@ export class LGraphNodeConnectGeometry extends LGraphNodePortsWidgets {
             if (!h.do_add_triggers_slots) {
                 return null;
             }
-            target.changeMode?.(h.ON_TRIGGER);
-            targetSlot = target.findInputSlot ? (target.findInputSlot("onTrigger") as number) : -1;
+            target.changeMode(h.ON_TRIGGER);
+            targetSlot = target.findInputSlot("onTrigger") as number;
         } else if (!target.inputs || targetSlot >= target.inputs.length) {
             if (h.debug) {
                 console.log("Connect: Error, slot number not found");
@@ -496,16 +499,20 @@ export class LGraphNodeConnectGeometry extends LGraphNodePortsWidgets {
 
         let changed = false;
         const output = this.outputs[outSlot] as OutSlot;
-        const input = target.inputs ? (target.inputs[targetSlot as number] as InSlot) : null;
+        if (!this.outputs[outSlot]) {
+            return null;
+        }
+
+        const input = target.inputs![targetSlot as number] as InSlot;
         let link_info: LinkLike | null = null;
 
         if (target.onBeforeConnectInput) {
-            targetSlot = target.onBeforeConnectInput(targetSlot as number) as SlotId;
+            targetSlot = target.onBeforeConnectInput(targetSlot as number) as SlotId | false | null;
         }
-        if (targetSlot === false || targetSlot === null || !input || !h.isValidConnection(output.type, input.type)) {
+        if (targetSlot === false || targetSlot === null || !h.isValidConnection(output.type, input.type)) {
             this.setDirtyCanvas(false, true);
             if (changed) {
-                graph.connectionChange?.(this, link_info || undefined);
+                graph.connectionChange?.(this as unknown as NodeLike, link_info || undefined);
             }
             return null;
         }
@@ -519,7 +526,7 @@ export class LGraphNodeConnectGeometry extends LGraphNodePortsWidgets {
 
         if (target.inputs && target.inputs[targetSlot as number] && target.inputs[targetSlot as number].link != null) {
             graph.beforeChange?.();
-            target.disconnectInput?.(targetSlot as number, { doProcessChange: false });
+            target.disconnectInput(targetSlot as number, { doProcessChange: false });
             changed = true;
         }
         if (output.links && output.links.length && output.type === h.EVENT && !h.allow_multi_output_for_events) {
@@ -530,14 +537,14 @@ export class LGraphNodeConnectGeometry extends LGraphNodePortsWidgets {
 
         const nextId = h.use_uuids ? h.uuidv4() : ++graph.last_link_id;
         link_info = new LLink(
-            nextId as unknown as number,
-            String(input.type || output.type || ""),
+            nextId as number,
+            (input.type || output.type) as string,
             this.id as number,
             outSlot,
             target.id as number,
             targetSlot as number
         ) as unknown as LinkLike;
-        graph.links[String(link_info.id)] = link_info;
+        graph.links[link_info.id as unknown as string] = link_info;
 
         if (!output.links) {
             output.links = [];
@@ -550,12 +557,12 @@ export class LGraphNodeConnectGeometry extends LGraphNodePortsWidgets {
         graph._version++;
         this.onConnectionsChange?.(h.OUTPUT, outSlot, true, link_info, output);
         target.onConnectionsChange?.(h.INPUT, targetSlot as number, true, link_info, input as InSlot);
-        graph.onNodeConnectionChange?.(h.INPUT, target, targetSlot as number, this, outSlot);
-        graph.onNodeConnectionChange?.(h.OUTPUT, this, outSlot, target, targetSlot as number);
+        graph.onNodeConnectionChange?.(h.INPUT, target, targetSlot as number, this as unknown as NodeLike, outSlot);
+        graph.onNodeConnectionChange?.(h.OUTPUT, this as unknown as NodeLike, outSlot, target, targetSlot as number);
 
         this.setDirtyCanvas(false, true);
         graph.afterChange?.();
-        graph.connectionChange?.(this, link_info);
+        graph.connectionChange?.(this as unknown as NodeLike, link_info);
         return link_info;
     }
 
@@ -585,21 +592,17 @@ export class LGraphNodeConnectGeometry extends LGraphNodePortsWidgets {
             }
             for (let i = 0; i < output.links.length; i++) {
                 const link_id = output.links[i];
-                const link = graph.links[String(link_id)];
-                if (link && link.target_id == target.id) {
+                const link = graph.links[link_id as unknown as string] as LinkLike;
+                if (link.target_id == target.id) {
                     output.links.splice(i, 1);
-                    const input = target.inputs ? (target.inputs[link.target_slot] as InSlot) : null;
-                    if (input) {
-                        input.link = null;
-                    }
-                    delete graph.links[String(link_id)];
+                    const input = target.inputs![link.target_slot] as InSlot;
+                    input.link = null;
+                    delete graph.links[link_id as unknown as string];
                     graph._version++;
-                    if (input) {
-                        target.onConnectionsChange?.(h.INPUT, link.target_slot, false, link, input);
-                    }
+                    target.onConnectionsChange?.(h.INPUT, link.target_slot, false, link, input);
                     this.onConnectionsChange?.(h.OUTPUT, outSlot, false, link, output);
-                    graph.onNodeConnectionChange?.(h.OUTPUT, this, outSlot);
-                    graph.onNodeConnectionChange?.(h.OUTPUT, this, outSlot);
+                    graph.onNodeConnectionChange?.(h.OUTPUT, this as unknown as NodeLike, outSlot);
+                    graph.onNodeConnectionChange?.(h.OUTPUT, this as unknown as NodeLike, outSlot);
                     graph.onNodeConnectionChange?.(h.INPUT, target, link.target_slot);
                     break;
                 }
@@ -607,35 +610,29 @@ export class LGraphNodeConnectGeometry extends LGraphNodePortsWidgets {
         } else {
             for (let i = 0; i < output.links.length; i++) {
                 const link_id = output.links[i];
-                const link = graph.links[String(link_id)];
+                const link = graph.links[link_id as unknown as string];
                 if (!link) {
                     continue;
                 }
                 const target = graph.getNodeById(link.target_id);
                 let input: InSlot | null = null;
                 graph._version++;
-                if (target?.inputs) {
-                    input = target.inputs[link.target_slot] as InSlot;
-                    if (input) {
-                        input.link = null;
-                    }
-                    if (input) {
-                        target.onConnectionsChange?.(h.INPUT, link.target_slot, false, link, input);
-                    }
-                    graph.onNodeConnectionChange?.(h.INPUT, target, link.target_slot);
-                }
-                delete graph.links[String(link_id)];
-                this.onConnectionsChange?.(h.OUTPUT, outSlot, false, link, output);
-                graph.onNodeConnectionChange?.(h.OUTPUT, this, outSlot);
                 if (target) {
+                    input = target.inputs![link.target_slot] as InSlot;
+                    input.link = null;
+                    target.onConnectionsChange?.(h.INPUT, link.target_slot, false, link, input);
                     graph.onNodeConnectionChange?.(h.INPUT, target, link.target_slot);
                 }
+                delete graph.links[link_id as unknown as string];
+                this.onConnectionsChange?.(h.OUTPUT, outSlot, false, link, output);
+                graph.onNodeConnectionChange?.(h.OUTPUT, this as unknown as NodeLike, outSlot);
+                graph.onNodeConnectionChange?.(h.INPUT, target, link.target_slot);
             }
             output.links = null;
         }
 
         this.setDirtyCanvas(false, true);
-        graph.connectionChange?.(this);
+        graph.connectionChange?.(this as unknown as NodeLike);
         return true;
     }
 
@@ -655,16 +652,19 @@ export class LGraphNodeConnectGeometry extends LGraphNodePortsWidgets {
         }
 
         const input = this.inputs[inSlot] as InSlot;
+        if (!input) {
+            return false;
+        }
         const link_id = input.link;
         if (link_id != null) {
             input.link = null;
-            const link = graph.links[String(link_id)];
+            const link = graph.links[link_id as unknown as string];
             if (link) {
                 const originNode = graph.getNodeById(link.origin_id);
-                if (!originNode || !originNode.outputs) {
+                if (!originNode) {
                     return false;
                 }
-                const output = originNode.outputs[link.origin_slot] as OutSlot;
+                const output = originNode.outputs![link.origin_slot] as OutSlot;
                 if (!output || !output.links || output.links.length === 0) {
                     return false;
                 }
@@ -675,27 +675,23 @@ export class LGraphNodeConnectGeometry extends LGraphNodePortsWidgets {
                         break;
                     }
                 }
-                delete graph.links[String(link_id)];
+                delete graph.links[link_id as unknown as string];
                 graph._version++;
                 this.onConnectionsChange?.(h.INPUT, inSlot, false, link, input);
                 originNode.onConnectionsChange?.(h.OUTPUT, i, false, link, output);
                 graph.onNodeConnectionChange?.(h.OUTPUT, originNode, i);
-                graph.onNodeConnectionChange?.(h.INPUT, this, inSlot);
+                graph.onNodeConnectionChange?.(h.INPUT, this as unknown as NodeLike, inSlot);
             }
         }
 
         this.setDirtyCanvas(false, true);
-        graph.connectionChange?.(this);
+        graph.connectionChange?.(this as unknown as NodeLike);
         return true;
     }
 
     /** returns the center of a connection point in canvas coords */
     getConnectionPos(is_input: boolean, slot_number: SlotId, out?: Vector2): Vector2 {
         const h = this.host();
-        let slot = slot_number;
-        if (typeof slot === "string") {
-            slot = is_input ? (this.findInputSlot(slot) as number) : (this.findOutputSlot(slot) as number);
-        }
         const o = (out || (new Float32Array(2) as unknown as Vector2)) as Vector2;
         let num_slots = 0;
         if (is_input && this.inputs) {
@@ -718,33 +714,33 @@ export class LGraphNodeConnectGeometry extends LGraphNodePortsWidgets {
             return o;
         }
 
-        if (is_input && slot == -1) {
+        if (is_input && slot_number == -1) {
             o[0] = this.pos[0] + h.NODE_TITLE_HEIGHT * 0.5;
             o[1] = this.pos[1] + h.NODE_TITLE_HEIGHT * 0.5;
             return o;
         }
 
-        if (is_input && this.inputs && num_slots > (slot as number) && (this.inputs[slot as number] as InSlot).pos) {
-            const p = (this.inputs[slot as number] as InSlot).pos as Vector2;
+        if (is_input && this.inputs && num_slots > (slot_number as number) && (this.inputs[slot_number as number] as InSlot).pos) {
+            const p = (this.inputs[slot_number as number] as InSlot).pos as Vector2;
             o[0] = this.pos[0] + p[0];
             o[1] = this.pos[1] + p[1];
             return o;
-        } else if (!is_input && this.outputs && num_slots > (slot as number) && (this.outputs[slot as number] as OutSlot).pos) {
-            const p = (this.outputs[slot as number] as OutSlot).pos as Vector2;
+        } else if (!is_input && this.outputs && num_slots > (slot_number as number) && (this.outputs[slot_number as number] as OutSlot).pos) {
+            const p = (this.outputs[slot_number as number] as OutSlot).pos as Vector2;
             o[0] = this.pos[0] + p[0];
             o[1] = this.pos[1] + p[1];
             return o;
         }
 
         if (this.horizontal) {
-            o[0] = this.pos[0] + ((slot as number) + 0.5) * (this.size[0] / num_slots);
+            o[0] = this.pos[0] + ((slot_number as number) + 0.5) * (this.size[0] / num_slots);
             o[1] = is_input ? this.pos[1] - h.NODE_TITLE_HEIGHT : this.pos[1] + this.size[1];
             return o;
         }
 
         o[0] = is_input ? this.pos[0] + offset : this.pos[0] + this.size[0] + 1 - offset;
         const cls = this.constructor as { slot_start_y?: number };
-        o[1] = this.pos[1] + ((slot as number) + 0.7) * h.NODE_SLOT_HEIGHT + (cls.slot_start_y || 0);
+        o[1] = this.pos[1] + ((slot_number as number) + 0.7) * h.NODE_SLOT_HEIGHT + (cls.slot_start_y || 0);
         return o;
     }
 
