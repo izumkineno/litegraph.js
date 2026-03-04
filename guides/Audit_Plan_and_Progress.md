@@ -158,7 +158,7 @@ Git 提交规则（强制）：
 
 ### D. 数据模型：LLink / LGraph / LGraphNode / LGraphGroup
 
-- [ ] **Audit Task 18: `src/ts-migration/models/LLink.ts`**
+- [x] **Audit Task 18: `src/ts-migration/models/LLink.ts`**
   - 对应原 JS：`function LLink` + `LLink.prototype.configure/serialize`。
   - 对应原 d.ts：`LLink` 类定义。
 
@@ -267,9 +267,9 @@ Git 提交规则（强制）：
 ## 审计进度快照
 
 - 总任务数：`42`
-- 已完成：`17`
+- 已完成：`18`
 - 进行中：`0`
-- 未开始：`25`
+- 未开始：`24`
 - 最新更新时间：`2026-03-04`
 
 ---
@@ -572,3 +572,18 @@ Git 提交规则（强制）：
   2. 兼容增强（顶层别名缺失时回退到 `LiteGraph.*`）不破坏原行为，仅扩展健壮性。
 - 验证：
   1. 类型校验通过：`npx tsc --noEmit src/ts-migration/compat/cjs-exports.ts`。
+
+### Audit Task 18 结果
+- 结论：Pass（发现 2 处 LLink 语义偏差并已修复）
+- JS 对照：`src/litegraph.js`
+  - `LLink` 构造、`configure`（数组/对象直接赋值）、`serialize`（runtime tuple 顺序）
+- d.ts 对照：`src/litegraph.d.ts`
+  - `LLink` 类签名与 `SerializedLLink`（d.ts 顺序）
+- TS 对照：`src/ts-migration/models/LLink.ts`
+- 发现问题：
+  1. `configure` 通过 compat helper 做了 `Number/String` 强制转换与默认值填充，偏离原 JS 的“按输入原值直接赋值”语义。
+  2. `serialize` 通过 compat helper 二次归一化后输出，存在不必要的数据重写风险（原 JS 为直接返回字段元组）。
+- 已实施修复：
+  1. 将 `configure` 改为直接赋值逻辑，保留原 JS 行为；同时保留对 d.ts 顺序 tuple 的兼容识别（`source[1]` 为 `string` 时按 d.ts 顺序读取）。
+  2. 将 `serialize` 改为直接返回 runtime 顺序元组 `[id, origin_id, origin_slot, target_id, target_slot, type]`，与原 JS 一致。
+  3. 校验通过：`npx tsc --noEmit src/ts-migration/models/LLink.ts`。
