@@ -214,7 +214,7 @@ Git 提交规则（强制）：
   - 对应原 JS：`function LGraphGroup` + `configure/serialize/move/recomputeInsideNodes`。
   - 对应原 d.ts：`LGraphGroup` 声明。
 
-- [ ] **Audit Task 32: `src/ts-migration/models/LGraphGroup.serialization.compat.ts`**
+- [x] **Audit Task 32: `src/ts-migration/models/LGraphGroup.serialization.compat.ts`**
   - 对应原 JS：`font_size` 运行时字段。
   - 对应原 d.ts：`font` 字段声明兼容。
 
@@ -267,9 +267,9 @@ Git 提交规则（强制）：
 ## 审计进度快照
 
 - 总任务数：`42`
-- 已完成：`31`
+- 已完成：`32`
 - 进行中：`0`
-- 未开始：`11`
+- 未开始：`10`
 - 最新更新时间：`2026-03-04`
 
 ---
@@ -904,3 +904,20 @@ Git 提交规则（强制）：
   5. 移除本文件对 group-serialization compat helper 的依赖，避免兼容层改变核心运行时语义。
 - 验证：
   1. 类型校验通过：`npx tsc --noEmit src/ts-migration/models/LGraphGroup.ts`。
+
+### Audit Task 32 结果
+- 结论：Pass（发现 2 处序列化兼容语义偏差并已修复）
+- JS 对照：`src/litegraph.js`
+  - `LGraphGroup.prototype.configure` 直接读取 `font_size`
+  - `LGraphGroup.prototype.serialize` 直接输出 `font_size`
+- d.ts 对照：`src/litegraph.d.ts`
+  - `SerializedLGraphGroup.font`（声明层字段）
+- TS 对照：`src/ts-migration/models/LGraphGroup.serialization.compat.ts`
+- 发现问题：
+  1. `normalizeSerializedLGraphGroup` 对 `title/color` 做 `String(...)` 强制转换，超出兼容桥接职责，可能改变原值语义。
+  2. `serializeLGraphGroupShape` 对 runtime 形状做 `String/Number` 强制归一化，可能将 `undefined/null` 等输入改写为 `""/0`，偏离“仅字段映射兼容”的目标。
+- 已实施修复：
+  1. `normalizeSerializedLGraphGroup` 仅保留 `font/font_size` 的兼容归一化，不再强制转换 `title/color`。
+  2. `serializeLGraphGroupShape` 仅执行结构映射与字段名转换（`font_size <-> font`），移除多余类型强转。
+- 验证：
+  1. 类型校验通过：`npx tsc --noEmit src/ts-migration/models/LGraphGroup.serialization.compat.ts`。

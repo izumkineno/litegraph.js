@@ -45,9 +45,9 @@ export function normalizeSerializedLGraphGroup(
     }
 
     return {
-        title: String(anyGroup.title ?? ""),
+        title: anyGroup.title,
         bounding: anyGroup.bounding,
-        color: String(anyGroup.color ?? ""),
+        color: anyGroup.color,
         font_size: fontSize,
     };
 }
@@ -75,10 +75,10 @@ export function serializeLGraphGroupShape(
     order: SerializedLGraphGroupOrder = "runtime"
 ): SerializedLGraphGroupRuntime | SerializedLGraphGroup {
     const runtimeShape: SerializedLGraphGroupRuntime = {
-        title: String(shape.title ?? ""),
+        title: shape.title,
         bounding: shape.bounding,
-        color: String(shape.color ?? ""),
-        font_size: Number(shape.font_size ?? 0),
+        color: shape.color,
+        font_size: shape.font_size,
     };
 
     if (order === "runtime") {
