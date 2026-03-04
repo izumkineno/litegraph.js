@@ -118,7 +118,7 @@ Git 提交规则（强制）：
   - 对应原 JS：`registerNodeType/unregisterNodeType/createNode/getNodeType*`。
   - 对应原 d.ts：LiteGraph 工厂 API 与节点注册契约。
 
-- [ ] **Audit Task 09: `src/ts-migration/core/litegraph.runtime.ts`**
+- [x] **Audit Task 09: `src/ts-migration/core/litegraph.runtime.ts`**
   - 对应原 JS：`isValidConnection/fetchFile/cloneObject/uuidv4/registerSearchboxExtra` 等。
   - 对应原 d.ts：运行时辅助 API 类型契约。
 
@@ -267,9 +267,9 @@ Git 提交规则（强制）：
 ## 审计进度快照
 
 - 总任务数：`42`
-- 已完成：`8`
+- 已完成：`9`
 - 进行中：`0`
-- 未开始：`34`
+- 未开始：`33`
 - 最新更新时间：`2026-03-04`
 
 ---
@@ -432,3 +432,24 @@ Git 提交规则（强制）：
   2. 将两个分类过滤比较调整为 `!=`，与 JS 运行时一致。
   3. 对齐 `registerNodeType/unregisterNodeType` 的 `Nodes` 检查与删除键语义到原 JS 行为。
   4. 校验通过：`npx tsc --noEmit src/ts-migration/core/litegraph.registry.ts`。
+
+### Audit Task 09 结果
+- 结论：Pass（发现 5 处运行时辅助迁移偏差并已修复）
+- JS 对照：`src/litegraph.js`
+  - `registerNodeAndSlotType/buildNodeClassFromObject/wrapFunctionAsNode`
+  - `isValidConnection/fetchFile/cloneObject/uuidv4/registerSearchboxExtra`
+- d.ts 对照：`src/litegraph.d.ts`
+  - LiteGraph 运行辅助 API 暴露面（节点包装、重载脚本、工具方法）
+- TS 对照：`src/ts-migration/core/litegraph.runtime.ts`
+- 发现问题：
+  1. `buildNodeClassFromObject` 与 `wrapFunctionAsNode` 为 `classObject.desc` 赋值时，类型缺少 `desc` 字段导致 `TS2339`，单文件 `tsc` 失败。
+  2. `registerNodeAndSlotType` 对 `"anonymous"` 哨兵比较使用了非语义化的类型强转写法，可读性差且不利于保持 JS 行为对照。
+  3. `registerNodeAndSlotType` 对事件槽类型判断使用 `===`，与原 JS 的 `==` 语义不一致（字符串 `"-1"` 场景会偏离）。
+  4. `isValidConnection` 的若干关键比较使用 `===`，与原 JS 的 `==` 语义不一致。
+  5. `fetchFile` 对未知 `type` 的字符串 URL 分支回退为 `response.text()`，与原 JS 的“返回 `undefined` 进入回调”语义不一致。
+- 已实施修复：
+  1. 引入 `GeneratedNodeClassLike`，显式承载 `desc` 字段，修复 `TS2339`。
+  2. 重写 `"anonymous"` 分支判断为显式 `unknown` 读值 + `!= "anonymous"`，保持原 JS 判定语义。
+  3. 将事件槽与连接判断中的关键比较对齐为 JS 的宽松相等语义（`==`）。
+  4. 删除 `fetchFile` 未知类型的 `response.text()` 回退，恢复 JS 语义。
+  5. 校验通过：`npx tsc --noEmit src/ts-migration/core/litegraph.runtime.ts`。

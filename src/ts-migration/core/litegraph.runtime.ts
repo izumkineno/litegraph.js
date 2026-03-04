@@ -23,6 +23,10 @@ interface BuildNodeClassFromObjectShape {
 
 type FetchFileType = "text" | "string" | "arraybuffer" | "json" | "blob";
 
+interface GeneratedNodeClassLike extends LGraphNodeConstructorLike {
+    desc?: string;
+}
+
 interface LGraphNodeRuntimeLike extends LGraphNodeLike {
     addInput: (name: string, type: SlotType) => void;
     addOutput: (name: string, type: SlotType) => void;
@@ -82,11 +86,12 @@ export class LiteGraphRuntime {
         out?: boolean
     ): void {
         out = out || false;
+        const registeredType = (
+            this.host.registered_node_types as Record<string, unknown>
+        )[String(type)];
         const baseClass =
-            typeof type === "string" &&
-            this.host.registered_node_types[type] !==
-                ("anonymous" as unknown as LGraphNodeConstructorLike)
-                ? this.host.registered_node_types[type]
+            typeof type === "string" && registeredType != "anonymous"
+                ? registeredType
                 : type;
 
         const classType = (baseClass as unknown as { constructor: { type: string } })
@@ -95,7 +100,7 @@ export class LiteGraphRuntime {
         let allTypes: string[] = [];
         if (typeof slotType === "string") {
             allTypes = slotType.split(",");
-        } else if (slotType === this.host.EVENT || slotType === this.host.ACTION) {
+        } else if (slotType == this.host.EVENT || slotType == this.host.ACTION) {
             allTypes = ["_event_"];
         } else {
             allTypes = ["*"];
@@ -179,9 +184,7 @@ export class LiteGraphRuntime {
         }
         ctorCode += "if(this.onCreate)this.onCreate()";
 
-        const classObject = Function(
-            ctorCode
-        ) as unknown as LGraphNodeConstructorLike;
+        const classObject = Function(ctorCode) as unknown as GeneratedNodeClassLike;
         for (const key in object) {
             if (key !== "inputs" && key !== "outputs" && key !== "properties") {
                 classObject.prototype[key] = object[key];
@@ -241,7 +244,7 @@ export class LiteGraphRuntime {
         if (properties) {
             code += "this.properties = " + JSON.stringify(properties) + ";\n";
         }
-        const classObject = Function(code) as unknown as LGraphNodeConstructorLike;
+        const classObject = Function(code) as unknown as GeneratedNodeClassLike;
         classObject.title = name.split("/").pop();
         classObject.desc = "Generated from " + func.name;
         classObject.prototype.onExecute = function onExecute(
@@ -341,17 +344,17 @@ export class LiteGraphRuntime {
      * @return {Boolean} true if they can be connected
      */
     isValidConnection(typeA: SlotType, typeB: SlotType): boolean {
-        if (typeA === "" || typeA === "*") {
+        if (typeA == "" || typeA === "*") {
             typeA = 0;
         }
-        if (typeB === "" || typeB === "*") {
+        if (typeB == "" || typeB === "*") {
             typeB = 0;
         }
         if (
             !typeA || // generic output
             !typeB || // generic input
-            typeA === typeB || // same type (is valid for triggers)
-            (typeA === this.host.EVENT && typeB === this.host.ACTION)
+            typeA == typeB || // same type (is valid for triggers)
+            (typeA == this.host.EVENT && typeB == this.host.ACTION)
         ) {
             return true;
         }
@@ -445,7 +448,6 @@ export class LiteGraphRuntime {
                     if (type === "blob") {
                         return response.blob();
                     }
-                    return response.text();
                 })
                 .then((data) => {
                     if (onComplete) {
