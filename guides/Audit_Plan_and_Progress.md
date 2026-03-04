@@ -128,7 +128,7 @@ Git 提交规则（强制）：
   - 对应原 JS：`distance/compareObjects/isInside* / growBounding`。
   - 对应原 d.ts：相关工具函数签名。
 
-- [ ] **Audit Task 11: `src/ts-migration/utils/color.ts`**
+- [x] **Audit Task 11: `src/ts-migration/utils/color.ts`**
   - 对应原 JS：`colorToString/hex2num/num2hex`。
   - 对应原 d.ts：颜色工具类型。
 
@@ -267,9 +267,9 @@ Git 提交规则（强制）：
 ## 审计进度快照
 
 - 总任务数：`42`
-- 已完成：`10`
+- 已完成：`11`
 - 进行中：`0`
-- 未开始：`32`
+- 未开始：`31`
 - 最新更新时间：`2026-03-04`
 
 ---
@@ -471,3 +471,18 @@ Git 提交规则（强制）：
   2. `isInsideBounding` 兼容了 `[[min],[max]]` 与 `[min,max]` 两种表示，保持对旧调用路径与 d.ts 声明的双向兼容。
 - 验证：
   1. 类型校验通过：`npx tsc --noEmit src/ts-migration/utils/math-geometry.ts`。
+
+### Audit Task 11 结果
+- 结论：Pass（发现 1 处类型契约漂移并已修复）
+- JS 对照：`src/litegraph.js`
+  - `colorToString/hex2num/num2hex` 的运行时算法与边界行为
+- d.ts 对照：`src/litegraph.d.ts`
+  - `colorToString(c: string): string`
+  - `hex2num(hex: string): [number, number, number]`
+  - `num2hex(triplet: [number, number, number]): string`
+- TS 对照：`src/ts-migration/utils/color.ts`
+- 发现问题：
+  1. `colorToString` 参数仅声明为 `ReadonlyArray<number>`，未覆盖 d.ts 的 `string` 形态，存在类型契约漂移。
+- 已实施修复：
+  1. 为 `colorToString` 增加重载：`(c: string)` 与 `(c: ReadonlyArray<number>)`，实现保持原 JS 运行语义不变。
+  2. 校验通过：`npx tsc --noEmit src/ts-migration/utils/color.ts`。

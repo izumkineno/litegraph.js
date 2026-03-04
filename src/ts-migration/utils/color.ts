@@ -1,16 +1,19 @@
 /**
  * Convert normalized rgb/rgba array to css rgba string.
  */
-export function colorToString(c: ReadonlyArray<number>): string {
+export function colorToString(c: string): string;
+export function colorToString(c: ReadonlyArray<number>): string;
+export function colorToString(c: string | ReadonlyArray<number>): string {
+    const source = c as ReadonlyArray<number>;
     return (
         "rgba(" +
-        Math.round(c[0] * 255).toFixed() +
+        Math.round(source[0] * 255).toFixed() +
         "," +
-        Math.round(c[1] * 255).toFixed() +
+        Math.round(source[1] * 255).toFixed() +
         "," +
-        Math.round(c[2] * 255).toFixed() +
+        Math.round(source[2] * 255).toFixed() +
         "," +
-        (c.length == 4 ? c[3].toFixed(2) : "1.0") +
+        (source.length == 4 ? source[3].toFixed(2) : "1.0") +
         ")"
     );
 }
@@ -52,4 +55,3 @@ export function num2hex(triplet: [number, number, number]): string {
     }
     return hex;
 }
-
