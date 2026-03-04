@@ -106,7 +106,7 @@ Git 提交规则（强制）：
 
 ### B. LiteGraph 核心模块
 
-- [ ] **Audit Task 06: `src/ts-migration/core/litegraph.constants.ts`**
+- [x] **Audit Task 06: `src/ts-migration/core/litegraph.constants.ts`**
   - 对应原 JS：LiteGraph 常量区、枚举、默认配置。
   - 对应原 d.ts：常量声明、枚举值约束。
 
@@ -267,9 +267,9 @@ Git 提交规则（强制）：
 ## 审计进度快照
 
 - 总任务数：`42`
-- 已完成：`5`
+- 已完成：`6`
 - 进行中：`0`
-- 未开始：`37`
+- 未开始：`36`
 - 最新更新时间：`2026-03-04`
 
 ---
@@ -387,3 +387,17 @@ Git 提交规则（强制）：
   1. 为 `LiteGraphContextMenuCompatHost`、`LGraphHooksCompatHost` 增加 `[key: string]: unknown`。
   2. 增加 `SerializedLLinkRuntime` 与 `SerializedLGraphGroupRuntime` 别名导出，确保声明层与实现导出命名兼容。
   3. 校验通过：`npx tsc --noEmit src/ts-migration/types/litegraph-compat.ts` 与 `npx tsc --noEmit src/ts-migration/types/litegraph-compat.d.ts`。
+
+### Audit Task 06 结果
+- 结论：Pass（发现 1 处常量逻辑的类型收敛缺陷并已修复）
+- JS 对照：`src/litegraph.js`
+  - LiteGraph 常量区 `shift_click_do_break_link_from/click_do_break_link_from_key/isBreakLinkModifierPressed`
+  - 其余常量默认值与枚举（`VERSION`、形状、方向、链接渲染模式）均已对齐
+- d.ts 对照：`src/litegraph.d.ts`
+  - LiteGraph 常量声明与枚举约束（`BOX/ROUND/CIRCLE/CARD/ARROW`、`ALWAYS/ON_EVENT/NEVER/ON_TRIGGER` 等）
+- TS 对照：`src/ts-migration/core/litegraph.constants.ts`
+- 发现问题：
+  1. `isBreakLinkModifierPressed` 中对 `shift_click_do_break_link_from` 使用 `!== true && !== false` 分支判断，触发 TypeScript 缩窄冲突（`tsc --noEmit` 报 TS2367），导致该模块单文件类型检查失败。
+- 已实施修复：
+  1. 将判断改为等价的 `typeof shortcutSetting !== "boolean"` 分支，保持 JS 运行语义不变（布尔值走开关语义，字符串/数组走修饰键语义）。
+  2. 校验通过：`npx tsc --noEmit src/ts-migration/core/litegraph.constants.ts`。

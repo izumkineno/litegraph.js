@@ -273,17 +273,15 @@ export const LiteGraphConstants: LiteGraphConstantsShape = {
     shift_click_do_break_link_from: true, // [false!] set true to enable disconnect shortcut from output slots
     click_do_break_link_from_key: "shift", // "shift"|"alt"|"ctrl"|"meta"|Array<string>
     isBreakLinkModifierPressed: function(e?: ModifierEventLike | null): boolean {
-        if (!e || !LiteGraphConstants.shift_click_do_break_link_from) {
+        const shortcutSetting = LiteGraphConstants.shift_click_do_break_link_from;
+        if (!e || !shortcutSetting) {
             return false;
         }
 
         let breakMod: BreakLinkModifierConfig =
             LiteGraphConstants.click_do_break_link_from_key;
-        if (
-            LiteGraphConstants.shift_click_do_break_link_from !== true &&
-            LiteGraphConstants.shift_click_do_break_link_from !== false
-        ) {
-            breakMod = LiteGraphConstants.shift_click_do_break_link_from;
+        if (typeof shortcutSetting !== "boolean") {
+            breakMod = shortcutSetting;
         }
 
         const hasModifier = (modifier?: string): boolean => {
@@ -351,4 +349,3 @@ export const LiteGraphConstants: LiteGraphConstantsShape = {
     // use this if you must have node IDs that are unique across all graphs and subgraphs.
     use_uuids: false,
 };
-
