@@ -178,7 +178,7 @@ Git 提交规则（强制）：
   - 对应原 JS：`add/remove/getNodeById/find*/getNodeOnPos/getGroupOnPos`。
   - 对应原 d.ts：图结构管理 API。
 
-- [ ] **Audit Task 23: `src/ts-migration/models/LGraph.io-events.ts`**
+- [x] **Audit Task 23: `src/ts-migration/models/LGraph.io-events.ts`**
   - 对应原 JS：`addInput/addOutput/triggerInput/sendEventToAllNodes/connectionChange`。
   - 对应原 d.ts：图级 I/O 与事件接口。
 
@@ -267,9 +267,9 @@ Git 提交规则（强制）：
 ## 审计进度快照
 
 - 总任务数：`42`
-- 已完成：`22`
+- 已完成：`23`
 - 进行中：`0`
-- 未开始：`20`
+- 未开始：`19`
 - 最新更新时间：`2026-03-04`
 
 ---
@@ -666,3 +666,32 @@ Git 提交规则（强制）：
   5. 调整 `onNodeAdded` 兼容 hook 调用的宿主类型对齐。
 - 验证：
   1. 类型校验通过：`npx tsc --noEmit src/ts-migration/models/LGraph.structure.ts`。
+
+### Audit Task 23 结果
+- 结论：Pass（发现 7 处图级 IO/事件链迁移偏差并已修复）
+- JS 对照：`src/litegraph.js`
+  - `LGraph.prototype.sendEventToAllNodes`
+  - `LGraph.prototype.sendActionToCanvas`
+  - `LGraph.prototype.onAction/trigger/triggerInput/setCallback`
+  - `LGraph.prototype.beforeChange/afterChange/connectionChange`
+  - `LGraph.prototype.isLive/clearTriggeredSlots/change/setDirtyCanvas`
+- d.ts 对照：`src/litegraph.d.ts`
+  - `onAction/trigger/addInput...setDirtyCanvas` 一组图级 IO 与事件接口
+- TS 对照：`src/ts-migration/models/LGraph.io-events.ts`
+- 发现问题：
+  1. `sendEventToAllNodes` 对 `Subgraph.sendEventToAllNodes` 增加存在性保护，偏离原 JS 直接调用语义。
+  2. `sendEventToAllNodes` 将 `node[eventname]` 从“truthy 判断”收窄为“函数判断”，改变了原 JS 的异常路径行为。
+  3. `sendActionToCanvas` 从 `(action, params)` 改为 rest 参数并重写 payload 组装，偏离原调用语义。
+  4. `onAction` 对 `GraphInput` 存在性提前返回，导致 `_input_nodes` 刷新路径与原 JS 不一致。
+  5. `onAction` 对 `properties/actionDo` 增加可选保护，偏离原 JS 直接访问与调用语义。
+  6. `triggerInput/setCallback` 对 `onTrigger/setTrigger` 增加可选保护，偏离原 JS。
+  7. `beforeChange/afterChange` 传给 `sendActionToCanvas` 的参数形态偏离原 JS（应直接传 `this`）。
+- 已实施修复：
+  1. 恢复 `sendEventToAllNodes` 的原始判断与调用分支（含 Subgraph 递归分发路径）。
+  2. 恢复 `sendActionToCanvas(action, params)` 原型签名与 `apply(c, params)` 行为。
+  3. `onAction` 恢复 `_input_nodes` 固定刷新路径，并恢复 `properties.name` / `actionDo` 的直接调用语义。
+  4. `triggerInput` 与 `setCallback` 恢复对节点回调的直接调用。
+  5. `beforeChange/afterChange` 恢复向 canvas 分发 `this` 作为第二参数。
+  6. 调整类型桥接以满足继承约束，不改变上述运行时行为。
+- 验证：
+  1. 类型校验通过：`npx tsc --noEmit src/ts-migration/models/LGraph.io-events.ts`。

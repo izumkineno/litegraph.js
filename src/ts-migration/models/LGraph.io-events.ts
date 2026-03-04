@@ -20,11 +20,11 @@ interface GraphNodeEventLike {
     id: number | string;
     mode: number;
     constructor: Function;
-    properties?: { name?: string };
-    onTrigger?: (value: unknown) => void;
-    setTrigger?: (func: (...args: unknown[]) => unknown) => void;
-    actionDo?: (action: string, param?: unknown, options?: unknown) => void;
-    sendEventToAllNodes?: (
+    properties: { name?: string };
+    onTrigger: (value: unknown) => void;
+    setTrigger: (func: (...args: unknown[]) => unknown) => void;
+    actionDo: (action: string, param?: unknown, options?: unknown) => void;
+    sendEventToAllNodes: (
         eventname: string,
         params?: unknown,
         mode?: number
@@ -135,50 +135,41 @@ export class LGraphIOEvents extends LGraphStructure {
             const node = nodes[j];
 
             if (node.constructor === host.Subgraph && eventname != "onExecute") {
-                if (node.mode == targetMode && node.sendEventToAllNodes) {
+                if (node.mode == targetMode) {
                     node.sendEventToAllNodes(eventname, params, targetMode);
                 }
                 continue;
             }
 
-            const eventHandler = node[eventname];
-            if (typeof eventHandler !== "function" || node.mode != targetMode) {
+            if (!node[eventname] || node.mode != targetMode) {
                 continue;
             }
 
             if (params === undefined) {
-                (eventHandler as () => void).call(node);
+                (node[eventname] as () => void).call(node);
             } else if ((params as { constructor?: unknown }).constructor === Array) {
-                (eventHandler as (...args: unknown[]) => void).apply(
+                (node[eventname] as (...args: unknown[]) => void).apply(
                     node,
                     params as unknown[]
                 );
             } else {
-                (eventHandler as (value: unknown) => void).call(node, params);
+                (node[eventname] as (value: unknown) => void).call(node, params);
             }
         }
     }
 
-    sendActionToCanvas(action: string, ...params: unknown[]): void {
+    sendActionToCanvas(action: string, params?: unknown): void {
         const canvasList = this.getCanvasList();
         if (!canvasList) {
             return;
         }
 
-        const payload =
-            params.length === 0
-                ? undefined
-                : params.length === 1
-                ? params[0]
-                : params;
-
         for (let i = 0; i < canvasList.length; ++i) {
             const canvas = canvasList[i];
-            const actionHandler = canvas[action];
-            if (typeof actionHandler === "function") {
-                (actionHandler as (...args: unknown[]) => void).apply(
+            if (canvas[action]) {
+                (canvas[action] as (...args: unknown[]) => void).apply(
                     canvas,
-                    payload as unknown[]
+                    params as unknown[]
                 );
             }
         }
@@ -186,23 +177,17 @@ export class LGraphIOEvents extends LGraphStructure {
 
     onAction(action: string, param?: unknown, options?: unknown): void {
         const host = this.getIOEventsHost();
-        if (!host.GraphInput) {
-            return;
-        }
-
-        this._input_nodes = this.findNodesByClass<GraphNodeEventLike>(
-            host.GraphInput,
-            this._input_nodes
-        );
+        this._input_nodes = this.findNodesByClass(
+            host.GraphInput as Function,
+            this._input_nodes as unknown as never[]
+        ) as unknown as GraphNodeEventLike[];
         for (let i = 0; i < this._input_nodes.length; ++i) {
             const node = this._input_nodes[i];
-            if (node.properties?.name != action) {
+            if (node.properties.name != action) {
                 continue;
             }
             // wrap node.onAction(action, param);
-            if (node.actionDo) {
-                node.actionDo(action, param, options);
-            }
+            node.actionDo(action, param, options);
             break;
         }
     }
@@ -488,35 +473,31 @@ export class LGraphIOEvents extends LGraphStructure {
     }
 
     triggerInput(name: string, value: unknown): void {
-        const nodes = this.findNodesByTitle<GraphNodeEventLike>(name);
+        const nodes = this.findNodesByTitle(name) as unknown as GraphNodeEventLike[];
         for (let i = 0; i < nodes.length; ++i) {
-            if (nodes[i].onTrigger) {
-                nodes[i].onTrigger(value);
-            }
+            nodes[i].onTrigger(value);
         }
     }
 
     setCallback(name: string, func: (...args: unknown[]) => unknown): void {
-        const nodes = this.findNodesByTitle<GraphNodeEventLike>(name);
+        const nodes = this.findNodesByTitle(name) as unknown as GraphNodeEventLike[];
         for (let i = 0; i < nodes.length; ++i) {
-            if (nodes[i].setTrigger) {
-                nodes[i].setTrigger(func);
-            }
+            nodes[i].setTrigger(func);
         }
     }
 
     // used for undo, called before any change is made to the graph
-    beforeChange(info?: GraphNodeEventLike): void {
+    beforeChange(info?: unknown): void {
         if (this.onBeforeChange) {
-            this.onBeforeChange(this, info);
+            this.onBeforeChange(this, info as GraphNodeEventLike | undefined);
         }
         this.sendActionToCanvas("onBeforeChange", this);
     }
 
     // used to resend actions, called after any change is made to the graph
-    afterChange(info?: GraphNodeEventLike): void {
+    afterChange(info?: unknown): void {
         if (this.onAfterChange) {
-            this.onAfterChange(this, info);
+            this.onAfterChange(this, info as GraphNodeEventLike | undefined);
         }
         this.sendActionToCanvas("onAfterChange", this);
     }
