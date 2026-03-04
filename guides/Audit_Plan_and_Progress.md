@@ -258,7 +258,7 @@ Git 提交规则（强制）：
   - 对应原 JS：`closeAllContextMenus` 的入口归属与行为。
   - 对应原 d.ts：菜单关闭 API 的兼容声明。
 
-- [ ] **Audit Task 42: `src/ts-migration/ui/CurveEditor.ts`**
+- [x] **Audit Task 42: `src/ts-migration/ui/CurveEditor.ts`**
   - 对应原 JS：`function CurveEditor` + `draw/onMouse*/getCloserPoint`。
   - 对应原 d.ts：`CurveEditor` 相关类型路径（若无声明需记录差异）。
 
@@ -267,9 +267,9 @@ Git 提交规则（强制）：
 ## 审计进度快照
 
 - 总任务数：`42`
-- 已完成：`41`
+- 已完成：`42`
 - 进行中：`0`
-- 未开始：`1`
+- 未开始：`0`
 - 最新更新时间：`2026-03-04`
 
 ---
@@ -1139,3 +1139,22 @@ Git 提交规则（强制）：
   1. 将注释修正为 `Task 41 compatibility layer`，其余运行时绑定语义保持不变。
 - 验证：
   1. 类型校验通过：`npx tsc --noEmit src/ts-migration/ui/context-menu-compat.ts`。
+
+### Audit Task 42 结果
+- 结论：Pass（发现 3 处 CurveEditor 迁移语义偏差并已修复）
+- JS 对照：`src/litegraph.js`
+  - `function CurveEditor`
+  - `CurveEditor.sampleCurve`
+  - `CurveEditor.prototype.draw/onMouseDown/onMouseMove/onMouseUp/getCloserPoint`
+- d.ts 对照：`src/litegraph.d.ts`
+  - 未声明 `CurveEditor`（差异已记录：该类型契约缺失于原始 d.ts）
+- TS 对照：`src/ts-migration/ui/CurveEditor.ts`
+- 发现问题：
+  1. `onMouseDown` 新增 `!this.size` 早返回，偏离原 JS 直接访问 `this.size` 的语义。
+  2. `onMouseMove` 新增 `!this.size` 早返回，偏离原 JS 路径。
+  3. `getCloserPoint` 新增 `!this.size` 防御分支，且 `_nearest` 在构造函数被提前初始化为 `-1`，与原 JS 的延迟写入语义不一致。
+- 已实施修复：
+  1. 移除 `onMouseDown/onMouseMove/getCloserPoint` 中额外的 `this.size` 防御分支，回收到原 JS 等价语义。
+  2. 将 `_nearest` 改为可选字段，移除构造函数中的预初始化，保持原 JS 的首次写入时机。
+- 验证：
+  1. 类型校验通过：`npx tsc --noEmit src/ts-migration/ui/CurveEditor.ts`。

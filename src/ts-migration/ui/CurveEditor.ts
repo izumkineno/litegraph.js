@@ -21,7 +21,7 @@ export class CurveEditor {
     points: CurvePoint[] | null | undefined;
     selected: number;
     nearest: number;
-    _nearest: number;
+    _nearest?: number;
     size: Vector2 | null; // stores last size used
     must_update: boolean;
     margin: number;
@@ -30,7 +30,6 @@ export class CurveEditor {
         this.points = points;
         this.selected = -1;
         this.nearest = -1;
-        this._nearest = -1;
         this.size = null;
         this.must_update = true;
         this.margin = 5;
@@ -128,9 +127,6 @@ export class CurveEditor {
         if (localpos[1] < 0) {
             return;
         }
-        if (!this.size) {
-            return;
-        }
 
         // this.captureInput(true);
         const w = this.size[0] - this.margin * 2;
@@ -160,9 +156,6 @@ export class CurveEditor {
     ): void {
         const points = this.points;
         if (!points) {
-            return;
-        }
-        if (!this.size) {
             return;
         }
 
@@ -214,7 +207,7 @@ export class CurveEditor {
 
     getCloserPoint(pos: Vector2, max_dist?: number): number {
         const points = this.points;
-        if (!points || !this.size) {
+        if (!points) {
             return -1;
         }
         max_dist = max_dist || 30;
