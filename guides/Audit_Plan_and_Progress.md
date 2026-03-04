@@ -250,7 +250,7 @@ Git 提交规则（强制）：
 
 ### F. UI 组件与兼容层
 
-- [ ] **Audit Task 40: `src/ts-migration/ui/ContextMenu.ts`**
+- [x] **Audit Task 40: `src/ts-migration/ui/ContextMenu.ts`**
   - 对应原 JS：`function ContextMenu` + `addItem/close/getTopMenu/getFirstEvent`。
   - 对应原 d.ts：`ContextMenu` 类接口。
 
@@ -267,9 +267,9 @@ Git 提交规则（强制）：
 ## 审计进度快照
 
 - 总任务数：`42`
-- 已完成：`39`
+- 已完成：`40`
 - 进行中：`0`
-- 未开始：`3`
+- 未开始：`2`
 - 最新更新时间：`2026-03-04`
 
 ---
@@ -1101,3 +1101,27 @@ Git 提交规则（强制）：
   7. 清理类型问题并通过单文件编译验证。
 - 验证：
   1. 类型校验通过：`npx tsc --noEmit src/ts-migration/canvas/LGraphCanvas.menu-panel.ts`。
+
+### Audit Task 40 结果
+- 结论：Pass（发现 6 处 ContextMenu 语义漂移并已修复）
+- JS 对照：`src/litegraph.js`
+  - `function ContextMenu`
+  - `ContextMenu.prototype.addItem/close/getTopMenu/getFirstEvent`
+  - `ContextMenu.trigger/isCursorOverElement`、`LiteGraph.closeAllContextMenus`
+- d.ts 对照：`src/litegraph.d.ts`
+  - `ContextMenu` 构造、实例方法与静态方法声明
+- TS 对照：`src/ts-migration/ui/ContextMenu.ts`
+- 发现问题：
+  1. 构造函数里 `eventClass` 判定增加了 `null` 放行，且 `minWidth/minHeight`、`wheel` 初始位移、菜单项迭代逻辑与原 JS 不一致。
+  2. `addItem` 将 `dataset.value` 做了额外转换，并在回调链里引入防御式可选调用，偏离原 JS 直接调用语义。
+  3. 子菜单创建时额外注入了 `ownerDocument.defaultView`，与原 JS 构造路径不一致。
+  4. `close` 中将 `current_submenu` 置为 `undefined` 且 `trigger` 传了 `origin`，偏离原 JS 的关闭事件触发参数。
+  5. `getFirstEvent` 强制回落 `null`，偏离原 JS 返回 `options.event` 原值语义。
+  6. 原 JS 在 `close` 末尾保留的 TODO 生命周期注释在迁移层缺失。
+- 已实施修复：
+  1. 回收构造流程到原 JS 等价语义（`eventClass` 判定、尺寸赋值、wheel 位移、数组迭代与定位路径）。
+  2. 回收 `addItem` 的 `dataset`、回调链与子菜单构造参数语义。
+  3. 回收 `close` 的父菜单触发链与 `current_submenu` 清理语义。
+  4. 回收 `getFirstEvent` 返回语义，并补回 `close` 末尾 TODO 注释。
+- 验证：
+  1. 类型校验通过：`npx tsc --noEmit src/ts-migration/ui/ContextMenu.ts`。
