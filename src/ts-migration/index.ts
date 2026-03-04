@@ -46,6 +46,11 @@ import {
 import { LLink } from "./models/LLink";
 import { applyLiteGraphApiCompatAliases } from "./types/litegraph-compat";
 import { ContextMenu as ContextMenuImpl } from "./ui/ContextMenu";
+import {
+    applyContextMenuCloseAllCompat as applyContextMenuCloseAllCompatUi,
+    CONTEXT_MENU_CLOSE_ALL_DIFF_ID,
+    isContextMenuCloseAllCompatSynced,
+} from "./ui/context-menu-compat";
 import { CurveEditor } from "./ui/CurveEditor";
 import { colorToString, hex2num, num2hex } from "./utils/color";
 import { getParameterNames } from "./utils/function-signature";
@@ -68,6 +73,7 @@ export {
     GRID_SQUARE_SHAPE_DIFF_ID,
     LLINK_SERIALIZATION_DIFF_ID,
     LGRAPHGROUP_SERIALIZATION_DIFF_ID,
+    CONTEXT_MENU_CLOSE_ALL_DIFF_ID,
     isSerializedLLinkDtsOrderCompat,
     normalizeSerializedLLinkCompatTuple,
     denormalizeSerializedLLinkCompatTuple,
@@ -77,6 +83,8 @@ export {
     denormalizeSerializedLGraphGroupCompatShape,
     parseSerializedLGraphGroupInput,
     serializeLGraphGroupShape,
+    applyContextMenuCloseAllCompatUi,
+    isContextMenuCloseAllCompatSynced,
     LLink,
     CurveEditor,
     colorToString,

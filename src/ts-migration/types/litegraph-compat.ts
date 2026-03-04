@@ -1,4 +1,5 @@
 import type { SerializedLGraphGroup, SerializedLLink } from "./serialization";
+import { applyContextMenuCloseAllCompat as applyContextMenuCloseAllCompatImpl } from "../ui/context-menu-compat";
 
 export type CompatCallback = (...args: unknown[]) => unknown;
 
@@ -308,17 +309,7 @@ export function applyLGraphCanvasPrototypeCompatShims(
 export function applyContextMenuCloseAllCompat(
     liteGraph: LiteGraphContextMenuCompatHost
 ): void {
-    const resolved =
-        liteGraph.closeAllContextMenus ||
-        liteGraph.ContextMenu?.closeAllContextMenus;
-    if (!resolved) {
-        return;
-    }
-
-    liteGraph.closeAllContextMenus = resolved;
-    if (liteGraph.ContextMenu) {
-        liteGraph.ContextMenu.closeAllContextMenus = resolved;
-    }
+    applyContextMenuCloseAllCompatImpl(liteGraph);
 }
 
 export function invokeGraphOnNodeAddedCompatHook(
