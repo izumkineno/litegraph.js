@@ -170,7 +170,7 @@ Git 提交规则（强制）：
   - 对应原 JS：`function LGraph` + `clear/start/stop/getTime*`。
   - 对应原 d.ts：`LGraph` 生命周期成员。
 
-- [ ] **Audit Task 21: `src/ts-migration/models/LGraph.execution.ts`**
+- [x] **Audit Task 21: `src/ts-migration/models/LGraph.execution.ts`**
   - 对应原 JS：`runStep/updateExecutionOrder/computeExecutionOrder/getAncestors/arrange`。
   - 对应原 d.ts：图执行调度相关成员。
 
@@ -267,9 +267,9 @@ Git 提交规则（强制）：
 ## 审计进度快照
 
 - 总任务数：`42`
-- 已完成：`20`
+- 已完成：`21`
 - 进行中：`0`
-- 未开始：`22`
+- 未开始：`21`
 - 最新更新时间：`2026-03-04`
 
 ---
@@ -618,3 +618,28 @@ Git 提交规则（强制）：
   3. 将 `on_frame` 改为等价箭头函数，保持执行语义不变并消除 `TS1251`。
 - 验证：
   1. 类型校验通过：`npx tsc --noEmit src/ts-migration/models/LGraph.lifecycle.ts`。
+
+### Audit Task 21 结果
+- 结论：Pass（发现 5 处执行链迁移偏差并已修复）
+- JS 对照：`src/litegraph.js`
+  - `LGraph.prototype.runStep`
+  - `LGraph.prototype.updateExecutionOrder`
+  - `LGraph.prototype.computeExecutionOrder`
+  - `LGraph.prototype.getAncestors`
+  - `LGraph.prototype.arrange`
+- d.ts 对照：`src/litegraph.d.ts`
+  - `LGraph.runStep/updateExecutionOrder/computeExecutionOrder/getAncestors/arrange`
+- TS 对照：`src/ts-migration/models/LGraph.execution.ts`
+- 发现问题：
+  1. `runStep` 对 `executePendingActions` 增加了存在性保护，偏离原 JS 的直接调用语义。
+  2. `runStep` 在 `do_not_catch_errors` 分支把 `node.doExecute()` 改成了 `doExecute/onExecute` 回退，偏离原 JS。
+  3. `computeExecutionOrder` 的临时字典键使用 `Record<number,...>`，对字符串 ID（UUID 模式）键语义不稳。
+  4. `getAncestors` 增加 `getInputNode` 保护分支，偏离原 JS 的直接调用路径。
+  5. `arrange` 对 `setDirtyCanvas` 加了可选保护，原 JS 为无条件调用。
+- 已实施修复：
+  1. 对齐 `runStep` 到原 JS：移除额外保护，恢复 `executePendingActions` 与 `doExecute` 直接调用语义。
+  2. 将执行序图内部字典改为字符串键路径（`Record<string,...>` + `String(id)`），确保与 JS 对象键行为一致。
+  3. `getAncestors` 恢复直接调用 `getInputNode(i)`。
+  4. `arrange` 恢复无条件 `setDirtyCanvas(true, true)`。
+- 验证：
+  1. 类型校验通过：`npx tsc --noEmit src/ts-migration/models/LGraph.execution.ts`。

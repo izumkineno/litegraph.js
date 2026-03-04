@@ -30,7 +30,7 @@ interface GraphOutputSlot {
 
 interface GraphLinkLike {
     id: number;
-    target_id: number;
+    target_id: number | string;
 }
 
 interface GraphNodeExecutionLike {
@@ -46,7 +46,7 @@ interface GraphNodeExecutionLike {
     order: number;
     constructor: { priority?: number };
     priority?: number;
-    getInputNode?: (index: number) => GraphNodeExecutionLike | null;
+    getInputNode: (index: number) => GraphNodeExecutionLike | null;
     pos: [number, number];
     size: [number, number];
 }
@@ -77,8 +77,12 @@ export class LGraphExecution extends LGraph {
         return { ...defaultExecutionHost, ...host };
     }
 
-    private getNodeByIdExecution(id: number): GraphNodeExecutionLike | null {
-        return (this._nodes_by_id[id] as GraphNodeExecutionLike) || null;
+    private getNodeByIdExecution(id: number | string): GraphNodeExecutionLike | null {
+        const nodesById = this._nodes_by_id as unknown as Record<
+            string,
+            GraphNodeExecutionLike
+        >;
+        return nodesById[String(id)] || null;
     }
 
     /**
@@ -117,18 +121,13 @@ export class LGraphExecution extends LGraph {
                     if (
                         liteGraph.use_deferred_actions &&
                         node._waiting_actions &&
-                        node._waiting_actions.length &&
-                        node.executePendingActions
+                        node._waiting_actions.length
                     ) {
-                        node.executePendingActions();
+                        (node as { executePendingActions: () => void }).executePendingActions();
                     }
                     if (node.mode == liteGraph.ALWAYS && node.onExecute) {
                         // wrap node.onExecute();
-                        if (node.doExecute) {
-                            node.doExecute();
-                        } else {
-                            node.onExecute();
-                        }
+                        (node as { doExecute: () => void }).doExecute();
                     }
                 }
 
@@ -151,10 +150,9 @@ export class LGraphExecution extends LGraph {
                         if (
                             liteGraph.use_deferred_actions &&
                             node._waiting_actions &&
-                            node._waiting_actions.length &&
-                            node.executePendingActions
+                            node._waiting_actions.length
                         ) {
-                            node.executePendingActions();
+                            (node as { executePendingActions: () => void }).executePendingActions();
                         }
                         if (node.mode == liteGraph.ALWAYS && node.onExecute) {
                             node.onExecute();
@@ -221,9 +219,9 @@ export class LGraphExecution extends LGraph {
     ): GraphNodeExecutionLike[] {
         let L: GraphNodeExecutionLike[] = [];
         const S: GraphNodeExecutionLike[] = [];
-        const M: Record<number, GraphNodeExecutionLike> = {};
+        const M: Record<string, GraphNodeExecutionLike> = {};
         const visited_links: Record<number, boolean> = {}; // to avoid repeating links
-        const remaining_links: Record<number, number> = {}; // to a
+        const remaining_links: Record<string, number> = {}; // to a
 
         // search for the nodes without inputs (starting nodes)
         for (let i = 0, l = this._nodes.length; i < l; ++i) {
@@ -232,7 +230,7 @@ export class LGraphExecution extends LGraph {
                 continue;
             }
 
-            M[node.id] = node; // add to pending nodes
+            M[String(node.id)] = node; // add to pending nodes
 
             let num = 0; // num of input connections
             if (node.inputs) {
@@ -254,7 +252,7 @@ export class LGraphExecution extends LGraph {
                 if (set_level) {
                     node._level = 0;
                 }
-                remaining_links[node.id] = num;
+                remaining_links[String(node.id)] = num;
             }
         }
 
@@ -266,7 +264,7 @@ export class LGraphExecution extends LGraph {
             // get an starting node
             const node = S.shift()!;
             L.push(node); // add to ordered list
-            delete M[node.id]; // remove from the pending nodes
+            delete M[String(node.id)]; // remove from the pending nodes
 
             if (!node.outputs) {
                 continue;
@@ -311,8 +309,9 @@ export class LGraphExecution extends LGraph {
                     }
 
                     visited_links[link.id] = true; // mark as visited
-                    remaining_links[target_node.id] -= 1; // reduce the number of links remaining
-                    if (remaining_links[target_node.id] == 0) {
+                    const targetNodeId = String(target_node.id);
+                    remaining_links[targetNodeId] -= 1; // reduce the number of links remaining
+                    if (remaining_links[targetNodeId] == 0) {
                         S.push(target_node);
                     } // if no more links, then add to starters array
                 }
@@ -375,12 +374,10 @@ export class LGraphExecution extends LGraph {
                 ancestors.push(current);
             }
 
-            if (current.getInputNode) {
-                for (let i = 0; i < current.inputs.length; ++i) {
-                    const input = current.getInputNode(i);
-                    if (input && ancestors.indexOf(input) == -1) {
-                        pending.push(input);
-                    }
+            for (let i = 0; i < current.inputs.length; ++i) {
+                const input = current.getInputNode(i);
+                if (input && ancestors.indexOf(input) == -1) {
+                    pending.push(input);
                 }
             }
         }
@@ -435,9 +432,9 @@ export class LGraphExecution extends LGraph {
             x += max_size + margin;
         }
 
-        const self = this as unknown as { setDirtyCanvas?: (fg: boolean, bg: boolean) => void };
-        if (self.setDirtyCanvas) {
-            self.setDirtyCanvas(true, true);
-        }
+        (this as unknown as { setDirtyCanvas: (fg: boolean, bg: boolean) => void }).setDirtyCanvas(
+            true,
+            true
+        );
     }
 }
