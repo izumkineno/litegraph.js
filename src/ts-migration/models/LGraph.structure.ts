@@ -71,7 +71,7 @@ interface GraphCanvasStructureLike {
 
 /**
  * LGraph structure-management methods.
- * Source: `add/remove/getNodeById/find*/getNodeOnPos/getGroupOnPos`.
+ * Source: `add/remove/getNodeById/find*()/getNodeOnPos/getGroupOnPos`.
  */
 export class LGraphStructure extends LGraphExecution {
     onNodeAdded?: (node: GraphNodeStructureLike) => void;
