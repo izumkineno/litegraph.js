@@ -100,7 +100,7 @@
 - [x] **Task 16: LGraphNode 数据通道与执行层迁移** — 来源：`setOutputData/getInputData/doExecute/actionDo/trigger/triggerSlot/clearTriggeredSlot`；目标产物：`models/LGraphNode.execution.ts`。
 - [x] **Task 17: LGraphNode 端口与 Widget 层迁移** — 来源：`addInput/addOutput/addWidget/addCustomWidget/computeSize/getPropertyInfo`；目标产物：`models/LGraphNode.ports-widgets.ts`。
 - [x] **Task 18: LGraphNode 连接与几何层迁移** — 来源：`find*Slot*`、`connect*`、`disconnect*`、`getConnectionPos/getBounding/isPointInside`；目标产物：`models/LGraphNode.connect-geometry.ts`。
-- [ ] **Task 19: LGraphNode 画布协作层迁移** — 来源：`alignToGrid/trace/setDirtyCanvas/loadImage/executeAction/captureInput/collapse/pin/localToScreen`；目标产物：`models/LGraphNode.canvas-collab.ts`。
+- [x] **Task 19: LGraphNode 画布协作层迁移** — 来源：`alignToGrid/trace/setDirtyCanvas/loadImage/executeAction/captureInput/collapse/pin/localToScreen`；目标产物：`models/LGraphNode.canvas-collab.ts`。
 - [ ] **Task 20: LGraphGroup 类迁移** — 来源：`_ctor/configure/serialize/move/recomputeInsideNodes` + 复用 `isPointInside/setDirtyCanvas`；目标产物：`models/LGraphGroup.ts`。
 - [ ] **Task 21: DragAndScale 类迁移** — 来源：`bindEvents/computeVisibleArea/onMouse/changeScale/reset`；目标产物：`canvas/DragAndScale.ts`。
 
@@ -172,11 +172,11 @@
 
 ## 进度快照
 
-- 当前阶段：`Phase B 执行中（Task 18 已完成）`
+- 当前阶段：`Phase B 执行中（Task 19 已完成）`
 - 总任务数：`44`
-- 已完成：`18`
+- 已完成：`19`
 - 进行中：`0`
-- 待开始：`26`
+- 待开始：`25`
 
 ## 进度日志（模板）
 
@@ -201,3 +201,4 @@
 | 2026-03-04 | 执行 | Task 16 | 迁移 `LGraphNode` 数据通道与执行层到 `models/LGraphNode.execution.ts`（`setOutputData/getInputData/doExecute/actionDo/trigger/triggerSlot/clearTriggeredSlot`，并补齐同段 `setOutputDataType/getInputDataType/getInputDataByName/executePendingActions`） | 触发链仍依赖 `findInputSlot` 与完整连接/端口实现，待后续 Task 17-18 收敛 | 执行 Task 17 |
 | 2026-03-04 | 执行 | Task 17 | 迁移 `LGraphNode` 端口与 Widget 层到 `models/LGraphNode.ports-widgets.ts`（`addInput/addOutput/addWidget/addCustomWidget/computeSize/getPropertyInfo`，并补齐 `addInputs/addOutputs/setSize`） | `removeInput/removeOutput` 与断连链路依赖后续连接层任务统一收敛，`setDirtyCanvas` 仍为占位待 Task 19 落地 | 执行 Task 18 |
 | 2026-03-04 | 执行 | Task 18 | 迁移 `LGraphNode` 连接与几何层到 `models/LGraphNode.connect-geometry.ts`（`find*Slot*`、`connect*`、`disconnect*`、`getConnectionPos/getBounding/isPointInside`）并保留类型匹配与连接回调链路 | 当前 `setDirtyCanvas` 继续占位，且 `connectByType` 的过滤扩展位（TODO filter）仍待后续专项收敛 | 执行 Task 19 |
+| 2026-03-04 | 执行 | Task 19 | 迁移 `LGraphNode` 画布协作层到 `models/LGraphNode.canvas-collab.ts`（`alignToGrid/trace/setDirtyCanvas/loadImage/captureInput/collapse/pin/localToScreen`），并保留 `executeAction` 的“源码中禁用”语义说明 | `loadImage` 返回值与现有 `d.ts` 的 `void` 签名存在差异，后续在契约兼容任务统一收敛 | 执行 Task 20 |
