@@ -236,7 +236,7 @@ Git 提交规则（强制）：
   - 对应原 JS：构造、`setGraph/openSubgraph/closeSubgraph/bindEvents/unbindEvents`。
   - 对应原 d.ts：生命周期与绑定 API。
 
-- [ ] **Audit Task 37: `src/ts-migration/canvas/LGraphCanvas.input.ts`**
+- [x] **Audit Task 37: `src/ts-migration/canvas/LGraphCanvas.input.ts`**
   - 对应原 JS：`processMouse* / processKey / copy/paste / processDrop`。
   - 对应原 d.ts：输入交互 API。
 
@@ -267,9 +267,9 @@ Git 提交规则（强制）：
 ## 审计进度快照
 
 - 总任务数：`42`
-- 已完成：`36`
+- 已完成：`37`
 - 进行中：`0`
-- 未开始：`6`
+- 未开始：`5`
 - 最新更新时间：`2026-03-04`
 
 ---
@@ -1014,3 +1014,37 @@ Git 提交规则（强制）：
   5. `processTouch.target` 补齐 `event.target || this.canvas` 回退行为。
 - 验证：
   1. 类型校验通过：`npx tsc --noEmit src/ts-migration/canvas/LGraphCanvas.lifecycle.ts`。
+
+### Audit Task 37 结果
+- 结论：Pass（发现 12 处输入层迁移偏差并已修复）
+- JS 对照：`src/litegraph.js`
+  - `LGraphCanvas.prototype.processMouseDown/processMouseMove/processMouseUp`
+  - `LGraphCanvas.prototype.processMouseWheel/processKey/copyToClipboard/pasteFromClipboard`
+  - `LGraphCanvas.prototype.processDrop/checkDropItem/processNodeDblClicked`
+  - `LGraphCanvas.prototype.selectNodes/deleteSelectedNodes/centerOnNode/convertEventToCanvasOffset/computeVisibleNodes`
+- d.ts 对照：`src/litegraph.d.ts`
+  - `LGraphCanvas` 输入交互声明（`processMouse* / processKey / copyToClipboard / pasteFromClipboard / processDrop / adjustMouseEvent`）
+- TS 对照：`src/ts-migration/canvas/LGraphCanvas.input.ts`
+- 发现问题：
+  1. `processMouseDown` 对事件迁移、`canvas.focus`、菜单调用、中键建点等链路引入可选调用与空值防御，偏离原 JS 直接调用语义。
+  2. `processMouseMove` 的 `resize/onMouseEnter/onMouseMove/onMouseLeave` 使用可选调用，偏离原 JS 触发链。
+  3. `processMouseUp` 的 `connectByType/connectByTypeOutput/showSearchBox/showConnectionMenu` 使用可选调用，偏离原 JS。
+  4. `processMouseUp` 对 `click_time`、`align_to_grid`、`alignToGrid` 与 `onNodeMoved` 引入防御分支，偏离原 JS。
+  5. `processMouseWheel` 将 `e.detail` 增加 `0` 兜底，偏离原 JS 原始数值路径。
+  6. `processKey` 对 `target.localName` 使用可选访问，偏离原 JS 直接访问路径。
+  7. `copyToClipboard/pasteFromClipboard` 引入 `graph/localStorage` 防御分支，偏离原 JS。
+  8. `processDrop/checkDropItem` 对 `dataTransfer/getFileExtension` 采用防御式路径，且事件分发不完全按原 JS 的 `event` 语义。
+  9. `processNodeDblClicked` 使用 `setDirty(true, true)`，偏离原 JS `setDirty(true)`。
+  10. `deleteSelectedNodes` 的自动重连路径使用可选调用，偏离原 JS 直接调用链。
+  11. `centerOnNode/convertEventToCanvasOffset/computeVisibleNodes` 增加空值防御，偏离原 JS。
+  12. `convertOffsetToCanvas` 与原 JS 委托 `ds.convertOffsetToCanvas(pos, out)` 语义不一致。
+- 已实施修复：
+  1. 收敛 `processMouseDown/Move/Up` 的核心交互分支，恢复原 JS 直接调用与状态流转。
+  2. 恢复连接释放、菜单弹出、节点对齐与移动回调等链路的原始触发语义。
+  3. 恢复 `processMouseWheel/processKey` 的原始取值与目标访问语义。
+  4. 收敛剪贴板与拖放链路到原 JS 等价行为（含 `checkDropItem` 的创建与回调路径）。
+  5. 将 `processNodeDblClicked` 的脏区调用恢复为 `setDirty(true)` 语义（通过运行时桥接调用）。
+  6. 恢复 `deleteSelectedNodes/centerOnNode/convertEventToCanvasOffset/computeVisibleNodes` 的原实现路径。
+  7. 恢复 `convertOffsetToCanvas` 的 `ds` 委托签名语义（含 `out` 透传）。
+- 验证：
+  1. 类型校验通过：`npx tsc --noEmit src/ts-migration/canvas/LGraphCanvas.input.ts`。
