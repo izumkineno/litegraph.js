@@ -60,7 +60,7 @@ export type WidgetCallback<T extends IWidget = IWidget> = (
     event?: MouseEvent
 ) => void;
 
-export interface IWidget<TValue = unknown, TOptions = unknown> {
+export interface IWidget<TValue = any, TOptions = any> {
     name: string | null;
     value: TValue;
     options?: TOptions;
@@ -88,7 +88,7 @@ export interface IWidget<TValue = unknown, TOptions = unknown> {
     computeSize?(width: number): [number, number];
 }
 
-export interface IButtonWidget extends IWidget<null, Record<string, never>> {
+export interface IButtonWidget extends IWidget<null, {}> {
     type: "button";
 }
 
@@ -119,7 +119,7 @@ export interface IComboWidget
     type: "combo";
 }
 
-export interface ITextWidget extends IWidget<string, Record<string, never>> {
+export interface ITextWidget extends IWidget<string, {}> {
     type: "text";
 }
 
@@ -138,12 +138,12 @@ export interface IContextMenuItem {
 
 export interface IContextMenuOptions {
     callback?: ContextMenuEventListener;
-    ignore_item_callbacks?: boolean;
+    ignore_item_callbacks?: Boolean;
     event?: MouseEvent | CustomEvent;
     parentMenu?: ContextMenuLike;
     autoopen?: boolean;
     title?: string;
-    extra?: unknown;
+    extra?: any;
 }
 
 export type ContextMenuItem = IContextMenuItem | null;

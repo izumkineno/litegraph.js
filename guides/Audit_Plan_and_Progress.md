@@ -71,6 +71,13 @@
 - `[-]` 审计中
 - `[x]` 已完成（有证据）
 
+Git 提交规则（强制）：
+
+1. 每次完成一个 Audit Task 的验证后，若发现缺失并已修复，必须立即提交一次 git。
+2. 提交必须只包含该 Audit Task 直接相关的文件，不混入无关改动。
+3. 建议提交信息格式：`fix(audit-task-XX): <缺失点/修复点简述>`。
+4. 若该 Task 审计结果为“完美匹配（无代码修改）”，则不强制提交。
+
 ---
 
 ## Task Checklist（审计任务列表）
@@ -81,7 +88,7 @@
   - 对应原 JS：IIFE 入口装配、全局导出与 `exports.*`。
   - 对应原 d.ts：全局 `LiteGraph` API 聚合导出契约。
 
-- [ ] **Audit Task 02: `src/ts-migration/types/core-types.ts`**
+- [x] **Audit Task 02: `src/ts-migration/types/core-types.ts`**
   - 对应原 JS：核心结构约定（节点、槽、widget、菜单）在运行时使用路径。
   - 对应原 d.ts：`Vector*`、`INode*`、`IWidget*`、`IContextMenu*`。
 
@@ -260,9 +267,9 @@
 ## 审计进度快照
 
 - 总任务数：`42`
-- 已完成：`1`
+- 已完成：`2`
 - 进行中：`0`
-- 未开始：`41`
+- 未开始：`40`
 - 最新更新时间：`2026-03-04`
 
 ---
@@ -301,3 +308,23 @@
   1. 对齐 `pointerListenerAdd/Remove` 语义：补齐 fallback、事件选项、去重与包装逻辑。
   2. 对齐 `extendClass` 复制规则：改为 `hasOwnProperty` 判定，并按原逻辑处理 getter/setter。
   3. 构建验证通过：`node scripts/build-ts-migration.mjs`。
+
+### Audit Task 02 结果
+- 结论：Pass（发现 5 处类型契约偏差并已修复）
+- JS 对照：`src/litegraph.js`
+  - 节点槽、Widget、ContextMenu 结构在运行时调用链中的字段语义
+- d.ts 对照：`src/litegraph.d.ts`
+  - `IWidget<TValue = any, TOptions = any>`
+  - `IButtonWidget extends IWidget<null, {}>`
+  - `ITextWidget extends IWidget<string, {}>`
+  - `IContextMenuOptions.ignore_item_callbacks?: Boolean`
+  - `IContextMenuOptions.extra?: any`
+- TS 对照：`src/ts-migration/types/core-types.ts`
+- 发现问题：
+  1. `IWidget` 泛型默认值使用 `unknown`，与 d.ts 的 `any` 不一致。
+  2. `IButtonWidget`、`ITextWidget` 的 options 从 `{}` 收窄为 `Record<string, never>`，与 d.ts 不一致。
+  3. `ignore_item_callbacks` 类型用 `boolean`，与 d.ts 的 `Boolean` 不一致。
+  4. `extra` 类型用 `unknown`，与 d.ts 的 `any` 不一致。
+- 已实施修复：
+  1. 将上述 5 处签名全部改为与 d.ts 一致。
+  2. 校验通过：`npx tsc --noEmit src/ts-migration/types/core-types.ts`。
