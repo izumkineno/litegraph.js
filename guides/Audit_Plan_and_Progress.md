@@ -240,7 +240,7 @@ Git 提交规则（强制）：
   - 对应原 JS：`processMouse* / processKey / copy/paste / processDrop`。
   - 对应原 d.ts：输入交互 API。
 
-- [ ] **Audit Task 38: `src/ts-migration/canvas/LGraphCanvas.render.ts`**
+- [x] **Audit Task 38: `src/ts-migration/canvas/LGraphCanvas.render.ts`**
   - 对应原 JS：`draw* / renderLink / drawNodeWidgets / processNodeWidgets`。
   - 对应原 d.ts：渲染相关方法。
 
@@ -267,9 +267,9 @@ Git 提交规则（强制）：
 ## 审计进度快照
 
 - 总任务数：`42`
-- 已完成：`37`
+- 已完成：`38`
 - 进行中：`0`
-- 未开始：`5`
+- 未开始：`4`
 - 最新更新时间：`2026-03-04`
 
 ---
@@ -1048,3 +1048,29 @@ Git 提交规则（强制）：
   7. 恢复 `convertOffsetToCanvas` 的 `ds` 委托签名语义（含 `out` 透传）。
 - 验证：
   1. 类型校验通过：`npx tsc --noEmit src/ts-migration/canvas/LGraphCanvas.input.ts`。
+
+### Audit Task 38 结果
+- 结论：Pass（发现 6 处渲染链路迁移偏差并已修复）
+- JS 对照：`src/litegraph.js`
+  - `LGraphCanvas.prototype.drawSubgraphPanel/drawSubgraphPanelLeft/drawSubgraphPanelRight/drawButton`
+  - `LGraphCanvas.prototype.drawNode/drawNodeShape`
+  - `LGraphCanvas.prototype.drawNodeWidgets/processNodeWidgets`
+- d.ts 对照：`src/litegraph.d.ts`
+  - `LGraphCanvas.drawNode/drawNodeShape/drawNodeWidgets/processNodeWidgets/drawSubgraphPanel*`
+- TS 对照：`src/ts-migration/canvas/LGraphCanvas.render.ts`
+- 发现问题：
+  1. `drawSubgraphPanel*` 在迁移层为空实现，子图输入/输出面板行为缺失。
+  2. `drawNode` 被简化为“仅主体 + widgets”，缺失输入输出插槽、collapsed slots、连接兼容透明度等关键绘制分支。
+  3. `drawNodeShape` 缺少原始标题条梯度容错、mode box 色彩策略、subgraph 按钮与 selection marker 形状分支。
+  4. `drawNodeWidgets` 仅覆盖简化 slider 路径，缺少 button/toggle/number/combo/string/text/custom 绘制语义。
+  5. `processNodeWidgets` 仅覆盖 button/slider，缺失 number/combo 选择、toggle、文本编辑、custom mouse 与属性回写链路。
+  6. `drawButton` 使用 `fillRect` 而非 `roundRect`，与原 UI 命中与视觉语义不一致。
+- 已实施修复：
+  1. 补齐 `drawSubgraphPanel/drawSubgraphPanelLeft/drawSubgraphPanelRight` 完整流程（关闭、创建 graph/input graph/output、+按钮对话框入口）。
+  2. 将 `drawNode` 回收至原 JS 等价渲染路径，补全 slots 与 collapsed slots 分支。
+  3. 将 `drawNodeShape` 回收至原 JS 逻辑，补齐 title/mode/selection/subgraph button/gradient fallback 分支。
+  4. 将 `drawNodeWidgets/processNodeWidgets` 回收至原 JS 控件全集逻辑与回调/属性同步链路。
+  5. 将 `drawButton` 恢复为 `roundRect` 绘制与原点击判定语义。
+  6. 修复迁移过程中引入的类型问题（`Vector2.set`、`colState` 联合类型、ES5 下块级函数声明）。
+- 验证：
+  1. 类型校验通过：`npx tsc --noEmit src/ts-migration/canvas/LGraphCanvas.render.ts`。

@@ -448,16 +448,24 @@ export class LGraphCanvasRender extends LGraphCanvasInput {
      **/
     drawNode(node: any, ctx: CanvasRenderingContext2D): void {
         const LiteGraph = this.constants();
+        let glow = false;
         this.current_node = node;
 
         const color = node.color || node.constructor.color || LiteGraph.NODE_DEFAULT_COLOR;
         let bgcolor = node.bgcolor || node.constructor.bgcolor || LiteGraph.NODE_DEFAULT_BGCOLOR;
+
+        if (node.mouseOver) {
+            glow = true;
+        }
+
         const low_quality = this.ds.scale < 0.6;
 
         if (this.live_mode) {
             if (!node.flags.collapsed) {
                 ctx.shadowColor = "transparent";
-                node.onDrawForeground?.(ctx, this, this.canvas);
+                if (node.onDrawForeground) {
+                    node.onDrawForeground(ctx, this, this.canvas);
+                }
             }
             return;
         }
@@ -474,7 +482,11 @@ export class LGraphCanvasRender extends LGraphCanvasInput {
             ctx.shadowColor = "transparent";
         }
 
-        if (node.flags.collapsed && node.onDrawCollapsed && node.onDrawCollapsed(ctx, this) == true) {
+        if (
+            node.flags.collapsed &&
+            node.onDrawCollapsed &&
+            node.onDrawCollapsed(ctx, this) == true
+        ) {
             return;
         }
 
@@ -523,29 +535,285 @@ export class LGraphCanvasRender extends LGraphCanvasInput {
             node.mouseOver
         );
         ctx.shadowColor = "transparent";
-        node.onDrawForeground?.(ctx, this, this.canvas);
 
-        // 迁移阶段保留核心节点绘制，插槽/控件完整处理交由 drawNodeWidgets/processNodeWidgets。
+        if (node.onDrawForeground) {
+            node.onDrawForeground(ctx, this, this.canvas);
+        }
+
         ctx.textAlign = horizontal ? "center" : "left";
         ctx.font = this.inner_text_font;
 
-        if (node.widgets && !node.flags.collapsed) {
-            let widgets_y = 2;
-            if (node.widgets_start_y != null) {
-                widgets_y = node.widgets_start_y;
+        const render_text = !low_quality;
+        const out_slot = this.connecting_output;
+        const in_slot = this.connecting_input;
+        ctx.lineWidth = 1;
+
+        let max_y = 0;
+        const slot_pos = new Float32Array(2);
+        let slot: any = null;
+
+        if (!node.flags.collapsed) {
+            if (node.inputs) {
+                for (let i = 0; i < node.inputs.length; i++) {
+                    slot = node.inputs[i];
+                    const slot_type = slot.type;
+                    let slot_shape = slot.shape;
+
+                    ctx.globalAlpha = editor_alpha;
+                    if (this.connecting_output && !LiteGraph.isValidConnection(slot.type, out_slot.type)) {
+                        ctx.globalAlpha = 0.4 * editor_alpha;
+                    }
+
+                    ctx.fillStyle =
+                        slot.link != null
+                            ? slot.color_on ||
+                              this.default_connection_color_byType[slot_type] ||
+                              this.default_connection_color.input_on
+                            : slot.color_off ||
+                              this.default_connection_color_byTypeOff[slot_type] ||
+                              this.default_connection_color_byType[slot_type] ||
+                              this.default_connection_color.input_off;
+
+                    const pos = node.getConnectionPos(true, i, slot_pos);
+                    pos[0] -= node.pos[0];
+                    pos[1] -= node.pos[1];
+                    if (max_y < pos[1] + LiteGraph.NODE_SLOT_HEIGHT * 0.5) {
+                        max_y = pos[1] + LiteGraph.NODE_SLOT_HEIGHT * 0.5;
+                    }
+
+                    ctx.beginPath();
+
+                    if (slot_type == "array") {
+                        slot_shape = LiteGraph.GRID_SHAPE;
+                    }
+
+                    let doStroke = true;
+                    if (slot.type === LiteGraph.EVENT || slot.shape === LiteGraph.BOX_SHAPE) {
+                        if (horizontal) {
+                            ctx.rect(pos[0] - 5 + 0.5, pos[1] - 8 + 0.5, 10, 14);
+                        } else {
+                            ctx.rect(pos[0] - 6 + 0.5, pos[1] - 5 + 0.5, 14, 10);
+                        }
+                    } else if (slot_shape === LiteGraph.ARROW_SHAPE) {
+                        ctx.moveTo(pos[0] + 8, pos[1] + 0.5);
+                        ctx.lineTo(pos[0] - 4, pos[1] + 6 + 0.5);
+                        ctx.lineTo(pos[0] - 4, pos[1] - 6 + 0.5);
+                        ctx.closePath();
+                    } else if (slot_shape === LiteGraph.GRID_SHAPE) {
+                        ctx.rect(pos[0] - 4, pos[1] - 4, 2, 2);
+                        ctx.rect(pos[0] - 1, pos[1] - 4, 2, 2);
+                        ctx.rect(pos[0] + 2, pos[1] - 4, 2, 2);
+                        ctx.rect(pos[0] - 4, pos[1] - 1, 2, 2);
+                        ctx.rect(pos[0] - 1, pos[1] - 1, 2, 2);
+                        ctx.rect(pos[0] + 2, pos[1] - 1, 2, 2);
+                        ctx.rect(pos[0] - 4, pos[1] + 2, 2, 2);
+                        ctx.rect(pos[0] - 1, pos[1] + 2, 2, 2);
+                        ctx.rect(pos[0] + 2, pos[1] + 2, 2, 2);
+                        doStroke = false;
+                    } else {
+                        if (low_quality) {
+                            ctx.rect(pos[0] - 4, pos[1] - 4, 8, 8);
+                        } else {
+                            ctx.arc(pos[0], pos[1], 4, 0, Math.PI * 2);
+                        }
+                    }
+                    ctx.fill();
+
+                    if (render_text) {
+                        const text = slot.label != null ? slot.label : slot.name;
+                        if (text) {
+                            ctx.fillStyle = LiteGraph.NODE_TEXT_COLOR;
+                            if (horizontal || slot.dir == LiteGraph.UP) {
+                                ctx.fillText(text, pos[0], pos[1] - 10);
+                            } else {
+                                ctx.fillText(text, pos[0] + 10, pos[1] + 5);
+                            }
+                        }
+                    }
+                }
             }
-            this.drawNodeWidgets(
-                node,
-                widgets_y,
-                ctx,
-                this.node_widget && this.node_widget[0] == node ? this.node_widget[1] : null
-            );
+
+            ctx.textAlign = horizontal ? "center" : "right";
+            ctx.strokeStyle = "black";
+            if (node.outputs) {
+                for (let i = 0; i < node.outputs.length; i++) {
+                    slot = node.outputs[i];
+                    const slot_type = slot.type;
+                    let slot_shape = slot.shape;
+
+                    if (this.connecting_input && !LiteGraph.isValidConnection(slot_type, in_slot.type)) {
+                        ctx.globalAlpha = 0.4 * editor_alpha;
+                    }
+
+                    const pos = node.getConnectionPos(false, i, slot_pos);
+                    pos[0] -= node.pos[0];
+                    pos[1] -= node.pos[1];
+                    if (max_y < pos[1] + LiteGraph.NODE_SLOT_HEIGHT * 0.5) {
+                        max_y = pos[1] + LiteGraph.NODE_SLOT_HEIGHT * 0.5;
+                    }
+
+                    ctx.fillStyle =
+                        slot.links && slot.links.length
+                            ? slot.color_on ||
+                              this.default_connection_color_byType[slot_type] ||
+                              this.default_connection_color.output_on
+                            : slot.color_off ||
+                              this.default_connection_color_byTypeOff[slot_type] ||
+                              this.default_connection_color_byType[slot_type] ||
+                              this.default_connection_color.output_off;
+                    ctx.beginPath();
+
+                    if (slot_type == "array") {
+                        slot_shape = LiteGraph.GRID_SHAPE;
+                    }
+
+                    let doStroke = true;
+                    if (slot_type === LiteGraph.EVENT || slot_shape === LiteGraph.BOX_SHAPE) {
+                        if (horizontal) {
+                            ctx.rect(pos[0] - 5 + 0.5, pos[1] - 8 + 0.5, 10, 14);
+                        } else {
+                            ctx.rect(pos[0] - 6 + 0.5, pos[1] - 5 + 0.5, 14, 10);
+                        }
+                    } else if (slot_shape === LiteGraph.ARROW_SHAPE) {
+                        ctx.moveTo(pos[0] + 8, pos[1] + 0.5);
+                        ctx.lineTo(pos[0] - 4, pos[1] + 6 + 0.5);
+                        ctx.lineTo(pos[0] - 4, pos[1] - 6 + 0.5);
+                        ctx.closePath();
+                    } else if (slot_shape === LiteGraph.GRID_SHAPE) {
+                        ctx.rect(pos[0] - 4, pos[1] - 4, 2, 2);
+                        ctx.rect(pos[0] - 1, pos[1] - 4, 2, 2);
+                        ctx.rect(pos[0] + 2, pos[1] - 4, 2, 2);
+                        ctx.rect(pos[0] - 4, pos[1] - 1, 2, 2);
+                        ctx.rect(pos[0] - 1, pos[1] - 1, 2, 2);
+                        ctx.rect(pos[0] + 2, pos[1] - 1, 2, 2);
+                        ctx.rect(pos[0] - 4, pos[1] + 2, 2, 2);
+                        ctx.rect(pos[0] - 1, pos[1] + 2, 2, 2);
+                        ctx.rect(pos[0] + 2, pos[1] + 2, 2, 2);
+                        doStroke = false;
+                    } else {
+                        if (low_quality) {
+                            ctx.rect(pos[0] - 4, pos[1] - 4, 8, 8);
+                        } else {
+                            ctx.arc(pos[0], pos[1], 4, 0, Math.PI * 2);
+                        }
+                    }
+
+                    ctx.fill();
+                    if (!low_quality && doStroke) {
+                        ctx.stroke();
+                    }
+
+                    if (render_text) {
+                        const text = slot.label != null ? slot.label : slot.name;
+                        if (text) {
+                            ctx.fillStyle = LiteGraph.NODE_TEXT_COLOR;
+                            if (horizontal || slot.dir == LiteGraph.DOWN) {
+                                ctx.fillText(text, pos[0], pos[1] - 8);
+                            } else {
+                                ctx.fillText(text, pos[0] - 10, pos[1] + 5);
+                            }
+                        }
+                    }
+                }
+            }
+
+            ctx.textAlign = "left";
+            ctx.globalAlpha = 1;
+
+            if (node.widgets) {
+                let widgets_y = max_y;
+                if (horizontal || node.widgets_up) {
+                    widgets_y = 2;
+                }
+                if (node.widgets_start_y != null) {
+                    widgets_y = node.widgets_start_y;
+                }
+                this.drawNodeWidgets(
+                    node,
+                    widgets_y,
+                    ctx,
+                    this.node_widget && this.node_widget[0] == node
+                        ? this.node_widget[1]
+                        : null
+                );
+            }
+        } else if (this.render_collapsed_slots) {
+            let input_slot = null;
+            let output_slot = null;
+
+            if (node.inputs) {
+                for (let i = 0; i < node.inputs.length; i++) {
+                    slot = node.inputs[i];
+                    if (slot.link == null) {
+                        continue;
+                    }
+                    input_slot = slot;
+                    break;
+                }
+            }
+            if (node.outputs) {
+                for (let i = 0; i < node.outputs.length; i++) {
+                    slot = node.outputs[i];
+                    if (!slot.links || !slot.links.length) {
+                        continue;
+                    }
+                    output_slot = slot;
+                }
+            }
+
+            if (input_slot) {
+                let x = 0;
+                let y = LiteGraph.NODE_TITLE_HEIGHT * -0.5;
+                if (horizontal) {
+                    x = node._collapsed_width * 0.5;
+                    y = -LiteGraph.NODE_TITLE_HEIGHT;
+                }
+                ctx.fillStyle = "#686";
+                ctx.beginPath();
+                if (slot.type === LiteGraph.EVENT || slot.shape === LiteGraph.BOX_SHAPE) {
+                    ctx.rect(x - 7 + 0.5, y - 4, 14, 8);
+                } else if (slot.shape === LiteGraph.ARROW_SHAPE) {
+                    ctx.moveTo(x + 8, y);
+                    ctx.lineTo(x + -4, y - 4);
+                    ctx.lineTo(x + -4, y + 4);
+                    ctx.closePath();
+                } else {
+                    ctx.arc(x, y, 4, 0, Math.PI * 2);
+                }
+                ctx.fill();
+            }
+
+            if (output_slot) {
+                let x = node._collapsed_width;
+                let y = LiteGraph.NODE_TITLE_HEIGHT * -0.5;
+                if (horizontal) {
+                    x = node._collapsed_width * 0.5;
+                    y = 0;
+                }
+                ctx.fillStyle = "#686";
+                ctx.strokeStyle = "black";
+                ctx.beginPath();
+                if (slot.type === LiteGraph.EVENT || slot.shape === LiteGraph.BOX_SHAPE) {
+                    ctx.rect(x - 7 + 0.5, y - 4, 14, 8);
+                } else if (slot.shape === LiteGraph.ARROW_SHAPE) {
+                    ctx.moveTo(x + 6, y);
+                    ctx.lineTo(x - 6, y - 4);
+                    ctx.lineTo(x - 6, y + 4);
+                    ctx.closePath();
+                } else {
+                    ctx.arc(x, y, 4, 0, Math.PI * 2);
+                }
+                ctx.fill();
+            }
         }
 
         if (node.clip_area) {
             ctx.restore();
         }
+
         ctx.globalAlpha = 1.0;
+
+        void glow;
     }
 
     // used by this.over_link_center
@@ -659,32 +927,42 @@ export class LGraphCanvasRender extends LGraphCanvasInput {
         area[1] = render_title ? -title_height : 0;
         area[2] = size[0] + 1;
         area[3] = render_title ? size[1] + title_height : size[1];
+
         const old_alpha = ctx.globalAlpha;
 
-        ctx.beginPath();
-        if (shape == LiteGraph.BOX_SHAPE || low_quality) {
-            ctx.fillRect(area[0], area[1], area[2], area[3]);
-        } else if (shape == LiteGraph.ROUND_SHAPE || shape == LiteGraph.CARD_SHAPE) {
-            (ctx as any).roundRect(
-                area[0],
-                area[1],
-                area[2],
-                area[3],
-                shape == LiteGraph.CARD_SHAPE ? [this.round_radius, this.round_radius, 0, 0] : [this.round_radius]
-            );
+        {
+            ctx.beginPath();
+            if (shape == LiteGraph.BOX_SHAPE || low_quality) {
+                ctx.fillRect(area[0], area[1], area[2], area[3]);
+            } else if (
+                shape == LiteGraph.ROUND_SHAPE ||
+                shape == LiteGraph.CARD_SHAPE
+            ) {
+                (ctx as any).roundRect(
+                    area[0],
+                    area[1],
+                    area[2],
+                    area[3],
+                    shape == LiteGraph.CARD_SHAPE ? [this.round_radius, this.round_radius, 0, 0] : [this.round_radius]
+                );
+            } else if (shape == LiteGraph.CIRCLE_SHAPE) {
+                ctx.arc(
+                    size[0] * 0.5,
+                    size[1] * 0.5,
+                    size[0] * 0.5,
+                    0,
+                    Math.PI * 2
+                );
+            }
             ctx.fill();
-        } else if (shape == LiteGraph.CIRCLE_SHAPE) {
-            ctx.arc(size[0] * 0.5, size[1] * 0.5, size[0] * 0.5, 0, Math.PI * 2);
-            ctx.fill();
-        } else {
-            ctx.fill();
-        }
 
-        if (!node.flags.collapsed && render_title) {
-            ctx.shadowColor = "transparent";
-            ctx.fillStyle = "rgba(0,0,0,0.2)";
-            ctx.fillRect(0, -1, area[2], 2);
+            if (!node.flags.collapsed && render_title) {
+                ctx.shadowColor = "transparent";
+                ctx.fillStyle = "rgba(0,0,0,0.2)";
+                ctx.fillRect(0, -1, area[2], 2);
+            }
         }
+        ctx.shadowColor = "transparent";
 
         if (node.onDrawBackground) {
             node.onDrawBackground(ctx, this, this.canvas, this.graph_mouse);
@@ -693,13 +971,46 @@ export class LGraphCanvasRender extends LGraphCanvasInput {
         if (render_title || title_mode == LiteGraph.TRANSPARENT_TITLE) {
             if (node.onDrawTitleBar) {
                 node.onDrawTitleBar(ctx, title_height, size, this.ds.scale, fgcolor);
-            } else {
+            } else if (
+                title_mode != LiteGraph.TRANSPARENT_TITLE &&
+                (node.constructor.title_color || this.render_title_colored)
+            ) {
                 const title_color = node.constructor.title_color || fgcolor;
-                ctx.fillStyle = title_color;
+
+                if (node.flags.collapsed) {
+                    ctx.shadowColor = LiteGraph.DEFAULT_SHADOW_COLOR;
+                }
+
+                if (this.use_gradients) {
+                    const hostClass = this.constructor as any;
+                    let grad = hostClass.gradients[title_color];
+                    if (!grad) {
+                        grad = ctx.createLinearGradient(0, 0, 400, 0);
+                        try {
+                            grad.addColorStop(0, title_color);
+                            grad.addColorStop(1, "#000");
+                            hostClass.gradients[title_color] = grad;
+                        } catch (err) {
+                            const fallback_color = fgcolor || LiteGraph.NODE_DEFAULT_COLOR || "#888";
+                            grad = hostClass.gradients[fallback_color];
+                            if (!grad) {
+                                grad = ctx.createLinearGradient(0, 0, 400, 0);
+                                grad.addColorStop(0, fallback_color);
+                                grad.addColorStop(1, "#000");
+                                hostClass.gradients[fallback_color] = grad;
+                            }
+                            hostClass.gradients[title_color] = grad;
+                        }
+                    }
+                    ctx.fillStyle = grad;
+                } else {
+                    ctx.fillStyle = title_color;
+                }
+
                 ctx.beginPath();
                 if (shape == LiteGraph.BOX_SHAPE || low_quality) {
                     ctx.rect(0, -title_height, size[0] + 1, title_height);
-                } else {
+                } else if (shape == LiteGraph.ROUND_SHAPE || shape == LiteGraph.CARD_SHAPE) {
                     (ctx as any).roundRect(
                         0,
                         -title_height,
@@ -709,53 +1020,197 @@ export class LGraphCanvasRender extends LGraphCanvasInput {
                     );
                 }
                 ctx.fill();
+                ctx.shadowColor = "transparent";
+            }
+
+            let colState: any = false;
+            if (LiteGraph.node_box_coloured_by_mode) {
+                if (LiteGraph.NODE_MODES_COLORS[node.mode]) {
+                    colState = LiteGraph.NODE_MODES_COLORS[node.mode];
+                }
+            }
+            if (LiteGraph.node_box_coloured_when_on) {
+                colState = node.action_triggered ? "#FFF" : (node.execute_triggered ? "#AAA" : colState);
             }
 
             const box_size = 10;
-            ctx.fillStyle = node.boxcolor || LiteGraph.NODE_DEFAULT_BOXCOLOR;
-            if (low_quality) {
+            if (node.onDrawTitleBox) {
+                node.onDrawTitleBox(ctx, title_height, size, this.ds.scale);
+            } else if (
+                shape == LiteGraph.ROUND_SHAPE ||
+                shape == LiteGraph.CIRCLE_SHAPE ||
+                shape == LiteGraph.CARD_SHAPE
+            ) {
+                if (low_quality) {
+                    ctx.fillStyle = "black";
+                    ctx.beginPath();
+                    ctx.arc(
+                        title_height * 0.5,
+                        title_height * -0.5,
+                        box_size * 0.5 + 1,
+                        0,
+                        Math.PI * 2
+                    );
+                    ctx.fill();
+                }
+
+                ctx.fillStyle = node.boxcolor || colState || LiteGraph.NODE_DEFAULT_BOXCOLOR;
+                if (low_quality) {
+                    ctx.fillRect(
+                        title_height * 0.5 - box_size * 0.5,
+                        title_height * -0.5 - box_size * 0.5,
+                        box_size,
+                        box_size
+                    );
+                } else {
+                    ctx.beginPath();
+                    ctx.arc(
+                        title_height * 0.5,
+                        title_height * -0.5,
+                        box_size * 0.5,
+                        0,
+                        Math.PI * 2
+                    );
+                    ctx.fill();
+                }
+            } else {
+                if (low_quality) {
+                    ctx.fillStyle = "black";
+                    ctx.fillRect(
+                        (title_height - box_size) * 0.5 - 1,
+                        (title_height + box_size) * -0.5 - 1,
+                        box_size + 2,
+                        box_size + 2
+                    );
+                }
+                ctx.fillStyle = node.boxcolor || colState || LiteGraph.NODE_DEFAULT_BOXCOLOR;
                 ctx.fillRect(
-                    title_height * 0.5 - box_size * 0.5,
-                    title_height * -0.5 - box_size * 0.5,
+                    (title_height - box_size) * 0.5,
+                    (title_height + box_size) * -0.5,
                     box_size,
                     box_size
                 );
-            } else {
+            }
+            ctx.globalAlpha = old_alpha;
+
+            if (node.onDrawTitleText) {
+                node.onDrawTitleText(
+                    ctx,
+                    title_height,
+                    size,
+                    this.ds.scale,
+                    this.title_text_font,
+                    selected
+                );
+            }
+            if (!low_quality) {
+                ctx.font = this.title_text_font;
+                const title = String(node.getTitle());
+                if (title) {
+                    if (selected) {
+                        ctx.fillStyle = LiteGraph.NODE_SELECTED_TITLE_COLOR;
+                    } else {
+                        ctx.fillStyle = node.constructor.title_text_color || this.node_title_color;
+                    }
+                    if (node.flags.collapsed) {
+                        ctx.textAlign = "left";
+                        ctx.measureText(title);
+                        ctx.fillText(
+                            title.substr(0, 20),
+                            title_height,
+                            LiteGraph.NODE_TITLE_TEXT_Y - title_height
+                        );
+                        ctx.textAlign = "left";
+                    } else {
+                        ctx.textAlign = "left";
+                        ctx.fillText(
+                            title,
+                            title_height,
+                            LiteGraph.NODE_TITLE_TEXT_Y - title_height
+                        );
+                    }
+                }
+            }
+
+            if (!node.flags.collapsed && node.subgraph && !node.skip_subgraph_button) {
+                const w = LiteGraph.NODE_TITLE_HEIGHT;
+                const x = node.size[0] - w;
+                const over = LiteGraph.isInsideRectangle(
+                    this.graph_mouse[0] - node.pos[0],
+                    this.graph_mouse[1] - node.pos[1],
+                    x + 2,
+                    -w + 2,
+                    w - 4,
+                    w - 4
+                );
+                ctx.fillStyle = over ? "#888" : "#555";
+                if (shape == LiteGraph.BOX_SHAPE || low_quality) {
+                    ctx.fillRect(x + 2, -w + 2, w - 4, w - 4);
+                } else {
+                    ctx.beginPath();
+                    (ctx as any).roundRect(x + 2, -w + 2, w - 4, w - 4, [4]);
+                    ctx.fill();
+                }
+                ctx.fillStyle = "#333";
                 ctx.beginPath();
-                ctx.arc(title_height * 0.5, title_height * -0.5, box_size * 0.5, 0, Math.PI * 2);
+                ctx.moveTo(x + w * 0.2, -w * 0.6);
+                ctx.lineTo(x + w * 0.8, -w * 0.6);
+                ctx.lineTo(x + w * 0.5, -w * 0.3);
                 ctx.fill();
             }
 
-            ctx.globalAlpha = old_alpha;
-            if (!low_quality) {
-                ctx.font = this.title_text_font;
-                const title = String(node.getTitle?.() || node.title || "");
-                if (title) {
-                    ctx.fillStyle = selected
-                        ? LiteGraph.NODE_SELECTED_TITLE_COLOR
-                        : node.constructor.title_text_color || this.node_title_color;
-                    ctx.textAlign = "left";
-                    ctx.fillText(
-                        node.flags.collapsed ? title.substr(0, 20) : title,
-                        title_height,
-                        LiteGraph.NODE_TITLE_TEXT_Y - title_height
-                    );
-                }
+            if (node.onDrawTitle) {
+                node.onDrawTitle(ctx);
             }
         }
 
         if (selected) {
-            node.onBounding?.(area);
+            if (node.onBounding) {
+                node.onBounding(area);
+            }
+
+            if (title_mode == LiteGraph.TRANSPARENT_TITLE) {
+                area[1] -= title_height;
+                area[3] += title_height;
+            }
             ctx.lineWidth = 1;
             ctx.globalAlpha = 0.8;
             ctx.beginPath();
-            (ctx as any).roundRect(
-                -6 + area[0],
-                -6 + area[1],
-                12 + area[2],
-                12 + area[3],
-                [this.round_radius * 2]
-            );
+            if (shape == LiteGraph.BOX_SHAPE) {
+                ctx.rect(
+                    -6 + area[0],
+                    -6 + area[1],
+                    12 + area[2],
+                    12 + area[3]
+                );
+            } else if (
+                shape == LiteGraph.ROUND_SHAPE ||
+                (shape == LiteGraph.CARD_SHAPE && node.flags.collapsed)
+            ) {
+                (ctx as any).roundRect(
+                    -6 + area[0],
+                    -6 + area[1],
+                    12 + area[2],
+                    12 + area[3],
+                    [this.round_radius * 2]
+                );
+            } else if (shape == LiteGraph.CARD_SHAPE) {
+                (ctx as any).roundRect(
+                    -6 + area[0],
+                    -6 + area[1],
+                    12 + area[2],
+                    12 + area[3],
+                    [this.round_radius * 2, 2, this.round_radius * 2, 2]
+                );
+            } else if (shape == LiteGraph.CIRCLE_SHAPE) {
+                ctx.arc(
+                    size[0] * 0.5,
+                    size[1] * 0.5,
+                    size[0] * 0.5 + 6,
+                    0,
+                    Math.PI * 2
+                );
+            }
             ctx.strokeStyle = LiteGraph.NODE_BOX_OUTLINE_COLOR;
             ctx.stroke();
             ctx.strokeStyle = fgcolor;
@@ -1044,35 +1499,218 @@ export class LGraphCanvasRender extends LGraphCanvasInput {
             return;
         }
         const width = node.size[0];
+        const widgets = node.widgets;
+        posY += 2;
         const H = LiteGraph.NODE_WIDGET_HEIGHT;
         const show_text = this.ds.scale > 0.5;
-        posY += 2;
         ctx.save();
         ctx.globalAlpha = this.editor_alpha;
+        const outline_color = LiteGraph.WIDGET_OUTLINE_COLOR;
+        const background_color = LiteGraph.WIDGET_BGCOLOR;
+        const text_color = LiteGraph.WIDGET_TEXT_COLOR;
+        const secondary_text_color = LiteGraph.WIDGET_SECONDARY_TEXT_COLOR;
         const margin = 15;
-        for (let i = 0; i < node.widgets.length; ++i) {
-            const w = node.widgets[i];
-            const y = w.y || posY;
-            w.last_y = y;
-            const widget_width = w.width || width;
-            if (w.type == "slider") {
-                const range = w.options.max - w.options.min;
-                let nvalue = (w.value - w.options.min) / range;
-                nvalue = clamp(nvalue, 0, 1);
-                ctx.fillStyle = LiteGraph.WIDGET_BGCOLOR;
-                ctx.fillRect(margin, y, widget_width - margin * 2, H);
-                ctx.fillStyle = active_widget == w ? "#89A" : "#678";
-                ctx.fillRect(margin, y, nvalue * (widget_width - margin * 2), H);
-            } else {
-                ctx.fillStyle = LiteGraph.WIDGET_BGCOLOR;
-                ctx.fillRect(margin, y, widget_width - margin * 2, H);
+
+        for (let i = 0; i < widgets.length; ++i) {
+            const w = widgets[i];
+            let y = posY;
+            if (w.y) {
+                y = w.y;
             }
-            if (show_text) {
-                ctx.fillStyle = LiteGraph.WIDGET_TEXT_COLOR;
-                ctx.textAlign = "left";
-                ctx.fillText(String(w.label || w.name || ""), margin * 2, y + H * 0.7);
+            w.last_y = y;
+            ctx.strokeStyle = outline_color;
+            ctx.fillStyle = "#222";
+            ctx.textAlign = "left";
+            if (w.disabled) {
+                ctx.globalAlpha *= 0.5;
+            }
+            const widget_width = w.width || width;
+
+            switch (w.type) {
+                case "button":
+                    if (w.clicked) {
+                        ctx.fillStyle = "#AAA";
+                        w.clicked = false;
+                        this.dirty_canvas = true;
+                    }
+                    ctx.fillRect(margin, y, widget_width - margin * 2, H);
+                    if (show_text && !w.disabled) {
+                        ctx.strokeRect(margin, y, widget_width - margin * 2, H);
+                    }
+                    if (show_text) {
+                        ctx.textAlign = "center";
+                        ctx.fillStyle = text_color;
+                        ctx.fillText(w.label || w.name, widget_width * 0.5, y + H * 0.7);
+                    }
+                    break;
+                case "toggle":
+                    ctx.textAlign = "left";
+                    ctx.strokeStyle = outline_color;
+                    ctx.fillStyle = background_color;
+                    ctx.beginPath();
+                    if (show_text) {
+                        (ctx as any).roundRect(margin, y, widget_width - margin * 2, H, [H * 0.5]);
+                    } else {
+                        ctx.rect(margin, y, widget_width - margin * 2, H);
+                    }
+                    ctx.fill();
+                    if (show_text && !w.disabled) {
+                        ctx.stroke();
+                    }
+                    ctx.fillStyle = w.value ? "#89A" : "#333";
+                    ctx.beginPath();
+                    ctx.arc(widget_width - margin * 2, y + H * 0.5, H * 0.36, 0, Math.PI * 2);
+                    ctx.fill();
+                    if (show_text) {
+                        ctx.fillStyle = secondary_text_color;
+                        const label = w.label || w.name;
+                        if (label != null) {
+                            ctx.fillText(label, margin * 2, y + H * 0.7);
+                        }
+                        ctx.fillStyle = w.value ? text_color : secondary_text_color;
+                        ctx.textAlign = "right";
+                        ctx.fillText(
+                            w.value
+                                ? w.options.on || "true"
+                                : w.options.off || "false",
+                            widget_width - 40,
+                            y + H * 0.7
+                        );
+                    }
+                    break;
+                case "slider": {
+                    ctx.fillStyle = background_color;
+                    ctx.fillRect(margin, y, widget_width - margin * 2, H);
+                    const range = w.options.max - w.options.min;
+                    let nvalue = (w.value - w.options.min) / range;
+                    if (nvalue < 0.0) nvalue = 0.0;
+                    if (nvalue > 1.0) nvalue = 1.0;
+                    ctx.fillStyle = w.options.hasOwnProperty("slider_color")
+                        ? w.options.slider_color
+                        : (active_widget == w ? "#89A" : "#678");
+                    ctx.fillRect(margin, y, nvalue * (widget_width - margin * 2), H);
+                    if (show_text && !w.disabled) {
+                        ctx.strokeRect(margin, y, widget_width - margin * 2, H);
+                    }
+                    if (w.marker) {
+                        let marker_nvalue = (w.marker - w.options.min) / range;
+                        if (marker_nvalue < 0.0) marker_nvalue = 0.0;
+                        if (marker_nvalue > 1.0) marker_nvalue = 1.0;
+                        ctx.fillStyle = w.options.hasOwnProperty("marker_color") ? w.options.marker_color : "#AA9";
+                        ctx.fillRect(margin + marker_nvalue * (widget_width - margin * 2), y, 2, H);
+                    }
+                    if (show_text) {
+                        ctx.textAlign = "center";
+                        ctx.fillStyle = text_color;
+                        ctx.fillText(
+                            w.label || w.name + "  " + Number(w.value).toFixed(
+                                w.options.precision != null
+                                    ? w.options.precision
+                                    : 3
+                            ),
+                            widget_width * 0.5,
+                            y + H * 0.7
+                        );
+                    }
+                    break;
+                }
+                case "number":
+                case "combo":
+                    ctx.textAlign = "left";
+                    ctx.strokeStyle = outline_color;
+                    ctx.fillStyle = background_color;
+                    ctx.beginPath();
+                    if (show_text) {
+                        (ctx as any).roundRect(margin, y, widget_width - margin * 2, H, [H * 0.5]);
+                    } else {
+                        ctx.rect(margin, y, widget_width - margin * 2, H);
+                    }
+                    ctx.fill();
+                    if (show_text) {
+                        if (!w.disabled) {
+                            ctx.stroke();
+                        }
+                        ctx.fillStyle = text_color;
+                        if (!w.disabled) {
+                            ctx.beginPath();
+                            ctx.moveTo(margin + 16, y + 5);
+                            ctx.lineTo(margin + 6, y + H * 0.5);
+                            ctx.lineTo(margin + 16, y + H - 5);
+                            ctx.fill();
+                            ctx.beginPath();
+                            ctx.moveTo(widget_width - margin - 16, y + 5);
+                            ctx.lineTo(widget_width - margin - 6, y + H * 0.5);
+                            ctx.lineTo(widget_width - margin - 16, y + H - 5);
+                            ctx.fill();
+                        }
+                        ctx.fillStyle = secondary_text_color;
+                        ctx.fillText(w.label || w.name, margin * 2 + 5, y + H * 0.7);
+                        ctx.fillStyle = text_color;
+                        ctx.textAlign = "right";
+                        if (w.type == "number") {
+                            ctx.fillText(
+                                Number(w.value).toFixed(
+                                    w.options.precision !== undefined
+                                        ? w.options.precision
+                                        : 3
+                                ),
+                                widget_width - margin * 2 - 20,
+                                y + H * 0.7
+                            );
+                        } else {
+                            let v = w.value;
+                            if (w.options.values) {
+                                let values = w.options.values;
+                                if (values.constructor === Function) {
+                                    values = values();
+                                }
+                                if (values && values.constructor !== Array) {
+                                    v = values[w.value];
+                                }
+                            }
+                            ctx.fillText(v, widget_width - margin * 2 - 20, y + H * 0.7);
+                        }
+                    }
+                    break;
+                case "string":
+                case "text":
+                    ctx.textAlign = "left";
+                    ctx.strokeStyle = outline_color;
+                    ctx.fillStyle = background_color;
+                    ctx.beginPath();
+                    if (show_text) {
+                        (ctx as any).roundRect(margin, y, widget_width - margin * 2, H, [H * 0.5]);
+                    } else {
+                        ctx.rect(margin, y, widget_width - margin * 2, H);
+                    }
+                    ctx.fill();
+                    if (show_text) {
+                        if (!w.disabled) {
+                            ctx.stroke();
+                        }
+                        ctx.save();
+                        ctx.beginPath();
+                        ctx.rect(margin, y, widget_width - margin * 2, H);
+                        ctx.clip();
+                        ctx.fillStyle = secondary_text_color;
+                        const label = w.label || w.name;
+                        if (label != null) {
+                            ctx.fillText(label, margin * 2, y + H * 0.7);
+                        }
+                        ctx.fillStyle = text_color;
+                        ctx.textAlign = "right";
+                        ctx.fillText(String(w.value).substr(0, 30), widget_width - margin * 2, y + H * 0.7);
+                        ctx.restore();
+                    }
+                    break;
+                default:
+                    if (w.draw) {
+                        w.draw(ctx, node, widget_width, y, H);
+                    }
+                    break;
             }
             posY += (w.computeSize ? w.computeSize(widget_width)[1] : H) + 4;
+            ctx.globalAlpha = this.editor_alpha;
         }
         ctx.restore();
         ctx.textAlign = "left";
@@ -1087,9 +1725,9 @@ export class LGraphCanvasRender extends LGraphCanvasInput {
         const x = pos[0] - node.pos[0];
         const y = pos[1] - node.pos[1];
         const width = node.size[0];
-        const pointerDown = LiteGraph.pointerevents_method + "down";
-        const pointerMove = LiteGraph.pointerevents_method + "move";
+        const deltaX = event.deltaX || event.deltax || 0;
         const that = this;
+        const ref_window = this.getCanvasWindow();
 
         for (let i = 0; i < node.widgets.length; ++i) {
             const w = node.widgets[i];
@@ -1100,37 +1738,183 @@ export class LGraphCanvasRender extends LGraphCanvasInput {
             const widget_width = w.width || width;
             if (
                 w != active_widget &&
-                (x < 6 || x > widget_width - 12 || y < w.last_y || y > w.last_y + widget_height)
+                (x < 6 || x > widget_width - 12 || y < w.last_y || y > w.last_y + widget_height || w.last_y === undefined)
             ) {
                 continue;
             }
 
             const old_value = w.value;
-            if ((event.type == pointerDown || event.type == "mousedown") && w.type == "button") {
-                w.clicked = true;
-                if (w.callback) {
-                    setTimeout(() => w.callback(w, that, node, pos, event), 20);
-                }
-                this.dirty_canvas = true;
-            } else if (
-                (event.type == pointerMove || event.type == "mousemove" || event.type == pointerDown) &&
-                w.type == "slider"
-            ) {
-                if (!w.options.read_only) {
+            switch (w.type) {
+                case "button":
+                    if (event.type === LiteGraph.pointerevents_method + "down") {
+                        if (w.callback) {
+                            setTimeout(function() {
+                                w.callback(w, that, node, pos, event);
+                            }, 20);
+                        }
+                        w.clicked = true;
+                        this.dirty_canvas = true;
+                    }
+                    break;
+                case "slider": {
                     const nvalue = clamp((x - 15) / (widget_width - 30), 0, 1);
+                    if (w.options.read_only) break;
                     w.value = w.options.min + (w.options.max - w.options.min) * nvalue;
                     if (old_value != w.value) {
-                        node.onWidgetChanged?.(w.name, w.value, old_value, w);
-                        node.graph._version++;
-                        if (w.callback) {
-                            setTimeout(() => w.callback(w.value, that, node, pos, event), 20);
+                        setTimeout(function() {
+                            inner_value_change(w, w.value);
+                        }, 20);
+                    }
+                    this.dirty_canvas = true;
+                    break;
+                }
+                case "number":
+                case "combo":
+                    if (event.type == LiteGraph.pointerevents_method + "move" && w.type == "number") {
+                        if (deltaX) {
+                            w.value += deltaX * 0.1 * (w.options.step || 1);
+                        }
+                        if (w.options.min != null && w.value < w.options.min) {
+                            w.value = w.options.min;
+                        }
+                        if (w.options.max != null && w.value > w.options.max) {
+                            w.value = w.options.max;
+                        }
+                    } else if (event.type == LiteGraph.pointerevents_method + "down") {
+                        let values = w.options.values;
+                        if (values && values.constructor === Function) {
+                            values = w.options.values(w, node);
+                        }
+                        let values_list = null;
+
+                        if (w.type != "number") {
+                            values_list = values.constructor === Array ? values : Object.keys(values);
+                        }
+
+                        const delta = x < 40 ? -1 : x > widget_width - 40 ? 1 : 0;
+                        if (w.type == "number") {
+                            w.value += delta * 0.1 * (w.options.step || 1);
+                            if (w.options.min != null && w.value < w.options.min) {
+                                w.value = w.options.min;
+                            }
+                            if (w.options.max != null && w.value > w.options.max) {
+                                w.value = w.options.max;
+                            }
+                        } else if (delta) {
+                            let index = -1;
+                            this.last_mouseclick = 0;
+                            if (values.constructor === Object) {
+                                index = values_list.indexOf(String(w.value)) + delta;
+                            } else {
+                                index = values_list.indexOf(w.value) + delta;
+                            }
+                            if (index >= values_list.length) {
+                                index = values_list.length - 1;
+                            }
+                            if (index < 0) {
+                                index = 0;
+                            }
+                            if (values.constructor === Array) {
+                                w.value = values[index];
+                            } else {
+                                w.value = index;
+                            }
+                        } else {
+                            const text_values = values != values_list ? Object.values(values) : values;
+                            const inner_clicked = function(v: any) {
+                                if (values != values_list) {
+                                    v = text_values.indexOf(v);
+                                }
+                                this.value = v;
+                                inner_value_change(this, v);
+                                that.dirty_canvas = true;
+                                return false;
+                            };
+                            new LiteGraph.ContextMenu(text_values, {
+                                    scale: Math.max(1, this.ds.scale),
+                                    event: event,
+                                    className: "dark",
+                                    callback: inner_clicked.bind(w)
+                                },
+                                ref_window);
+                        }
+                    } else if (event.type == LiteGraph.pointerevents_method + "up" && w.type == "number") {
+                        const delta = x < 40 ? -1 : x > widget_width - 40 ? 1 : 0;
+                        if (event.click_time < 200 && delta == 0) {
+                            this.prompt("Value", w.value, function(v: string) {
+                                    if (/^[0-9+\-*/()\s]+|\d+\.\d+$/.test(v)) {
+                                        try {
+                                            v = eval(v);
+                                        } catch (e) {}
+                                    }
+                                    this.value = Number(v);
+                                    inner_value_change(this, this.value);
+                                }.bind(w),
+                                event);
                         }
                     }
+
+                    if (old_value != w.value) {
+                        setTimeout(
+                            function() {
+                                inner_value_change(this, this.value);
+                            }.bind(w),
+                            20
+                        );
+                    }
+                    this.dirty_canvas = true;
+                    break;
+                case "toggle":
+                    if (event.type == LiteGraph.pointerevents_method + "down") {
+                        w.value = !w.value;
+                        setTimeout(function() {
+                            inner_value_change(w, w.value);
+                        }, 20);
+                    }
+                    break;
+                case "string":
+                case "text":
+                    if (event.type == LiteGraph.pointerevents_method + "down") {
+                        this.prompt(
+                            "Value",
+                            w.value,
+                            function(v: any) {
+                                inner_value_change(this, v);
+                            }.bind(w),
+                            event,
+                            w.options ? w.options.multiline : false
+                        );
+                    }
+                    break;
+                default:
+                    if (w.mouse) {
+                        this.dirty_canvas = w.mouse(event, [x, y], node);
+                    }
+                    break;
+            }
+
+            if (old_value != w.value) {
+                if (node.onWidgetChanged) {
+                    node.onWidgetChanged(w.name, w.value, old_value, w);
                 }
-                this.dirty_canvas = true;
+                node.graph._version++;
             }
             return w;
         }
+
+        function inner_value_change(widget: any, value: any) {
+            if (widget.type == "number") {
+                value = Number(value);
+            }
+            widget.value = value;
+            if (widget.options && widget.options.property && node.properties[widget.options.property] !== undefined) {
+                node.setProperty(widget.options.property, value);
+            }
+            if (widget.callback) {
+                widget.callback(widget.value, that, node, pos, event);
+            }
+        }
+
         return null;
     }
 
@@ -1234,9 +2018,157 @@ export class LGraphCanvasRender extends LGraphCanvasInput {
         // source keeps this disabled in production
     }
 
-    drawSubgraphPanel(_ctx: CanvasRenderingContext2D): void {}
-    drawSubgraphPanelLeft(_subgraph: any, _subnode: any, _ctx: CanvasRenderingContext2D): void {}
-    drawSubgraphPanelRight(_subgraph: any, _subnode: any, _ctx: CanvasRenderingContext2D): void {}
+    drawSubgraphPanel(ctx: CanvasRenderingContext2D): void {
+        const subgraph = this.graph;
+        const subnode = subgraph._subgraph_node;
+        if (!subnode) {
+            console.warn("subgraph without subnode");
+            return;
+        }
+        this.drawSubgraphPanelLeft(subgraph, subnode, ctx);
+        this.drawSubgraphPanelRight(subgraph, subnode, ctx);
+    }
+
+    drawSubgraphPanelLeft(subgraph: any, subnode: any, ctx: CanvasRenderingContext2D): void {
+        const LiteGraph = this.constants();
+        const num = subnode.inputs ? subnode.inputs.length : 0;
+        const w = 200;
+        const h = Math.floor(LiteGraph.NODE_SLOT_HEIGHT * 1.6);
+
+        ctx.fillStyle = "#111";
+        ctx.globalAlpha = 0.8;
+        ctx.beginPath();
+        (ctx as any).roundRect(10, 10, w, (num + 1) * h + 50, [8]);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+
+        ctx.fillStyle = "#888";
+        ctx.font = "14px Arial";
+        ctx.textAlign = "left";
+        ctx.fillText("Graph Inputs", 20, 34);
+
+        if (this.drawButton(w - 20, 20, 20, 20, "X", "#151515")) {
+            this.closeSubgraph();
+            return;
+        }
+
+        let y = 50;
+        ctx.font = "14px Arial";
+        if (subnode.inputs) {
+            for (let i = 0; i < subnode.inputs.length; ++i) {
+                const input = subnode.inputs[i];
+                if (input.not_subgraph_input) {
+                    continue;
+                }
+
+                if (this.drawButton(20, y + 2, w - 20, h - 2)) {
+                    const type = subnode.constructor.input_node_type || "graph/input";
+                    this.graph.beforeChange();
+                    const newnode = LiteGraph.createNode(type);
+                    if (newnode) {
+                        subgraph.add(newnode);
+                        this.block_click = false;
+                        this.last_click_position = null;
+                        this.selectNodes([newnode]);
+                        this.node_dragged = newnode;
+                        this.dragging_canvas = false;
+                        newnode.setProperty("name", input.name);
+                        newnode.setProperty("type", input.type);
+                        this.node_dragged.pos[0] = this.graph_mouse[0] - 5;
+                        this.node_dragged.pos[1] = this.graph_mouse[1] - 5;
+                        this.graph.afterChange();
+                    } else {
+                        console.error("graph input node not found:", type);
+                    }
+                }
+                ctx.fillStyle = "#9C9";
+                ctx.beginPath();
+                ctx.arc(w - 16, y + h * 0.5, 5, 0, 2 * Math.PI);
+                ctx.fill();
+                ctx.fillStyle = "#AAA";
+                ctx.fillText(input.name, 30, y + h * 0.75);
+                ctx.fillStyle = "#777";
+                ctx.fillText(input.type, 130, y + h * 0.75);
+                y += h;
+            }
+        }
+
+        if (this.drawButton(20, y + 2, w - 20, h - 2, "+", "#151515", "#222")) {
+            this.showSubgraphPropertiesDialog(subnode);
+        }
+    }
+
+    drawSubgraphPanelRight(subgraph: any, subnode: any, ctx: CanvasRenderingContext2D): void {
+        const LiteGraph = this.constants();
+        const num = subnode.outputs ? subnode.outputs.length : 0;
+        const canvas_w = this.bgcanvas.width;
+        const w = 200;
+        const h = Math.floor(LiteGraph.NODE_SLOT_HEIGHT * 1.6);
+
+        ctx.fillStyle = "#111";
+        ctx.globalAlpha = 0.8;
+        ctx.beginPath();
+        (ctx as any).roundRect(canvas_w - w - 10, 10, w, (num + 1) * h + 50, [8]);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+
+        ctx.fillStyle = "#888";
+        ctx.font = "14px Arial";
+        ctx.textAlign = "left";
+        const title_text = "Graph Outputs";
+        const tw = ctx.measureText(title_text).width;
+        ctx.fillText(title_text, canvas_w - tw - 20, 34);
+
+        if (this.drawButton(canvas_w - w, 20, 20, 20, "X", "#151515")) {
+            this.closeSubgraph();
+            return;
+        }
+
+        let y = 50;
+        ctx.font = "14px Arial";
+        if (subnode.outputs) {
+            for (let i = 0; i < subnode.outputs.length; ++i) {
+                const output = subnode.outputs[i];
+                if (output.not_subgraph_input) {
+                    continue;
+                }
+
+                if (this.drawButton(canvas_w - w, y + 2, w - 20, h - 2)) {
+                    const type = subnode.constructor.output_node_type || "graph/output";
+                    this.graph.beforeChange();
+                    const newnode = LiteGraph.createNode(type);
+                    if (newnode) {
+                        subgraph.add(newnode);
+                        this.block_click = false;
+                        this.last_click_position = null;
+                        this.selectNodes([newnode]);
+                        this.node_dragged = newnode;
+                        this.dragging_canvas = false;
+                        newnode.setProperty("name", output.name);
+                        newnode.setProperty("type", output.type);
+                        this.node_dragged.pos[0] = this.graph_mouse[0] - 5;
+                        this.node_dragged.pos[1] = this.graph_mouse[1] - 5;
+                        this.graph.afterChange();
+                    } else {
+                        console.error("graph input node not found:", type);
+                    }
+                }
+                ctx.fillStyle = "#9C9";
+                ctx.beginPath();
+                ctx.arc(canvas_w - w + 16, y + h * 0.5, 5, 0, 2 * Math.PI);
+                ctx.fill();
+                ctx.fillStyle = "#AAA";
+                ctx.fillText(output.name, canvas_w - w + 30, y + h * 0.75);
+                ctx.fillStyle = "#777";
+                ctx.fillText(output.type, canvas_w - w + 130, y + h * 0.75);
+                y += h;
+            }
+        }
+
+        if (this.drawButton(canvas_w - w, y + 2, w - 20, h - 2, "+", "#151515", "#222")) {
+            this.showSubgraphPropertiesDialogRight(subnode);
+        }
+    }
 
     drawButton(
         x: number,
@@ -1270,16 +2202,20 @@ export class LGraphCanvasRender extends LGraphCanvasInput {
         if (clicked) {
             ctx.fillStyle = "#AAA";
         }
-        ctx.fillRect(x, y, w, h);
+        ctx.beginPath();
+        (ctx as any).roundRect(x, y, w, h, [4]);
+        ctx.fill();
         if (text != null) {
-            ctx.fillStyle = textcolor;
-            ctx.textAlign = "center";
-            ctx.font = ((h * 0.65) | 0) + "px Arial";
-            ctx.fillText(text, x + w * 0.5, y + h * 0.75);
-            ctx.textAlign = "left";
+            if ((text as any).constructor == String) {
+                ctx.fillStyle = textcolor;
+                ctx.textAlign = "center";
+                ctx.font = ((h * 0.65) | 0) + "px Arial";
+                ctx.fillText(text, x + w * 0.5, y + h * 0.75);
+                ctx.textAlign = "left";
+            }
         }
 
-        const was_clicked = !!clicked && !this.block_click;
+        const was_clicked = clicked && !this.block_click;
         if (clicked) {
             this.blockClick();
         }
