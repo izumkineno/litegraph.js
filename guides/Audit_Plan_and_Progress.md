@@ -244,7 +244,7 @@ Git 提交规则（强制）：
   - 对应原 JS：`draw* / renderLink / drawNodeWidgets / processNodeWidgets`。
   - 对应原 d.ts：渲染相关方法。
 
-- [ ] **Audit Task 39: `src/ts-migration/canvas/LGraphCanvas.menu-panel.ts`**
+- [x] **Audit Task 39: `src/ts-migration/canvas/LGraphCanvas.menu-panel.ts`**
   - 对应原 JS：`showSearchBox/createDialog/createPanel/processContextMenu` 等菜单面板链路。
   - 对应原 d.ts：菜单与面板路径契约。
 
@@ -267,9 +267,9 @@ Git 提交规则（强制）：
 ## 审计进度快照
 
 - 总任务数：`42`
-- 已完成：`38`
+- 已完成：`39`
 - 进行中：`0`
-- 未开始：`4`
+- 未开始：`3`
 - 最新更新时间：`2026-03-04`
 
 ---
@@ -1074,3 +1074,30 @@ Git 提交规则（强制）：
   6. 修复迁移过程中引入的类型问题（`Vector2.set`、`colState` 联合类型、ES5 下块级函数声明）。
 - 验证：
   1. 类型校验通过：`npx tsc --noEmit src/ts-migration/canvas/LGraphCanvas.render.ts`。
+
+### Audit Task 39 结果
+- 结论：Pass（发现 7 处菜单/面板链路迁移偏差并已修复）
+- JS 对照：`src/litegraph.js`
+  - `LGraphCanvas.prototype.createDefaultNodeForSlot/showConnectionMenu/showSearchBox`
+  - `LGraphCanvas.prototype.showEditPropertyValue/createDialog/prompt/processContextMenu`
+- d.ts 对照：`src/litegraph.d.ts`
+  - `LGraphCanvas.showSearchBox/showEditPropertyValue/createDialog/createPanel/processContextMenu`
+- TS 对照：`src/ts-migration/canvas/LGraphCanvas.menu-panel.ts`
+- 发现问题：
+  1. `createDefaultNodeForSlot` 字符串槽位解析与 JS 不一致，且遗漏 `nodeNewOpts.inputs/outputs` 迁移分支。
+  2. `showSearchBox` 迁移层是简化实现，缺失关键链路：外部点击延迟关闭、鼠标离开策略、键盘上下选择、extras 数据注入、slot 连接回填等。
+  3. `showEditPropertyValue` 简化了 `enum/combo` 对象值映射、`array/object` JSON 解析和关闭回调语义。
+  4. `createDialog` 缺失 `checkForInput` 默认行为与 `select` 焦点切换防误关逻辑。
+  5. `prompt` 缺失缩放适配、旧弹窗关闭/替换、`select` 交互防误关语义。
+  6. `showLinkMenu/showConnectionMenu/processContextMenu` 存在多处防御式可选调用，偏离原 JS 的直接调用链。
+  7. 局部 `setDirty` 调用参数语义与类型约束未对齐，导致审计编译失败风险。
+- 已实施修复：
+  1. 回收 `createDefaultNodeForSlot` 到原 JS 等价路径，补齐 `nodeNewOpts.inputs/outputs` 处理与直接连接链。
+  2. 大幅回填 `showSearchBox` 逻辑，补齐关闭策略、键盘导航、类型过滤、extras 注入与自动连线路径。
+  3. 回收 `showEditPropertyValue` 到原 JS 等价语义（包含 `enum/combo`、`array/object`、`onclose` 钩子）。
+  4. 回收 `createDialog` 关键分支（`checkForInput`、`closeOnLeave_checkModified`、outside close 生命周期）。
+  5. 回收 `prompt` 的缩放/替换/关闭策略并修复脏区调用参数。
+  6. 收敛 `showLinkMenu/showConnectionMenu/processContextMenu` 到直接调用语义。
+  7. 清理类型问题并通过单文件编译验证。
+- 验证：
+  1. 类型校验通过：`npx tsc --noEmit src/ts-migration/canvas/LGraphCanvas.menu-panel.ts`。

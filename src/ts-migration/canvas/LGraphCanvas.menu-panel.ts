@@ -111,16 +111,16 @@ export class LGraphCanvasMenuPanel extends LGraphCanvasRender {
     showLinkMenu(link: any, e: MouseEvent): false {
         this.setActiveCanvas();
         const host = this.menuHost();
-        const node_left = this.graph?.getNodeById?.(link.origin_id);
-        const node_right = this.graph?.getNodeById?.(link.target_id);
-        const fromType =
-            node_left?.outputs?.[link.origin_slot]?.type !== undefined
-                ? node_left.outputs[link.origin_slot].type
-                : false;
-        const destType =
-            node_right?.inputs?.[link.target_slot]?.type !== undefined
-                ? node_right.inputs[link.target_slot].type
-                : false;
+        const node_left = this.graph.getNodeById(link.origin_id);
+        const node_right = this.graph.getNodeById(link.target_id);
+        let fromType: any = false;
+        if (node_left && node_left.outputs && node_left.outputs[link.origin_slot]) {
+            fromType = node_left.outputs[link.origin_slot].type;
+        }
+        let destType: any = false;
+        if (node_right && node_right.outputs && node_right.outputs[link.target_slot]) {
+            destType = node_right.inputs[link.target_slot].type;
+        }
 
         const menu = new host.ContextMenu(
             ["Add Node", null, "Delete", null],
@@ -130,16 +130,16 @@ export class LGraphCanvasMenuPanel extends LGraphCanvasRender {
                 callback: (v: any, _opts: any, menuEvent: MouseEvent) => {
                     if (v === "Add Node") {
                         this.menuClass().onMenuAdd(null, null, menuEvent, menu, (node: any) => {
-                            if (!node?.inputs?.length || !node?.outputs?.length) {
+                            if (!node.inputs || !node.inputs.length || !node.outputs || !node.outputs.length) {
                                 return;
                             }
-                            if (node_left?.connectByType?.(link.origin_slot, node, fromType)) {
-                                node.connectByType?.(link.target_slot, node_right, destType);
+                            if (node_left.connectByType(link.origin_slot, node, fromType)) {
+                                node.connectByType(link.target_slot, node_right, destType);
                                 node.pos[0] -= node.size[0] * 0.5;
                             }
                         });
                     } else if (v === "Delete") {
-                        this.graph?.removeLink?.(link.id);
+                        this.graph.removeLink(link.id);
                     }
                 },
             },
@@ -166,7 +166,12 @@ export class LGraphCanvasMenuPanel extends LGraphCanvasRender {
 
         const isFrom = !!(opts.nodeFrom && opts.slotFrom !== null);
         const isTo = !isFrom && !!(opts.nodeTo && opts.slotTo !== null);
-        if ((!isFrom && !isTo) || !opts.nodeType) {
+        if (!isFrom && !isTo) {
+            console.warn("No data passed to createDefaultNodeForSlot " + opts.nodeFrom + " " + opts.slotFrom + " " + opts.nodeTo + " " + opts.slotTo);
+            return false;
+        }
+        if (!opts.nodeType) {
+            console.warn("No type to createDefaultNodeForSlot");
             return false;
         }
 
@@ -175,22 +180,23 @@ export class LGraphCanvasMenuPanel extends LGraphCanvasRender {
         let iSlotConn: any = false;
         if (typeof slotX === "string") {
             iSlotConn = isFrom
-                ? nodeX.findOutputSlot?.(slotX, false)
-                : nodeX.findInputSlot?.(slotX, false);
-            slotX = isFrom ? nodeX.outputs?.[iSlotConn] : nodeX.inputs?.[iSlotConn];
+                ? nodeX.findOutputSlot(slotX, false)
+                : nodeX.findInputSlot(slotX, false);
+            slotX = isFrom ? nodeX.outputs[slotX] : nodeX.inputs[slotX];
         } else if (typeof slotX === "object") {
             iSlotConn = isFrom
-                ? nodeX.findOutputSlot?.(slotX.name)
-                : nodeX.findInputSlot?.(slotX.name);
+                ? nodeX.findOutputSlot(slotX.name)
+                : nodeX.findInputSlot(slotX.name);
         } else if (typeof slotX === "number") {
             iSlotConn = slotX;
-            slotX = isFrom ? nodeX.outputs?.[slotX] : nodeX.inputs?.[slotX];
+            slotX = isFrom ? nodeX.outputs[slotX] : nodeX.inputs[slotX];
         } else {
+            console.warn("Cant get slot information " + slotX);
             return false;
         }
 
-        if (!slotX || iSlotConn === false) {
-            return false;
+        if (slotX === false || iSlotConn === false) {
+            console.warn("createDefaultNodeForSlot bad slotX " + slotX + " " + iSlotConn);
         }
         const fromSlotType = slotX.type == host.EVENT ? "_event_" : slotX.type;
         const slotTypesDefault = isFrom
@@ -223,21 +229,42 @@ export class LGraphCanvasMenuPanel extends LGraphCanvasRender {
         }
         const newNode = host.createNode(nodeNewType);
         if (!newNode) {
+            console.log("failed creating " + nodeNewType);
             return false;
         }
-        if (nodeNewOpts?.properties) {
-            for (const i in nodeNewOpts.properties) {
-                newNode.addProperty?.(i, nodeNewOpts.properties[i]);
+        if (nodeNewOpts) {
+            if (nodeNewOpts.properties) {
+                for (const i in nodeNewOpts.properties) {
+                    newNode.addProperty(i, nodeNewOpts.properties[i]);
+                }
+            }
+            if (nodeNewOpts.inputs) {
+                newNode.inputs = [];
+                for (const i in nodeNewOpts.inputs) {
+                    newNode.addOutput(
+                        nodeNewOpts.inputs[i][0],
+                        nodeNewOpts.inputs[i][1]
+                    );
+                }
+            }
+            if (nodeNewOpts.outputs) {
+                newNode.outputs = [];
+                for (const i in nodeNewOpts.outputs) {
+                    newNode.addOutput(
+                        nodeNewOpts.outputs[i][0],
+                        nodeNewOpts.outputs[i][1]
+                    );
+                }
+            }
+            if (nodeNewOpts.title) {
+                newNode.title = nodeNewOpts.title;
+            }
+            if (nodeNewOpts.json) {
+                newNode.configure(nodeNewOpts.json);
             }
         }
-        if (nodeNewOpts?.title) {
-            newNode.title = nodeNewOpts.title;
-        }
-        if (nodeNewOpts?.json) {
-            newNode.configure?.(nodeNewOpts.json);
-        }
 
-        this.graph?.add?.(newNode);
+        this.graph.add(newNode);
         newNode.pos = [
             opts.position[0] +
                 opts.posAdd[0] +
@@ -247,9 +274,13 @@ export class LGraphCanvasMenuPanel extends LGraphCanvasRender {
                 (opts.posSizeFix[1] ? opts.posSizeFix[1] * newNode.size[1] : 0),
         ];
         if (isFrom) {
-            opts.nodeFrom.connectByType?.(iSlotConn, newNode, fromSlotType);
+            opts.nodeFrom.connectByType(iSlotConn, newNode, fromSlotType);
         } else {
-            opts.nodeTo.connectByTypeOutput?.(iSlotConn, newNode, fromSlotType);
+            opts.nodeTo.connectByTypeOutput(iSlotConn, newNode, fromSlotType);
+        }
+
+        if (isFrom && isTo) {
+            // TODO
         }
         return true;
     }
@@ -314,16 +345,16 @@ export class LGraphCanvasMenuPanel extends LGraphCanvasRender {
             title:
                 (slotX?.name ? slotX.name + (fromSlotType ? " | " : "") : "") +
                 (fromSlotType || ""),
-            callback: (v: any, _menuOpt: any, e: any) => {
-                if (v === "Add Node") {
-                    this.menuClass().onMenuAdd(null, null, e, menu, (node: any) => {
-                        if (isFrom) {
-                            opts.nodeFrom.connectByType?.(iSlotConn, node, fromSlotType);
-                        } else {
-                            opts.nodeTo.connectByTypeOutput?.(iSlotConn, node, fromSlotType);
-                        }
-                    });
-                } else if (v === "Search") {
+                callback: (v: any, _menuOpt: any, e: any) => {
+                    if (v === "Add Node") {
+                        this.menuClass().onMenuAdd(null, null, e, menu, (node: any) => {
+                            if (isFrom) {
+                                opts.nodeFrom.connectByType(iSlotConn, node, fromSlotType);
+                            } else {
+                                opts.nodeTo.connectByTypeOutput(iSlotConn, node, fromSlotType);
+                            }
+                        });
+                    } else if (v === "Search") {
                     if (isFrom) {
                         this.showSearchBox(e, {
                             node_from: opts.nodeFrom,
@@ -359,6 +390,7 @@ export class LGraphCanvasMenuPanel extends LGraphCanvasRender {
     ): DialogLike {
         this.setActiveCanvas();
         const host = this.menuHost();
+        title = title || "";
         const dialog = document.createElement("div") as DialogLike;
         dialog.is_modified = false;
         dialog.className = "graphdialog rounded";
@@ -375,8 +407,16 @@ export class LGraphCanvasMenuPanel extends LGraphCanvasRender {
 
         const canvas = (this.menuClass().active_canvas as any)?.canvas || this.canvas;
         canvas.parentNode?.appendChild(dialog);
+        if (this.ds.scale > 1) {
+            dialog.style.transform = "scale(" + this.ds.scale + ")";
+        }
+
         let closeTimer: ReturnType<typeof setTimeout> | null = null;
+        let prevent_timeout: any = false;
         host.pointerListenerAdd(dialog, "leave", () => {
+            if (prevent_timeout) {
+                return;
+            }
             if (host.dialog_close_on_mouse_leave && !dialog.is_modified) {
                 closeTimer = setTimeout(dialog.close, host.dialog_close_on_mouse_leave_delay);
             }
@@ -386,6 +426,25 @@ export class LGraphCanvasMenuPanel extends LGraphCanvasRender {
                 clearTimeout(closeTimer);
             }
         });
+        const selInDia = dialog.querySelectorAll("select");
+        if (selInDia) {
+            selInDia.forEach((selIn) => {
+                selIn.addEventListener("click", () => {
+                    prevent_timeout++;
+                });
+                selIn.addEventListener("blur", () => {
+                    prevent_timeout = 0;
+                });
+                selIn.addEventListener("change", () => {
+                    prevent_timeout = -1;
+                });
+            });
+        }
+
+        if (this.prompt_box) {
+            this.prompt_box.close();
+        }
+        this.prompt_box = dialog;
 
         const nameEl = dialog.querySelector(".name") as HTMLElement | null;
         const inputEl = dialog.querySelector(".value") as
@@ -440,208 +499,516 @@ export class LGraphCanvasMenuPanel extends LGraphCanvasRender {
     showSearchBox(event?: MouseEvent, options?: any): DialogLike {
         this.setActiveCanvas();
         const host = this.menuHost();
-        const hasSlotTypes = !!(
+        const has_slot_types = !!(
             (host.slot_types_in && host.slot_types_in.length) ||
             (host.slot_types_out && host.slot_types_out.length)
         );
-        const opts = Object.assign(
-            {
-                slot_from: null,
-                node_from: null,
-                node_to: null,
-                do_type_filter: host.search_filter_enabled && hasSlotTypes,
-                type_filter_in: false,
-                type_filter_out: false,
-                show_all_if_empty: true,
-                show_all_on_open: host.search_show_all_on_open,
-                hide_on_mouse_leave: host.search_hide_on_mouse_leave,
-            },
-            options || {}
-        );
-        if (opts.do_type_filter && !hasSlotTypes) {
+        const def_options = {
+            slot_from: null,
+            node_from: null,
+            node_to: null,
+            do_type_filter: host.search_filter_enabled && has_slot_types,
+            type_filter_in: false,
+            type_filter_out: false,
+            show_general_if_none_on_typefilter: true,
+            show_general_after_typefiltered: true,
+            hide_on_mouse_leave: host.search_hide_on_mouse_leave,
+            show_all_if_empty: true,
+            show_all_on_open: host.search_show_all_on_open,
+        };
+        const opts = Object.assign(def_options, options || {});
+        if (opts.do_type_filter && !has_slot_types) {
             opts.do_type_filter = false;
         }
 
+        const that = this;
         const graphcanvas = this.menuClass().active_canvas as any;
-        const canvas = graphcanvas?.canvas || this.canvas;
+        const canvas = graphcanvas.canvas;
         const root_document = canvas.ownerDocument || document;
+
         const dialog = document.createElement("div") as DialogLike;
-        dialog.is_modified = false;
         dialog.className = "litegraph litesearchbox graphdialog rounded";
-        dialog.innerHTML =
-            "<span class='name'>Search</span> <input autofocus type='text' class='value rounded'/>";
+        dialog.innerHTML = "<span class='name'>Search</span> <input autofocus type='text' class='value rounded'/>";
         if (opts.do_type_filter) {
             dialog.innerHTML += "<select class='slot_in_type_filter'><option value=''></option></select>";
             dialog.innerHTML += "<select class='slot_out_type_filter'><option value=''></option></select>";
         }
         dialog.innerHTML += "<div class='helper'></div>";
-        (root_document.fullscreenElement || root_document.body).appendChild(dialog);
-        dialog.modified = () => {
-            dialog.is_modified = true;
-        };
+
+        if (root_document.fullscreenElement) {
+            root_document.fullscreenElement.appendChild(dialog);
+        } else {
+            root_document.body.appendChild(dialog);
+            root_document.body.style.overflow = "hidden";
+        }
+
+        const selIn = opts.do_type_filter
+            ? (dialog.querySelector(".slot_in_type_filter") as HTMLSelectElement)
+            : null;
+        const selOut = opts.do_type_filter
+            ? (dialog.querySelector(".slot_out_type_filter") as HTMLSelectElement)
+            : null;
+
         dialog.close = () => {
-            this.search_box = null;
+            that.search_box = null;
+            dialog.blur();
+            canvas.focus();
             root_document.body.style.overflow = "";
             if (dialog._remove_outside_close) {
                 dialog._remove_outside_close();
+                dialog._remove_outside_close = null;
             }
-            dialog.parentNode?.removeChild(dialog);
+
+            setTimeout(() => {
+                that.canvas.focus();
+            }, 20);
+            if (dialog.parentNode) {
+                dialog.parentNode.removeChild(dialog);
+            }
         };
 
-        this.search_box?.close?.();
-        this.search_box = dialog;
+        if (this.ds.scale > 1) {
+            dialog.style.transform = "scale(" + this.ds.scale + ")";
+        }
+
+        const open_time = host.getTime ? host.getTime() : Date.now();
+        const bindOutsideClose = (): void => {
+            const onOutsideDown = (e: Event): void => {
+                if (!dialog || !that.search_box) {
+                    return;
+                }
+                const now = host.getTime ? host.getTime() : Date.now();
+                if (now - open_time < 60) {
+                    return;
+                }
+                if (dialog.contains(e.target as Node)) {
+                    return;
+                }
+                dialog.close();
+            };
+
+            root_document.addEventListener("mousedown", onOutsideDown, true);
+            root_document.addEventListener("touchstart", onOutsideDown, { capture: true, passive: true });
+            dialog._remove_outside_close = () => {
+                root_document.removeEventListener("mousedown", onOutsideDown, true);
+                root_document.removeEventListener("touchstart", onOutsideDown, true);
+            };
+        };
+        bindOutsideClose();
+
+        if (opts.hide_on_mouse_leave) {
+            let prevent_timeout: any = false;
+            let timeout_close: ReturnType<typeof setTimeout> | null = null;
+            host.pointerListenerAdd(dialog, "enter", () => {
+                if (timeout_close) {
+                    clearTimeout(timeout_close);
+                    timeout_close = null;
+                }
+            });
+            host.pointerListenerAdd(dialog, "leave", () => {
+                if (prevent_timeout) {
+                    return;
+                }
+                timeout_close = setTimeout(() => {
+                    dialog.close();
+                }, 500);
+            });
+            if (opts.do_type_filter && selIn && selOut) {
+                selIn.addEventListener("click", () => {
+                    prevent_timeout++;
+                });
+                selIn.addEventListener("blur", () => {
+                    prevent_timeout = 0;
+                });
+                selIn.addEventListener("change", () => {
+                    prevent_timeout = -1;
+                });
+                selOut.addEventListener("click", () => {
+                    prevent_timeout++;
+                });
+                selOut.addEventListener("blur", () => {
+                    prevent_timeout = 0;
+                });
+                selOut.addEventListener("change", () => {
+                    prevent_timeout = -1;
+                });
+            }
+        }
+
+        if (that.search_box) {
+            that.search_box.close();
+        }
+        that.search_box = dialog;
+
         const helper = dialog.querySelector(".helper") as HTMLDivElement;
+        let first: any = null;
+        let timeout: ReturnType<typeof setTimeout> | null = null;
+        let selected: any = null;
+
         const input = dialog.querySelector("input") as HTMLInputElement;
-        const inSel = dialog.querySelector(".slot_in_type_filter") as HTMLSelectElement | null;
-        const outSel = dialog.querySelector(".slot_out_type_filter") as HTMLSelectElement | null;
-
-        const addResult = (name: string): void => {
-            const div = document.createElement("div");
-            div.innerText = name;
-            div.className = "litegraph lite-search-item";
-            div.addEventListener("click", () => select(name));
-            helper.appendChild(div);
-        };
-
-        const select = (name: string): void => {
-            if (this.onSearchBoxSelection) {
-                this.onSearchBoxSelection(name, event, graphcanvas);
-            } else {
-                const extra = host.searchbox_extras?.[name.toLowerCase()];
-                if (extra) {
-                    name = extra.type;
+        if (input) {
+            input.addEventListener("blur", function(this: HTMLInputElement) {
+                if (that.search_box && !opts.hide_on_mouse_leave) {
+                    setTimeout(function() {
+                        if (!that.search_box) {
+                            return;
+                        }
+                        const active_element = root_document.activeElement;
+                        if (!active_element || !dialog.contains(active_element)) {
+                            dialog.close();
+                        }
+                    }, 0);
+                    return;
                 }
-                graphcanvas.graph.beforeChange?.();
-                const node = host.createNode(name);
-                if (node) {
-                    node.pos = event
-                        ? graphcanvas.convertEventToCanvasOffset(event)
-                        : [this.graph_mouse[0], this.graph_mouse[1]];
-                    graphcanvas.graph.add(node, false);
+                if (that.search_box && opts.hide_on_mouse_leave) {
+                    this.focus();
                 }
-                graphcanvas.graph.afterChange?.();
+            });
+            input.addEventListener("keydown", (e: KeyboardEvent) => {
+                if (e.keyCode == 38) {
+                    changeSelection(false);
+                } else if (e.keyCode == 40) {
+                    changeSelection(true);
+                } else if (e.keyCode == 27) {
+                    dialog.close();
+                } else if (e.keyCode == 13) {
+                    refreshHelper();
+                    if (selected) {
+                        select(selected.innerHTML);
+                    } else if (first) {
+                        select(first);
+                    } else {
+                        dialog.close();
+                    }
+                } else {
+                    if (timeout) {
+                        clearInterval(timeout as any);
+                    }
+                    timeout = setTimeout(refreshHelper, 250);
+                    return;
+                }
+                e.preventDefault();
+                e.stopPropagation();
+                e.stopImmediatePropagation();
+            });
+        }
+
+        if (opts.do_type_filter && selIn && selOut) {
+            const aSlotsIn = host.slot_types_in || [];
+            let inType = opts.type_filter_in;
+            if (inType == host.EVENT || inType == host.ACTION) {
+                inType = "_event_";
             }
-            dialog.close();
-        };
+            for (let i = 0; i < aSlotsIn.length; i++) {
+                const opt = document.createElement("option");
+                opt.value = aSlotsIn[i];
+                opt.innerHTML = aSlotsIn[i];
+                selIn.appendChild(opt);
+                if (inType !== false && (inType + "").toLowerCase() == (aSlotsIn[i] + "").toLowerCase()) {
+                    opt.selected = true;
+                }
+            }
+            selIn.addEventListener("change", refreshHelper);
 
-        const refresh = (): void => {
-            const str = input.value.toLowerCase();
+            const aSlotsOut = host.slot_types_out || [];
+            let outType = opts.type_filter_out;
+            if (outType == host.EVENT || outType == host.ACTION) {
+                outType = "_event_";
+            }
+            for (let i = 0; i < aSlotsOut.length; i++) {
+                const opt = document.createElement("option");
+                opt.value = aSlotsOut[i];
+                opt.innerHTML = aSlotsOut[i];
+                selOut.appendChild(opt);
+                if (outType !== false && (outType + "").toLowerCase() == (aSlotsOut[i] + "").toLowerCase()) {
+                    opt.selected = true;
+                }
+            }
+            selOut.addEventListener("change", refreshHelper);
+        }
+
+        const rect = canvas.getBoundingClientRect();
+        const left = ((event ? event.clientX : rect.left + rect.width * 0.5) - 80);
+        const top = ((event ? event.clientY : rect.top + rect.height * 0.5) - 20);
+        dialog.style.left = left + "px";
+        dialog.style.top = top + "px";
+
+        if (event && (event as any).layerY > (rect.height - 200)) {
+            helper.style.maxHeight = (rect.height - (event as any).layerY - 20) + "px";
+        }
+
+        input.focus();
+        if (opts.show_all_on_open) {
+            refreshHelper();
+        }
+
+        function select(name: string) {
+            if (name) {
+                if (that.onSearchBoxSelection) {
+                    that.onSearchBoxSelection(name, event, graphcanvas);
+                } else {
+                    const extra = host.searchbox_extras[name.toLowerCase()];
+                    if (extra) {
+                        name = extra.type;
+                    }
+
+                    graphcanvas.graph.beforeChange();
+                    const node = host.createNode(name);
+                    if (node) {
+                        node.pos = graphcanvas.convertEventToCanvasOffset(event);
+                        graphcanvas.graph.add(node, false);
+                    }
+
+                    if (extra && extra.data && node) {
+                        if (extra.data.properties) {
+                            for (const i in extra.data.properties) {
+                                node.addProperty(i, extra.data.properties[i]);
+                            }
+                        }
+                        if (extra.data.inputs) {
+                            node.inputs = [];
+                            for (const i in extra.data.inputs) {
+                                node.addOutput(extra.data.inputs[i][0], extra.data.inputs[i][1]);
+                            }
+                        }
+                        if (extra.data.outputs) {
+                            node.outputs = [];
+                            for (const i in extra.data.outputs) {
+                                node.addOutput(extra.data.outputs[i][0], extra.data.outputs[i][1]);
+                            }
+                        }
+                        if (extra.data.title) {
+                            node.title = extra.data.title;
+                        }
+                        if (extra.data.json) {
+                            node.configure(extra.data.json);
+                        }
+                    }
+
+                    if (opts.node_from && node) {
+                        let iS: any = false;
+                        switch (typeof opts.slot_from) {
+                            case "string":
+                                iS = opts.node_from.findOutputSlot(opts.slot_from);
+                                break;
+                            case "object":
+                                if (opts.slot_from.name) {
+                                    iS = opts.node_from.findOutputSlot(opts.slot_from.name);
+                                } else {
+                                    iS = -1;
+                                }
+                                if (iS == -1 && typeof opts.slot_from.slot_index !== "undefined") iS = opts.slot_from.slot_index;
+                                break;
+                            case "number":
+                                iS = opts.slot_from;
+                                break;
+                            default:
+                                iS = 0;
+                        }
+                        if (typeof opts.node_from.outputs[iS] !== "undefined") {
+                            if (iS !== false && iS > -1) {
+                                opts.node_from.connectByType(iS, node, opts.node_from.outputs[iS].type);
+                            }
+                        }
+                    }
+                    if (opts.node_to && node) {
+                        let iS: any = false;
+                        switch (typeof opts.slot_from) {
+                            case "string":
+                                iS = opts.node_to.findInputSlot(opts.slot_from);
+                                break;
+                            case "object":
+                                if (opts.slot_from.name) {
+                                    iS = opts.node_to.findInputSlot(opts.slot_from.name);
+                                } else {
+                                    iS = -1;
+                                }
+                                if (iS == -1 && typeof opts.slot_from.slot_index !== "undefined") iS = opts.slot_from.slot_index;
+                                break;
+                            case "number":
+                                iS = opts.slot_from;
+                                break;
+                            default:
+                                iS = 0;
+                        }
+                        if (typeof opts.node_to.inputs[iS] !== "undefined") {
+                            if (iS !== false && iS > -1) {
+                                opts.node_to.connectByTypeOutput(iS, node, opts.node_to.inputs[iS].type);
+                            }
+                        }
+                    }
+
+                    graphcanvas.graph.afterChange();
+                }
+            }
+
+            dialog.close();
+        }
+
+        function changeSelection(forward: boolean) {
+            const prev = selected;
+            if (selected) {
+                selected.classList.remove("selected");
+            }
+            if (!selected) {
+                selected = forward
+                    ? helper.childNodes[0]
+                    : helper.childNodes[helper.childNodes.length];
+            } else {
+                selected = forward
+                    ? selected.nextSibling
+                    : selected.previousSibling;
+                if (!selected) {
+                    selected = prev;
+                }
+            }
+            if (!selected) {
+                return;
+            }
+            selected.classList.add("selected");
+            selected.scrollIntoView({ block: "end", behavior: "smooth" });
+        }
+
+        function refreshHelper() {
+            timeout = null;
+            let str = input.value;
+            first = null;
             helper.innerHTML = "";
             if (!str && !opts.show_all_if_empty) {
                 return;
             }
-            if (this.onSearchBox) {
-                const list = this.onSearchBox(helper, str, graphcanvas) as any[] | null;
-                if (list && list.length) {
-                    for (const r of list) {
-                        addResult(String(r));
-                    }
-                }
-                return;
-            }
 
-            const all = Object.keys(host.registered_node_types || {});
-            const filterBySlot = (type: string): boolean => {
-                if (inSel?.value) {
-                    const info = host.registered_slot_in_types?.[inSel.value];
-                    if (info?.nodes && !info.nodes.includes(type)) {
-                        return false;
+            if (that.onSearchBox) {
+                const list = that.onSearchBox(helper, str, graphcanvas) as any[] | null;
+                if (list) {
+                    for (let i = 0; i < list.length; ++i) {
+                        addResult(list[i]);
                     }
-                }
-                if (outSel?.value) {
-                    const info = host.registered_slot_out_types?.[outSel.value];
-                    if (info?.nodes && !info.nodes.includes(type)) {
-                        return false;
-                    }
-                }
-                return true;
-            };
-
-            for (const type of all) {
-                if (str && type.toLowerCase().indexOf(str) === -1) {
-                    continue;
-                }
-                if (!filterBySlot(type)) {
-                    continue;
-                }
-                addResult(type);
-            }
-        };
-
-        input.addEventListener("keydown", (e: KeyboardEvent) => {
-            if (e.key === "Escape") {
-                dialog.close();
-            } else if (e.key === "Enter") {
-                const first = helper.firstElementChild as HTMLElement | null;
-                if (first) {
-                    select(first.innerText);
-                } else {
-                    dialog.close();
                 }
             } else {
-                setTimeout(refresh, 0);
-                return;
+                let c = 0;
+                str = str.toLowerCase();
+                const filter = graphcanvas.filter || graphcanvas.graph.filter;
+                const sIn = opts.do_type_filter && that.search_box
+                    ? (that.search_box.querySelector(".slot_in_type_filter") as HTMLSelectElement)
+                    : null;
+                const sOut = opts.do_type_filter && that.search_box
+                    ? (that.search_box.querySelector(".slot_out_type_filter") as HTMLSelectElement)
+                    : null;
+                const search_limit = that.menuClass().search_limit !== undefined
+                    ? that.menuClass().search_limit
+                    : -1;
+                const inner_test_filter = (type: string, optsIn?: any): boolean => {
+                    const optsDef = {
+                        skipFilter: false,
+                        inTypeOverride: false,
+                        outTypeOverride: false,
+                    };
+                    const local = Object.assign(optsDef, optsIn || {});
+                    const ctor = host.registered_node_types[type];
+                    if (filter && ctor.filter != filter) {
+                        return false;
+                    }
+                    if ((!opts.show_all_if_empty || str) && type.toLowerCase().indexOf(str) === -1) {
+                        return false;
+                    }
+                    if (opts.do_type_filter && !local.skipFilter) {
+                        let sV: any = sIn?.value;
+                        if (local.inTypeOverride !== false) sV = local.inTypeOverride;
+                        if (sIn && sV) {
+                            if (host.registered_slot_in_types[sV] && host.registered_slot_in_types[sV].nodes) {
+                                const doesInc = host.registered_slot_in_types[sV].nodes.includes(type);
+                                if (doesInc === false) {
+                                    return false;
+                                }
+                            }
+                        }
+
+                        sV = sOut?.value;
+                        if (local.outTypeOverride !== false) sV = local.outTypeOverride;
+                        if (sOut && sV) {
+                            if (host.registered_slot_out_types[sV] && host.registered_slot_out_types[sV].nodes) {
+                                const doesInc = host.registered_slot_out_types[sV].nodes.includes(type);
+                                if (doesInc === false) {
+                                    return false;
+                                }
+                            }
+                        }
+                    }
+                    return true;
+                };
+
+                for (const i in host.searchbox_extras) {
+                    const extra = host.searchbox_extras[i];
+                    if ((!opts.show_all_if_empty || str) && extra.desc.toLowerCase().indexOf(str) === -1) {
+                        continue;
+                    }
+                    const ctor = host.registered_node_types[extra.type];
+                    if (ctor && ctor.filter != filter) {
+                        continue;
+                    }
+                    if (!inner_test_filter(extra.type)) {
+                        continue;
+                    }
+                    addResult(extra.desc, "searchbox_extra");
+                    if (search_limit !== -1 && c++ > search_limit) {
+                        break;
+                    }
+                }
+
+                const keys = Object.keys(host.registered_node_types);
+                const filtered = keys.filter((t) => inner_test_filter(t));
+                for (let i = 0; i < filtered.length; i++) {
+                    addResult(filtered[i]);
+                    if (search_limit !== -1 && c++ > search_limit) {
+                        break;
+                    }
+                }
             }
-            e.preventDefault();
-            e.stopPropagation();
-            e.stopImmediatePropagation();
-        });
 
-        if (inSel) {
-            host.slot_types_in.forEach((v: string) => {
-                const opt = document.createElement("option");
-                opt.value = v;
-                opt.innerText = v;
-                inSel.appendChild(opt);
-            });
-            inSel.addEventListener("change", refresh);
-        }
-        if (outSel) {
-            host.slot_types_out.forEach((v: string) => {
-                const opt = document.createElement("option");
-                opt.value = v;
-                opt.innerText = v;
-                outSel.appendChild(opt);
-            });
-            outSel.addEventListener("change", refresh);
-        }
-
-        const onOutsideDown = (ev: Event): void => {
-            if (!dialog.contains(ev.target as Node)) {
-                dialog.close();
+            function addResult(type: string, className?: string) {
+                const help = document.createElement("div");
+                if (!first) {
+                    first = type;
+                }
+                help.innerText = type;
+                help.dataset["type"] = escape(type);
+                help.className = "litegraph lite-search-item";
+                if (className) {
+                    help.className += " " + className;
+                }
+                help.addEventListener("click", function(this: HTMLDivElement) {
+                    select(unescape(this.dataset["type"] as string));
+                });
+                helper.appendChild(help);
             }
-        };
-        root_document.addEventListener("mousedown", onOutsideDown, true);
-        root_document.addEventListener("touchstart", onOutsideDown, true);
-        dialog._remove_outside_close = () => {
-            root_document.removeEventListener("mousedown", onOutsideDown, true);
-            root_document.removeEventListener("touchstart", onOutsideDown, true);
-        };
-
-        const rect = canvas.getBoundingClientRect();
-        dialog.style.left =
-            ((event ? event.clientX : rect.left + rect.width * 0.5) - 80) + "px";
-        dialog.style.top =
-            ((event ? event.clientY : rect.top + rect.height * 0.5) - 20) + "px";
-
-        input.focus();
-        if (opts.show_all_on_open) {
-            refresh();
         }
+
         return dialog;
     }
 
     showEditPropertyValue(node: any, property: any, options: any): DialogLike | void {
-        if (!node || node.properties?.[property] === undefined) {
+        if (!node || node.properties[property] === undefined) {
             return;
         }
-        const info = node.getPropertyInfo?.(property) || {};
-        const type = info.type || "string";
-        let input_html = "<input autofocus type='text' class='value'/>";
-        if ((type == "enum" || type == "combo") && info.values) {
-            input_html = "<select autofocus class='value'>";
+
+        options = options || {};
+
+        const info = node.getPropertyInfo(property);
+        const type = info.type;
+
+        let input_html = "";
+
+        if (type == "string" || type == "number" || type == "array" || type == "object") {
+            input_html = "<input autofocus type='text' class='value'/>";
+        } else if ((type == "enum" || type == "combo") && info.values) {
+            input_html = "<select autofocus type='text' class='value'>";
             for (const i in info.values) {
-                const v = info.values.constructor === Array ? info.values[i] : i;
+                let v: any = i;
+                if (info.values.constructor === Array) {
+                    v = info.values[i];
+                }
+
                 input_html +=
                     "<option value='" +
                     v +
@@ -657,6 +1024,9 @@ export class LGraphCanvasMenuPanel extends LGraphCanvasRender {
                 "<input autofocus type='checkbox' class='value' " +
                 (node.properties[property] ? "checked" : "") +
                 "/>";
+        } else {
+            console.warn("unknown type: " + type);
+            return;
         }
 
         const dialog = this.createDialog(
@@ -665,41 +1035,85 @@ export class LGraphCanvasMenuPanel extends LGraphCanvasRender {
                 "</span>" +
                 input_html +
                 "<button>OK</button>",
-            options || {}
+            options
         );
-        const input = dialog.querySelector(".value") as any;
-        const setValue = (value: any): void => {
+
+        let input: any = false;
+        if ((type == "enum" || type == "combo") && info.values) {
+            input = dialog.querySelector("select");
+            input.addEventListener("change", function(e: Event) {
+                dialog.modified();
+                setValue((e.target as HTMLSelectElement).value);
+            });
+        } else if (type == "boolean" || type == "toggle") {
+            input = dialog.querySelector("input");
+            if (input) {
+                input.addEventListener("click", function() {
+                    dialog.modified();
+                    setValue(!!input.checked);
+                });
+            }
+        } else {
+            input = dialog.querySelector("input");
+            if (input) {
+                input.addEventListener("blur", function(this: HTMLInputElement) {
+                    this.focus();
+                });
+
+                let v = node.properties[property] !== undefined ? node.properties[property] : "";
+                if (type !== "string") {
+                    v = JSON.stringify(v);
+                }
+
+                input.value = v;
+                input.addEventListener("keydown", function(e: KeyboardEvent) {
+                    if (e.keyCode == 27) {
+                        dialog.close();
+                    } else if (e.keyCode == 13) {
+                        inner();
+                    } else if (e.keyCode != 13) {
+                        dialog.modified();
+                        return;
+                    }
+                    e.preventDefault();
+                    e.stopPropagation();
+                });
+            }
+        }
+        if (input) input.focus();
+
+        const button = dialog.querySelector("button");
+        button?.addEventListener("click", inner);
+
+        function inner() {
+            setValue(input.value);
+        }
+
+        function setValue(value: any) {
+            if (info && info.values && info.values.constructor === Object && info.values[value] != undefined) {
+                value = info.values[value];
+            }
+
+            if (typeof node.properties[property] == "number") {
+                value = Number(value);
+            }
             if (type == "array" || type == "object") {
                 value = JSON.parse(value);
-            } else if (typeof node.properties[property] == "number") {
-                value = Number(value);
-            } else if (type == "boolean" || type == "toggle") {
-                value = !!value;
             }
             node.properties[property] = value;
-            node.graph && (node.graph._version += 1);
-            node.onPropertyChanged?.(property, value);
-            options?.onclose?.();
-            dialog.close();
-            node.setDirtyCanvas?.(true, true);
-        };
-
-        dialog.querySelector("button")?.addEventListener("click", () => {
-            setValue(type == "boolean" || type == "toggle" ? input.checked : input.value);
-        });
-        input?.addEventListener("keydown", (e: KeyboardEvent) => {
-            if (e.key === "Escape") {
-                dialog.close();
-            } else if (e.key === "Enter") {
-                setValue(type == "boolean" || type == "toggle" ? input.checked : input.value);
-            } else {
-                dialog.modified();
-                return;
+            if (node.graph) {
+                node.graph._version++;
             }
-            e.preventDefault();
-            e.stopPropagation();
-        });
-        input?.focus();
+            if (node.onPropertyChanged) {
+                node.onPropertyChanged(property, value);
+            }
+            if (options.onclose) {
+                options.onclose();
+            }
+            dialog.close();
+            node.setDirtyCanvas(true, true);
+        }
+
         return dialog;
     }
 
@@ -714,6 +1128,7 @@ export class LGraphCanvasMenuPanel extends LGraphCanvasRender {
             },
             options || {}
         );
+        const close_on_leave = !!(opts.closeOnLeave && host.dialog_close_on_mouse_leave);
         const dialog = document.createElement("div") as DialogLike;
         dialog.className = "graphdialog";
         dialog.innerHTML = html;
@@ -722,7 +1137,10 @@ export class LGraphCanvasMenuPanel extends LGraphCanvasRender {
             dialog.is_modified = true;
         };
         dialog.close = () => {
-            dialog._remove_outside_close?.();
+            if (dialog._remove_outside_close) {
+                dialog._remove_outside_close();
+                dialog._remove_outside_close = null;
+            }
             dialog.parentNode?.removeChild(dialog);
         };
 
@@ -747,29 +1165,76 @@ export class LGraphCanvasMenuPanel extends LGraphCanvasRender {
         dialog.style.top = y + "px";
         this.canvas.parentNode?.appendChild(dialog);
 
-        if (opts.closeOnLeave && host.dialog_close_on_mouse_leave) {
-            let timer: ReturnType<typeof setTimeout> | null = null;
-            host.pointerListenerAdd(dialog, "leave", () => {
-                if (opts.closeOnLeave_checkModified && dialog.is_modified) {
-                    return;
-                }
-                timer = setTimeout(dialog.close, host.dialog_close_on_mouse_leave_delay);
-            });
-            host.pointerListenerAdd(dialog, "enter", () => {
-                if (timer) {
-                    clearTimeout(timer);
-                }
+        if (opts.checkForInput) {
+            const aI = dialog.querySelectorAll("input");
+            let focused = false;
+            if (aI) {
+                aI.forEach((iX) => {
+                    iX.addEventListener("keydown", function(e: KeyboardEvent) {
+                        dialog.modified();
+                        if (e.keyCode == 27) {
+                            dialog.close();
+                        } else if (e.keyCode != 13) {
+                            return;
+                        }
+                        e.preventDefault();
+                        e.stopPropagation();
+                    });
+                    if (!focused) {
+                        iX.focus();
+                        focused = true;
+                    }
+                });
+            }
+        }
+
+        let dialogCloseTimer: ReturnType<typeof setTimeout> | null = null;
+        let prevent_timeout: any = false;
+        host.pointerListenerAdd(dialog, "leave", () => {
+            if (prevent_timeout) {
+                return;
+            }
+            if (!close_on_leave) {
+                return;
+            }
+            if (opts.closeOnLeave_checkModified && dialog.is_modified) {
+                return;
+            }
+            dialogCloseTimer = setTimeout(dialog.close, host.dialog_close_on_mouse_leave_delay);
+        });
+        host.pointerListenerAdd(dialog, "enter", () => {
+            if (dialogCloseTimer) {
+                clearTimeout(dialogCloseTimer);
+            }
+        });
+        const selInDia = dialog.querySelectorAll("select");
+        if (selInDia) {
+            selInDia.forEach((selIn) => {
+                selIn.addEventListener("click", () => {
+                    prevent_timeout++;
+                });
+                selIn.addEventListener("blur", () => {
+                    prevent_timeout = 0;
+                });
+                selIn.addEventListener("change", () => {
+                    prevent_timeout = -1;
+                });
             });
         }
+
         if (opts.closeOnClickOutside) {
             const root = this.canvas.ownerDocument || document;
             const onOutsideDown = (e: Event): void => {
-                if (!dialog.contains(e.target as Node)) {
-                    dialog.close();
+                if (!dialog.parentNode) {
+                    return;
                 }
+                if (dialog.contains(e.target as Node)) {
+                    return;
+                }
+                dialog.close();
             };
             root.addEventListener("mousedown", onOutsideDown, true);
-            root.addEventListener("touchstart", onOutsideDown, true);
+            root.addEventListener("touchstart", onOutsideDown, { capture: true, passive: true });
             dialog._remove_outside_close = () => {
                 root.removeEventListener("mousedown", onOutsideDown, true);
                 root.removeEventListener("touchstart", onOutsideDown, true);
@@ -1276,16 +1741,13 @@ export class LGraphCanvasMenuPanel extends LGraphCanvasRender {
     }
 
     checkPanels(): void {
-        if (!this.canvas) {
-            return;
-        }
-        const panels = this.canvas.parentNode?.querySelectorAll(".litegraph.dialog");
-        panels?.forEach((panel: any) => {
+        const panels = this.canvas.parentNode.querySelectorAll(".litegraph.dialog");
+        panels.forEach((panel: any) => {
             if (!panel.node) {
                 return;
             }
             if (!panel.node.graph || panel.graph != this.graph) {
-                panel.close?.();
+                panel.close();
             }
         });
     }
@@ -1495,24 +1957,24 @@ export class LGraphCanvasMenuPanel extends LGraphCanvasRender {
             }
             if (v.content == "Remove Slot") {
                 const info = v.slot;
-                node.graph.beforeChange?.();
+                node.graph.beforeChange();
                 if (info.input) {
-                    node.removeInput?.(info.slot);
+                    node.removeInput(info.slot);
                 } else if (info.output) {
-                    node.removeOutput?.(info.slot);
+                    node.removeOutput(info.slot);
                 }
-                node.graph.afterChange?.();
+                node.graph.afterChange();
                 return;
             }
             if (v.content == "Disconnect Links") {
                 const info = v.slot;
-                node.graph.beforeChange?.();
+                node.graph.beforeChange();
                 if (info.output) {
-                    node.disconnectOutput?.(info.slot);
+                    node.disconnectOutput(info.slot);
                 } else if (info.input) {
-                    node.disconnectInput?.(info.slot);
+                    node.disconnectInput(info.slot);
                 }
-                node.graph.afterChange?.();
+                node.graph.afterChange();
                 return;
             }
             if (v.content == "Rename Slot") {
@@ -1529,7 +1991,7 @@ export class LGraphCanvasMenuPanel extends LGraphCanvasRender {
                     input.value = slot_info.label || "";
                 }
                 const inner = (): void => {
-                    node.graph.beforeChange?.();
+                    node.graph.beforeChange();
                     if (input?.value) {
                         if (slot_info) {
                             slot_info.label = input.value;
@@ -1537,7 +1999,7 @@ export class LGraphCanvasMenuPanel extends LGraphCanvasRender {
                         that.setDirty(true, false);
                     }
                     dialog.close();
-                    node.graph.afterChange?.();
+                    node.graph.afterChange();
                 };
                 dialog.querySelector("button")?.addEventListener("click", inner);
                 input?.addEventListener("keydown", (e: KeyboardEvent) => {
