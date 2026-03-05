@@ -102,7 +102,12 @@ interface Host {
     INPUT: number;
     OUTPUT: number;
     EVENT: number | string;
+    ACTION: number | string;
+    ALWAYS: number;
+    ON_EVENT: number;
+    NEVER: number;
     ON_TRIGGER: number;
+    ON_REQUEST?: number;
     do_add_triggers_slots: boolean;
     allow_multi_output_for_events: boolean;
     use_uuids: boolean;
@@ -119,6 +124,10 @@ const hostDefaults: Host = {
     INPUT: 1,
     OUTPUT: 2,
     EVENT: -1,
+    ACTION: -1,
+    ALWAYS: 0,
+    ON_EVENT: 1,
+    NEVER: 2,
     ON_TRIGGER: 3,
     do_add_triggers_slots: false,
     allow_multi_output_for_events: true,
@@ -381,6 +390,62 @@ export class LGraphNodeConnectGeometry extends LGraphNodePortsWidgets {
             }
         }
         return -1;
+    }
+
+    addOnTriggerInput(): number {
+        const h = this.host();
+        const triggerSlot = this.findInputSlot("onTrigger") as number;
+        if (triggerSlot === -1) {
+            this.addInput("onTrigger", h.EVENT as string | -1, {
+                optional: true,
+                nameLocked: true,
+            });
+            return this.findInputSlot("onTrigger") as number;
+        }
+        return triggerSlot;
+    }
+
+    addOnExecutedOutput(): number {
+        const h = this.host();
+        const triggerSlot = this.findOutputSlot("onExecuted") as number;
+        if (triggerSlot === -1) {
+            this.addOutput("onExecuted", h.ACTION as string | -1, {
+                optional: true,
+                nameLocked: true,
+            });
+            return this.findOutputSlot("onExecuted") as number;
+        }
+        return triggerSlot;
+    }
+
+    onAfterExecuteNode(param?: unknown, options?: unknown): void {
+        const triggerSlot = this.findOutputSlot("onExecuted") as number;
+        if (triggerSlot !== -1) {
+            this.triggerSlot(triggerSlot, param, null, options as Record<string, unknown>);
+        }
+    }
+
+    changeMode(modeTo: number): boolean {
+        const h = this.host();
+        switch (modeTo) {
+            case h.ON_EVENT:
+                break;
+            case h.ON_TRIGGER:
+                this.addOnTriggerInput();
+                this.addOnExecutedOutput();
+                break;
+            case h.NEVER:
+                break;
+            case h.ALWAYS:
+                break;
+            default:
+                if (h.ON_REQUEST == null || modeTo !== h.ON_REQUEST) {
+                    return false;
+                }
+                break;
+        }
+        this.mode = modeTo;
+        return true;
     }
 
     connectByType(

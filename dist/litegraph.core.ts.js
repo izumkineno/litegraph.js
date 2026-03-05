@@ -646,6 +646,9 @@ var LiteGraphTSMigration = (function(exports) {
         }
         const kV = Object.values(host.NODE_MODES).indexOf(String(v2));
         const fApplyMultiNode = (target) => {
+          if (typeof target.changeMode !== "function") {
+            return;
+          }
           if (kV >= 0 && Object.values(host.NODE_MODES)[kV]) {
             target.changeMode(kV);
           } else {
@@ -11049,6 +11052,10 @@ var LiteGraphTSMigration = (function(exports) {
     INPUT: 1,
     OUTPUT: 2,
     EVENT: -1,
+    ACTION: -1,
+    ALWAYS: 0,
+    ON_EVENT: 1,
+    NEVER: 2,
     ON_TRIGGER: 3,
     do_add_triggers_slots: false,
     allow_multi_output_for_events: true,
@@ -11268,6 +11275,58 @@ var LiteGraphTSMigration = (function(exports) {
         }
       }
       return -1;
+    }
+    addOnTriggerInput() {
+      const h = this.host();
+      const triggerSlot = this.findInputSlot("onTrigger");
+      if (triggerSlot === -1) {
+        this.addInput("onTrigger", h.EVENT, {
+          optional: true,
+          nameLocked: true
+        });
+        return this.findInputSlot("onTrigger");
+      }
+      return triggerSlot;
+    }
+    addOnExecutedOutput() {
+      const h = this.host();
+      const triggerSlot = this.findOutputSlot("onExecuted");
+      if (triggerSlot === -1) {
+        this.addOutput("onExecuted", h.ACTION, {
+          optional: true,
+          nameLocked: true
+        });
+        return this.findOutputSlot("onExecuted");
+      }
+      return triggerSlot;
+    }
+    onAfterExecuteNode(param, options) {
+      const triggerSlot = this.findOutputSlot("onExecuted");
+      if (triggerSlot !== -1) {
+        this.triggerSlot(triggerSlot, param, null, options);
+      }
+    }
+    changeMode(modeTo) {
+      const h = this.host();
+      switch (modeTo) {
+        case h.ON_EVENT:
+          break;
+        case h.ON_TRIGGER:
+          this.addOnTriggerInput();
+          this.addOnExecutedOutput();
+          break;
+        case h.NEVER:
+          break;
+        case h.ALWAYS:
+          break;
+        default:
+          if (h.ON_REQUEST == null || modeTo !== h.ON_REQUEST) {
+            return false;
+          }
+          break;
+      }
+      this.mode = modeTo;
+      return true;
     }
     connectByType(slot, target_node, target_slotType, optsIn) {
       const h = this.host();

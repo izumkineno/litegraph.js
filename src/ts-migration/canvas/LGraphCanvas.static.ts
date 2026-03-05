@@ -1003,10 +1003,13 @@ export class LGraphCanvas {
             }
             const kV = Object.values(host.NODE_MODES).indexOf(String(v));
             const fApplyMultiNode = (target: LGraphNodeLike): void => {
+                if (typeof target.changeMode !== "function") {
+                    return;
+                }
                 if (kV >= 0 && Object.values(host.NODE_MODES)[kV]) {
-                    target.changeMode!(kV);
+                    target.changeMode(kV);
                 } else {
-                    target.changeMode!(host.ALWAYS);
+                    target.changeMode(host.ALWAYS);
                 }
             };
             const graphcanvas = LGraphCanvas.active_canvas as LGraphCanvasRuntimeLike;
