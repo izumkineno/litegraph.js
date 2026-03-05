@@ -456,18 +456,22 @@ export class LGraphCanvasMenuPanel extends LGraphCanvasRender {
         }
         if (inputEl) {
             inputEl.value = value;
-            inputEl.addEventListener("keydown", (e: KeyboardEvent) => {
+            inputEl.addEventListener("keydown", (e: Event) => {
+                const keyEvent = e as KeyboardEvent;
                 dialog.is_modified = true;
-                if (e.key === "Escape") {
+                if (keyEvent.key === "Escape") {
                     dialog.close();
-                } else if (e.key === "Enter" && (e.target as HTMLElement).localName != "textarea") {
+                } else if (
+                    keyEvent.key === "Enter" &&
+                    (keyEvent.target as HTMLElement).localName != "textarea"
+                ) {
                     callback?.(inputEl.value);
                     dialog.close();
                 } else {
                     return;
                 }
-                e.preventDefault();
-                e.stopPropagation();
+                keyEvent.preventDefault();
+                keyEvent.stopPropagation();
             });
         }
         dialog.querySelector("button")?.addEventListener("click", () => {
@@ -560,7 +564,7 @@ export class LGraphCanvasMenuPanel extends LGraphCanvasRender {
             }
 
             setTimeout(() => {
-                that.canvas.focus();
+                that.canvas?.focus();
             }, 20);
             if (dialog.parentNode) {
                 dialog.parentNode.removeChild(dialog);
@@ -1144,7 +1148,11 @@ export class LGraphCanvasMenuPanel extends LGraphCanvasRender {
             dialog.parentNode?.removeChild(dialog);
         };
 
-        const rect = this.canvas.getBoundingClientRect();
+        const canvas = this.canvas;
+        if (!canvas) {
+            return dialog;
+        }
+        const rect = canvas.getBoundingClientRect();
         let x = -20;
         let y = -20;
         if (rect) {
@@ -1158,12 +1166,12 @@ export class LGraphCanvasMenuPanel extends LGraphCanvasRender {
             x += opts.event.clientX;
             y += opts.event.clientY;
         } else {
-            x += this.canvas.width * 0.5;
-            y += this.canvas.height * 0.5;
+            x += canvas.width * 0.5;
+            y += canvas.height * 0.5;
         }
         dialog.style.left = x + "px";
         dialog.style.top = y + "px";
-        this.canvas.parentNode?.appendChild(dialog);
+        canvas.parentNode?.appendChild(dialog);
 
         if (opts.checkForInput) {
             const aI = dialog.querySelectorAll("input");
@@ -1223,7 +1231,7 @@ export class LGraphCanvasMenuPanel extends LGraphCanvasRender {
         }
 
         if (opts.closeOnClickOutside) {
-            const root = this.canvas.ownerDocument || document;
+            const root = canvas.ownerDocument || document;
             const onOutsideDown = (e: Event): void => {
                 if (!dialog.parentNode) {
                     return;
@@ -1625,11 +1633,11 @@ export class LGraphCanvasMenuPanel extends LGraphCanvasRender {
         };
 
         refresh();
-        this.canvas.parentNode?.appendChild(panel);
+        this.canvas?.parentNode?.appendChild(panel);
     }
 
     showSubgraphPropertiesDialog(node: any): PanelLike {
-        const old_panel = this.canvas.parentNode?.querySelector(".subgraph_dialog") as any;
+        const old_panel = this.canvas?.parentNode?.querySelector(".subgraph_dialog") as any;
         old_panel?.close?.();
         const panel = this.createPanel("Subgraph Inputs", { closable: true, width: 500 });
         panel.node = node;
@@ -1676,12 +1684,12 @@ export class LGraphCanvasMenuPanel extends LGraphCanvasRender {
         });
 
         refresh();
-        this.canvas.parentNode?.appendChild(panel);
+        this.canvas?.parentNode?.appendChild(panel);
         return panel;
     }
 
     showSubgraphPropertiesDialogRight(node: any): PanelLike {
-        const old_panel = this.canvas.parentNode?.querySelector(".subgraph_dialog") as any;
+        const old_panel = this.canvas?.parentNode?.querySelector(".subgraph_dialog") as any;
         old_panel?.close?.();
         const panel = this.createPanel("Subgraph Outputs", { closable: true, width: 500 });
         panel.node = node;
@@ -1726,22 +1734,31 @@ export class LGraphCanvasMenuPanel extends LGraphCanvasRender {
             (p.querySelector(".type") as HTMLInputElement).value = "";
             refresh();
         };
-        addRow.querySelector(".name")?.addEventListener("keydown", function(e: KeyboardEvent) {
-            if (e.key === "Enter") {
+        addRow
+            .querySelector(".name")
+            ?.addEventListener("keydown", function(this: HTMLElement, e: Event) {
+            const keyEvent = e as KeyboardEvent;
+            if (keyEvent.key === "Enter") {
                 addOutput.apply(this as unknown as HTMLElement);
             }
         });
-        addRow.querySelector("button")?.addEventListener("click", function() {
+        addRow
+            .querySelector("button")
+            ?.addEventListener("click", function(this: HTMLElement) {
             addOutput.apply(this as unknown as HTMLElement);
         });
 
         refresh();
-        this.canvas.parentNode?.appendChild(panel);
+        this.canvas?.parentNode?.appendChild(panel);
         return panel;
     }
 
     checkPanels(): void {
-        const panels = this.canvas.parentNode.querySelectorAll(".litegraph.dialog");
+        const parent = this.canvas?.parentNode;
+        if (!parent) {
+            return;
+        }
+        const panels = parent.querySelectorAll(".litegraph.dialog");
         panels.forEach((panel: any) => {
             if (!panel.node) {
                 return;

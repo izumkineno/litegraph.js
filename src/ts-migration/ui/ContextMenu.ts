@@ -11,9 +11,13 @@ type ContextMenuCallback = (
     node: any
 ) => boolean | void;
 
-interface ContextMenuOptions extends IContextMenuOptions {
+interface ContextMenuOptions
+    extends Omit<
+        IContextMenuOptions,
+        "callback" | "ignore_item_callbacks" | "event" | "parentMenu" | "extra"
+    > {
     callback?: ContextMenuCallback;
-    ignore_item_callbacks?: boolean;
+    ignore_item_callbacks?: boolean | Boolean;
     event?: MouseEvent | CustomEvent | PointerEvent | null;
     parentMenu?: ContextMenu;
     autoopen?: boolean;
@@ -178,21 +182,23 @@ export class ContextMenu {
         ContextMenu.host().pointerListenerAdd(
             root,
             "down",
-            (e: MouseEvent) => {
-                if (e.button == 2) {
+            (e: Event) => {
+                const mouseEvent = e as MouseEvent;
+                if (mouseEvent.button == 2) {
                     this.close();
-                    e.preventDefault();
+                    mouseEvent.preventDefault();
                     return true;
                 }
             },
             true
         );
 
-        const wheelHandler = (e: WheelEvent): boolean => {
+        const wheelHandler = (e: Event): boolean => {
+            const wheelEvent = e as WheelEvent;
             const currentTop = parseInt(root.style.top, 10);
             const speed = this.options.scroll_speed || 0.1;
-            root.style.top = (currentTop + e.deltaY * speed).toFixed() + "px";
-            e.preventDefault();
+            root.style.top = (currentTop + wheelEvent.deltaY * speed).toFixed() + "px";
+            wheelEvent.preventDefault();
             return true;
         };
         if (!this.options.scroll_speed) {
@@ -202,16 +208,13 @@ export class ContextMenu {
             capture: true,
             passive: false,
         };
-        root.addEventListener(
-            "wheel",
-            wheelHandler as EventListener,
-            wheelEventOptions
-        );
+        root.addEventListener("wheel", wheelHandler, wheelEventOptions);
         // `mousewheel` is deprecated; keep it only as a legacy fallback.
-        if (!("onwheel" in root)) {
+        const supportsWheel = "onwheel" in document.createElement("div");
+        if (!supportsWheel) {
             root.addEventListener(
                 "mousewheel",
-                wheelHandler as EventListener,
+                wheelHandler,
                 wheelEventOptions
             );
         }
@@ -306,7 +309,7 @@ export class ContextMenu {
     }
 
     addItem(name: string, value: MenuValueLike, options?: ContextMenuOptions): MenuElement {
-        options = options || {};
+        const resolvedOptions: ContextMenuOptions = options || {};
         const element = document.createElement("div") as MenuElement;
         element.className = "litemenu-entry submenu";
         let disabled = false;
@@ -340,7 +343,7 @@ export class ContextMenu {
         if (!disabled) {
             element.addEventListener("click", inner_onclick);
         }
-        if (!disabled && options.autoopen) {
+        if (!disabled && resolvedOptions.autoopen) {
             ContextMenu.host().pointerListenerAdd(element, "enter", inner_over);
         }
 
@@ -361,14 +364,14 @@ export class ContextMenu {
                 that.current_submenu.close(e);
             }
 
-            if (options.callback) {
-                const result = options.callback.call(
+            if (resolvedOptions.callback) {
+                const result = resolvedOptions.callback.call(
                     this,
                     entryValue,
-                    options,
+                    resolvedOptions,
                     e,
                     that,
-                    options.node
+                    resolvedOptions.node
                 );
                 if (result === true) {
                     close_parent = false;
@@ -378,16 +381,16 @@ export class ContextMenu {
             if (entryValue) {
                 if (
                     entryValue.callback &&
-                    !options.ignore_item_callbacks &&
+                    !resolvedOptions.ignore_item_callbacks &&
                     entryValue.disabled !== true
                 ) {
                     const result = entryValue.callback.call(
                         this,
                         entryValue,
-                        options,
+                        resolvedOptions,
                         e,
                         that,
-                        options.extra
+                        resolvedOptions.extra
                     );
                     if (result === true) {
                         close_parent = false;
@@ -407,7 +410,7 @@ export class ContextMenu {
                                 entryValue.submenu.ignore_item_callbacks,
                             title: entryValue.submenu.title,
                             extra: entryValue.submenu.extra,
-                            autoopen: options.autoopen,
+                            autoopen: resolvedOptions.autoopen,
                         }
                     );
                     close_parent = false;

@@ -18,6 +18,7 @@ function isInsideRectangle(
 type SlotId = number | string;
 type InSlot = INodeInputSlot & { link: number | null; pos?: Vector2 };
 type OutSlot = INodeOutputSlot & { links: number[] | null; pos?: Vector2; _data?: unknown };
+type SlotExtra = Partial<INodeInputSlot> | Partial<INodeOutputSlot>;
 type LinkLike = {
     id: number | string;
     type?: string | number;
@@ -171,6 +172,11 @@ export class LGraphNodeConnectGeometry extends LGraphNodePortsWidgets {
             return null;
         }
         return typeof node === "number" ? this.graphRef()?.getNodeById(node) || null : node;
+    }
+
+    private markSlotOptional<TExtra extends SlotExtra>(extra: TExtra): TExtra {
+        (extra as unknown as Record<string, unknown>).optional = true;
+        return extra;
     }
 
     /** returns the bounding of the object, used for rendering purposes */
@@ -396,10 +402,10 @@ export class LGraphNodeConnectGeometry extends LGraphNodePortsWidgets {
         const h = this.host();
         const triggerSlot = this.findInputSlot("onTrigger") as number;
         if (triggerSlot === -1) {
-            this.addInput("onTrigger", h.EVENT as string | -1, {
-                optional: true,
+            const extra = this.markSlotOptional<Partial<INodeInputSlot>>({
                 nameLocked: true,
             });
+            this.addInput("onTrigger", h.EVENT as string | -1, extra);
             return this.findInputSlot("onTrigger") as number;
         }
         return triggerSlot;
@@ -409,21 +415,24 @@ export class LGraphNodeConnectGeometry extends LGraphNodePortsWidgets {
         const h = this.host();
         const triggerSlot = this.findOutputSlot("onExecuted") as number;
         if (triggerSlot === -1) {
-            this.addOutput("onExecuted", h.ACTION as string | -1, {
-                optional: true,
+            const extra = this.markSlotOptional<Partial<INodeOutputSlot>>({
                 nameLocked: true,
             });
+            this.addOutput("onExecuted", h.ACTION as string | -1, extra);
             return this.findOutputSlot("onExecuted") as number;
         }
         return triggerSlot;
     }
 
-    onAfterExecuteNode(param?: unknown, options?: unknown): void {
+    onAfterExecuteNode: NonNullable<LGraphNodePortsWidgets["onAfterExecuteNode"]> = (
+        param?: unknown,
+        options?: unknown
+    ): void => {
         const triggerSlot = this.findOutputSlot("onExecuted") as number;
         if (triggerSlot !== -1) {
             this.triggerSlot(triggerSlot, param, null, options as Record<string, unknown>);
         }
-    }
+    };
 
     changeMode(modeTo: number): boolean {
         const h = this.host();
@@ -459,7 +468,13 @@ export class LGraphNodeConnectGeometry extends LGraphNodePortsWidgets {
             { createEventInCase: true, firstFreeIfOutputGeneralInCase: true, generalTypeInCase: true },
             optsIn || {}
         );
-        const target = this.toNode(target_node) as NodeLike;
+        const target = this.toNode(target_node);
+        if (!target) {
+            return null;
+        }
+        if (typeof target.findInputSlotByType !== "function") {
+            return null;
+        }
         const typed = target.findInputSlotByType(target_slotType, false, true);
         if (typeof typed === "number" && typed >= 0) {
             return this.connect(slot, target, typed);
@@ -473,7 +488,11 @@ export class LGraphNodeConnectGeometry extends LGraphNodePortsWidgets {
                 return this.connect(slot, target, generic);
             }
         }
-        if (opts.firstFreeIfOutputGeneralInCase && (target_slotType == 0 || target_slotType == "*" || target_slotType == "")) {
+        if (
+            opts.firstFreeIfOutputGeneralInCase &&
+            (target_slotType == 0 || target_slotType == "*" || target_slotType == "") &&
+            typeof target.findInputSlotFree === "function"
+        ) {
             const free = target.findInputSlotFree({ typesNotAccepted: [h.EVENT] });
             if (typeof free === "number" && free >= 0) {
                 return this.connect(slot, target, free);
@@ -494,7 +513,16 @@ export class LGraphNodeConnectGeometry extends LGraphNodePortsWidgets {
             { createEventInCase: true, firstFreeIfInputGeneralInCase: true, generalTypeInCase: true },
             optsIn || {}
         );
-        const source = this.toNode(source_node) as NodeLike;
+        const source = this.toNode(source_node);
+        if (!source) {
+            return null;
+        }
+        if (
+            typeof source.findOutputSlotByType !== "function" ||
+            typeof source.connect !== "function"
+        ) {
+            return null;
+        }
         const typed = source.findOutputSlotByType(source_slotType, false, true);
         if (typeof typed === "number" && typed >= 0) {
             return source.connect(typed, this as unknown as NodeLike, slot);
@@ -508,7 +536,11 @@ export class LGraphNodeConnectGeometry extends LGraphNodePortsWidgets {
         if (opts.createEventInCase && source_slotType == h.EVENT && h.do_add_triggers_slots && source.addOnExecutedOutput) {
             return source.connect(source.addOnExecutedOutput(), this as unknown as NodeLike, slot);
         }
-        if (opts.firstFreeIfInputGeneralInCase && (source_slotType == 0 || source_slotType == "*" || source_slotType == "")) {
+        if (
+            opts.firstFreeIfInputGeneralInCase &&
+            (source_slotType == 0 || source_slotType == "*" || source_slotType == "") &&
+            typeof source.findOutputSlotFree === "function"
+        ) {
             const free = source.findOutputSlotFree({ typesNotAccepted: [h.EVENT] });
             if (typeof free === "number" && free >= 0) {
                 return source.connect(free, this as unknown as NodeLike, slot);
@@ -545,6 +577,9 @@ export class LGraphNodeConnectGeometry extends LGraphNodePortsWidgets {
 
         let targetSlot: SlotId | false | null = target_slot || 0;
         if (typeof targetSlot === "string") {
+            if (typeof target.findInputSlot !== "function") {
+                return null;
+            }
             targetSlot = target.findInputSlot(targetSlot) as number;
             if (targetSlot === -1) {
                 if (h.debug) {
@@ -554,6 +589,12 @@ export class LGraphNodeConnectGeometry extends LGraphNodePortsWidgets {
             }
         } else if (targetSlot === h.EVENT) {
             if (!h.do_add_triggers_slots) {
+                return null;
+            }
+            if (
+                typeof target.changeMode !== "function" ||
+                typeof target.findInputSlot !== "function"
+            ) {
                 return null;
             }
             target.changeMode(h.ON_TRIGGER);
@@ -594,7 +635,9 @@ export class LGraphNodeConnectGeometry extends LGraphNodePortsWidgets {
 
         if (target.inputs && target.inputs[targetSlot as number] && target.inputs[targetSlot as number].link != null) {
             graph.beforeChange?.();
-            target.disconnectInput(targetSlot as number, { doProcessChange: false });
+            if (typeof target.disconnectInput === "function") {
+                target.disconnectInput(targetSlot as number, { doProcessChange: false });
+            }
             changed = true;
         }
         if (output.links && output.links.length && output.type === h.EVENT && !h.allow_multi_output_for_events) {

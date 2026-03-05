@@ -191,24 +191,28 @@ export class LGraphPersistence extends LGraphIOEvents {
      * @param {Boolean} returns if there was any error parsing
      */
     configure(
-        data: SerializedGraphPersistenceLike | null | undefined,
+        data: object,
         keep_old?: boolean
     ): boolean | undefined {
         if (!data) {
             return undefined;
         }
+        const graphData = data as SerializedGraphPersistenceLike;
 
         if (!keep_old) {
             this.clear();
         }
 
-        const nodes = data.nodes;
+        const nodes = graphData.nodes;
 
         // decode links info (they are very verbose)
-        if (data.links && (data.links as { constructor?: unknown }).constructor === Array) {
+        if (
+            graphData.links &&
+            (graphData.links as { constructor?: unknown }).constructor === Array
+        ) {
             const links: LLink[] = [];
-            for (let i = 0; i < (data.links as unknown[]).length; ++i) {
-                const linkData = (data.links as unknown[])[i];
+            for (let i = 0; i < (graphData.links as unknown[]).length; ++i) {
+                const linkData = (graphData.links as unknown[])[i];
                 if (!linkData) {
                     // weird bug
                     console.warn("serialized graph link data contains errors, skipping.");
@@ -218,16 +222,16 @@ export class LGraphPersistence extends LGraphIOEvents {
                 link.configure(linkData as unknown as Parameters<LLink["configure"]>[0]);
                 links[link.id] = link;
             }
-            data.links = links as unknown as Record<number, unknown>;
+            graphData.links = links as unknown as Record<number, unknown>;
         }
 
         // copy all stored fields
-        for (const i in data) {
+        for (const i in graphData) {
             if (i == "nodes" || i == "groups") {
                 // links must be accepted
                 continue;
             }
-            (this as unknown as Record<string, unknown>)[i] = data[i];
+            (this as unknown as Record<string, unknown>)[i] = graphData[i];
         }
 
         let error = false;
@@ -278,22 +282,22 @@ export class LGraphPersistence extends LGraphIOEvents {
 
         // groups
         this._groups.length = 0;
-        if (data.groups) {
+        if (graphData.groups) {
             const host = this.getPersistenceHost();
             const LGraphGroupCtor = host.LGraphGroup as new () => GraphGroupPersistenceLike;
-            for (let i = 0; i < data.groups.length; ++i) {
+            for (let i = 0; i < graphData.groups.length; ++i) {
                 const group = new LGraphGroupCtor();
-                group.configure(data.groups[i]);
+                group.configure(graphData.groups[i]);
                 this.add(group as unknown as Parameters<LGraphPersistence["add"]>[0]);
             }
         }
 
         this.updateExecutionOrder();
 
-        this.extra = data.extra || {};
+        this.extra = graphData.extra || {};
 
         if (this.onConfigure) {
-            this.onConfigure(data);
+            this.onConfigure(graphData);
         }
 
         this._version++;

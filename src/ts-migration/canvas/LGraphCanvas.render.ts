@@ -90,7 +90,7 @@ export class LGraphCanvasRender extends LGraphCanvasInput {
         this.last_draw_time = now;
 
         if (this.graph) {
-            this.ds.computeVisibleArea(this.viewport);
+            this.ds.computeVisibleArea(this.viewport ?? undefined);
         }
 
         if (
@@ -309,7 +309,7 @@ export class LGraphCanvasRender extends LGraphCanvasInput {
         }
 
         if (!this.bgctx) {
-            this.bgctx = this.bgcanvas.getContext("2d");
+            this.bgctx = canvas.getContext("2d");
         }
         const ctx = this.bgctx as (CanvasRenderingContext2D & Record<string, any>) | null;
         if (!ctx) {
@@ -1785,7 +1785,7 @@ export class LGraphCanvasRender extends LGraphCanvasInput {
                         if (values && values.constructor === Function) {
                             values = w.options.values(w, node);
                         }
-                        let values_list = null;
+                        let values_list: unknown[] | null = null;
 
                         if (w.type != "number") {
                             values_list = values.constructor === Array ? values : Object.keys(values);
@@ -1800,7 +1800,7 @@ export class LGraphCanvasRender extends LGraphCanvasInput {
                             if (w.options.max != null && w.value > w.options.max) {
                                 w.value = w.options.max;
                             }
-                        } else if (delta) {
+                        } else if (delta && values_list) {
                             let index = -1;
                             this.last_mouseclick = 0;
                             if (values.constructor === Object) {
@@ -1820,8 +1820,8 @@ export class LGraphCanvasRender extends LGraphCanvasInput {
                                 w.value = index;
                             }
                         } else {
-                            const text_values = values != values_list ? Object.values(values) : values;
-                            const inner_clicked = function(v: any) {
+                            const text_values: unknown[] = values != values_list ? Object.values(values) : values;
+                            const inner_clicked = function(this: { value: unknown }, v: unknown) {
                                 if (values != values_list) {
                                     v = text_values.indexOf(v);
                                 }
@@ -1841,7 +1841,7 @@ export class LGraphCanvasRender extends LGraphCanvasInput {
                     } else if (event.type == LiteGraph.pointerevents_method + "up" && w.type == "number") {
                         const delta = x < 40 ? -1 : x > widget_width - 40 ? 1 : 0;
                         if (event.click_time < 200 && delta == 0) {
-                            this.prompt("Value", w.value, function(v: string) {
+                            this.prompt("Value", w.value, function(this: { value: number }, v: string) {
                                     if (/^[0-9+\-*/()\s]+|\d+\.\d+$/.test(v)) {
                                         try {
                                             v = eval(v);
@@ -1856,7 +1856,7 @@ export class LGraphCanvasRender extends LGraphCanvasInput {
 
                     if (old_value != w.value) {
                         setTimeout(
-                            function() {
+                            function(this: { value: unknown }) {
                                 inner_value_change(this, this.value);
                             }.bind(w),
                             20
@@ -1878,7 +1878,7 @@ export class LGraphCanvasRender extends LGraphCanvasInput {
                         this.prompt(
                             "Value",
                             w.value,
-                            function(v: any) {
+                            function(this: { value: unknown }, v: unknown) {
                                 inner_value_change(this, v);
                             }.bind(w),
                             event,
@@ -2101,7 +2101,11 @@ export class LGraphCanvasRender extends LGraphCanvasInput {
     drawSubgraphPanelRight(subgraph: any, subnode: any, ctx: CanvasRenderingContext2D): void {
         const LiteGraph = this.constants();
         const num = subnode.outputs ? subnode.outputs.length : 0;
-        const canvas_w = this.bgcanvas.width;
+        const bgcanvas = this.bgcanvas;
+        if (!bgcanvas) {
+            return;
+        }
+        const canvas_w = bgcanvas.width;
         const w = 200;
         const h = Math.floor(LiteGraph.NODE_SLOT_HEIGHT * 1.6);
 
@@ -2185,20 +2189,22 @@ export class LGraphCanvasRender extends LGraphCanvasInput {
         if (!ctx || !this.canvas) {
             return false;
         }
-        bgcolor = bgcolor || LiteGraph.NODE_DEFAULT_COLOR;
-        hovercolor = hovercolor || "#555";
-        textcolor = textcolor || LiteGraph.NODE_TEXT_COLOR;
-        let pos = this.ds.convertOffsetToCanvas(this.graph_mouse);
-        const hover = LiteGraph.isInsideRectangle(pos[0], pos[1], x, y, w, h);
-        pos = this.last_click_position ? [this.last_click_position[0], this.last_click_position[1]] : null;
-        if (pos) {
+        const resolvedBgColor = bgcolor ?? LiteGraph.NODE_DEFAULT_COLOR ?? "#333";
+        const resolvedHoverColor = hovercolor ?? "#555";
+        const resolvedTextColor = textcolor ?? LiteGraph.NODE_TEXT_COLOR ?? "#AAA";
+        const hoverPos = this.ds.convertOffsetToCanvas(this.graph_mouse);
+        const hover = LiteGraph.isInsideRectangle(hoverPos[0], hoverPos[1], x, y, w, h);
+        let clickPos: Vector2 | undefined = this.last_click_position
+            ? [this.last_click_position[0], this.last_click_position[1]]
+            : undefined;
+        if (clickPos) {
             const rect = this.canvas.getBoundingClientRect();
-            pos[0] -= rect.left;
-            pos[1] -= rect.top;
+            clickPos[0] -= rect.left;
+            clickPos[1] -= rect.top;
         }
-        const clicked = pos && LiteGraph.isInsideRectangle(pos[0], pos[1], x, y, w, h);
+        const clicked = !!(clickPos && LiteGraph.isInsideRectangle(clickPos[0], clickPos[1], x, y, w, h));
 
-        ctx.fillStyle = hover ? hovercolor : bgcolor;
+        ctx.fillStyle = hover ? resolvedHoverColor : resolvedBgColor;
         if (clicked) {
             ctx.fillStyle = "#AAA";
         }
@@ -2207,7 +2213,7 @@ export class LGraphCanvasRender extends LGraphCanvasInput {
         ctx.fill();
         if (text != null) {
             if ((text as any).constructor == String) {
-                ctx.fillStyle = textcolor;
+                ctx.fillStyle = resolvedTextColor;
                 ctx.textAlign = "center";
                 ctx.font = ((h * 0.65) | 0) + "px Arial";
                 ctx.fillText(text, x + w * 0.5, y + h * 0.75);

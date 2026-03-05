@@ -77,8 +77,8 @@ export class LGraphCanvasInput extends LGraphCanvasLifecycle {
     _highlight_output: Vector2 | null = null;
     _highlight_input_slot: any = null;
 
-    node_panel?: { close: () => void };
-    options_panel?: { close: () => void };
+    node_panel?: { close: () => void } | null;
+    options_panel?: { close: () => void } | null;
     onMouseDown?: (event: CanvasMouseEventLike) => void;
     onDropItem?: (event: Event) => unknown;
     onNodeSelected?: (node: any) => void;
@@ -154,7 +154,7 @@ export class LGraphCanvasInput extends LGraphCanvasLifecycle {
         const x = e.clientX;
         const y = e.clientY;
 
-        this.ds.viewport = this.viewport;
+        this.ds.viewport = this.viewport || undefined;
         const is_inside =
             !this.viewport ||
             (this.viewport &&
@@ -165,9 +165,32 @@ export class LGraphCanvasInput extends LGraphCanvasLifecycle {
 
         // move mouse move event to the window in case it drags outside of the canvas
         if (!this.options.skip_events) {
-            LiteGraph.pointerListenerRemove(this.canvas, "move", this._mousemove_callback, false);
-            LiteGraph.pointerListenerAdd(ref_window.document, "move", this._mousemove_callback, true);
-            LiteGraph.pointerListenerAdd(ref_window.document, "up", this._mouseup_callback, true);
+            const moveCallback = this._mousemove_callback;
+            const upCallback = this._mouseup_callback;
+            if (this.canvas && moveCallback) {
+                LiteGraph.pointerListenerRemove(
+                    this.canvas,
+                    "move",
+                    moveCallback,
+                    false
+                );
+            }
+            if (moveCallback) {
+                LiteGraph.pointerListenerAdd(
+                    ref_window.document,
+                    "move",
+                    moveCallback,
+                    true
+                );
+            }
+            if (upCallback) {
+                LiteGraph.pointerListenerAdd(
+                    ref_window.document,
+                    "up",
+                    upCallback,
+                    true
+                );
+            }
         }
 
         if (!is_inside) {
@@ -830,9 +853,31 @@ export class LGraphCanvasInput extends LGraphCanvasLifecycle {
 
         // restore the mousemove event back to the canvas
         if (!this.options.skip_events) {
-            LiteGraph.pointerListenerRemove(document, "move", this._mousemove_callback, true);
-            LiteGraph.pointerListenerAdd(this.canvas, "move", this._mousemove_callback);
-            LiteGraph.pointerListenerRemove(document, "up", this._mouseup_callback, true);
+            const moveCallback = this._mousemove_callback;
+            const upCallback = this._mouseup_callback;
+            if (moveCallback) {
+                LiteGraph.pointerListenerRemove(
+                    document,
+                    "move",
+                    moveCallback,
+                    true
+                );
+                if (this.canvas) {
+                    LiteGraph.pointerListenerAdd(
+                        this.canvas,
+                        "move",
+                        moveCallback
+                    );
+                }
+            }
+            if (upCallback) {
+                LiteGraph.pointerListenerRemove(
+                    document,
+                    "up",
+                    upCallback,
+                    true
+                );
+            }
         }
 
         this.adjustMouseEvent(e);
@@ -1336,9 +1381,10 @@ export class LGraphCanvasInput extends LGraphCanvasLifecycle {
             const node = LiteGraph.createNode(node_data.type);
             if (node) {
                 node.configure(node_data);
+                const sourceMinPos: Vector2 = posMin || [0, 0];
                 // paste in last known mouse position
-                node.pos[0] += this.graph_mouse[0] - posMin[0];
-                node.pos[1] += this.graph_mouse[1] - posMin[1];
+                node.pos[0] += this.graph_mouse[0] - sourceMinPos[0];
+                node.pos[1] += this.graph_mouse[1] - sourceMinPos[1];
                 this.graph.add(node, { doProcessChange: false });
                 nodes.push(node);
             }
@@ -1510,13 +1556,12 @@ export class LGraphCanvasInput extends LGraphCanvasLifecycle {
             this.deselectAllNodes();
         }
 
-        nodes = nodes || this.graph._nodes;
-        if (typeof nodes == "string") {
-            nodes = [nodes as any];
+        const sourceNodes = (nodes || this.graph?._nodes || []) as any[];
+        if (typeof sourceNodes == "string") {
+            return;
         }
 
-        for (const i in nodes) {
-            const node = nodes[i] as any;
+        for (const node of sourceNodes) {
             if (node.is_selected) {
                 this.deselectNode(node);
                 continue;
@@ -1763,9 +1808,9 @@ export class LGraphCanvasInput extends LGraphCanvasLifecycle {
     computeVisibleNodes(nodes?: any[], out?: any[]): any[] {
         const visible_nodes = out || [];
         visible_nodes.length = 0;
-        nodes = nodes || this.graph._nodes;
-        for (let i = 0, l = nodes.length; i < l; ++i) {
-            const n = nodes[i];
+        const sourceNodes = nodes || this.graph._nodes || [];
+        for (let i = 0, l = sourceNodes.length; i < l; ++i) {
+            const n = sourceNodes[i];
 
             // skip rendering nodes in live mode
             if (this.live_mode && !n.onDrawBackground && !n.onDrawForeground) {

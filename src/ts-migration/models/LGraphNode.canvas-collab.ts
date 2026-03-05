@@ -68,16 +68,14 @@ export class LGraphNodeCanvasCollab extends LGraphNodeConnectGeometry {
 
     /* Console output */
     trace(msg: string): void {
-        if (!this.console) {
-            this.console = [];
-        }
+        const consoleLines = this.console || (this.console = []);
+        const maxConsoleLines =
+            (this.constructor as LGraphNodeCanvasCollabClassMeta).MAX_CONSOLE ??
+            100;
 
-        this.console.push(msg);
-        if (
-            this.console.length >
-            (this.constructor as LGraphNodeCanvasCollabClassMeta).MAX_CONSOLE
-        ) {
-            this.console.shift();
+        consoleLines.push(msg);
+        if (consoleLines.length > maxConsoleLines) {
+            consoleLines.shift();
         }
 
         const graph = this.graph as unknown as LGraphNodeCanvasCollabGraphLike;

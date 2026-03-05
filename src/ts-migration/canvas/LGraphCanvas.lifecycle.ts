@@ -700,7 +700,8 @@ export class LGraphCanvasLifecycle extends LGraphCanvasStatic {
             this._mousewheel_callback as EventListener,
             wheelEventOptions
         );
-        if (!("onwheel" in canvas)) {
+        const wheelCapableCanvas = canvas as CanvasLike & { onwheel?: unknown };
+        if (typeof wheelCapableCanvas.onwheel === "undefined") {
             canvas.addEventListener(
                 "mousewheel",
                 this._mousewheel_callback as EventListener,
@@ -729,7 +730,7 @@ export class LGraphCanvasLifecycle extends LGraphCanvasStatic {
         );
 
         canvas.addEventListener("contextmenu", this._doNothing);
-        if (!("onwheel" in canvas)) {
+        if (typeof wheelCapableCanvas.onwheel === "undefined") {
             canvas.addEventListener(
                 "DOMMouseScroll",
                 this._mousewheel_callback as EventListener,

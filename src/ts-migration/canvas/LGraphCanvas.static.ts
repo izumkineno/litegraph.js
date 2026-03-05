@@ -207,7 +207,8 @@ export class LGraphCanvas {
         if (!canvas) {
             return;
         }
-        const ref_window = canvas.getCanvasWindow();
+        const canvasRef = canvas;
+        const ref_window = canvasRef.getCanvasWindow();
         void ref_window;
 
         const host = LGraphCanvas.callbackHost();
@@ -371,13 +372,17 @@ export class LGraphCanvas {
         callback?: (node: LGraphNodeLike | null) => void
     ): false | void {
         const canvas = LGraphCanvas.active_canvas;
-        const ref_window = (canvas as LGraphCanvasRuntimeLike).getCanvasWindow();
-        const graph = (canvas as LGraphCanvasRuntimeLike).graph;
+        if (!canvas) {
+            return;
+        }
+        const canvasRef = canvas;
+        const ref_window = canvasRef.getCanvasWindow();
+        const graph = canvasRef.graph;
         const host = LGraphCanvas.callbackHost();
 
         function inner_onMenuAdded(base_category: string, menuRef: unknown): void {
             const categories = host
-                .getNodeTypesCategories(canvas.filter || graph.filter)
+                .getNodeTypesCategories(canvasRef.filter || graph.filter)
                 .filter((category) => category.startsWith(base_category));
             const entries: MenuEntryLike[] = [];
 
@@ -415,7 +420,7 @@ export class LGraphCanvas {
 
             const nodes = host.getNodeTypesInCategory(
                 base_category.slice(0, -1),
-                canvas.filter || graph.filter
+                canvasRef.filter || graph.filter
             );
             nodes.map((nodeType) => {
                 if (nodeType.skip_list) {
@@ -429,16 +434,16 @@ export class LGraphCanvas {
                         const selected = value as { value?: string };
                         const first_event =
                             (contextMenu as ContextMenuLike).getFirstEvent!();
-                        canvas!.graph.beforeChange!();
+                        canvasRef.graph.beforeChange!();
                         const newNode = host.createNode(selected.value || "");
                         if (newNode) {
-                            newNode.pos = canvas!.convertEventToCanvasOffset(first_event);
-                            canvas!.graph.add(newNode);
+                            newNode.pos = canvasRef.convertEventToCanvasOffset(first_event);
+                            canvasRef.graph.add(newNode);
                         }
                         if (callback) {
                             callback(newNode);
                         }
-                        canvas!.graph.afterChange!();
+                        canvasRef.graph.afterChange!();
                     },
                 });
             });
@@ -469,7 +474,8 @@ export class LGraphCanvas {
         if (!canvas) {
             return;
         }
-        const ref_window = canvas.getCanvasWindow();
+        const canvasRef = canvas;
+        const ref_window = canvasRef.getCanvasWindow();
         const host = LGraphCanvas.callbackHost();
 
         let optInputs = node.optional_inputs;
@@ -567,7 +573,8 @@ export class LGraphCanvas {
         if (!canvas) {
             return;
         }
-        const ref_window = canvas.getCanvasWindow();
+        const canvasRef = canvas;
+        const ref_window = canvasRef.getCanvasWindow();
         const host = LGraphCanvas.callbackHost();
 
         let optOutputs = node.optional_outputs;
@@ -702,7 +709,8 @@ export class LGraphCanvas {
         if (!canvas) {
             return;
         }
-        const ref_window = canvas.getCanvasWindow();
+        const canvasRef = canvas;
+        const ref_window = canvasRef.getCanvasWindow();
 
         const entries: MenuEntryLike[] = [];
         for (const i in node.properties) {
@@ -751,7 +759,7 @@ export class LGraphCanvas {
             }
             const valueObj = v as MenuEntryLike;
             const rect = this.getBoundingClientRect();
-            canvas.showEditPropertyValue(node, String(valueObj.value || ""), {
+            canvasRef.showEditPropertyValue(node, String(valueObj.value || ""), {
                 position: [rect.left, rect.top],
             });
         }
@@ -928,7 +936,7 @@ export class LGraphCanvas {
     static getPropertyPrintableValue(
         value: unknown,
         values?: Record<string, unknown> | unknown[]
-    ): string | undefined {
+    ): string {
         if (!values) {
             return String(value);
         }
@@ -948,6 +956,8 @@ export class LGraphCanvas {
             }
             return String(value) + " (" + desc_value + ")";
         }
+
+        return String(value);
     }
 
     static onMenuNodeCollapse(
@@ -1188,6 +1198,9 @@ export class LGraphCanvas {
         }
 
         const subgraph_node = LGraphCanvas.callbackHost().createNode("graph/subgraph");
+        if (!subgraph_node) {
+            return;
+        }
         subgraph_node.pos = [node.pos[0], node.pos[1]] as Vector2;
         graph.add(subgraph_node);
         subgraph_node.buildFromNodes!(nodes_list);

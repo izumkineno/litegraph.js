@@ -353,7 +353,7 @@ export class LGraphNode {
 
         if (this.widgets) {
             for (let i = 0; i < this.widgets.length; ++i) {
-                const widget = this.widgets[i];
+                const widget: IWidget | null = this.widgets[i] || null;
                 if (!widget) {
                     continue;
                 }
@@ -487,8 +487,12 @@ export class LGraphNode {
 
         if (data.outputs) {
             for (let i = 0; i < data.outputs.length; ++i) {
-                if (data.outputs[i].links) {
-                    data.outputs[i].links.length = 0;
+                const outputSlot = data.outputs[i];
+                if (!outputSlot) {
+                    continue;
+                }
+                if (outputSlot.links) {
+                    outputSlot.links.length = 0;
                 }
             }
         }

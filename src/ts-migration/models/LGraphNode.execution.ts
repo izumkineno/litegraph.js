@@ -450,7 +450,8 @@ export class LGraphNodeExecution extends LGraphNode {
             return false;
         }
         for (let i = 0; i < this.outputs.length; ++i) {
-            if (this.outputs[i].links && this.outputs[i].links.length) {
+            const links = this.outputs[i]?.links;
+            if (links && links.length) {
                 return true;
             }
         }
@@ -676,9 +677,10 @@ export class LGraphNodeExecution extends LGraphNode {
 
         const host = this.getExecutionHost();
         const graph = this.getExecutionGraph() as LGraphExecutionStateLike | null;
-        if (graph) {
-            graph._last_trigger_time = host.getTime();
+        if (!graph) {
+            return;
         }
+        graph._last_trigger_time = host.getTime();
 
         // for every link attached here
         for (let k = 0; k < links.length; ++k) {
@@ -687,9 +689,7 @@ export class LGraphNodeExecution extends LGraphNode {
                 // to skip links
                 continue;
             }
-            const link_info = (graph as LGraphExecutionStateLike).links[
-                String(links[k])
-            ];
+            const link_info = graph.links[String(links[k])];
             if (!link_info) {
                 // not connected
                 continue;

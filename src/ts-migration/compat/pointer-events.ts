@@ -75,6 +75,18 @@ export interface PointerEventsHost {
     ) => void;
 }
 
+function isTouchEvent(event: Event | TouchNormalizedEvent): event is TouchEvent {
+    if (typeof TouchEvent !== "undefined" && event instanceof TouchEvent) {
+        return true;
+    }
+    const maybeTouch = event as Partial<TouchEvent>;
+    return (
+        !!maybeTouch &&
+        typeof maybeTouch === "object" &&
+        ("changedTouches" in maybeTouch || "touches" in maybeTouch)
+    );
+}
+
 /**
  * helper for interaction: pointer, touch, mouse Listeners
  * used by LGraphCanvas DragAndScale ContextMenu
@@ -281,8 +293,11 @@ export function pointerListenerAdd(
     let wrapped = fCall;
     if (resolved.use_touch_wrapper) {
         const semantic_event = String(sEvIn || "").toLowerCase();
-        wrapped = function(this: unknown, ev: Event): unknown {
-            const normalized = host._normalizeTouchEvent(ev as TouchEvent);
+        wrapped = function(this: unknown, ev: Event | TouchNormalizedEvent): unknown {
+            if (!isTouchEvent(ev)) {
+                return;
+            }
+            const normalized = host._normalizeTouchEvent(ev);
             if (!normalized) {
                 return;
             }

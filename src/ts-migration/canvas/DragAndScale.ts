@@ -118,7 +118,8 @@ export class DragAndScale {
             this._binded_mouse_callback as EventListener,
             wheelEventOptions
         );
-        if (!("onwheel" in element)) {
+        const wheelCapableElement = element as HTMLElement & { onwheel?: unknown };
+        if (typeof wheelCapableElement.onwheel === "undefined") {
             element.addEventListener(
                 "mousewheel",
                 this._binded_mouse_callback as EventListener,

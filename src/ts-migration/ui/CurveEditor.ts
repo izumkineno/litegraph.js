@@ -127,6 +127,9 @@ export class CurveEditor {
         if (localpos[1] < 0) {
             return;
         }
+        if (!this.size) {
+            return;
+        }
 
         // this.captureInput(true);
         const w = this.size[0] - this.margin * 2;
@@ -156,6 +159,9 @@ export class CurveEditor {
     ): void {
         const points = this.points;
         if (!points) {
+            return;
+        }
+        if (!this.size) {
             return;
         }
 
@@ -208,6 +214,9 @@ export class CurveEditor {
     getCloserPoint(pos: Vector2, max_dist?: number): number {
         const points = this.points;
         if (!points) {
+            return -1;
+        }
+        if (!this.size) {
             return -1;
         }
         max_dist = max_dist || 30;

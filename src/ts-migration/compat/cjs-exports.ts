@@ -1,4 +1,4 @@
-type UnknownCtor = new (...args: unknown[]) => unknown;
+type UnknownCtor = new (...args: never[]) => unknown;
 
 interface LiteGraphNamespaceLike extends Record<string, unknown> {
     LGraph?: UnknownCtor;
