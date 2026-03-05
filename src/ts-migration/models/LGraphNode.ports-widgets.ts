@@ -70,9 +70,9 @@ type WidgetLike = IWidget & {
  */
 export class LGraphNodePortsWidgets extends LGraphNodeExecution {
     onResize?: (size: Vector2) => void;
-    onOutputAdded?: (output: OutputSlot) => void;
+    declare onOutputAdded?: (output: OutputSlot) => void;
     onOutputRemoved?: (slot: number) => void;
-    onInputAdded?: (input: InputSlot) => void;
+    declare onInputAdded?: (input: InputSlot) => void;
     onInputRemoved?: (slot: number, slot_info: InputSlot) => void;
     onGetPropertyInfo?: (property: string) => PropertyInfo | null;
 
