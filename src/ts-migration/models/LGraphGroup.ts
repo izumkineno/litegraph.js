@@ -4,6 +4,10 @@
 import type { Vector2, Vector4 } from "../types/core-types";
 import { overlapBounding } from "../utils/math-geometry";
 import { LGraphNodeCanvasCollab } from "./LGraphNode.canvas-collab";
+import {
+    parseSerializedLGraphGroupInput,
+    type SerializedLGraphGroupCompatInput,
+} from "./LGraphGroup.serialization.compat";
 
 interface LGraphGroupNodeLike {
     pos: Vector2;
@@ -113,16 +117,12 @@ export class LGraphGroup {
         });
     }
 
-    configure(o: {
-        title: string;
-        bounding: Vector4;
-        color: string;
-        font_size?: number;
-    }): void {
-        this.title = o.title;
-        this._bounding.set(o.bounding);
-        this.color = o.color;
-        this.font_size = o.font_size as number;
+    configure(o: SerializedLGraphGroupCompatInput): void {
+        const normalized = parseSerializedLGraphGroupInput(o, this.font_size);
+        this.title = normalized.title;
+        this._bounding.set(normalized.bounding);
+        this.color = normalized.color;
+        this.font_size = normalized.font_size;
     }
 
     serialize(): {
