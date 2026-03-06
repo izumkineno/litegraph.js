@@ -1,7 +1,7 @@
 import type {
-    MenuPanelCanvasClassPort,
     MenuPanelHost,
     PanelLike,
+    ResolvedMenuPanelCanvasClassPort,
 } from "./menu-panel-types";
 
 export interface NodePanelCanvasPort {
@@ -24,7 +24,7 @@ export interface NodePanelStatePort {
 
 export interface NodePanelPresenterContext {
     host: MenuPanelHost;
-    menuClass: MenuPanelCanvasClassPort;
+    menuClass: ResolvedMenuPanelCanvasClassPort;
     graphcanvas: NodePanelCanvasPort;
     state: NodePanelStatePort;
 }

@@ -946,6 +946,1140 @@ var LiteGraphTSMigration = (function(exports) {
     );
     return false;
   }
+  const classHostCache = /* @__PURE__ */ new WeakMap();
+  function resolveOwnerConstructor(owner) {
+    if (typeof owner === "function") {
+      return owner;
+    }
+    if (!owner || typeof owner !== "object") {
+      return null;
+    }
+    const ctor = owner.constructor;
+    return typeof ctor === "function" ? ctor : null;
+  }
+  function resolveHostSource(owner, hostField) {
+    if (!owner) {
+      return void 0;
+    }
+    const ctor = resolveOwnerConstructor(owner);
+    if (!ctor) {
+      return void 0;
+    }
+    return ctor[hostField];
+  }
+  function createClassHostResolver(defaults, options) {
+    const hostField = (options == null ? void 0 : options.hostField) || "liteGraph";
+    const cacheKey = (options == null ? void 0 : options.cacheKey) || hostField;
+    const fallbackOwners = (options == null ? void 0 : options.fallbackOwners) || [];
+    const transform = (options == null ? void 0 : options.transform) || ((merged) => merged);
+    return function resolveClassHost(owner) {
+      const ctor = resolveOwnerConstructor(owner);
+      if (!ctor) {
+        return transform(defaults);
+      }
+      let bucket = classHostCache.get(ctor);
+      if (!bucket) {
+        bucket = /* @__PURE__ */ new Map();
+        classHostCache.set(ctor, bucket);
+      }
+      const cached = bucket.get(cacheKey);
+      if (cached && cached.defaultsRef === defaults) {
+        let cacheMatches = cached.sourceRefs.length === fallbackOwners.length + 1;
+        if (cacheMatches) {
+          for (let i2 = 0; i2 < fallbackOwners.length; ++i2) {
+            if (cached.sourceRefs[i2] !== resolveHostSource(fallbackOwners[i2](), hostField)) {
+              cacheMatches = false;
+              break;
+            }
+          }
+        }
+        if (cacheMatches && cached.sourceRefs[fallbackOwners.length] === resolveHostSource(ctor, hostField)) {
+          return cached.value;
+        }
+      }
+      const sourceRefs = [];
+      let merged = defaults;
+      let didMerge = false;
+      let lastSource;
+      for (let i2 = 0; i2 < fallbackOwners.length; ++i2) {
+        const source = resolveHostSource(fallbackOwners[i2](), hostField);
+        sourceRefs.push(source);
+        if (!source) {
+          continue;
+        }
+        merged = didMerge ? { ...merged, ...source } : { ...defaults, ...source };
+        didMerge = true;
+        lastSource = source;
+      }
+      const ownerSource = resolveHostSource(ctor, hostField);
+      sourceRefs.push(ownerSource);
+      if (ownerSource) {
+        merged = didMerge ? { ...merged, ...ownerSource } : { ...defaults, ...ownerSource };
+        didMerge = true;
+        lastSource = ownerSource;
+      }
+      const value = transform(merged, lastSource);
+      bucket.set(cacheKey, {
+        defaultsRef: defaults,
+        sourceRefs,
+        value
+      });
+      return value;
+    };
+  }
+  let DefaultContextMenu$2 = class DefaultContextMenu {
+    constructor(_values, _options, _ref_window) {
+    }
+    getFirstEvent() {
+      return {};
+    }
+  };
+  const defaultHost$1 = {
+    EVENT: -1,
+    ACTION: -1,
+    ALWAYS: 0,
+    EVENT_LINK_COLOR: "#A86",
+    NODE_MODES: ["Always", "On Event", "Never", "On Trigger"],
+    VALID_SHAPES: ["default", "box", "round", "card"],
+    do_add_triggers_slots: false,
+    dialog_close_on_mouse_leave: true,
+    dialog_close_on_mouse_leave_delay: 500,
+    ContextMenu: DefaultContextMenu$2,
+    createNode: () => null,
+    getNodeTypesCategories: () => [],
+    getNodeTypesInCategory: () => [],
+    slot_types_default_in: {},
+    slot_types_default_out: {}
+  };
+  const resolveCanvasStaticHost = createClassHostResolver(defaultHost$1, {
+    cacheKey: "LGraphCanvas.static"
+  });
+  let LGraphCanvas$1 = (_a = class {
+    static host() {
+      return resolveCanvasStaticHost(this);
+    }
+    static callbackHost() {
+      var _a2;
+      const activeCtor = (_a2 = _a.active_canvas) == null ? void 0 : _a2.constructor;
+      if (activeCtor) {
+        return resolveCanvasStaticHost(activeCtor);
+      }
+      return _a.host();
+    }
+    /** Create menu for `Add Group` */
+    static onGroupAdd(_info, _entry, mouse_event) {
+      const canvas = _a.active_canvas;
+      if (!canvas) {
+        return;
+      }
+      const canvasRef = canvas;
+      canvasRef.getCanvasWindow();
+      const host = _a.callbackHost();
+      const group = new host.LGraphGroup();
+      group.pos = canvas.convertEventToCanvasOffset(mouse_event);
+      canvas.graph.add(group);
+    }
+    /**
+     * Determines the furthest nodes in each direction
+     * @param nodes {LGraphNode[]} the nodes to from which boundary nodes will be extracted
+     * @return {{left: LGraphNode, top: LGraphNode, right: LGraphNode, bottom: LGraphNode}}
+     */
+    static getBoundaryNodes(nodes) {
+      let top = null;
+      let right = null;
+      let bottom = null;
+      let left = null;
+      const source = nodes;
+      for (const nID in source) {
+        const node2 = source[nID];
+        const [x2, y2] = node2.pos;
+        const [width2, height] = node2.size;
+        if (top === null || y2 < top.pos[1]) {
+          top = node2;
+        }
+        if (right === null || x2 + width2 > right.pos[0] + right.size[0]) {
+          right = node2;
+        }
+        if (bottom === null || y2 + height > bottom.pos[1] + bottom.size[1]) {
+          bottom = node2;
+        }
+        if (left === null || x2 < left.pos[0]) {
+          left = node2;
+        }
+      }
+      return { top, right, bottom, left };
+    }
+    /**
+     *
+     * @param nodes {LGraphNode[]} a list of nodes
+     * @param direction {"top"|"bottom"|"left"|"right"} Direction to align the nodes
+     * @param align_to {LGraphNode?} Node to align to (if null, align to the furthest node in the given direction)
+     */
+    static alignNodes(nodes, direction, align_to) {
+      if (!nodes) {
+        return;
+      }
+      const canvas = _a.active_canvas;
+      let boundaryNodes;
+      if (align_to === void 0) {
+        boundaryNodes = _a.getBoundaryNodes(nodes);
+      } else {
+        boundaryNodes = {
+          top: align_to,
+          right: align_to,
+          bottom: align_to,
+          left: align_to
+        };
+      }
+      for (const [, node2] of Object.entries(canvas.selected_nodes || {})) {
+        switch (direction) {
+          case "right":
+            node2.pos[0] = boundaryNodes.right.pos[0] + boundaryNodes.right.size[0] - node2.size[0];
+            break;
+          case "left":
+            node2.pos[0] = boundaryNodes.left.pos[0];
+            break;
+          case "top":
+            node2.pos[1] = boundaryNodes.top.pos[1];
+            break;
+          case "bottom":
+            node2.pos[1] = boundaryNodes.bottom.pos[1] + boundaryNodes.bottom.size[1] - node2.size[1];
+            break;
+        }
+      }
+      canvas.dirty_canvas = true;
+      canvas.dirty_bgcanvas = true;
+    }
+    static onNodeAlign(_value, _options, event2, prev_menu, node2) {
+      const host = _a.callbackHost();
+      new host.ContextMenu(["Top", "Bottom", "Left", "Right"], {
+        event: event2,
+        callback: inner_clicked,
+        parentMenu: prev_menu
+      });
+      function inner_clicked(value) {
+        _a.alignNodes(
+          _a.active_canvas.selected_nodes,
+          value.toLowerCase(),
+          node2
+        );
+      }
+    }
+    static onGroupAlign(_value, _options, event2, prev_menu) {
+      const host = _a.callbackHost();
+      new host.ContextMenu(["Top", "Bottom", "Left", "Right"], {
+        event: event2,
+        callback: inner_clicked,
+        parentMenu: prev_menu
+      });
+      function inner_clicked(value) {
+        _a.alignNodes(
+          _a.active_canvas.selected_nodes,
+          value.toLowerCase()
+        );
+      }
+    }
+    /** Create menu for `Add Node` */
+    static onMenuAdd(_node, _options, e, prev_menu, callback) {
+      const canvas = _a.active_canvas;
+      if (!canvas) {
+        return;
+      }
+      const canvasRef = canvas;
+      const ref_window2 = canvasRef.getCanvasWindow();
+      const graph = canvasRef.graph;
+      const host = _a.callbackHost();
+      function inner_onMenuAdded(base_category, menuRef) {
+        const categories = host.getNodeTypesCategories(canvasRef.filter || graph.filter).filter((category) => category.startsWith(base_category));
+        const entries = [];
+        categories.map((category) => {
+          if (!category) {
+            return;
+          }
+          const base_category_regex = new RegExp("^(" + base_category + ")");
+          const category_name = category.replace(base_category_regex, "").split("/")[0];
+          const category_path = base_category === "" ? category_name + "/" : base_category + category_name + "/";
+          let name = category_name;
+          if (name.indexOf("::") != -1) {
+            name = name.split("::")[1];
+          }
+          const index = entries.findIndex((entry) => entry.value === category_path);
+          if (index === -1) {
+            entries.push({
+              value: category_path,
+              content: name,
+              has_submenu: true,
+              callback: (value, _event, _mouseEvent, contextMenu) => {
+                const selected = value;
+                inner_onMenuAdded(selected.value || "", contextMenu);
+              }
+            });
+          }
+        });
+        const nodes = host.getNodeTypesInCategory(
+          base_category.slice(0, -1),
+          canvasRef.filter || graph.filter
+        );
+        nodes.map((nodeType) => {
+          if (nodeType.skip_list) {
+            return;
+          }
+          entries.push({
+            value: nodeType.type,
+            content: nodeType.title,
+            has_submenu: false,
+            callback: (value, _event, _mouseEvent, contextMenu) => {
+              const selected = value;
+              const first_event = contextMenu.getFirstEvent();
+              canvasRef.graph.beforeChange();
+              const newNode = host.createNode(selected.value || "");
+              if (newNode) {
+                newNode.pos = canvasRef.convertEventToCanvasOffset(first_event);
+                canvasRef.graph.add(newNode);
+              }
+              if (callback) {
+                callback(newNode);
+              }
+              canvasRef.graph.afterChange();
+            }
+          });
+        });
+        new host.ContextMenu(entries, { event: e, parentMenu: menuRef }, ref_window2);
+      }
+      inner_onMenuAdded("", prev_menu);
+      return false;
+    }
+    static onMenuCollapseAll() {
+    }
+    static onMenuNodeEdit() {
+    }
+    static showMenuNodeOptionalInputs(_v, _options, e, prev_menu, node2) {
+      if (!node2) {
+        return;
+      }
+      const that2 = this;
+      const canvas = _a.active_canvas;
+      if (!canvas) {
+        return;
+      }
+      const canvasRef = canvas;
+      const ref_window2 = canvasRef.getCanvasWindow();
+      const host = _a.callbackHost();
+      let optInputs = node2.optional_inputs;
+      if (node2.onGetInputs) {
+        optInputs = node2.onGetInputs();
+      }
+      let entries = [];
+      if (optInputs) {
+        for (let i2 = 0; i2 < optInputs.length; i2++) {
+          const entry = optInputs[i2];
+          if (!entry) {
+            entries.push(null);
+            continue;
+          }
+          let label = entry[0];
+          if (!entry[2]) {
+            entry[2] = {};
+          }
+          if (entry[2].label) {
+            label = String(entry[2].label);
+          }
+          entry[2].removable = true;
+          const data = { content: label, value: entry };
+          if (entry[1] == host.ACTION) {
+            data.className = "event";
+          }
+          entries.push(data);
+        }
+      }
+      if (node2.onMenuNodeInputs) {
+        const retEntries = node2.onMenuNodeInputs(entries);
+        if (retEntries) {
+          entries = retEntries;
+        }
+      }
+      if (!entries.length) {
+        return;
+      }
+      new host.ContextMenu(
+        entries,
+        {
+          event: e,
+          callback: inner_clicked,
+          parentMenu: prev_menu,
+          node: node2
+        },
+        ref_window2
+      );
+      function inner_clicked(v2, _e, prev) {
+        if (!node2) {
+          return;
+        }
+        const valueObj = v2;
+        if (valueObj.callback) {
+          valueObj.callback.call(that2, node2, valueObj, e, prev);
+        }
+        if (valueObj.value) {
+          node2.graph.beforeChange();
+          const addEntry = valueObj.value;
+          node2.addInput(addEntry[0], addEntry[1], addEntry[2]);
+          if (node2.onNodeInputAdd) {
+            node2.onNodeInputAdd(valueObj.value);
+          }
+          node2.setDirtyCanvas(true, true);
+          node2.graph.afterChange();
+        }
+      }
+      return false;
+    }
+    static showMenuNodeOptionalOutputs(_v, _options, e, prev_menu, node2) {
+      if (!node2) {
+        return;
+      }
+      const that2 = this;
+      const canvas = _a.active_canvas;
+      if (!canvas) {
+        return;
+      }
+      const canvasRef = canvas;
+      const ref_window2 = canvasRef.getCanvasWindow();
+      const host = _a.callbackHost();
+      let optOutputs = node2.optional_outputs;
+      if (node2.onGetOutputs) {
+        optOutputs = node2.onGetOutputs();
+      }
+      let entries = [];
+      if (optOutputs) {
+        for (let i2 = 0; i2 < optOutputs.length; i2++) {
+          const entry = optOutputs[i2];
+          if (!entry) {
+            entries.push(null);
+            continue;
+          }
+          if (node2.flags && node2.flags.skip_repeated_outputs && node2.findOutputSlot && node2.findOutputSlot(entry[0]) != -1) {
+            continue;
+          }
+          let label = entry[0];
+          if (!entry[2]) {
+            entry[2] = {};
+          }
+          if (entry[2].label) {
+            label = String(entry[2].label);
+          }
+          entry[2].removable = true;
+          const data = { content: label, value: entry };
+          if (entry[1] == host.EVENT) {
+            data.className = "event";
+          }
+          entries.push(data);
+        }
+      }
+      const thisLike = this;
+      if (thisLike.onMenuNodeOutputs) {
+        entries = thisLike.onMenuNodeOutputs(entries);
+      }
+      if (host.do_add_triggers_slots && node2.findOutputSlot && node2.findOutputSlot("onExecuted") == -1) {
+        entries.push({
+          content: "On Executed",
+          value: ["onExecuted", host.EVENT, { nameLocked: true }],
+          className: "event"
+        });
+      }
+      if (node2.onMenuNodeOutputs) {
+        const retEntries = node2.onMenuNodeOutputs(entries);
+        if (retEntries) {
+          entries = retEntries;
+        }
+      }
+      if (!entries.length) {
+        return;
+      }
+      new host.ContextMenu(
+        entries,
+        {
+          event: e,
+          callback: inner_clicked,
+          parentMenu: prev_menu,
+          node: node2
+        },
+        ref_window2
+      );
+      function inner_clicked(v2, _e, prev) {
+        if (!node2) {
+          return;
+        }
+        const valueObj = v2;
+        if (valueObj.callback) {
+          valueObj.callback.call(that2, node2, valueObj, e, prev);
+        }
+        if (!valueObj.value) {
+          return;
+        }
+        const packed = valueObj.value;
+        const value = packed[1];
+        if (value && (Array.isArray(value) || value.constructor === Object)) {
+          const submenuEntries = [];
+          for (const i2 in value) {
+            submenuEntries.push({
+              content: i2,
+              value: value[i2]
+            });
+          }
+          new host.ContextMenu(submenuEntries, {
+            event: e,
+            callback: inner_clicked,
+            parentMenu: prev,
+            node: node2
+          });
+          return false;
+        }
+        node2.graph.beforeChange();
+        node2.addOutput(packed[0], packed[1], packed[2]);
+        if (node2.onNodeOutputAdd) {
+          node2.onNodeOutputAdd(valueObj.value);
+        }
+        node2.setDirtyCanvas(true, true);
+        node2.graph.afterChange();
+      }
+      return false;
+    }
+    static onShowMenuNodeProperties(_value, _options, e, prev_menu, node2) {
+      if (!node2 || !node2.properties) {
+        return;
+      }
+      const canvas = _a.active_canvas;
+      if (!canvas) {
+        return;
+      }
+      const canvasRef = canvas;
+      const ref_window2 = canvasRef.getCanvasWindow();
+      const entries = [];
+      for (const i2 in node2.properties) {
+        let value = node2.properties[i2] !== void 0 ? node2.properties[i2] : " ";
+        if (typeof value == "object") {
+          value = JSON.stringify(value);
+        }
+        const info = node2.getPropertyInfo(i2);
+        if (info.type == "enum" || info.type == "combo") {
+          value = _a.getPropertyPrintableValue(
+            value,
+            info.values
+          );
+        }
+        value = _a.decodeHTML(String(value));
+        entries.push({
+          content: "<span class='property_name'>" + (info.label ? info.label : i2) + "</span><span class='property_value'>" + value + "</span>",
+          value: i2
+        });
+      }
+      if (!entries.length) {
+        return;
+      }
+      new (_a.callbackHost()).ContextMenu(
+        entries,
+        {
+          event: e,
+          callback: inner_clicked,
+          parentMenu: prev_menu,
+          allow_html: true,
+          node: node2
+        },
+        ref_window2
+      );
+      function inner_clicked(v2) {
+        if (!node2) {
+          return;
+        }
+        const valueObj = v2;
+        const rect = this.getBoundingClientRect();
+        canvasRef.showEditPropertyValue(node2, String(valueObj.value || ""), {
+          position: [rect.left, rect.top]
+        });
+      }
+      return false;
+    }
+    static decodeHTML(str) {
+      const e = document.createElement("div");
+      e.innerText = str;
+      return e.innerHTML;
+    }
+    static onMenuResizeNode(_value, _options, _e, _menu, node2) {
+      if (!node2) {
+        return;
+      }
+      const fApplyMultiNode = (target) => {
+        target.size = target.computeSize();
+        if (target.onResize) {
+          target.onResize(target.size);
+        }
+      };
+      const graphcanvas = _a.active_canvas;
+      if (!graphcanvas.selected_nodes || Object.keys(graphcanvas.selected_nodes).length <= 1) {
+        fApplyMultiNode(node2);
+      } else {
+        for (const i2 in graphcanvas.selected_nodes) {
+          fApplyMultiNode(graphcanvas.selected_nodes[i2]);
+        }
+      }
+      node2.setDirtyCanvas(true, true);
+    }
+    static onResizeNode(value, options, e, menu, node2) {
+      _a.onMenuResizeNode(value, options, e, menu, node2);
+    }
+    // TODO refactor :: this is used fot title but not for properties!
+    static onShowPropertyEditor(item, _options, e, _menu, node2) {
+      var _a2;
+      const property = item.property || "title";
+      const value = node2[property];
+      const dialog = document.createElement("div");
+      dialog.is_modified = false;
+      dialog.className = "graphdialog";
+      dialog.innerHTML = "<span class='name'></span><input autofocus type='text' class='value'/><button>OK</button>";
+      dialog.close = function() {
+        if (dialog.parentNode) {
+          dialog.parentNode.removeChild(dialog);
+        }
+      };
+      const title = dialog.querySelector(".name");
+      if (title) {
+        title.textContent = property;
+      }
+      const input = dialog.querySelector(".value");
+      if (input) {
+        input.value = String(value != null ? value : "");
+        input.addEventListener("blur", function() {
+          this.focus();
+        });
+        input.addEventListener("keydown", function(ev) {
+          var _a3;
+          dialog.is_modified = true;
+          if (ev.keyCode == 27) {
+            (_a3 = dialog.close) == null ? void 0 : _a3.call(dialog);
+          } else if (ev.keyCode == 13) {
+            inner();
+          } else if (ev.keyCode != 13 && ev.target.localName != "textarea") {
+            return;
+          }
+          ev.preventDefault();
+          ev.stopPropagation();
+        });
+      }
+      const graphcanvas = _a.active_canvas;
+      if (!graphcanvas) {
+        return;
+      }
+      const canvas = graphcanvas.canvas;
+      const rect = canvas.getBoundingClientRect();
+      let offsetx = -20;
+      let offsety = -20;
+      if (rect) {
+        offsetx -= rect.left;
+        offsety -= rect.top;
+      }
+      const evt = e || globalThis.event;
+      if (evt) {
+        dialog.style.left = evt.clientX + offsetx + "px";
+        dialog.style.top = evt.clientY + offsety + "px";
+      } else {
+        dialog.style.left = canvas.width * 0.5 + offsetx + "px";
+        dialog.style.top = canvas.height * 0.5 + offsety + "px";
+      }
+      const button = dialog.querySelector("button");
+      if (button) {
+        button.addEventListener("click", inner);
+      }
+      (_a2 = canvas.parentNode) == null ? void 0 : _a2.appendChild(dialog);
+      input == null ? void 0 : input.focus();
+      const host = _a.callbackHost();
+      let dialogCloseTimer = null;
+      dialog.addEventListener("mouseleave", function() {
+        if (host.dialog_close_on_mouse_leave) {
+          if (!dialog.is_modified && host.dialog_close_on_mouse_leave) {
+            dialogCloseTimer = setTimeout(
+              () => {
+                var _a3;
+                return (_a3 = dialog.close) == null ? void 0 : _a3.call(dialog);
+              },
+              host.dialog_close_on_mouse_leave_delay
+            );
+          }
+        }
+      });
+      dialog.addEventListener("mouseenter", function() {
+        if (host.dialog_close_on_mouse_leave) {
+          if (dialogCloseTimer) {
+            clearTimeout(dialogCloseTimer);
+          }
+        }
+      });
+      function inner() {
+        if (input) {
+          setValue(input.value);
+        }
+      }
+      function setValue(nextValue) {
+        var _a3;
+        let safeValue = nextValue;
+        if (item.type == "Number") {
+          safeValue = Number(safeValue);
+        } else if (item.type == "Boolean") {
+          safeValue = Boolean(safeValue);
+        }
+        node2[property] = safeValue;
+        if (dialog.parentNode) {
+          dialog.parentNode.removeChild(dialog);
+        }
+        (_a3 = node2.setDirtyCanvas) == null ? void 0 : _a3.call(node2, true, true);
+      }
+    }
+    static getPropertyPrintableValue(value, values) {
+      if (!values) {
+        return String(value);
+      }
+      if (Array.isArray(values)) {
+        return String(value);
+      }
+      if (values.constructor === Object) {
+        let desc_value = "";
+        for (const k in values) {
+          if (values[k] != value) {
+            continue;
+          }
+          desc_value = k;
+          break;
+        }
+        return String(value) + " (" + desc_value + ")";
+      }
+      return String(value);
+    }
+    static onMenuNodeCollapse(_value, _options, _e, _menu, node2) {
+      node2.graph.beforeChange();
+      const fApplyMultiNode = (target) => {
+        target.collapse();
+      };
+      const graphcanvas = _a.active_canvas;
+      if (!graphcanvas.selected_nodes || Object.keys(graphcanvas.selected_nodes).length <= 1) {
+        fApplyMultiNode(node2);
+      } else {
+        for (const i2 in graphcanvas.selected_nodes) {
+          fApplyMultiNode(graphcanvas.selected_nodes[i2]);
+        }
+      }
+      node2.graph.afterChange();
+    }
+    static onMenuNodePin(_value, _options, _e, _menu, node2) {
+      node2.pin();
+    }
+    static onMenuNodeMode(_value, _options, e, menu, node2) {
+      const host = _a.callbackHost();
+      new host.ContextMenu(host.NODE_MODES, {
+        event: e,
+        callback: inner_clicked,
+        parentMenu: menu,
+        node: node2
+      });
+      function inner_clicked(v2) {
+        if (!node2) {
+          return;
+        }
+        const kV = Object.values(host.NODE_MODES).indexOf(String(v2));
+        const fApplyMultiNode = (target) => {
+          if (typeof target.changeMode !== "function") {
+            return;
+          }
+          if (kV >= 0 && Object.values(host.NODE_MODES)[kV]) {
+            target.changeMode(kV);
+          } else {
+            target.changeMode(host.ALWAYS);
+          }
+        };
+        const graphcanvas = _a.active_canvas;
+        if (!graphcanvas.selected_nodes || Object.keys(graphcanvas.selected_nodes).length <= 1) {
+          fApplyMultiNode(node2);
+        } else {
+          for (const i2 in graphcanvas.selected_nodes) {
+            fApplyMultiNode(graphcanvas.selected_nodes[i2]);
+          }
+        }
+      }
+      return false;
+    }
+    static onMenuNodeColors(_value, _options, e, menu, node2) {
+      if (!node2) {
+        throw "no node for color";
+      }
+      const host = _a.callbackHost();
+      const values = [];
+      values.push({
+        value: null,
+        content: "<span style='display: block; padding-left: 4px;'>No color</span>"
+      });
+      for (const i2 in _a.node_colors) {
+        const color = _a.node_colors[i2];
+        values.push({
+          value: i2,
+          content: "<span style='display: block; color: #999; padding-left: 4px; border-left: 8px solid " + color.color + "; background-color:" + color.bgcolor + "'>" + i2 + "</span>"
+        });
+      }
+      new host.ContextMenu(values, {
+        event: e,
+        callback: inner_clicked,
+        parentMenu: menu,
+        node: node2
+      });
+      function inner_clicked(v2) {
+        if (!node2) {
+          return;
+        }
+        const valueObj = v2;
+        const color = valueObj.value ? _a.node_colors[valueObj.value] : null;
+        const fApplyColor = (target) => {
+          if (color) {
+            if (host.LGraphGroup && target.constructor === host.LGraphGroup) {
+              target.color = color.groupcolor;
+            } else {
+              target.color = color.color;
+              target.bgcolor = color.bgcolor;
+            }
+          } else {
+            delete target.color;
+            delete target.bgcolor;
+          }
+        };
+        const graphcanvas = _a.active_canvas;
+        if (!graphcanvas.selected_nodes || Object.keys(graphcanvas.selected_nodes).length <= 1) {
+          fApplyColor(node2);
+        } else {
+          for (const i2 in graphcanvas.selected_nodes) {
+            fApplyColor(graphcanvas.selected_nodes[i2]);
+          }
+        }
+        node2.setDirtyCanvas(true, true);
+      }
+      return false;
+    }
+    static onMenuNodeShapes(_value, _options, e, menu, node2) {
+      if (!node2) {
+        throw "no node passed";
+      }
+      const host = _a.callbackHost();
+      new host.ContextMenu(host.VALID_SHAPES, {
+        event: e,
+        callback: inner_clicked,
+        parentMenu: menu,
+        node: node2
+      });
+      function inner_clicked(v2) {
+        if (!node2) {
+          return;
+        }
+        node2.graph.beforeChange();
+        const fApplyMultiNode = (target) => {
+          target.shape = v2;
+        };
+        const graphcanvas = _a.active_canvas;
+        if (!graphcanvas.selected_nodes || Object.keys(graphcanvas.selected_nodes).length <= 1) {
+          fApplyMultiNode(node2);
+        } else {
+          for (const i2 in graphcanvas.selected_nodes) {
+            fApplyMultiNode(graphcanvas.selected_nodes[i2]);
+          }
+        }
+        node2.graph.afterChange();
+        node2.setDirtyCanvas(true);
+      }
+      return false;
+    }
+    static onMenuNodeRemove(_value, _options, _e, _menu, node2) {
+      if (!node2) {
+        throw "no node passed";
+      }
+      const graph = node2.graph;
+      graph.beforeChange();
+      const fApplyMultiNode = (target) => {
+        if (target.removable === false) {
+          return;
+        }
+        graph.remove(target);
+      };
+      const graphcanvas = _a.active_canvas;
+      if (!graphcanvas.selected_nodes || Object.keys(graphcanvas.selected_nodes).length <= 1) {
+        fApplyMultiNode(node2);
+      } else {
+        for (const i2 in graphcanvas.selected_nodes) {
+          fApplyMultiNode(graphcanvas.selected_nodes[i2]);
+        }
+      }
+      graph.afterChange();
+      node2.setDirtyCanvas(true, true);
+    }
+    static onMenuNodeToSubgraph(_value, _options, _e, _menu, node2) {
+      const graph = node2.graph;
+      const graphcanvas = _a.active_canvas;
+      if (!graphcanvas) {
+        return;
+      }
+      let nodes_list = Object.values(graphcanvas.selected_nodes || {});
+      if (!nodes_list.length) {
+        nodes_list = [node2];
+      }
+      const subgraph_node = _a.callbackHost().createNode("graph/subgraph");
+      if (!subgraph_node) {
+        return;
+      }
+      subgraph_node.pos = [node2.pos[0], node2.pos[1]];
+      graph.add(subgraph_node);
+      subgraph_node.buildFromNodes(nodes_list);
+      graphcanvas.deselectAllNodes();
+      node2.setDirtyCanvas(true, true);
+    }
+    static onMenuNodeClone(_value, _options, _e, _menu, node2) {
+      node2.graph.beforeChange();
+      const newSelected = {};
+      const fApplyMultiNode = (target) => {
+        if (target.clonable === false) {
+          return;
+        }
+        const newnode = target.clone();
+        if (!newnode) {
+          return;
+        }
+        newnode.pos = [target.pos[0] + 5, target.pos[1] + 5];
+        target.graph.add(newnode);
+        newSelected[String(newnode.id)] = newnode;
+      };
+      const graphcanvas = _a.active_canvas;
+      if (!graphcanvas.selected_nodes || Object.keys(graphcanvas.selected_nodes).length <= 1) {
+        fApplyMultiNode(node2);
+      } else {
+        for (const i2 in graphcanvas.selected_nodes) {
+          fApplyMultiNode(graphcanvas.selected_nodes[i2]);
+        }
+      }
+      if (Object.keys(newSelected).length) {
+        graphcanvas.selectNodes(newSelected);
+      }
+      node2.graph.afterChange();
+      node2.setDirtyCanvas(true, true);
+    }
+    static getFileExtension(url) {
+      const question = url.indexOf("?");
+      if (question != -1) {
+        url = url.substr(0, question);
+      }
+      const point = url.lastIndexOf(".");
+      if (point == -1) {
+        return "";
+      }
+      return url.substr(point + 1).toLowerCase();
+    }
+  }, _a.DEFAULT_BACKGROUND_IMAGE = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGQAAABkCAIAAAD/gAIDAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAQBJREFUeNrs1rEKwjAUhlETUkj3vP9rdmr1Ysammk2w5wdxuLgcMHyptfawuZX4pJSWZTnfnu/lnIe/jNNxHHGNn//HNbbv+4dr6V+11uF527arU7+u63qfa/bnmh8sWLBgwYJlqRf8MEptXPBXJXa37BSl3ixYsGDBMliwFLyCV/DeLIMFCxYsWLBMwSt4Be/NggXLYMGCBUvBK3iNruC9WbBgwYJlsGApeAWv4L1ZBgsWLFiwYJmCV/AK3psFC5bBggULloJX8BpdwXuzYMGCBctgwVLwCl7Be7MMFixYsGDBsu8FH1FaSmExVfAxBa/gvVmwYMGCZbBg/W4vAQYA5tRF9QYlv/QAAAAASUVORK5CYII=", _a.link_type_colors = {
+    "-1": defaultHost$1.EVENT_LINK_COLOR,
+    number: "#AAA",
+    node: "#DCA"
+  }, _a.gradients = {}, _a.search_limit = -1, _a.node_colors = {
+    red: { color: "#322", bgcolor: "#533", groupcolor: "#A88" },
+    brown: { color: "#332922", bgcolor: "#593930", groupcolor: "#b06634" },
+    green: { color: "#232", bgcolor: "#353", groupcolor: "#8A8" },
+    blue: { color: "#223", bgcolor: "#335", groupcolor: "#88A" },
+    pale_blue: {
+      color: "#2a363b",
+      bgcolor: "#3f5159",
+      groupcolor: "#3f789e"
+    },
+    cyan: { color: "#233", bgcolor: "#355", groupcolor: "#8AA" },
+    purple: { color: "#323", bgcolor: "#535", groupcolor: "#a1309b" },
+    yellow: { color: "#432", bgcolor: "#653", groupcolor: "#b58b2a" },
+    black: { color: "#222", bgcolor: "#000", groupcolor: "#444" }
+  }, _a.active_canvas = null, _a.active_node = null, _a);
+  let cachedMenuPanelCanvasClass = null;
+  let DefaultContextMenu$1 = class DefaultContextMenu {
+    constructor(_values, _options, _window) {
+    }
+  };
+  function resolveTarget() {
+    return LGraphCanvas$1;
+  }
+  function bindStaticMethod(methodName) {
+    return (...args) => {
+      const target = resolveTarget();
+      const method = target[methodName];
+      if (typeof method !== "function") {
+        return void 0;
+      }
+      return method.apply(target, args);
+    };
+  }
+  function resolveMenuPanelCanvasClass() {
+    if (cachedMenuPanelCanvasClass) {
+      return cachedMenuPanelCanvasClass;
+    }
+    const resolved = {};
+    Object.defineProperties(resolved, {
+      active_canvas: {
+        enumerable: true,
+        get: () => resolveTarget().active_canvas,
+        set: (value) => {
+          resolveTarget().active_canvas = value;
+        }
+      },
+      active_node: {
+        enumerable: true,
+        get: () => resolveTarget().active_node,
+        set: (value) => {
+          resolveTarget().active_node = value;
+        }
+      },
+      search_limit: {
+        enumerable: true,
+        get: () => {
+          const value = resolveTarget().search_limit;
+          return typeof value === "number" ? value : -1;
+        }
+      },
+      ContextMenu: {
+        enumerable: true,
+        get: () => resolveTarget().ContextMenu || DefaultContextMenu$1
+      },
+      node_colors: {
+        enumerable: true,
+        get: () => resolveTarget().node_colors || {}
+      },
+      getPropertyPrintableValue: {
+        enumerable: true,
+        value: (value, values) => {
+          const target = resolveTarget();
+          if (typeof target.getPropertyPrintableValue === "function") {
+            return target.getPropertyPrintableValue(value, values);
+          }
+          return String(value);
+        }
+      },
+      onGroupAdd: { enumerable: true, value: bindStaticMethod("onGroupAdd") },
+      onGroupAlign: { enumerable: true, value: bindStaticMethod("onGroupAlign") },
+      onMenuAdd: { enumerable: true, value: bindStaticMethod("onMenuAdd") },
+      showMenuNodeOptionalInputs: {
+        enumerable: true,
+        value: bindStaticMethod("showMenuNodeOptionalInputs")
+      },
+      showMenuNodeOptionalOutputs: {
+        enumerable: true,
+        value: bindStaticMethod("showMenuNodeOptionalOutputs")
+      },
+      onShowMenuNodeProperties: {
+        enumerable: true,
+        value: bindStaticMethod("onShowMenuNodeProperties")
+      },
+      onShowPropertyEditor: {
+        enumerable: true,
+        value: bindStaticMethod("onShowPropertyEditor")
+      },
+      onMenuNodeMode: {
+        enumerable: true,
+        value: bindStaticMethod("onMenuNodeMode")
+      },
+      onMenuResizeNode: {
+        enumerable: true,
+        value: bindStaticMethod("onMenuResizeNode")
+      },
+      onMenuNodeCollapse: {
+        enumerable: true,
+        value: bindStaticMethod("onMenuNodeCollapse")
+      },
+      onMenuNodePin: {
+        enumerable: true,
+        value: bindStaticMethod("onMenuNodePin")
+      },
+      onMenuNodeColors: {
+        enumerable: true,
+        value: bindStaticMethod("onMenuNodeColors")
+      },
+      onMenuNodeShapes: {
+        enumerable: true,
+        value: bindStaticMethod("onMenuNodeShapes")
+      },
+      onMenuNodeClone: {
+        enumerable: true,
+        value: bindStaticMethod("onMenuNodeClone")
+      },
+      onMenuNodeToSubgraph: {
+        enumerable: true,
+        value: bindStaticMethod("onMenuNodeToSubgraph")
+      },
+      onNodeAlign: {
+        enumerable: true,
+        value: bindStaticMethod("onNodeAlign")
+      },
+      onMenuNodeRemove: {
+        enumerable: true,
+        value: bindStaticMethod("onMenuNodeRemove")
+      }
+    });
+    cachedMenuPanelCanvasClass = resolved;
+    return resolved;
+  }
+  const emptyMenuHost = {};
+  const menuHostCache = /* @__PURE__ */ new WeakMap();
+  class DefaultContextMenu {
+    constructor(_values, _options, _window) {
+    }
+  }
+  function defaultPointerListenerAdd$1(dom, ev, cb, capture) {
+    if ("addEventListener" in dom) {
+      dom.addEventListener(ev, cb, !!capture);
+    }
+  }
+  function defaultPointerListenerRemove$1(dom, ev, cb, capture) {
+    if ("removeEventListener" in dom) {
+      dom.removeEventListener(ev, cb, !!capture);
+    }
+  }
+  function resolveMenuPanelHost(litegraph, menuClass) {
+    var _a2, _b2, _c2, _d2;
+    const sourceHost = litegraph && typeof litegraph === "object" ? litegraph : emptyMenuHost;
+    const classKey = menuClass;
+    let classCache = menuHostCache.get(sourceHost);
+    if (!classCache) {
+      classCache = /* @__PURE__ */ new WeakMap();
+      menuHostCache.set(sourceHost, classCache);
+    }
+    const cached = classCache.get(classKey);
+    if (cached) {
+      return cached;
+    }
+    const resolved = {
+      ...sourceHost,
+      ContextMenu: sourceHost.ContextMenu || menuClass.ContextMenu || DefaultContextMenu,
+      ACTION: (_a2 = sourceHost.ACTION) != null ? _a2 : -1,
+      EVENT: (_b2 = sourceHost.EVENT) != null ? _b2 : -1,
+      NODE_MODES: sourceHost.NODE_MODES || ["Always", "On Event", "Never", "On Trigger"],
+      LINK_RENDER_MODES: sourceHost.LINK_RENDER_MODES || [
+        "Straight",
+        "Linear",
+        "Spline"
+      ],
+      availableCanvasOptions: sourceHost.availableCanvasOptions || [],
+      slot_types_default_in: sourceHost.slot_types_default_in || {},
+      slot_types_default_out: sourceHost.slot_types_default_out || {},
+      slot_types_in: sourceHost.slot_types_in || [],
+      slot_types_out: sourceHost.slot_types_out || [],
+      registered_node_types: sourceHost.registered_node_types || {},
+      registered_slot_in_types: sourceHost.registered_slot_in_types || {},
+      registered_slot_out_types: sourceHost.registered_slot_out_types || {},
+      searchbox_extras: sourceHost.searchbox_extras || {},
+      search_filter_enabled: !!sourceHost.search_filter_enabled,
+      search_hide_on_mouse_leave: !!sourceHost.search_hide_on_mouse_leave,
+      search_show_all_on_open: !!sourceHost.search_show_all_on_open,
+      dialog_close_on_mouse_leave: (_c2 = sourceHost.dialog_close_on_mouse_leave) != null ? _c2 : true,
+      dialog_close_on_mouse_leave_delay: (_d2 = sourceHost.dialog_close_on_mouse_leave_delay) != null ? _d2 : 500,
+      getTime: sourceHost.getTime || (() => Date.now()),
+      createNode: sourceHost.createNode || ((_type) => null),
+      pointerListenerAdd: sourceHost.pointerListenerAdd || defaultPointerListenerAdd$1,
+      pointerListenerRemove: sourceHost.pointerListenerRemove || defaultPointerListenerRemove$1
+    };
+    classCache.set(classKey, resolved);
+    return resolved;
+  }
   function showGraphOptionsPanel(context) {
     var _a2, _b2;
     const { graphcanvas, host } = context;
@@ -2040,952 +3174,6 @@ var LiteGraphTSMigration = (function(exports) {
     (_g = (_f = context.canvas) == null ? void 0 : _f.parentNode) == null ? void 0 : _g.appendChild(panel);
     return panel;
   }
-  const classHostCache = /* @__PURE__ */ new WeakMap();
-  function resolveOwnerConstructor(owner) {
-    if (typeof owner === "function") {
-      return owner;
-    }
-    if (!owner || typeof owner !== "object") {
-      return null;
-    }
-    const ctor = owner.constructor;
-    return typeof ctor === "function" ? ctor : null;
-  }
-  function resolveHostSource(owner, hostField) {
-    if (!owner) {
-      return void 0;
-    }
-    const ctor = resolveOwnerConstructor(owner);
-    if (!ctor) {
-      return void 0;
-    }
-    return ctor[hostField];
-  }
-  function createClassHostResolver(defaults, options) {
-    const hostField = (options == null ? void 0 : options.hostField) || "liteGraph";
-    const cacheKey = (options == null ? void 0 : options.cacheKey) || hostField;
-    const fallbackOwners = (options == null ? void 0 : options.fallbackOwners) || [];
-    const transform = (options == null ? void 0 : options.transform) || ((merged) => merged);
-    return function resolveClassHost(owner) {
-      const ctor = resolveOwnerConstructor(owner);
-      if (!ctor) {
-        return transform(defaults);
-      }
-      let bucket = classHostCache.get(ctor);
-      if (!bucket) {
-        bucket = /* @__PURE__ */ new Map();
-        classHostCache.set(ctor, bucket);
-      }
-      const cached = bucket.get(cacheKey);
-      if (cached && cached.defaultsRef === defaults) {
-        let cacheMatches = cached.sourceRefs.length === fallbackOwners.length + 1;
-        if (cacheMatches) {
-          for (let i2 = 0; i2 < fallbackOwners.length; ++i2) {
-            if (cached.sourceRefs[i2] !== resolveHostSource(fallbackOwners[i2](), hostField)) {
-              cacheMatches = false;
-              break;
-            }
-          }
-        }
-        if (cacheMatches && cached.sourceRefs[fallbackOwners.length] === resolveHostSource(ctor, hostField)) {
-          return cached.value;
-        }
-      }
-      const sourceRefs = [];
-      let merged = defaults;
-      let didMerge = false;
-      let lastSource;
-      for (let i2 = 0; i2 < fallbackOwners.length; ++i2) {
-        const source = resolveHostSource(fallbackOwners[i2](), hostField);
-        sourceRefs.push(source);
-        if (!source) {
-          continue;
-        }
-        merged = didMerge ? { ...merged, ...source } : { ...defaults, ...source };
-        didMerge = true;
-        lastSource = source;
-      }
-      const ownerSource = resolveHostSource(ctor, hostField);
-      sourceRefs.push(ownerSource);
-      if (ownerSource) {
-        merged = didMerge ? { ...merged, ...ownerSource } : { ...defaults, ...ownerSource };
-        didMerge = true;
-        lastSource = ownerSource;
-      }
-      const value = transform(merged, lastSource);
-      bucket.set(cacheKey, {
-        defaultsRef: defaults,
-        sourceRefs,
-        value
-      });
-      return value;
-    };
-  }
-  class DefaultContextMenu {
-    constructor(_values, _options, _ref_window) {
-    }
-    getFirstEvent() {
-      return {};
-    }
-  }
-  const defaultHost$1 = {
-    EVENT: -1,
-    ACTION: -1,
-    ALWAYS: 0,
-    EVENT_LINK_COLOR: "#A86",
-    NODE_MODES: ["Always", "On Event", "Never", "On Trigger"],
-    VALID_SHAPES: ["default", "box", "round", "card"],
-    do_add_triggers_slots: false,
-    dialog_close_on_mouse_leave: true,
-    dialog_close_on_mouse_leave_delay: 500,
-    ContextMenu: DefaultContextMenu,
-    createNode: () => null,
-    getNodeTypesCategories: () => [],
-    getNodeTypesInCategory: () => [],
-    slot_types_default_in: {},
-    slot_types_default_out: {}
-  };
-  const resolveCanvasStaticHost = createClassHostResolver(defaultHost$1, {
-    cacheKey: "LGraphCanvas.static"
-  });
-  let LGraphCanvas$1 = (_a = class {
-    static host() {
-      return resolveCanvasStaticHost(this);
-    }
-    static callbackHost() {
-      var _a2;
-      const activeCtor = (_a2 = _a.active_canvas) == null ? void 0 : _a2.constructor;
-      if (activeCtor) {
-        return resolveCanvasStaticHost(activeCtor);
-      }
-      return _a.host();
-    }
-    /** Create menu for `Add Group` */
-    static onGroupAdd(_info, _entry, mouse_event) {
-      const canvas = _a.active_canvas;
-      if (!canvas) {
-        return;
-      }
-      const canvasRef = canvas;
-      canvasRef.getCanvasWindow();
-      const host = _a.callbackHost();
-      const group = new host.LGraphGroup();
-      group.pos = canvas.convertEventToCanvasOffset(mouse_event);
-      canvas.graph.add(group);
-    }
-    /**
-     * Determines the furthest nodes in each direction
-     * @param nodes {LGraphNode[]} the nodes to from which boundary nodes will be extracted
-     * @return {{left: LGraphNode, top: LGraphNode, right: LGraphNode, bottom: LGraphNode}}
-     */
-    static getBoundaryNodes(nodes) {
-      let top = null;
-      let right = null;
-      let bottom = null;
-      let left = null;
-      const source = nodes;
-      for (const nID in source) {
-        const node2 = source[nID];
-        const [x2, y2] = node2.pos;
-        const [width2, height] = node2.size;
-        if (top === null || y2 < top.pos[1]) {
-          top = node2;
-        }
-        if (right === null || x2 + width2 > right.pos[0] + right.size[0]) {
-          right = node2;
-        }
-        if (bottom === null || y2 + height > bottom.pos[1] + bottom.size[1]) {
-          bottom = node2;
-        }
-        if (left === null || x2 < left.pos[0]) {
-          left = node2;
-        }
-      }
-      return { top, right, bottom, left };
-    }
-    /**
-     *
-     * @param nodes {LGraphNode[]} a list of nodes
-     * @param direction {"top"|"bottom"|"left"|"right"} Direction to align the nodes
-     * @param align_to {LGraphNode?} Node to align to (if null, align to the furthest node in the given direction)
-     */
-    static alignNodes(nodes, direction, align_to) {
-      if (!nodes) {
-        return;
-      }
-      const canvas = _a.active_canvas;
-      let boundaryNodes;
-      if (align_to === void 0) {
-        boundaryNodes = _a.getBoundaryNodes(nodes);
-      } else {
-        boundaryNodes = {
-          top: align_to,
-          right: align_to,
-          bottom: align_to,
-          left: align_to
-        };
-      }
-      for (const [, node2] of Object.entries(canvas.selected_nodes || {})) {
-        switch (direction) {
-          case "right":
-            node2.pos[0] = boundaryNodes.right.pos[0] + boundaryNodes.right.size[0] - node2.size[0];
-            break;
-          case "left":
-            node2.pos[0] = boundaryNodes.left.pos[0];
-            break;
-          case "top":
-            node2.pos[1] = boundaryNodes.top.pos[1];
-            break;
-          case "bottom":
-            node2.pos[1] = boundaryNodes.bottom.pos[1] + boundaryNodes.bottom.size[1] - node2.size[1];
-            break;
-        }
-      }
-      canvas.dirty_canvas = true;
-      canvas.dirty_bgcanvas = true;
-    }
-    static onNodeAlign(_value, _options, event2, prev_menu, node2) {
-      const host = _a.callbackHost();
-      new host.ContextMenu(["Top", "Bottom", "Left", "Right"], {
-        event: event2,
-        callback: inner_clicked,
-        parentMenu: prev_menu
-      });
-      function inner_clicked(value) {
-        _a.alignNodes(
-          _a.active_canvas.selected_nodes,
-          value.toLowerCase(),
-          node2
-        );
-      }
-    }
-    static onGroupAlign(_value, _options, event2, prev_menu) {
-      const host = _a.callbackHost();
-      new host.ContextMenu(["Top", "Bottom", "Left", "Right"], {
-        event: event2,
-        callback: inner_clicked,
-        parentMenu: prev_menu
-      });
-      function inner_clicked(value) {
-        _a.alignNodes(
-          _a.active_canvas.selected_nodes,
-          value.toLowerCase()
-        );
-      }
-    }
-    /** Create menu for `Add Node` */
-    static onMenuAdd(_node, _options, e, prev_menu, callback) {
-      const canvas = _a.active_canvas;
-      if (!canvas) {
-        return;
-      }
-      const canvasRef = canvas;
-      const ref_window2 = canvasRef.getCanvasWindow();
-      const graph = canvasRef.graph;
-      const host = _a.callbackHost();
-      function inner_onMenuAdded(base_category, menuRef) {
-        const categories = host.getNodeTypesCategories(canvasRef.filter || graph.filter).filter((category) => category.startsWith(base_category));
-        const entries = [];
-        categories.map((category) => {
-          if (!category) {
-            return;
-          }
-          const base_category_regex = new RegExp("^(" + base_category + ")");
-          const category_name = category.replace(base_category_regex, "").split("/")[0];
-          const category_path = base_category === "" ? category_name + "/" : base_category + category_name + "/";
-          let name = category_name;
-          if (name.indexOf("::") != -1) {
-            name = name.split("::")[1];
-          }
-          const index = entries.findIndex((entry) => entry.value === category_path);
-          if (index === -1) {
-            entries.push({
-              value: category_path,
-              content: name,
-              has_submenu: true,
-              callback: (value, _event, _mouseEvent, contextMenu) => {
-                const selected = value;
-                inner_onMenuAdded(selected.value || "", contextMenu);
-              }
-            });
-          }
-        });
-        const nodes = host.getNodeTypesInCategory(
-          base_category.slice(0, -1),
-          canvasRef.filter || graph.filter
-        );
-        nodes.map((nodeType) => {
-          if (nodeType.skip_list) {
-            return;
-          }
-          entries.push({
-            value: nodeType.type,
-            content: nodeType.title,
-            has_submenu: false,
-            callback: (value, _event, _mouseEvent, contextMenu) => {
-              const selected = value;
-              const first_event = contextMenu.getFirstEvent();
-              canvasRef.graph.beforeChange();
-              const newNode = host.createNode(selected.value || "");
-              if (newNode) {
-                newNode.pos = canvasRef.convertEventToCanvasOffset(first_event);
-                canvasRef.graph.add(newNode);
-              }
-              if (callback) {
-                callback(newNode);
-              }
-              canvasRef.graph.afterChange();
-            }
-          });
-        });
-        new host.ContextMenu(entries, { event: e, parentMenu: menuRef }, ref_window2);
-      }
-      inner_onMenuAdded("", prev_menu);
-      return false;
-    }
-    static onMenuCollapseAll() {
-    }
-    static onMenuNodeEdit() {
-    }
-    static showMenuNodeOptionalInputs(_v, _options, e, prev_menu, node2) {
-      if (!node2) {
-        return;
-      }
-      const that2 = this;
-      const canvas = _a.active_canvas;
-      if (!canvas) {
-        return;
-      }
-      const canvasRef = canvas;
-      const ref_window2 = canvasRef.getCanvasWindow();
-      const host = _a.callbackHost();
-      let optInputs = node2.optional_inputs;
-      if (node2.onGetInputs) {
-        optInputs = node2.onGetInputs();
-      }
-      let entries = [];
-      if (optInputs) {
-        for (let i2 = 0; i2 < optInputs.length; i2++) {
-          const entry = optInputs[i2];
-          if (!entry) {
-            entries.push(null);
-            continue;
-          }
-          let label = entry[0];
-          if (!entry[2]) {
-            entry[2] = {};
-          }
-          if (entry[2].label) {
-            label = String(entry[2].label);
-          }
-          entry[2].removable = true;
-          const data = { content: label, value: entry };
-          if (entry[1] == host.ACTION) {
-            data.className = "event";
-          }
-          entries.push(data);
-        }
-      }
-      if (node2.onMenuNodeInputs) {
-        const retEntries = node2.onMenuNodeInputs(entries);
-        if (retEntries) {
-          entries = retEntries;
-        }
-      }
-      if (!entries.length) {
-        return;
-      }
-      new host.ContextMenu(
-        entries,
-        {
-          event: e,
-          callback: inner_clicked,
-          parentMenu: prev_menu,
-          node: node2
-        },
-        ref_window2
-      );
-      function inner_clicked(v2, _e, prev) {
-        if (!node2) {
-          return;
-        }
-        const valueObj = v2;
-        if (valueObj.callback) {
-          valueObj.callback.call(that2, node2, valueObj, e, prev);
-        }
-        if (valueObj.value) {
-          node2.graph.beforeChange();
-          const addEntry = valueObj.value;
-          node2.addInput(addEntry[0], addEntry[1], addEntry[2]);
-          if (node2.onNodeInputAdd) {
-            node2.onNodeInputAdd(valueObj.value);
-          }
-          node2.setDirtyCanvas(true, true);
-          node2.graph.afterChange();
-        }
-      }
-      return false;
-    }
-    static showMenuNodeOptionalOutputs(_v, _options, e, prev_menu, node2) {
-      if (!node2) {
-        return;
-      }
-      const that2 = this;
-      const canvas = _a.active_canvas;
-      if (!canvas) {
-        return;
-      }
-      const canvasRef = canvas;
-      const ref_window2 = canvasRef.getCanvasWindow();
-      const host = _a.callbackHost();
-      let optOutputs = node2.optional_outputs;
-      if (node2.onGetOutputs) {
-        optOutputs = node2.onGetOutputs();
-      }
-      let entries = [];
-      if (optOutputs) {
-        for (let i2 = 0; i2 < optOutputs.length; i2++) {
-          const entry = optOutputs[i2];
-          if (!entry) {
-            entries.push(null);
-            continue;
-          }
-          if (node2.flags && node2.flags.skip_repeated_outputs && node2.findOutputSlot && node2.findOutputSlot(entry[0]) != -1) {
-            continue;
-          }
-          let label = entry[0];
-          if (!entry[2]) {
-            entry[2] = {};
-          }
-          if (entry[2].label) {
-            label = String(entry[2].label);
-          }
-          entry[2].removable = true;
-          const data = { content: label, value: entry };
-          if (entry[1] == host.EVENT) {
-            data.className = "event";
-          }
-          entries.push(data);
-        }
-      }
-      const thisLike = this;
-      if (thisLike.onMenuNodeOutputs) {
-        entries = thisLike.onMenuNodeOutputs(entries);
-      }
-      if (host.do_add_triggers_slots && node2.findOutputSlot && node2.findOutputSlot("onExecuted") == -1) {
-        entries.push({
-          content: "On Executed",
-          value: ["onExecuted", host.EVENT, { nameLocked: true }],
-          className: "event"
-        });
-      }
-      if (node2.onMenuNodeOutputs) {
-        const retEntries = node2.onMenuNodeOutputs(entries);
-        if (retEntries) {
-          entries = retEntries;
-        }
-      }
-      if (!entries.length) {
-        return;
-      }
-      new host.ContextMenu(
-        entries,
-        {
-          event: e,
-          callback: inner_clicked,
-          parentMenu: prev_menu,
-          node: node2
-        },
-        ref_window2
-      );
-      function inner_clicked(v2, _e, prev) {
-        if (!node2) {
-          return;
-        }
-        const valueObj = v2;
-        if (valueObj.callback) {
-          valueObj.callback.call(that2, node2, valueObj, e, prev);
-        }
-        if (!valueObj.value) {
-          return;
-        }
-        const packed = valueObj.value;
-        const value = packed[1];
-        if (value && (Array.isArray(value) || value.constructor === Object)) {
-          const submenuEntries = [];
-          for (const i2 in value) {
-            submenuEntries.push({
-              content: i2,
-              value: value[i2]
-            });
-          }
-          new host.ContextMenu(submenuEntries, {
-            event: e,
-            callback: inner_clicked,
-            parentMenu: prev,
-            node: node2
-          });
-          return false;
-        }
-        node2.graph.beforeChange();
-        node2.addOutput(packed[0], packed[1], packed[2]);
-        if (node2.onNodeOutputAdd) {
-          node2.onNodeOutputAdd(valueObj.value);
-        }
-        node2.setDirtyCanvas(true, true);
-        node2.graph.afterChange();
-      }
-      return false;
-    }
-    static onShowMenuNodeProperties(_value, _options, e, prev_menu, node2) {
-      if (!node2 || !node2.properties) {
-        return;
-      }
-      const canvas = _a.active_canvas;
-      if (!canvas) {
-        return;
-      }
-      const canvasRef = canvas;
-      const ref_window2 = canvasRef.getCanvasWindow();
-      const entries = [];
-      for (const i2 in node2.properties) {
-        let value = node2.properties[i2] !== void 0 ? node2.properties[i2] : " ";
-        if (typeof value == "object") {
-          value = JSON.stringify(value);
-        }
-        const info = node2.getPropertyInfo(i2);
-        if (info.type == "enum" || info.type == "combo") {
-          value = _a.getPropertyPrintableValue(
-            value,
-            info.values
-          );
-        }
-        value = _a.decodeHTML(String(value));
-        entries.push({
-          content: "<span class='property_name'>" + (info.label ? info.label : i2) + "</span><span class='property_value'>" + value + "</span>",
-          value: i2
-        });
-      }
-      if (!entries.length) {
-        return;
-      }
-      new (_a.callbackHost()).ContextMenu(
-        entries,
-        {
-          event: e,
-          callback: inner_clicked,
-          parentMenu: prev_menu,
-          allow_html: true,
-          node: node2
-        },
-        ref_window2
-      );
-      function inner_clicked(v2) {
-        if (!node2) {
-          return;
-        }
-        const valueObj = v2;
-        const rect = this.getBoundingClientRect();
-        canvasRef.showEditPropertyValue(node2, String(valueObj.value || ""), {
-          position: [rect.left, rect.top]
-        });
-      }
-      return false;
-    }
-    static decodeHTML(str) {
-      const e = document.createElement("div");
-      e.innerText = str;
-      return e.innerHTML;
-    }
-    static onMenuResizeNode(_value, _options, _e, _menu, node2) {
-      if (!node2) {
-        return;
-      }
-      const fApplyMultiNode = (target) => {
-        target.size = target.computeSize();
-        if (target.onResize) {
-          target.onResize(target.size);
-        }
-      };
-      const graphcanvas = _a.active_canvas;
-      if (!graphcanvas.selected_nodes || Object.keys(graphcanvas.selected_nodes).length <= 1) {
-        fApplyMultiNode(node2);
-      } else {
-        for (const i2 in graphcanvas.selected_nodes) {
-          fApplyMultiNode(graphcanvas.selected_nodes[i2]);
-        }
-      }
-      node2.setDirtyCanvas(true, true);
-    }
-    static onResizeNode(value, options, e, menu, node2) {
-      _a.onMenuResizeNode(value, options, e, menu, node2);
-    }
-    // TODO refactor :: this is used fot title but not for properties!
-    static onShowPropertyEditor(item, _options, e, _menu, node2) {
-      var _a2;
-      const property = item.property || "title";
-      const value = node2[property];
-      const dialog = document.createElement("div");
-      dialog.is_modified = false;
-      dialog.className = "graphdialog";
-      dialog.innerHTML = "<span class='name'></span><input autofocus type='text' class='value'/><button>OK</button>";
-      dialog.close = function() {
-        if (dialog.parentNode) {
-          dialog.parentNode.removeChild(dialog);
-        }
-      };
-      const title = dialog.querySelector(".name");
-      if (title) {
-        title.textContent = property;
-      }
-      const input = dialog.querySelector(".value");
-      if (input) {
-        input.value = String(value != null ? value : "");
-        input.addEventListener("blur", function() {
-          this.focus();
-        });
-        input.addEventListener("keydown", function(ev) {
-          var _a3;
-          dialog.is_modified = true;
-          if (ev.keyCode == 27) {
-            (_a3 = dialog.close) == null ? void 0 : _a3.call(dialog);
-          } else if (ev.keyCode == 13) {
-            inner();
-          } else if (ev.keyCode != 13 && ev.target.localName != "textarea") {
-            return;
-          }
-          ev.preventDefault();
-          ev.stopPropagation();
-        });
-      }
-      const graphcanvas = _a.active_canvas;
-      if (!graphcanvas) {
-        return;
-      }
-      const canvas = graphcanvas.canvas;
-      const rect = canvas.getBoundingClientRect();
-      let offsetx = -20;
-      let offsety = -20;
-      if (rect) {
-        offsetx -= rect.left;
-        offsety -= rect.top;
-      }
-      const evt = e || globalThis.event;
-      if (evt) {
-        dialog.style.left = evt.clientX + offsetx + "px";
-        dialog.style.top = evt.clientY + offsety + "px";
-      } else {
-        dialog.style.left = canvas.width * 0.5 + offsetx + "px";
-        dialog.style.top = canvas.height * 0.5 + offsety + "px";
-      }
-      const button = dialog.querySelector("button");
-      if (button) {
-        button.addEventListener("click", inner);
-      }
-      (_a2 = canvas.parentNode) == null ? void 0 : _a2.appendChild(dialog);
-      input == null ? void 0 : input.focus();
-      const host = _a.callbackHost();
-      let dialogCloseTimer = null;
-      dialog.addEventListener("mouseleave", function() {
-        if (host.dialog_close_on_mouse_leave) {
-          if (!dialog.is_modified && host.dialog_close_on_mouse_leave) {
-            dialogCloseTimer = setTimeout(
-              () => {
-                var _a3;
-                return (_a3 = dialog.close) == null ? void 0 : _a3.call(dialog);
-              },
-              host.dialog_close_on_mouse_leave_delay
-            );
-          }
-        }
-      });
-      dialog.addEventListener("mouseenter", function() {
-        if (host.dialog_close_on_mouse_leave) {
-          if (dialogCloseTimer) {
-            clearTimeout(dialogCloseTimer);
-          }
-        }
-      });
-      function inner() {
-        if (input) {
-          setValue(input.value);
-        }
-      }
-      function setValue(nextValue) {
-        var _a3;
-        let safeValue = nextValue;
-        if (item.type == "Number") {
-          safeValue = Number(safeValue);
-        } else if (item.type == "Boolean") {
-          safeValue = Boolean(safeValue);
-        }
-        node2[property] = safeValue;
-        if (dialog.parentNode) {
-          dialog.parentNode.removeChild(dialog);
-        }
-        (_a3 = node2.setDirtyCanvas) == null ? void 0 : _a3.call(node2, true, true);
-      }
-    }
-    static getPropertyPrintableValue(value, values) {
-      if (!values) {
-        return String(value);
-      }
-      if (Array.isArray(values)) {
-        return String(value);
-      }
-      if (values.constructor === Object) {
-        let desc_value = "";
-        for (const k in values) {
-          if (values[k] != value) {
-            continue;
-          }
-          desc_value = k;
-          break;
-        }
-        return String(value) + " (" + desc_value + ")";
-      }
-      return String(value);
-    }
-    static onMenuNodeCollapse(_value, _options, _e, _menu, node2) {
-      node2.graph.beforeChange();
-      const fApplyMultiNode = (target) => {
-        target.collapse();
-      };
-      const graphcanvas = _a.active_canvas;
-      if (!graphcanvas.selected_nodes || Object.keys(graphcanvas.selected_nodes).length <= 1) {
-        fApplyMultiNode(node2);
-      } else {
-        for (const i2 in graphcanvas.selected_nodes) {
-          fApplyMultiNode(graphcanvas.selected_nodes[i2]);
-        }
-      }
-      node2.graph.afterChange();
-    }
-    static onMenuNodePin(_value, _options, _e, _menu, node2) {
-      node2.pin();
-    }
-    static onMenuNodeMode(_value, _options, e, menu, node2) {
-      const host = _a.callbackHost();
-      new host.ContextMenu(host.NODE_MODES, {
-        event: e,
-        callback: inner_clicked,
-        parentMenu: menu,
-        node: node2
-      });
-      function inner_clicked(v2) {
-        if (!node2) {
-          return;
-        }
-        const kV = Object.values(host.NODE_MODES).indexOf(String(v2));
-        const fApplyMultiNode = (target) => {
-          if (typeof target.changeMode !== "function") {
-            return;
-          }
-          if (kV >= 0 && Object.values(host.NODE_MODES)[kV]) {
-            target.changeMode(kV);
-          } else {
-            target.changeMode(host.ALWAYS);
-          }
-        };
-        const graphcanvas = _a.active_canvas;
-        if (!graphcanvas.selected_nodes || Object.keys(graphcanvas.selected_nodes).length <= 1) {
-          fApplyMultiNode(node2);
-        } else {
-          for (const i2 in graphcanvas.selected_nodes) {
-            fApplyMultiNode(graphcanvas.selected_nodes[i2]);
-          }
-        }
-      }
-      return false;
-    }
-    static onMenuNodeColors(_value, _options, e, menu, node2) {
-      if (!node2) {
-        throw "no node for color";
-      }
-      const host = _a.callbackHost();
-      const values = [];
-      values.push({
-        value: null,
-        content: "<span style='display: block; padding-left: 4px;'>No color</span>"
-      });
-      for (const i2 in _a.node_colors) {
-        const color = _a.node_colors[i2];
-        values.push({
-          value: i2,
-          content: "<span style='display: block; color: #999; padding-left: 4px; border-left: 8px solid " + color.color + "; background-color:" + color.bgcolor + "'>" + i2 + "</span>"
-        });
-      }
-      new host.ContextMenu(values, {
-        event: e,
-        callback: inner_clicked,
-        parentMenu: menu,
-        node: node2
-      });
-      function inner_clicked(v2) {
-        if (!node2) {
-          return;
-        }
-        const valueObj = v2;
-        const color = valueObj.value ? _a.node_colors[valueObj.value] : null;
-        const fApplyColor = (target) => {
-          if (color) {
-            if (host.LGraphGroup && target.constructor === host.LGraphGroup) {
-              target.color = color.groupcolor;
-            } else {
-              target.color = color.color;
-              target.bgcolor = color.bgcolor;
-            }
-          } else {
-            delete target.color;
-            delete target.bgcolor;
-          }
-        };
-        const graphcanvas = _a.active_canvas;
-        if (!graphcanvas.selected_nodes || Object.keys(graphcanvas.selected_nodes).length <= 1) {
-          fApplyColor(node2);
-        } else {
-          for (const i2 in graphcanvas.selected_nodes) {
-            fApplyColor(graphcanvas.selected_nodes[i2]);
-          }
-        }
-        node2.setDirtyCanvas(true, true);
-      }
-      return false;
-    }
-    static onMenuNodeShapes(_value, _options, e, menu, node2) {
-      if (!node2) {
-        throw "no node passed";
-      }
-      const host = _a.callbackHost();
-      new host.ContextMenu(host.VALID_SHAPES, {
-        event: e,
-        callback: inner_clicked,
-        parentMenu: menu,
-        node: node2
-      });
-      function inner_clicked(v2) {
-        if (!node2) {
-          return;
-        }
-        node2.graph.beforeChange();
-        const fApplyMultiNode = (target) => {
-          target.shape = v2;
-        };
-        const graphcanvas = _a.active_canvas;
-        if (!graphcanvas.selected_nodes || Object.keys(graphcanvas.selected_nodes).length <= 1) {
-          fApplyMultiNode(node2);
-        } else {
-          for (const i2 in graphcanvas.selected_nodes) {
-            fApplyMultiNode(graphcanvas.selected_nodes[i2]);
-          }
-        }
-        node2.graph.afterChange();
-        node2.setDirtyCanvas(true);
-      }
-      return false;
-    }
-    static onMenuNodeRemove(_value, _options, _e, _menu, node2) {
-      if (!node2) {
-        throw "no node passed";
-      }
-      const graph = node2.graph;
-      graph.beforeChange();
-      const fApplyMultiNode = (target) => {
-        if (target.removable === false) {
-          return;
-        }
-        graph.remove(target);
-      };
-      const graphcanvas = _a.active_canvas;
-      if (!graphcanvas.selected_nodes || Object.keys(graphcanvas.selected_nodes).length <= 1) {
-        fApplyMultiNode(node2);
-      } else {
-        for (const i2 in graphcanvas.selected_nodes) {
-          fApplyMultiNode(graphcanvas.selected_nodes[i2]);
-        }
-      }
-      graph.afterChange();
-      node2.setDirtyCanvas(true, true);
-    }
-    static onMenuNodeToSubgraph(_value, _options, _e, _menu, node2) {
-      const graph = node2.graph;
-      const graphcanvas = _a.active_canvas;
-      if (!graphcanvas) {
-        return;
-      }
-      let nodes_list = Object.values(graphcanvas.selected_nodes || {});
-      if (!nodes_list.length) {
-        nodes_list = [node2];
-      }
-      const subgraph_node = _a.callbackHost().createNode("graph/subgraph");
-      if (!subgraph_node) {
-        return;
-      }
-      subgraph_node.pos = [node2.pos[0], node2.pos[1]];
-      graph.add(subgraph_node);
-      subgraph_node.buildFromNodes(nodes_list);
-      graphcanvas.deselectAllNodes();
-      node2.setDirtyCanvas(true, true);
-    }
-    static onMenuNodeClone(_value, _options, _e, _menu, node2) {
-      node2.graph.beforeChange();
-      const newSelected = {};
-      const fApplyMultiNode = (target) => {
-        if (target.clonable === false) {
-          return;
-        }
-        const newnode = target.clone();
-        if (!newnode) {
-          return;
-        }
-        newnode.pos = [target.pos[0] + 5, target.pos[1] + 5];
-        target.graph.add(newnode);
-        newSelected[String(newnode.id)] = newnode;
-      };
-      const graphcanvas = _a.active_canvas;
-      if (!graphcanvas.selected_nodes || Object.keys(graphcanvas.selected_nodes).length <= 1) {
-        fApplyMultiNode(node2);
-      } else {
-        for (const i2 in graphcanvas.selected_nodes) {
-          fApplyMultiNode(graphcanvas.selected_nodes[i2]);
-        }
-      }
-      if (Object.keys(newSelected).length) {
-        graphcanvas.selectNodes(newSelected);
-      }
-      node2.graph.afterChange();
-      node2.setDirtyCanvas(true, true);
-    }
-    static getFileExtension(url) {
-      const question = url.indexOf("?");
-      if (question != -1) {
-        url = url.substr(0, question);
-      }
-      const point = url.lastIndexOf(".");
-      if (point == -1) {
-        return "";
-      }
-      return url.substr(point + 1).toLowerCase();
-    }
-  }, _a.DEFAULT_BACKGROUND_IMAGE = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGQAAABkCAIAAAD/gAIDAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAQBJREFUeNrs1rEKwjAUhlETUkj3vP9rdmr1Ysammk2w5wdxuLgcMHyptfawuZX4pJSWZTnfnu/lnIe/jNNxHHGNn//HNbbv+4dr6V+11uF527arU7+u63qfa/bnmh8sWLBgwYJlqRf8MEptXPBXJXa37BSl3ixYsGDBMliwFLyCV/DeLIMFCxYsWLBMwSt4Be/NggXLYMGCBUvBK3iNruC9WbBgwYJlsGApeAWv4L1ZBgsWLFiwYJmCV/AK3psFC5bBggULloJX8BpdwXuzYMGCBctgwVLwCl7Be7MMFixYsGDBsu8FH1FaSmExVfAxBa/gvVmwYMGCZbBg/W4vAQYA5tRF9QYlv/QAAAAASUVORK5CYII=", _a.link_type_colors = {
-    "-1": defaultHost$1.EVENT_LINK_COLOR,
-    number: "#AAA",
-    node: "#DCA"
-  }, _a.gradients = {}, _a.search_limit = -1, _a.node_colors = {
-    red: { color: "#322", bgcolor: "#533", groupcolor: "#A88" },
-    brown: { color: "#332922", bgcolor: "#593930", groupcolor: "#b06634" },
-    green: { color: "#232", bgcolor: "#353", groupcolor: "#8A8" },
-    blue: { color: "#223", bgcolor: "#335", groupcolor: "#88A" },
-    pale_blue: {
-      color: "#2a363b",
-      bgcolor: "#3f5159",
-      groupcolor: "#3f789e"
-    },
-    cyan: { color: "#233", bgcolor: "#355", groupcolor: "#8AA" },
-    purple: { color: "#323", bgcolor: "#535", groupcolor: "#a1309b" },
-    yellow: { color: "#432", bgcolor: "#653", groupcolor: "#b58b2a" },
-    black: { color: "#222", bgcolor: "#000", groupcolor: "#444" }
-  }, _a.active_canvas = null, _a.active_node = null, _a);
   function compareObjects(a, b) {
     for (const i2 in a) {
       if (a[i2] != b[i2]) {
@@ -7619,48 +7807,13 @@ var LiteGraphTSMigration = (function(exports) {
   }
   class LGraphCanvasMenuPanel extends LGraphCanvasRender {
     menuClass() {
-      return LGraphCanvas$1;
+      return resolveMenuPanelCanvasClass();
     }
     menuHost() {
-      var _a2, _b2, _c2, _d2;
-      const litegraph = this.getLiteGraphHost();
-      return {
-        ...litegraph,
-        ContextMenu: litegraph.ContextMenu || this.menuClass().ContextMenu || class {
-          constructor(_v, _o, _w) {
-          }
-        },
-        ACTION: (_a2 = litegraph.ACTION) != null ? _a2 : -1,
-        EVENT: (_b2 = litegraph.EVENT) != null ? _b2 : -1,
-        NODE_MODES: litegraph.NODE_MODES || ["Always", "On Event", "Never", "On Trigger"],
-        LINK_RENDER_MODES: litegraph.LINK_RENDER_MODES || ["Straight", "Linear", "Spline"],
-        availableCanvasOptions: litegraph.availableCanvasOptions || [],
-        slot_types_default_in: litegraph.slot_types_default_in || {},
-        slot_types_default_out: litegraph.slot_types_default_out || {},
-        slot_types_in: litegraph.slot_types_in || [],
-        slot_types_out: litegraph.slot_types_out || [],
-        registered_node_types: litegraph.registered_node_types || {},
-        registered_slot_in_types: litegraph.registered_slot_in_types || {},
-        registered_slot_out_types: litegraph.registered_slot_out_types || {},
-        searchbox_extras: litegraph.searchbox_extras || {},
-        search_filter_enabled: !!litegraph.search_filter_enabled,
-        search_hide_on_mouse_leave: !!litegraph.search_hide_on_mouse_leave,
-        search_show_all_on_open: !!litegraph.search_show_all_on_open,
-        dialog_close_on_mouse_leave: (_c2 = litegraph.dialog_close_on_mouse_leave) != null ? _c2 : true,
-        dialog_close_on_mouse_leave_delay: (_d2 = litegraph.dialog_close_on_mouse_leave_delay) != null ? _d2 : 500,
-        getTime: litegraph.getTime || (() => Date.now()),
-        createNode: litegraph.createNode || ((_) => null),
-        pointerListenerAdd: litegraph.pointerListenerAdd || ((dom, ev, cb, capture) => {
-          if ("addEventListener" in dom) {
-            dom.addEventListener(ev, cb, !!capture);
-          }
-        }),
-        pointerListenerRemove: litegraph.pointerListenerRemove || ((dom, ev, cb, capture) => {
-          if ("removeEventListener" in dom) {
-            dom.removeEventListener(ev, cb, !!capture);
-          }
-        })
-      };
+      return resolveMenuPanelHost(
+        this.getLiteGraphHost(),
+        this.menuClass()
+      );
     }
     setActiveCanvas() {
       this.menuClass().active_canvas = this;

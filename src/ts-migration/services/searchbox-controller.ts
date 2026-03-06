@@ -1,13 +1,13 @@
 import type {
     DialogLike,
-    MenuPanelCanvasClassPort,
     MenuPanelHost,
+    ResolvedMenuPanelCanvasClassPort,
     SearchBoxControllerPort,
 } from "./menu-panel-types";
 
 export interface SearchBoxControllerContext {
     host: MenuPanelHost;
-    menuClass: MenuPanelCanvasClassPort;
+    menuClass: ResolvedMenuPanelCanvasClassPort;
     graphcanvas: SearchBoxControllerPort;
 }
 

@@ -7,8 +7,8 @@ import {
 import type {
     DialogLike,
     MenuActionBuilderCanvasPort,
-    MenuPanelCanvasClassPort,
     MenuPanelHost,
+    ResolvedMenuPanelCanvasClassPort,
 } from "./menu-panel-types";
 
 export interface ContextMenuControllerCanvasPort
@@ -21,7 +21,7 @@ export interface ContextMenuControllerCanvasPort
 
 export interface ContextMenuControllerContext {
     host: MenuPanelHost;
-    menuClass: MenuPanelCanvasClassPort;
+    menuClass: ResolvedMenuPanelCanvasClassPort;
     graphcanvas: ContextMenuControllerCanvasPort;
 }
 

@@ -1,4 +1,8 @@
-import type { DialogLike, MenuPanelHost } from "./menu-panel-types";
+import type {
+    DialogLike,
+    MenuPanelHost,
+    ResolvedMenuPanelCanvasClassPort,
+} from "./menu-panel-types";
 
 export interface CreateDefaultNodeForSlotOptions {
     nodeFrom?: any;
@@ -20,7 +24,7 @@ export interface ConnectionMenuCanvasPort {
 
 export interface ConnectionMenuContext {
     host: MenuPanelHost;
-    menuClass: Record<string, any>;
+    menuClass: ResolvedMenuPanelCanvasClassPort;
     graphcanvas: ConnectionMenuCanvasPort;
 }
 

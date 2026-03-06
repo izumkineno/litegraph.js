@@ -14,10 +14,13 @@ import { createDialog } from "../services/dialog-factory";
 import { showLinkMenuController } from "../services/link-menu-controller";
 import {
     type DialogLike,
-    type MenuPanelHost,
     type PanelLike,
+    type ResolvedMenuPanelCanvasClassPort,
+    type ResolvedMenuPanelHost,
     type SearchBoxControllerPort,
 } from "../services/menu-panel-types";
+import { resolveMenuPanelCanvasClass } from "../services/menu-class-resolver";
+import { resolveMenuPanelHost } from "../services/menu-host-resolver";
 import { showGraphOptionsPanel } from "../services/graph-options-panel-presenter";
 import { showNodePanel } from "../services/node-panel-presenter";
 import { createPanel } from "../services/panel-factory";
@@ -25,7 +28,6 @@ import { showEditPropertyValueDialog } from "../services/property-value-dialog-c
 import { showPromptDialog } from "../services/prompt-dialog-controller";
 import { showSearchBoxController } from "../services/searchbox-controller";
 import { showSubgraphIoPanel } from "../services/subgraph-io-panel-presenter";
-import { LGraphCanvas as LGraphCanvasStatic } from "./LGraphCanvas.static";
 import { LGraphCanvasRender } from "./LGraphCanvas.render";
 
 /**
@@ -37,58 +39,15 @@ export class LGraphCanvasMenuPanel
     implements GraphCanvasWidgetPort {
     [key: string]: any;
 
-    private menuClass(): any {
-        return LGraphCanvasStatic as any;
+    private menuClass(): ResolvedMenuPanelCanvasClassPort {
+        return resolveMenuPanelCanvasClass();
     }
 
-    private menuHost(): any {
-        const litegraph = this.getLiteGraphHost() as unknown as MenuPanelHost;
-        return {
-            ...litegraph,
-            ContextMenu:
-                litegraph.ContextMenu ||
-                this.menuClass().ContextMenu ||
-                class {
-                    constructor(_v: any, _o: any, _w?: any) {}
-                },
-            ACTION: litegraph.ACTION ?? -1,
-            EVENT: litegraph.EVENT ?? -1,
-            NODE_MODES:
-                litegraph.NODE_MODES || ["Always", "On Event", "Never", "On Trigger"],
-            LINK_RENDER_MODES:
-                litegraph.LINK_RENDER_MODES || ["Straight", "Linear", "Spline"],
-            availableCanvasOptions: litegraph.availableCanvasOptions || [],
-            slot_types_default_in: litegraph.slot_types_default_in || {},
-            slot_types_default_out: litegraph.slot_types_default_out || {},
-            slot_types_in: litegraph.slot_types_in || [],
-            slot_types_out: litegraph.slot_types_out || [],
-            registered_node_types: litegraph.registered_node_types || {},
-            registered_slot_in_types: litegraph.registered_slot_in_types || {},
-            registered_slot_out_types: litegraph.registered_slot_out_types || {},
-            searchbox_extras: litegraph.searchbox_extras || {},
-            search_filter_enabled: !!litegraph.search_filter_enabled,
-            search_hide_on_mouse_leave: !!litegraph.search_hide_on_mouse_leave,
-            search_show_all_on_open: !!litegraph.search_show_all_on_open,
-            dialog_close_on_mouse_leave: litegraph.dialog_close_on_mouse_leave ?? true,
-            dialog_close_on_mouse_leave_delay:
-                litegraph.dialog_close_on_mouse_leave_delay ?? 500,
-            getTime: litegraph.getTime || (() => Date.now()),
-            createNode: litegraph.createNode || ((_: string) => null),
-            pointerListenerAdd:
-                litegraph.pointerListenerAdd ||
-                ((dom: EventTarget, ev: string, cb: EventListenerOrEventListenerObject, capture?: boolean) => {
-                    if ("addEventListener" in dom) {
-                        (dom as any).addEventListener(ev, cb, !!capture);
-                    }
-                }),
-            pointerListenerRemove:
-                litegraph.pointerListenerRemove ||
-                ((dom: EventTarget, ev: string, cb: EventListenerOrEventListenerObject, capture?: boolean) => {
-                    if ("removeEventListener" in dom) {
-                        (dom as any).removeEventListener(ev, cb, !!capture);
-                    }
-                }),
-        };
+    private menuHost(): ResolvedMenuPanelHost {
+        return resolveMenuPanelHost(
+            this.getLiteGraphHost(),
+            this.menuClass()
+        );
     }
 
     private setActiveCanvas(): void {

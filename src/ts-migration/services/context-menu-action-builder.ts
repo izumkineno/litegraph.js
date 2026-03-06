@@ -1,11 +1,11 @@
 import type {
     MenuActionBuilderCanvasPort,
-    MenuPanelCanvasClassPort,
+    ResolvedMenuPanelCanvasClassPort,
 } from "./menu-panel-types";
 
 export function buildCanvasMenuOptions(
     canvas: MenuActionBuilderCanvasPort,
-    menuClass: MenuPanelCanvasClassPort
+    menuClass: ResolvedMenuPanelCanvasClassPort
 ): any[] {
     let options: any[] = [];
     if (canvas.getMenuOptions) {
@@ -40,7 +40,7 @@ export function buildCanvasMenuOptions(
 
 export function buildNodeMenuOptions(
     canvas: MenuActionBuilderCanvasPort,
-    menuClass: MenuPanelCanvasClassPort,
+    menuClass: ResolvedMenuPanelCanvasClassPort,
     node: any
 ): any[] {
     let options: any[] = [];
@@ -122,7 +122,7 @@ export function buildNodeMenuOptions(
 }
 
 export function buildGroupMenuOptions(
-    menuClass: MenuPanelCanvasClassPort
+    menuClass: ResolvedMenuPanelCanvasClassPort
 ): any[] {
     return [
         { content: "Title", callback: menuClass.onShowPropertyEditor },

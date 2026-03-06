@@ -1,12 +1,12 @@
 import type {
-    MenuPanelCanvasClassPort,
     MenuPanelHost,
     PanelLike,
+    ResolvedMenuPanelCanvasClassPort,
 } from "./menu-panel-types";
 
 export interface PanelFactoryContext {
     host: MenuPanelHost;
-    menuClass: MenuPanelCanvasClassPort;
+    menuClass: ResolvedMenuPanelCanvasClassPort;
     window: Window;
 }
 
