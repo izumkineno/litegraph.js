@@ -1,6 +1,304 @@
 var LiteGraphTSMigration = (function(exports) {
   "use strict";
   var _a, _b, _c, _d;
+  const LGRAPHCANVAS_STATIC_RESIZE_DIFF_ID = "canvas-static.resize";
+  const LGRAPHCANVAS_STATIC_SUBGRAPH_MENU_DIFF_ID = "canvas-static.subgraph-menu";
+  const LGRAPHCANVAS_STATIC_MISSING_APIS_DIFF_ID = "canvas-static.missing-apis";
+  function applyLGraphCanvasStaticCompatAliases(host) {
+    if (!host.onResizeNode && host.onMenuResizeNode) {
+      host.onResizeNode = host.onMenuResizeNode;
+    }
+    if (!host.onMenuResizeNode && host.onResizeNode) {
+      host.onMenuResizeNode = host.onResizeNode;
+    }
+    if (!host.onNodeToSubgraph && host.onMenuNodeToSubgraph) {
+      host.onNodeToSubgraph = host.onMenuNodeToSubgraph;
+    }
+    if (!host.onMenuNodeToSubgraph && host.onNodeToSubgraph) {
+      host.onMenuNodeToSubgraph = host.onNodeToSubgraph;
+    }
+  }
+  function applyLGraphCanvasStaticMissingApiGuards(host) {
+    const filled = [];
+    if (!host.getBoundaryNodes) {
+      host.getBoundaryNodes = () => ({
+        top: null,
+        right: null,
+        bottom: null,
+        left: null
+      });
+      filled.push("getBoundaryNodes");
+    }
+    if (!host.alignNodes) {
+      host.alignNodes = () => {
+      };
+      filled.push("alignNodes");
+    }
+    if (!host.onNodeAlign) {
+      host.onNodeAlign = () => {
+      };
+      filled.push("onNodeAlign");
+    }
+    if (!host.onGroupAlign) {
+      host.onGroupAlign = () => {
+      };
+      filled.push("onGroupAlign");
+    }
+    if (!host.getPropertyPrintableValue) {
+      host.getPropertyPrintableValue = (value) => String(value);
+      filled.push("getPropertyPrintableValue");
+    }
+    return {
+      diffId: LGRAPHCANVAS_STATIC_MISSING_APIS_DIFF_ID,
+      filled
+    };
+  }
+  function applyLGraphCanvasStaticCompat$1(host) {
+    applyLGraphCanvasStaticCompatAliases(host);
+    return applyLGraphCanvasStaticMissingApiGuards(host);
+  }
+  function hasRequiredLGraphCanvasStaticApis(host) {
+    return typeof host.onResizeNode === "function" && typeof host.onMenuResizeNode === "function" && typeof host.onNodeToSubgraph === "function" && typeof host.onMenuNodeToSubgraph === "function" && typeof host.getBoundaryNodes === "function" && typeof host.alignNodes === "function" && typeof host.onNodeAlign === "function" && typeof host.onGroupAlign === "function" && typeof host.getPropertyPrintableValue === "function";
+  }
+  function attachLiteGraphCommonJsExports(exportsTarget, globalScope) {
+    const liteGraph = globalScope.LiteGraph;
+    exportsTarget.LiteGraph = globalScope.LiteGraph;
+    exportsTarget.LGraph = globalScope.LGraph || (liteGraph == null ? void 0 : liteGraph.LGraph);
+    exportsTarget.LLink = globalScope.LLink || (liteGraph == null ? void 0 : liteGraph.LLink);
+    exportsTarget.LGraphNode = globalScope.LGraphNode || (liteGraph == null ? void 0 : liteGraph.LGraphNode);
+    exportsTarget.LGraphGroup = globalScope.LGraphGroup || (liteGraph == null ? void 0 : liteGraph.LGraphGroup);
+    exportsTarget.DragAndScale = globalScope.DragAndScale || (liteGraph == null ? void 0 : liteGraph.DragAndScale);
+    exportsTarget.LGraphCanvas = globalScope.LGraphCanvas || (liteGraph == null ? void 0 : liteGraph.LGraphCanvas);
+    exportsTarget.ContextMenu = globalScope.ContextMenu || (liteGraph == null ? void 0 : liteGraph.ContextMenu);
+    return exportsTarget;
+  }
+  const CONTEXT_MENU_CLOSE_ALL_DIFF_ID = "ui.close-all-context-menus";
+  function applyContextMenuCloseAllCompat$1(liteGraph, fallback) {
+    var _a2;
+    const beforeLiteGraph = liteGraph.closeAllContextMenus;
+    const beforeContextMenu = (_a2 = liteGraph.ContextMenu) == null ? void 0 : _a2.closeAllContextMenus;
+    const resolved = resolveContextMenuCloseAll(liteGraph, fallback);
+    if (!resolved.fn) {
+      return {
+        diffId: CONTEXT_MENU_CLOSE_ALL_DIFF_ID,
+        source: "none",
+        changed: false,
+        synced: false
+      };
+    }
+    liteGraph.closeAllContextMenus = resolved.fn;
+    if (!liteGraph.ContextMenu) {
+      liteGraph.ContextMenu = {};
+    }
+    liteGraph.ContextMenu.closeAllContextMenus = resolved.fn;
+    const synced = isContextMenuCloseAllCompatSynced(liteGraph);
+    return {
+      diffId: CONTEXT_MENU_CLOSE_ALL_DIFF_ID,
+      source: resolved.source,
+      resolved: resolved.fn,
+      changed: beforeLiteGraph !== liteGraph.closeAllContextMenus || beforeContextMenu !== liteGraph.ContextMenu.closeAllContextMenus,
+      synced
+    };
+  }
+  function isContextMenuCloseAllCompatSynced(liteGraph) {
+    var _a2;
+    return !!(liteGraph.closeAllContextMenus && ((_a2 = liteGraph.ContextMenu) == null ? void 0 : _a2.closeAllContextMenus) && liteGraph.closeAllContextMenus === liteGraph.ContextMenu.closeAllContextMenus);
+  }
+  function resolveContextMenuCloseAll(liteGraph, fallback) {
+    var _a2;
+    if (liteGraph.closeAllContextMenus) {
+      return { source: "LiteGraph", fn: liteGraph.closeAllContextMenus };
+    }
+    if ((_a2 = liteGraph.ContextMenu) == null ? void 0 : _a2.closeAllContextMenus) {
+      return { source: "ContextMenu", fn: liteGraph.ContextMenu.closeAllContextMenus };
+    }
+    if (fallback) {
+      return { source: "fallback", fn: fallback };
+    }
+    return { source: "none" };
+  }
+  const LGRAPH_ON_NODE_ADDED_DIFF_ID = "graph-hooks.on-node-added";
+  function hasGraphOnNodeAddedCompatHook(graph) {
+    return typeof graph.onNodeAdded === "function";
+  }
+  function invokeGraphOnNodeAddedCompatHook(graph, node2) {
+    const rawHook = graph.onNodeAdded;
+    if (!rawHook) {
+      return false;
+    }
+    rawHook(node2);
+    return true;
+  }
+  function applyLiteGraphConstantAliases(host, fallbackValue = 6) {
+    const resolved = typeof host.GRID_SHAPE === "number" ? host.GRID_SHAPE : typeof host.SQUARE_SHAPE === "number" ? host.SQUARE_SHAPE : fallbackValue;
+    host.GRID_SHAPE = resolved;
+    host.SQUARE_SHAPE = resolved;
+    return resolved;
+  }
+  function applyLGraphCanvasStaticCompat(host) {
+    applyLGraphCanvasStaticCompat$1(host);
+  }
+  function applyLGraphCanvasPrototypeCompatShims(host) {
+    if (!host.processNodeDeselected && host.deselectNode) {
+      host.processNodeDeselected = (node2) => {
+        var _a2;
+        (_a2 = host.deselectNode) == null ? void 0 : _a2.call(host, node2);
+      };
+    }
+    if (!host.drawSlotGraphic) {
+      host.drawSlotGraphic = () => {
+      };
+    }
+    if (!host.touchHandler) {
+      host.touchHandler = () => {
+      };
+    }
+  }
+  function applyContextMenuCloseAllCompat(liteGraph) {
+    applyContextMenuCloseAllCompat$1(liteGraph);
+  }
+  function applyLiteGraphApiCompatAliases(targets) {
+    if (targets.liteGraph) {
+      applyLiteGraphConstantAliases(targets.liteGraph);
+      applyContextMenuCloseAllCompat(targets.liteGraph);
+    }
+    if (targets.canvasStatic) {
+      applyLGraphCanvasStaticCompat(targets.canvasStatic);
+    }
+    if (targets.canvasPrototype) {
+      applyLGraphCanvasPrototypeCompatShims(targets.canvasPrototype);
+    }
+  }
+  function applyLiteGraphAssemblyCompat(bundle) {
+    applyLiteGraphApiCompatAliases({
+      liteGraph: bundle.LiteGraph,
+      canvasStatic: bundle.LGraphCanvas,
+      canvasPrototype: bundle.LGraphCanvas.prototype
+    });
+  }
+  function clamp(v2, a, b) {
+    return a > v2 ? a : b < v2 ? b : v2;
+  }
+  const defaultBridgeOptions = {
+    exposeClamp: true,
+    installRequestAnimationFrameShim: true
+  };
+  function attachLiteGraphGlobalBridge(globalScope, runtime2, options) {
+    const resolved = { ...defaultBridgeOptions, ...options || {} };
+    const liteGraph = runtime2.LiteGraph;
+    globalScope.LiteGraph = liteGraph;
+    if (runtime2.LGraph) {
+      globalScope.LGraph = runtime2.LGraph;
+      liteGraph.LGraph = runtime2.LGraph;
+    }
+    if (runtime2.LLink) {
+      liteGraph.LLink = runtime2.LLink;
+    }
+    if (runtime2.LGraphNode) {
+      globalScope.LGraphNode = runtime2.LGraphNode;
+      liteGraph.LGraphNode = runtime2.LGraphNode;
+    }
+    if (runtime2.LGraphGroup) {
+      globalScope.LGraphGroup = runtime2.LGraphGroup;
+      liteGraph.LGraphGroup = runtime2.LGraphGroup;
+    }
+    if (runtime2.DragAndScale) {
+      liteGraph.DragAndScale = runtime2.DragAndScale;
+    }
+    if (runtime2.LGraphCanvas) {
+      globalScope.LGraphCanvas = runtime2.LGraphCanvas;
+      liteGraph.LGraphCanvas = runtime2.LGraphCanvas;
+    }
+    if (runtime2.ContextMenu) {
+      liteGraph.ContextMenu = runtime2.ContextMenu;
+    }
+    if (runtime2.CurveEditor) {
+      liteGraph.CurveEditor = runtime2.CurveEditor;
+    }
+    if (resolved.exposeClamp) {
+      globalScope.clamp = clamp;
+    }
+    if (resolved.installRequestAnimationFrameShim) {
+      installRequestAnimationFrameShim(globalScope);
+    }
+    return globalScope;
+  }
+  function installRequestAnimationFrameShim(globalScope) {
+    if (typeof window == "undefined") {
+      return;
+    }
+    if (globalScope.requestAnimationFrame) {
+      return;
+    }
+    globalScope.requestAnimationFrame = globalScope.webkitRequestAnimationFrame || globalScope.mozRequestAnimationFrame || function(callback) {
+      if (!globalScope.setTimeout) {
+        return 0;
+      }
+      return globalScope.setTimeout(callback, 1e3 / 60);
+    };
+  }
+  function resolveLiteGraphGlobalScope(input) {
+    if (input) {
+      return input;
+    }
+    return globalThis;
+  }
+  function attachLiteGraphAssemblyBridges(bundle, options = {}) {
+    const globalScope = resolveLiteGraphGlobalScope(options.globalScope);
+    if (options.attachToGlobal) {
+      const runtimeConstructors = {
+        LiteGraph: bundle.LiteGraph,
+        LGraph: bundle.LGraph,
+        LLink: bundle.LLink,
+        LGraphNode: bundle.LGraphNode,
+        LGraphGroup: bundle.LGraphGroup,
+        DragAndScale: bundle.DragAndScale,
+        LGraphCanvas: bundle.LGraphCanvas,
+        ContextMenu: bundle.ContextMenu,
+        CurveEditor: bundle.CurveEditor
+      };
+      attachLiteGraphGlobalBridge(
+        globalScope,
+        runtimeConstructors,
+        options.bridgeOptions
+      );
+    }
+    if (options.attachCommonJsExports) {
+      const exportsTarget = options.exportsTarget || globalScope.exports || {};
+      attachLiteGraphCommonJsExports(
+        exportsTarget,
+        globalScope
+      );
+    }
+    return globalScope;
+  }
+  const GRID_SQUARE_SHAPE_DIFF_ID = "constants.grid-square-alias";
+  const GRID_SQUARE_SHAPE_DEFAULT = 6;
+  function resolveGridSquareShapeValue(host, fallbackValue = GRID_SQUARE_SHAPE_DEFAULT) {
+    if (typeof host.GRID_SHAPE === "number") {
+      return { value: host.GRID_SHAPE, source: "GRID_SHAPE" };
+    }
+    if (typeof host.SQUARE_SHAPE === "number") {
+      return { value: host.SQUARE_SHAPE, source: "SQUARE_SHAPE" };
+    }
+    return { value: fallbackValue, source: "fallback" };
+  }
+  function applyGridSquareShapeAlias(host, fallbackValue = GRID_SQUARE_SHAPE_DEFAULT) {
+    const beforeGrid = host.GRID_SHAPE;
+    const beforeSquare = host.SQUARE_SHAPE;
+    const resolved = resolveGridSquareShapeValue(host, fallbackValue);
+    host.GRID_SHAPE = resolved.value;
+    host.SQUARE_SHAPE = resolved.value;
+    return {
+      diffId: GRID_SQUARE_SHAPE_DIFF_ID,
+      value: resolved.value,
+      source: resolved.source,
+      changed: beforeGrid !== host.GRID_SHAPE || beforeSquare !== host.SQUARE_SHAPE
+    };
+  }
+  function isGridSquareShapeAliasSynced(host) {
+    return typeof host.GRID_SHAPE === "number" && typeof host.SQUARE_SHAPE === "number" && host.GRID_SHAPE === host.SQUARE_SHAPE;
+  }
   const classHostCache = /* @__PURE__ */ new WeakMap();
   function resolveOwnerConstructor(owner) {
     if (typeof owner === "function") {
@@ -947,9 +1245,6 @@ var LiteGraphTSMigration = (function(exports) {
     yellow: { color: "#432", bgcolor: "#653", groupcolor: "#b58b2a" },
     black: { color: "#222", bgcolor: "#000", groupcolor: "#444" }
   }, _a.active_canvas = null, _a.active_node = null, _a);
-  function clamp(v2, a, b) {
-    return a > v2 ? a : b < v2 ? b : v2;
-  }
   function compareObjects(a, b) {
     for (const i2 in a) {
       if (a[i2] != b[i2]) {
@@ -1030,6 +1325,31 @@ var LiteGraphTSMigration = (function(exports) {
       }
     };
     return host;
+  }
+  function invokePointerListener(listener, context, event2) {
+    if (typeof listener === "function") {
+      return listener.call(context, event2);
+    }
+    return listener.handleEvent(event2);
+  }
+  function isValidPointerListener(listener) {
+    return !!listener && (typeof listener === "function" || typeof listener.handleEvent === "function");
+  }
+  function createDynamicPointerListenerCompat(methodRef) {
+    const host = createPointerEventsHost("mouse");
+    function syncMethod() {
+      host.pointerevents_method = methodRef() || "mouse";
+    }
+    return {
+      add(dom, eventName, callback, capture = false) {
+        syncMethod();
+        pointerListenerAdd(host, dom, eventName, callback, capture);
+      },
+      remove(dom, eventName, callback, capture = false) {
+        syncMethod();
+        pointerListenerRemove(host, dom, eventName, callback, capture);
+      }
+    };
   }
   function _normalizeTouchEvent(e) {
     const touch = e.changedTouches && e.changedTouches.length && e.changedTouches[0] || e.touches && e.touches.length && e.touches[0];
@@ -1134,7 +1454,7 @@ var LiteGraphTSMigration = (function(exports) {
     return !!capture;
   }
   function pointerListenerAdd(host, oDOM, sEvIn, fCall, capture = false) {
-    if (!oDOM || !("addEventListener" in oDOM) || !sEvIn || typeof fCall !== "function") {
+    if (!oDOM || !("addEventListener" in oDOM) || !sEvIn || !isValidPointerListener(fCall)) {
       return;
     }
     const resolved = host._resolvePointerEventName(sEvIn);
@@ -1169,7 +1489,7 @@ var LiteGraphTSMigration = (function(exports) {
         if (semantic_event == "down" || semantic_event == "move" || semantic_event == "up" || semantic_event == "cancel" || semantic_event == "enter" || semantic_event == "leave" || semantic_event == "over" || semantic_event == "out" || semantic_event == "gotpointercapture" || semantic_event == "lostpointercapture") {
           normalized.type = (host.pointerevents_method || "mouse") + semantic_event;
         }
-        return fCall.call(this, normalized);
+        return invokePointerListener(fCall, this, normalized);
       };
     }
     registry2[key].push({
@@ -1183,7 +1503,7 @@ var LiteGraphTSMigration = (function(exports) {
     );
   }
   function pointerListenerRemove(host, oDOM, sEvent, fCall, capture = false) {
-    if (!oDOM || !("removeEventListener" in oDOM) || !sEvent || typeof fCall !== "function") {
+    if (!oDOM || !("removeEventListener" in oDOM) || !sEvent || !isValidPointerListener(fCall)) {
       return;
     }
     const resolved = host._resolvePointerEventName(sEvent);
@@ -7361,135 +7681,6 @@ var LiteGraphTSMigration = (function(exports) {
       }
     }
   }
-  const LGRAPHCANVAS_STATIC_RESIZE_DIFF_ID = "canvas-static.resize";
-  const LGRAPHCANVAS_STATIC_SUBGRAPH_MENU_DIFF_ID = "canvas-static.subgraph-menu";
-  const LGRAPHCANVAS_STATIC_MISSING_APIS_DIFF_ID = "canvas-static.missing-apis";
-  function applyLGraphCanvasStaticCompatAliases(host) {
-    if (!host.onResizeNode && host.onMenuResizeNode) {
-      host.onResizeNode = host.onMenuResizeNode;
-    }
-    if (!host.onMenuResizeNode && host.onResizeNode) {
-      host.onMenuResizeNode = host.onResizeNode;
-    }
-    if (!host.onNodeToSubgraph && host.onMenuNodeToSubgraph) {
-      host.onNodeToSubgraph = host.onMenuNodeToSubgraph;
-    }
-    if (!host.onMenuNodeToSubgraph && host.onNodeToSubgraph) {
-      host.onMenuNodeToSubgraph = host.onNodeToSubgraph;
-    }
-  }
-  function applyLGraphCanvasStaticMissingApiGuards(host) {
-    const filled = [];
-    if (!host.getBoundaryNodes) {
-      host.getBoundaryNodes = () => ({
-        top: null,
-        right: null,
-        bottom: null,
-        left: null
-      });
-      filled.push("getBoundaryNodes");
-    }
-    if (!host.alignNodes) {
-      host.alignNodes = () => {
-      };
-      filled.push("alignNodes");
-    }
-    if (!host.onNodeAlign) {
-      host.onNodeAlign = () => {
-      };
-      filled.push("onNodeAlign");
-    }
-    if (!host.onGroupAlign) {
-      host.onGroupAlign = () => {
-      };
-      filled.push("onGroupAlign");
-    }
-    if (!host.getPropertyPrintableValue) {
-      host.getPropertyPrintableValue = (value) => String(value);
-      filled.push("getPropertyPrintableValue");
-    }
-    return {
-      diffId: LGRAPHCANVAS_STATIC_MISSING_APIS_DIFF_ID,
-      filled
-    };
-  }
-  function applyLGraphCanvasStaticCompat$1(host) {
-    applyLGraphCanvasStaticCompatAliases(host);
-    return applyLGraphCanvasStaticMissingApiGuards(host);
-  }
-  function hasRequiredLGraphCanvasStaticApis(host) {
-    return typeof host.onResizeNode === "function" && typeof host.onMenuResizeNode === "function" && typeof host.onNodeToSubgraph === "function" && typeof host.onMenuNodeToSubgraph === "function" && typeof host.getBoundaryNodes === "function" && typeof host.alignNodes === "function" && typeof host.onNodeAlign === "function" && typeof host.onGroupAlign === "function" && typeof host.getPropertyPrintableValue === "function";
-  }
-  function attachLiteGraphCommonJsExports(exportsTarget, globalScope) {
-    const liteGraph = globalScope.LiteGraph;
-    exportsTarget.LiteGraph = globalScope.LiteGraph;
-    exportsTarget.LGraph = globalScope.LGraph || (liteGraph == null ? void 0 : liteGraph.LGraph);
-    exportsTarget.LLink = globalScope.LLink || (liteGraph == null ? void 0 : liteGraph.LLink);
-    exportsTarget.LGraphNode = globalScope.LGraphNode || (liteGraph == null ? void 0 : liteGraph.LGraphNode);
-    exportsTarget.LGraphGroup = globalScope.LGraphGroup || (liteGraph == null ? void 0 : liteGraph.LGraphGroup);
-    exportsTarget.DragAndScale = globalScope.DragAndScale || (liteGraph == null ? void 0 : liteGraph.DragAndScale);
-    exportsTarget.LGraphCanvas = globalScope.LGraphCanvas || (liteGraph == null ? void 0 : liteGraph.LGraphCanvas);
-    exportsTarget.ContextMenu = globalScope.ContextMenu || (liteGraph == null ? void 0 : liteGraph.ContextMenu);
-    return exportsTarget;
-  }
-  const defaultBridgeOptions = {
-    exposeClamp: true,
-    installRequestAnimationFrameShim: true
-  };
-  function attachLiteGraphGlobalBridge(globalScope, runtime2, options) {
-    const resolved = { ...defaultBridgeOptions, ...options || {} };
-    const liteGraph = runtime2.LiteGraph;
-    globalScope.LiteGraph = liteGraph;
-    if (runtime2.LGraph) {
-      globalScope.LGraph = runtime2.LGraph;
-      liteGraph.LGraph = runtime2.LGraph;
-    }
-    if (runtime2.LLink) {
-      liteGraph.LLink = runtime2.LLink;
-    }
-    if (runtime2.LGraphNode) {
-      globalScope.LGraphNode = runtime2.LGraphNode;
-      liteGraph.LGraphNode = runtime2.LGraphNode;
-    }
-    if (runtime2.LGraphGroup) {
-      globalScope.LGraphGroup = runtime2.LGraphGroup;
-      liteGraph.LGraphGroup = runtime2.LGraphGroup;
-    }
-    if (runtime2.DragAndScale) {
-      liteGraph.DragAndScale = runtime2.DragAndScale;
-    }
-    if (runtime2.LGraphCanvas) {
-      globalScope.LGraphCanvas = runtime2.LGraphCanvas;
-      liteGraph.LGraphCanvas = runtime2.LGraphCanvas;
-    }
-    if (runtime2.ContextMenu) {
-      liteGraph.ContextMenu = runtime2.ContextMenu;
-    }
-    if (runtime2.CurveEditor) {
-      liteGraph.CurveEditor = runtime2.CurveEditor;
-    }
-    if (resolved.exposeClamp) {
-      globalScope.clamp = clamp;
-    }
-    if (resolved.installRequestAnimationFrameShim) {
-      installRequestAnimationFrameShim(globalScope);
-    }
-    return globalScope;
-  }
-  function installRequestAnimationFrameShim(globalScope) {
-    if (typeof window == "undefined") {
-      return;
-    }
-    if (globalScope.requestAnimationFrame) {
-      return;
-    }
-    globalScope.requestAnimationFrame = globalScope.webkitRequestAnimationFrame || globalScope.mozRequestAnimationFrame || function(callback) {
-      if (!globalScope.setTimeout) {
-        return 0;
-      }
-      return globalScope.setTimeout(callback, 1e3 / 60);
-    };
-  }
   function createTimeSource() {
     if (typeof performance != "undefined") {
       return performance.now.bind(performance);
@@ -7507,33 +7698,6 @@ var LiteGraphTSMigration = (function(exports) {
     return function getTime() {
       return (/* @__PURE__ */ new Date()).getTime();
     };
-  }
-  const GRID_SQUARE_SHAPE_DIFF_ID = "constants.grid-square-alias";
-  const GRID_SQUARE_SHAPE_DEFAULT = 6;
-  function resolveGridSquareShapeValue(host, fallbackValue = GRID_SQUARE_SHAPE_DEFAULT) {
-    if (typeof host.GRID_SHAPE === "number") {
-      return { value: host.GRID_SHAPE, source: "GRID_SHAPE" };
-    }
-    if (typeof host.SQUARE_SHAPE === "number") {
-      return { value: host.SQUARE_SHAPE, source: "SQUARE_SHAPE" };
-    }
-    return { value: fallbackValue, source: "fallback" };
-  }
-  function applyGridSquareShapeAlias(host, fallbackValue = GRID_SQUARE_SHAPE_DEFAULT) {
-    const beforeGrid = host.GRID_SHAPE;
-    const beforeSquare = host.SQUARE_SHAPE;
-    const resolved = resolveGridSquareShapeValue(host, fallbackValue);
-    host.GRID_SHAPE = resolved.value;
-    host.SQUARE_SHAPE = resolved.value;
-    return {
-      diffId: GRID_SQUARE_SHAPE_DIFF_ID,
-      value: resolved.value,
-      source: resolved.source,
-      changed: beforeGrid !== host.GRID_SHAPE || beforeSquare !== host.SQUARE_SHAPE
-    };
-  }
-  function isGridSquareShapeAliasSynced(host) {
-    return typeof host.GRID_SHAPE === "number" && typeof host.SQUARE_SHAPE === "number" && host.GRID_SHAPE === host.SQUARE_SHAPE;
   }
   const LiteGraphConstants = {
     VERSION: 0.4,
@@ -8970,18 +9134,6 @@ var LiteGraphTSMigration = (function(exports) {
         true
       );
     }
-  }
-  const LGRAPH_ON_NODE_ADDED_DIFF_ID = "graph-hooks.on-node-added";
-  function hasGraphOnNodeAddedCompatHook(graph) {
-    return typeof graph.onNodeAdded === "function";
-  }
-  function invokeGraphOnNodeAddedCompatHook(graph, node2) {
-    const rawHook = graph.onNodeAdded;
-    if (!rawHook) {
-      return false;
-    }
-    rawHook(node2);
-    return true;
   }
   const defaultStructureHost = {
     debug: false,
@@ -12204,91 +12356,6 @@ var LiteGraphTSMigration = (function(exports) {
       return this.graph;
     }
   }, _d.liteGraphCanvas = defaultCanvasColors, _d);
-  const CONTEXT_MENU_CLOSE_ALL_DIFF_ID = "ui.close-all-context-menus";
-  function applyContextMenuCloseAllCompat$1(liteGraph, fallback) {
-    var _a2;
-    const beforeLiteGraph = liteGraph.closeAllContextMenus;
-    const beforeContextMenu = (_a2 = liteGraph.ContextMenu) == null ? void 0 : _a2.closeAllContextMenus;
-    const resolved = resolveContextMenuCloseAll(liteGraph, fallback);
-    if (!resolved.fn) {
-      return {
-        diffId: CONTEXT_MENU_CLOSE_ALL_DIFF_ID,
-        source: "none",
-        changed: false,
-        synced: false
-      };
-    }
-    liteGraph.closeAllContextMenus = resolved.fn;
-    if (!liteGraph.ContextMenu) {
-      liteGraph.ContextMenu = {};
-    }
-    liteGraph.ContextMenu.closeAllContextMenus = resolved.fn;
-    const synced = isContextMenuCloseAllCompatSynced(liteGraph);
-    return {
-      diffId: CONTEXT_MENU_CLOSE_ALL_DIFF_ID,
-      source: resolved.source,
-      resolved: resolved.fn,
-      changed: beforeLiteGraph !== liteGraph.closeAllContextMenus || beforeContextMenu !== liteGraph.ContextMenu.closeAllContextMenus,
-      synced
-    };
-  }
-  function isContextMenuCloseAllCompatSynced(liteGraph) {
-    var _a2;
-    return !!(liteGraph.closeAllContextMenus && ((_a2 = liteGraph.ContextMenu) == null ? void 0 : _a2.closeAllContextMenus) && liteGraph.closeAllContextMenus === liteGraph.ContextMenu.closeAllContextMenus);
-  }
-  function resolveContextMenuCloseAll(liteGraph, fallback) {
-    var _a2;
-    if (liteGraph.closeAllContextMenus) {
-      return { source: "LiteGraph", fn: liteGraph.closeAllContextMenus };
-    }
-    if ((_a2 = liteGraph.ContextMenu) == null ? void 0 : _a2.closeAllContextMenus) {
-      return { source: "ContextMenu", fn: liteGraph.ContextMenu.closeAllContextMenus };
-    }
-    if (fallback) {
-      return { source: "fallback", fn: fallback };
-    }
-    return { source: "none" };
-  }
-  function applyLiteGraphConstantAliases(host, fallbackValue = 6) {
-    const resolved = typeof host.GRID_SHAPE === "number" ? host.GRID_SHAPE : typeof host.SQUARE_SHAPE === "number" ? host.SQUARE_SHAPE : fallbackValue;
-    host.GRID_SHAPE = resolved;
-    host.SQUARE_SHAPE = resolved;
-    return resolved;
-  }
-  function applyLGraphCanvasStaticCompat(host) {
-    applyLGraphCanvasStaticCompat$1(host);
-  }
-  function applyLGraphCanvasPrototypeCompatShims(host) {
-    if (!host.processNodeDeselected && host.deselectNode) {
-      host.processNodeDeselected = (node2) => {
-        var _a2;
-        (_a2 = host.deselectNode) == null ? void 0 : _a2.call(host, node2);
-      };
-    }
-    if (!host.drawSlotGraphic) {
-      host.drawSlotGraphic = () => {
-      };
-    }
-    if (!host.touchHandler) {
-      host.touchHandler = () => {
-      };
-    }
-  }
-  function applyContextMenuCloseAllCompat(liteGraph) {
-    applyContextMenuCloseAllCompat$1(liteGraph);
-  }
-  function applyLiteGraphApiCompatAliases(targets) {
-    if (targets.liteGraph) {
-      applyLiteGraphConstantAliases(targets.liteGraph);
-      applyContextMenuCloseAllCompat(targets.liteGraph);
-    }
-    if (targets.canvasStatic) {
-      applyLGraphCanvasStaticCompat(targets.canvasStatic);
-    }
-    if (targets.canvasPrototype) {
-      applyLGraphCanvasPrototypeCompatShims(targets.canvasPrototype);
-    }
-  }
   const defaultHost = {
     pointerevents_method: "mouse",
     isTouchDevice: () => typeof window !== "undefined" && ("ontouchstart" in window || typeof navigator !== "undefined" && navigator.maxTouchPoints > 0),
@@ -12887,202 +12954,8 @@ var LiteGraphTSMigration = (function(exports) {
   const DragAndScale = DragAndScale$1;
   const LGraphCanvas = LGraphCanvasMenuPanel;
   const ContextMenu = ContextMenu$1;
-  function createPointerListenerCompat(methodRef) {
-    const registry2 = /* @__PURE__ */ new WeakMap();
-    function resolveEvent(eventName, methodIn) {
-      const requested = String(eventName || "").toLowerCase();
-      let method = methodIn || "mouse";
-      if (method === "pointer" && (typeof window === "undefined" || !window.PointerEvent)) {
-        method = "touch";
-      }
-      if (requested.indexOf("mouse") === 0 || requested.indexOf("pointer") === 0 || requested.indexOf("touch") === 0) {
-        return {
-          domEvent: requested,
-          useTouchWrapper: requested.indexOf("touch") === 0
-        };
-      }
-      const mapMouse = {
-        down: "mousedown",
-        move: "mousemove",
-        up: "mouseup",
-        over: "mouseover",
-        out: "mouseout",
-        enter: "mouseenter",
-        leave: "mouseleave",
-        cancel: "mouseup"
-      };
-      const mapPointer = {
-        down: "pointerdown",
-        move: "pointermove",
-        up: "pointerup",
-        over: "pointerover",
-        out: "pointerout",
-        enter: "pointerenter",
-        leave: "pointerleave",
-        cancel: "pointercancel",
-        gotpointercapture: "gotpointercapture",
-        lostpointercapture: "lostpointercapture"
-      };
-      const mapTouch = {
-        down: "touchstart",
-        move: "touchmove",
-        up: "touchend",
-        cancel: "touchcancel",
-        over: null,
-        out: null,
-        enter: null,
-        leave: null,
-        gotpointercapture: null,
-        lostpointercapture: null
-      };
-      const map = method === "pointer" ? mapPointer : method === "touch" ? mapTouch : mapMouse;
-      let domEvent = map[requested];
-      if (!domEvent) {
-        if (method === "touch" && (requested === "enter" || requested === "leave" || requested === "over" || requested === "out")) {
-          return null;
-        }
-        domEvent = requested;
-      }
-      return {
-        domEvent,
-        useTouchWrapper: domEvent.indexOf("touch") === 0
-      };
-    }
-    function resolveEventOptions(domEvent, capture) {
-      if (domEvent && domEvent.indexOf("touch") === 0) {
-        return { capture: !!capture, passive: false };
-      }
-      return !!capture;
-    }
-    function invokeCallback(callback, context, event2) {
-      if (typeof callback === "function") {
-        return callback.call(context, event2);
-      }
-      return callback.handleEvent(event2);
-    }
-    function normalizeTouchEvent(e, semanticName, method) {
-      const touch = e.changedTouches && e.changedTouches.length && e.changedTouches[0] || e.touches && e.touches.length && e.touches[0];
-      if (!touch) {
-        return null;
-      }
-      const normalized = {
-        type: method + semanticName,
-        clientX: touch.clientX,
-        clientY: touch.clientY,
-        pageX: touch.pageX,
-        pageY: touch.pageY,
-        screenX: touch.screenX,
-        screenY: touch.screenY,
-        which: 1,
-        button: 0,
-        buttons: e.type === "touchend" || e.type === "touchcancel" ? 0 : 1,
-        isPrimary: true,
-        pointerId: touch.identifier || 1,
-        shiftKey: !!e.shiftKey,
-        ctrlKey: !!e.ctrlKey,
-        altKey: !!e.altKey,
-        metaKey: !!e.metaKey,
-        target: e.target,
-        originalEvent: e,
-        preventDefault: () => {
-          if (e.cancelable && e.preventDefault) {
-            e.preventDefault();
-          }
-        },
-        stopPropagation: () => {
-          if (e.stopPropagation) {
-            e.stopPropagation();
-          }
-        },
-        stopImmediatePropagation: () => {
-          if (e.stopImmediatePropagation) {
-            e.stopImmediatePropagation();
-          }
-        }
-      };
-      return normalized;
-    }
-    function add(dom, eventName, callback, capture = false) {
-      if (!dom || !("addEventListener" in dom)) {
-        return;
-      }
-      const method = methodRef();
-      const semanticName = String(eventName || "").toLowerCase();
-      const resolved = resolveEvent(semanticName, method);
-      if (!resolved || !resolved.domEvent) {
-        return;
-      }
-      const domEvent = resolved.domEvent;
-      let wrapped = callback;
-      if (resolved.useTouchWrapper) {
-        wrapped = function(ev) {
-          const normalized = normalizeTouchEvent(
-            ev,
-            semanticName,
-            method
-          );
-          if (!normalized) {
-            return;
-          }
-          if (semanticName === "down" || semanticName === "move" || semanticName === "up" || semanticName === "cancel" || semanticName === "enter" || semanticName === "leave" || semanticName === "over" || semanticName === "out" || semanticName === "gotpointercapture" || semanticName === "lostpointercapture") {
-            normalized.type = (methodRef() || "mouse") + semanticName;
-          }
-          invokeCallback(callback, this, normalized);
-        };
-      }
-      let bucket = registry2.get(dom);
-      if (!bucket) {
-        bucket = {};
-        registry2.set(dom, bucket);
-      }
-      const key = domEvent + "|" + (capture ? "1" : "0");
-      if (!bucket[key]) {
-        bucket[key] = [];
-      }
-      const existing = bucket[key].find((entry) => entry.original === callback);
-      if (existing) {
-        return;
-      }
-      bucket[key].push({ original: callback, wrapped });
-      dom.addEventListener(
-        domEvent,
-        wrapped,
-        resolveEventOptions(domEvent, !!capture)
-      );
-    }
-    function remove(dom, eventName, callback, capture = false) {
-      if (!dom || !("removeEventListener" in dom)) {
-        return;
-      }
-      const method = methodRef();
-      const semanticName = String(eventName || "").toLowerCase();
-      const resolved = resolveEvent(semanticName, method);
-      if (!resolved || !resolved.domEvent) {
-        return;
-      }
-      const domEvent = resolved.domEvent;
-      let wrapped = callback;
-      const bucket = registry2.get(dom);
-      const key = domEvent + "|" + (capture ? "1" : "0");
-      if (bucket && bucket[key]) {
-        const idx = bucket[key].findIndex(
-          (entry) => entry.original === callback
-        );
-        if (idx >= 0) {
-          wrapped = bucket[key][idx].wrapped;
-          bucket[key].splice(idx, 1);
-        }
-      }
-      dom.removeEventListener(
-        domEvent,
-        wrapped,
-        resolveEventOptions(domEvent, !!capture)
-      );
-    }
-    return { add, remove };
-  }
   function extendClass(target, origin) {
-    var _a2, _b2;
+    var _a2, _b2, _c2, _d2;
     for (const i2 in origin) {
       if (Object.prototype.hasOwnProperty.call(target, i2)) {
         continue;
@@ -13103,21 +12976,39 @@ var LiteGraphTSMigration = (function(exports) {
       }
       const getter = (_a2 = originPrototype.__lookupGetter__) == null ? void 0 : _a2.call(originPrototype, i2);
       if (getter) {
-        targetPrototype.__defineGetter__(i2, getter);
+        (_b2 = targetPrototype.__defineGetter__) == null ? void 0 : _b2.call(targetPrototype, i2, getter);
       } else {
         targetPrototype[i2] = originPrototype[i2];
       }
-      const setter = (_b2 = originPrototype.__lookupSetter__) == null ? void 0 : _b2.call(originPrototype, i2);
+      const setter = (_c2 = originPrototype.__lookupSetter__) == null ? void 0 : _c2.call(originPrototype, i2);
       if (setter) {
-        targetPrototype.__defineSetter__(i2, setter);
+        (_d2 = targetPrototype.__defineSetter__) == null ? void 0 : _d2.call(targetPrototype, i2, setter);
       }
     }
     return target;
   }
+  function bindRuntimeIntoClasses(liteGraph) {
+    LGraph.liteGraph = liteGraph;
+    LGraphNode$1.liteGraph = liteGraph;
+    LGraphNodeExecution.liteGraph = liteGraph;
+    LGraphNodePortsWidgets.liteGraph = liteGraph;
+    LGraphNodeConnectGeometry.liteGraph = liteGraph;
+    LGraphNode.liteGraph = liteGraph;
+    LGraphCanvas$1.liteGraph = liteGraph;
+    LGraphCanvasLifecycle.liteGraph = liteGraph;
+    LGraphCanvasInput.liteGraph = liteGraph;
+    LGraphCanvasRender.liteGraph = liteGraph;
+    LGraphCanvas.liteGraph = liteGraph;
+    DragAndScale.liteGraph = liteGraph;
+    ContextMenu.liteGraph = liteGraph;
+    LGraphGroup.liteGraphCanvas = {
+      node_colors: LGraphCanvas.node_colors
+    };
+  }
   function createLiteGraphNamespace() {
     const liteGraph = { ...LiteGraphConstants };
     applyGridSquareShapeAlias(liteGraph);
-    const pointerCompat = createPointerListenerCompat(
+    const pointerCompat = createDynamicPointerListenerCompat(
       () => String(liteGraph.pointerevents_method || "mouse")
     );
     liteGraph.getTime = createTimeSource();
@@ -13156,7 +13047,7 @@ var LiteGraphTSMigration = (function(exports) {
     liteGraph.getNodeTypesCategories = registry2.getNodeTypesCategories.bind(registry2);
     const runtime2 = new LiteGraphRuntime({
       ...liteGraph,
-      registerNodeType: liteGraph.registerNodeType.bind(liteGraph),
+      registerNodeType: registry2.registerNodeType.bind(registry2),
       getParameterNames
     });
     liteGraph.registerNodeAndSlotType = runtime2.registerNodeAndSlotType.bind(runtime2);
@@ -13168,39 +13059,11 @@ var LiteGraphTSMigration = (function(exports) {
     liteGraph.isValidConnection = runtime2.isValidConnection.bind(runtime2);
     liteGraph.registerSearchboxExtra = runtime2.registerSearchboxExtra.bind(runtime2);
     liteGraph.fetchFile = runtime2.fetchFile.bind(runtime2);
-    LGraph.liteGraph = liteGraph;
-    LGraphNode$1.liteGraph = liteGraph;
-    LGraphNodeExecution.liteGraph = liteGraph;
-    LGraphNodePortsWidgets.liteGraph = liteGraph;
-    LGraphNodeConnectGeometry.liteGraph = liteGraph;
-    LGraphNode.liteGraph = liteGraph;
-    LGraphCanvas$1.liteGraph = liteGraph;
-    LGraphCanvasLifecycle.liteGraph = liteGraph;
-    LGraphCanvasInput.liteGraph = liteGraph;
-    LGraphCanvasRender.liteGraph = liteGraph;
-    LGraphCanvas.liteGraph = liteGraph;
-    DragAndScale.liteGraph = liteGraph;
-    ContextMenu.liteGraph = liteGraph;
-    LGraphGroup.liteGraphCanvas = {
-      node_colors: LGraphCanvas.node_colors
-    };
-    applyLiteGraphApiCompatAliases({
-      liteGraph,
-      canvasStatic: LGraphCanvas,
-      canvasPrototype: LGraphCanvas.prototype
-    });
+    bindRuntimeIntoClasses(liteGraph);
     return { liteGraph, registry: registry2, runtime: runtime2 };
   }
-  function toGlobalScope(input) {
-    if (input) {
-      return input;
-    }
-    return globalThis;
-  }
-  function assembleLiteGraph(options = {}) {
-    const { liteGraph, registry: registry2, runtime: runtime2 } = createLiteGraphNamespace();
-    const globalScope = toGlobalScope(options.globalScope);
-    const bundle = {
+  function createAssemblyBundle(liteGraph, registry2, runtime2) {
+    return {
       LiteGraph: liteGraph,
       LGraph,
       LLink,
@@ -13213,31 +13076,16 @@ var LiteGraphTSMigration = (function(exports) {
       registry: registry2,
       runtime: runtime2
     };
-    if (options.attachToGlobal) {
-      const runtimeConstructors = {
-        LiteGraph: liteGraph,
-        LGraph,
-        LLink,
-        LGraphNode,
-        LGraphGroup,
-        DragAndScale,
-        LGraphCanvas,
-        ContextMenu,
-        CurveEditor
-      };
-      attachLiteGraphGlobalBridge(
-        globalScope,
-        runtimeConstructors,
-        options.bridgeOptions
-      );
-    }
-    if (options.attachCommonJsExports) {
-      const exportsTarget = options.exportsTarget || globalScope.exports || {};
-      attachLiteGraphCommonJsExports(
-        exportsTarget,
-        globalScope
-      );
-    }
+  }
+  function assembleLiteGraph(options = {}) {
+    const { liteGraph, registry: registry2, runtime: runtime2 } = createLiteGraphNamespace();
+    const bundle = createAssemblyBundle(
+      liteGraph,
+      registry2,
+      runtime2
+    );
+    applyLiteGraphAssemblyCompat(bundle);
+    attachLiteGraphAssemblyBridges(bundle, options);
     return bundle;
   }
   const defaultAssembly = assembleLiteGraph();
@@ -13271,7 +13119,9 @@ var LiteGraphTSMigration = (function(exports) {
   exports.applyLGraphCanvasStaticCompatAliasesLayer = applyLGraphCanvasStaticCompatAliases;
   exports.applyLGraphCanvasStaticCompatLayer = applyLGraphCanvasStaticCompat$1;
   exports.applyLGraphCanvasStaticMissingApiGuards = applyLGraphCanvasStaticMissingApiGuards;
+  exports.applyLiteGraphAssemblyCompat = applyLiteGraphAssemblyCompat;
   exports.assembleLiteGraph = assembleLiteGraph;
+  exports.attachLiteGraphAssemblyBridges = attachLiteGraphAssemblyBridges;
   exports.attachLiteGraphCommonJsExports = attachLiteGraphCommonJsExports;
   exports.attachLiteGraphGlobalBridge = attachLiteGraphGlobalBridge;
   exports.colorToString = colorToString;

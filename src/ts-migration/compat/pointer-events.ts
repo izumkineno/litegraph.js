@@ -15,11 +15,14 @@ export type SemanticPointerEvent =
 
 type PointerEventName = SemanticPointerEvent | string;
 
-type ListenerFn = (event: Event | TouchNormalizedEvent) => unknown;
+export type PointerListener =
+    | EventListener
+    | EventListenerObject
+    | ((event: Event | TouchNormalizedEvent) => unknown);
 
 interface ListenerRegistryEntry {
-    original: ListenerFn;
-    wrapped: ListenerFn;
+    original: PointerListener;
+    wrapped: PointerListener;
 }
 
 type ListenerRegistryBucket = Record<string, ListenerRegistryEntry[]>;
@@ -64,13 +67,28 @@ export interface PointerEventsHost {
     pointerListenerAdd: (
         oDOM: EventTarget | null | undefined,
         sEvIn: PointerEventName,
-        fCall: ListenerFn,
+        fCall: PointerListener,
         capture?: boolean
     ) => void;
     pointerListenerRemove: (
         oDOM: EventTarget | null | undefined,
         sEvent: PointerEventName,
-        fCall: ListenerFn,
+        fCall: PointerListener,
+        capture?: boolean
+    ) => void;
+}
+
+export interface DynamicPointerListenerCompat {
+    add: (
+        dom: EventTarget | null | undefined,
+        eventName: PointerEventName,
+        callback: PointerListener,
+        capture?: boolean
+    ) => void;
+    remove: (
+        dom: EventTarget | null | undefined,
+        eventName: PointerEventName,
+        callback: PointerListener,
         capture?: boolean
     ) => void;
 }
@@ -102,25 +120,64 @@ export function createPointerEventsHost(
             return resolvePointerEventName(host, event_name);
         },
         _pointerListenerOptions,
-        pointerListenerAdd(
-            oDOM: EventTarget | null | undefined,
-            sEvIn: PointerEventName,
-            fCall: ListenerFn,
-            capture = false
-        ): void {
-            pointerListenerAdd(host, oDOM, sEvIn, fCall, capture);
+            pointerListenerAdd(
+                oDOM: EventTarget | null | undefined,
+                sEvIn: PointerEventName,
+                fCall: PointerListener,
+                capture = false
+            ): void {
+                pointerListenerAdd(host, oDOM, sEvIn, fCall, capture);
         },
-        pointerListenerRemove(
-            oDOM: EventTarget | null | undefined,
-            sEvent: PointerEventName,
-            fCall: ListenerFn,
-            capture = false
-        ): void {
-            pointerListenerRemove(host, oDOM, sEvent, fCall, capture);
+            pointerListenerRemove(
+                oDOM: EventTarget | null | undefined,
+                sEvent: PointerEventName,
+                fCall: PointerListener,
+                capture = false
+            ): void {
+                pointerListenerRemove(host, oDOM, sEvent, fCall, capture);
         },
     };
 
     return host;
+}
+
+function invokePointerListener(
+    listener: PointerListener,
+    context: unknown,
+    event: Event | TouchNormalizedEvent
+): unknown {
+    if (typeof listener === "function") {
+        return listener.call(context, event);
+    }
+    return listener.handleEvent(event as Event);
+}
+
+function isValidPointerListener(listener: PointerListener | null | undefined): boolean {
+    return !!listener && (
+        typeof listener === "function" ||
+        typeof (listener as EventListenerObject).handleEvent === "function"
+    );
+}
+
+export function createDynamicPointerListenerCompat(
+    methodRef: () => PointerEventsMethod | string
+): DynamicPointerListenerCompat {
+    const host = createPointerEventsHost("mouse");
+
+    function syncMethod(): void {
+        host.pointerevents_method = methodRef() || "mouse";
+    }
+
+    return {
+        add(dom, eventName, callback, capture = false): void {
+            syncMethod();
+            pointerListenerAdd(host, dom, eventName, callback, capture);
+        },
+        remove(dom, eventName, callback, capture = false): void {
+            syncMethod();
+            pointerListenerRemove(host, dom, eventName, callback, capture);
+        },
+    };
 }
 
 export function _normalizeTouchEvent(e: TouchEvent): TouchNormalizedEvent | null {
@@ -257,14 +314,14 @@ export function pointerListenerAdd(
     host: PointerEventsHost,
     oDOM: EventTarget | null | undefined,
     sEvIn: PointerEventName,
-    fCall: ListenerFn,
+    fCall: PointerListener,
     capture = false
 ): void {
     if (
         !oDOM ||
         !("addEventListener" in oDOM) ||
         !sEvIn ||
-        typeof fCall !== "function"
+        !isValidPointerListener(fCall)
     ) {
         return; // -- break --
     }
@@ -315,7 +372,7 @@ export function pointerListenerAdd(
             ) {
                 normalized.type = (host.pointerevents_method || "mouse") + semantic_event;
             }
-            return fCall.call(this, normalized);
+            return invokePointerListener(fCall, this, normalized);
         };
     }
 
@@ -335,14 +392,14 @@ export function pointerListenerRemove(
     host: PointerEventsHost,
     oDOM: EventTarget | null | undefined,
     sEvent: PointerEventName,
-    fCall: ListenerFn,
+    fCall: PointerListener,
     capture = false
 ): void {
     if (
         !oDOM ||
         !("removeEventListener" in oDOM) ||
         !sEvent ||
-        typeof fCall !== "function"
+        !isValidPointerListener(fCall)
     ) {
         return; // -- break --
     }
