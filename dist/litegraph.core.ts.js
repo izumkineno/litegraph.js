@@ -423,6 +423,354 @@ var LiteGraphTSMigration = (function(exports) {
       { content: "Remove", callback: menuClass.onMenuNodeRemove }
     ];
   }
+  function buildSlotMenuOptions(node2, slot) {
+    var _a2, _b2;
+    if (node2.getSlotMenuOptions) {
+      return node2.getSlotMenuOptions(slot);
+    }
+    const options = [];
+    if ((_b2 = (_a2 = slot == null ? void 0 : slot.output) == null ? void 0 : _a2.links) == null ? void 0 : _b2.length) {
+      options.push({ content: "Disconnect Links", slot });
+    }
+    const slotDefinition = slot.input || slot.output;
+    if (slotDefinition == null ? void 0 : slotDefinition.removable) {
+      options.push(
+        slotDefinition.locked ? "Cannot remove" : { content: "Remove Slot", slot }
+      );
+    }
+    if (!(slotDefinition == null ? void 0 : slotDefinition.nameLocked)) {
+      options.push({ content: "Rename Slot", slot });
+    }
+    return options;
+  }
+  function createDefaultNodeForSlotController(context, optPass) {
+    var _a2;
+    const host = context.host;
+    const opts = Object.assign(
+      {
+        nodeFrom: null,
+        slotFrom: null,
+        nodeTo: null,
+        slotTo: null,
+        position: [0, 0],
+        nodeType: null,
+        posAdd: [0, 0],
+        posSizeFix: [0, 0]
+      },
+      optPass || {}
+    );
+    const isFrom = !!(opts.nodeFrom && opts.slotFrom !== null);
+    const isTo = !isFrom && !!(opts.nodeTo && opts.slotTo !== null);
+    if (!isFrom && !isTo) {
+      console.warn(
+        "No data passed to createDefaultNodeForSlot " + opts.nodeFrom + " " + opts.slotFrom + " " + opts.nodeTo + " " + opts.slotTo
+      );
+      return false;
+    }
+    if (!opts.nodeType) {
+      console.warn("No type to createDefaultNodeForSlot");
+      return false;
+    }
+    const nodeX = isFrom ? opts.nodeFrom : opts.nodeTo;
+    let slotX = isFrom ? opts.slotFrom : opts.slotTo;
+    let slotIndex = false;
+    if (typeof slotX === "string") {
+      slotIndex = isFrom ? nodeX.findOutputSlot(slotX, false) : nodeX.findInputSlot(slotX, false);
+      slotX = isFrom ? nodeX.outputs[slotX] : nodeX.inputs[slotX];
+    } else if (typeof slotX === "object") {
+      slotIndex = isFrom ? nodeX.findOutputSlot(slotX.name) : nodeX.findInputSlot(slotX.name);
+    } else if (typeof slotX === "number") {
+      slotIndex = slotX;
+      slotX = isFrom ? nodeX.outputs[slotX] : nodeX.inputs[slotX];
+    } else {
+      console.warn("Cant get slot information " + slotX);
+      return false;
+    }
+    if (slotX === false || slotIndex === false) {
+      console.warn("createDefaultNodeForSlot bad slotX " + slotX + " " + slotIndex);
+    }
+    const fromSlotType = slotX.type == host.EVENT ? "_event_" : slotX.type;
+    const slotTypesDefault = isFrom ? host.slot_types_default_out : host.slot_types_default_in;
+    const slotDefault = slotTypesDefault == null ? void 0 : slotTypesDefault[fromSlotType];
+    if (!slotDefault) {
+      return false;
+    }
+    let nodeNewType = false;
+    if (typeof slotDefault === "object") {
+      for (const key in slotDefault) {
+        if (opts.nodeType == slotDefault[key] || opts.nodeType == "AUTO") {
+          nodeNewType = slotDefault[key];
+          break;
+        }
+      }
+    } else if (opts.nodeType == slotDefault || opts.nodeType == "AUTO") {
+      nodeNewType = slotDefault;
+    }
+    if (!nodeNewType) {
+      return false;
+    }
+    let nodeNewOpts = null;
+    if (typeof nodeNewType === "object" && nodeNewType.node) {
+      nodeNewOpts = nodeNewType;
+      nodeNewType = nodeNewType.node;
+    }
+    const newNode = (_a2 = host.createNode) == null ? void 0 : _a2.call(host, nodeNewType);
+    if (!newNode) {
+      console.log("failed creating " + nodeNewType);
+      return false;
+    }
+    if (nodeNewOpts) {
+      const nodeCompat = newNode;
+      if (nodeNewOpts.properties) {
+        for (const key in nodeNewOpts.properties) {
+          nodeCompat.addProperty(key, nodeNewOpts.properties[key]);
+        }
+      }
+      if (nodeNewOpts.inputs) {
+        nodeCompat.inputs = [];
+        for (const key in nodeNewOpts.inputs) {
+          nodeCompat.addOutput(nodeNewOpts.inputs[key][0], nodeNewOpts.inputs[key][1]);
+        }
+      }
+      if (nodeNewOpts.outputs) {
+        nodeCompat.outputs = [];
+        for (const key in nodeNewOpts.outputs) {
+          nodeCompat.addOutput(nodeNewOpts.outputs[key][0], nodeNewOpts.outputs[key][1]);
+        }
+      }
+      if (nodeNewOpts.title) {
+        nodeCompat.title = nodeNewOpts.title;
+      }
+      if (nodeNewOpts.json) {
+        nodeCompat.configure(nodeNewOpts.json);
+      }
+    }
+    context.graphcanvas.graph.add(newNode);
+    newNode.pos = [
+      opts.position[0] + opts.posAdd[0] + (opts.posSizeFix[0] ? opts.posSizeFix[0] * newNode.size[0] : 0),
+      opts.position[1] + opts.posAdd[1] + (opts.posSizeFix[1] ? opts.posSizeFix[1] * newNode.size[1] : 0)
+    ];
+    if (isFrom) {
+      opts.nodeFrom.connectByType(slotIndex, newNode, fromSlotType);
+    } else {
+      opts.nodeTo.connectByTypeOutput(slotIndex, newNode, fromSlotType);
+    }
+    return true;
+  }
+  function showConnectionMenuController(context, optPass) {
+    var _a2, _b2, _c2, _d2, _e, _f, _g, _h;
+    const host = context.host;
+    const opts = Object.assign(
+      {
+        nodeFrom: null,
+        slotFrom: null,
+        nodeTo: null,
+        slotTo: null,
+        e: null
+      },
+      optPass || {}
+    );
+    const isFrom = !!(opts.nodeFrom && opts.slotFrom != null);
+    const isTo = !isFrom && !!(opts.nodeTo && opts.slotTo != null);
+    if (!isFrom && !isTo) {
+      return false;
+    }
+    const nodeX = isFrom ? opts.nodeFrom : opts.nodeTo;
+    let slotX = isFrom ? opts.slotFrom : opts.slotTo;
+    let slotIndex = false;
+    if (typeof slotX === "string") {
+      slotIndex = isFrom ? (_a2 = nodeX.findOutputSlot) == null ? void 0 : _a2.call(nodeX, slotX, false) : (_b2 = nodeX.findInputSlot) == null ? void 0 : _b2.call(nodeX, slotX, false);
+      slotX = isFrom ? (_c2 = nodeX.outputs) == null ? void 0 : _c2[slotIndex] : (_d2 = nodeX.inputs) == null ? void 0 : _d2[slotIndex];
+    } else if (typeof slotX === "object") {
+      slotIndex = isFrom ? (_e = nodeX.findOutputSlot) == null ? void 0 : _e.call(nodeX, slotX.name) : (_f = nodeX.findInputSlot) == null ? void 0 : _f.call(nodeX, slotX.name);
+    } else if (typeof slotX === "number") {
+      slotIndex = slotX;
+      slotX = isFrom ? (_g = nodeX.outputs) == null ? void 0 : _g[slotX] : (_h = nodeX.inputs) == null ? void 0 : _h[slotX];
+    } else {
+      return false;
+    }
+    const fromSlotType = slotX.type == host.EVENT ? "_event_" : slotX.type;
+    const options = ["Add Node", null];
+    if (context.graphcanvas.allow_searchbox) {
+      options.push("Search", null);
+    }
+    const slotTypesDefault = isFrom ? host.slot_types_default_out : host.slot_types_default_in;
+    if (slotTypesDefault == null ? void 0 : slotTypesDefault[fromSlotType]) {
+      if (typeof slotTypesDefault[fromSlotType] === "object") {
+        for (const key in slotTypesDefault[fromSlotType]) {
+          options.push(slotTypesDefault[fromSlotType][key]);
+        }
+      } else {
+        options.push(slotTypesDefault[fromSlotType]);
+      }
+    }
+    const menu = new host.ContextMenu(
+      options,
+      {
+        event: opts.e,
+        title: ((slotX == null ? void 0 : slotX.name) ? slotX.name + (fromSlotType ? " | " : "") : "") + (fromSlotType || ""),
+        callback: (value, _menuOpt, e) => {
+          if (value === "Add Node") {
+            context.menuClass.onMenuAdd(null, null, e, menu, (node2) => {
+              if (isFrom) {
+                opts.nodeFrom.connectByType(slotIndex, node2, fromSlotType);
+              } else {
+                opts.nodeTo.connectByTypeOutput(slotIndex, node2, fromSlotType);
+              }
+            });
+          } else if (value === "Search") {
+            if (isFrom) {
+              context.graphcanvas.showSearchBox(e, {
+                node_from: opts.nodeFrom,
+                slot_from: slotX,
+                type_filter_in: fromSlotType
+              });
+            } else {
+              context.graphcanvas.showSearchBox(e, {
+                node_to: opts.nodeTo,
+                slot_from: slotX,
+                type_filter_out: fromSlotType
+              });
+            }
+          } else {
+            createDefaultNodeForSlotController(
+              context,
+              Object.assign(opts, {
+                position: [opts.e.canvasX, opts.e.canvasY],
+                nodeType: value
+              })
+            );
+          }
+        }
+      },
+      context.graphcanvas.getCanvasWindow()
+    );
+    return false;
+  }
+  function processContextMenuController(context, node2, event2) {
+    var _a2, _b2, _c2, _d2, _e;
+    const { host, menuClass, graphcanvas } = context;
+    const options = {
+      event: event2,
+      callback: (value, callbackOptions) => {
+        handleContextMenuAction(context, node2, value, callbackOptions);
+      },
+      extra: node2
+    };
+    if (node2) {
+      options.title = node2.type;
+    }
+    let menuInfo = null;
+    let slot = null;
+    if (node2) {
+      slot = (_a2 = node2.getSlotInPosition) == null ? void 0 : _a2.call(node2, event2.canvasX, event2.canvasY);
+      menuClass.active_node = node2;
+    }
+    if (slot) {
+      menuInfo = buildSlotMenuOptions(node2, slot);
+      options.title = (slot.input ? slot.input.type : slot.output.type) || "*";
+      if (((_b2 = slot.input) == null ? void 0 : _b2.type) == host.ACTION) {
+        options.title = "Action";
+      }
+      if (((_c2 = slot.output) == null ? void 0 : _c2.type) == host.EVENT) {
+        options.title = "Event";
+      }
+    } else if (node2) {
+      menuInfo = buildNodeMenuOptions(graphcanvas, menuClass, node2);
+    } else {
+      menuInfo = buildCanvasMenuOptions(graphcanvas, menuClass);
+      const group = (_e = (_d2 = graphcanvas.graph).getGroupOnPos) == null ? void 0 : _e.call(_d2, event2.canvasX, event2.canvasY);
+      if (group) {
+        menuInfo.push(
+          null,
+          {
+            content: "Edit Group",
+            has_submenu: true,
+            submenu: {
+              title: "Group",
+              extra: group,
+              options: buildGroupMenuOptions(menuClass)
+            }
+          }
+        );
+      }
+    }
+    if (!menuInfo) {
+      return;
+    }
+    new host.ContextMenu(
+      menuInfo,
+      options,
+      graphcanvas.getCanvasWindow()
+    );
+  }
+  function handleContextMenuAction(context, node2, value, options) {
+    if (!value) {
+      return;
+    }
+    if (value.content == "Remove Slot") {
+      const info = value.slot;
+      node2.graph.beforeChange();
+      if (info.input) {
+        node2.removeInput(info.slot);
+      } else if (info.output) {
+        node2.removeOutput(info.slot);
+      }
+      node2.graph.afterChange();
+      return;
+    }
+    if (value.content == "Disconnect Links") {
+      const info = value.slot;
+      node2.graph.beforeChange();
+      if (info.output) {
+        node2.disconnectOutput(info.slot);
+      } else if (info.input) {
+        node2.disconnectInput(info.slot);
+      }
+      node2.graph.afterChange();
+      return;
+    }
+    if (value.content == "Rename Slot") {
+      showRenameSlotDialog(context, node2, value.slot, options);
+    }
+  }
+  function showRenameSlotDialog(context, node2, info, options) {
+    var _a2, _b2, _c2;
+    const slotInfo = info.input ? (_a2 = node2.getInputInfo) == null ? void 0 : _a2.call(node2, info.slot) : (_b2 = node2.getOutputInfo) == null ? void 0 : _b2.call(node2, info.slot);
+    const dialog = context.graphcanvas.createDialog(
+      "<span class='name'>Name</span><input autofocus type='text'/><button>OK</button>",
+      options
+    );
+    const input = dialog.querySelector("input");
+    if (input && slotInfo) {
+      input.value = slotInfo.label || "";
+    }
+    const commit = () => {
+      node2.graph.beforeChange();
+      if (input == null ? void 0 : input.value) {
+        if (slotInfo) {
+          slotInfo.label = input.value;
+        }
+        context.graphcanvas.setDirty(true, false);
+      }
+      dialog.close();
+      node2.graph.afterChange();
+    };
+    (_c2 = dialog.querySelector("button")) == null ? void 0 : _c2.addEventListener("click", commit);
+    input == null ? void 0 : input.addEventListener("keydown", (e) => {
+      dialog.is_modified = true;
+      if (e.key === "Escape") {
+        dialog.close();
+      } else if (e.key === "Enter") {
+        commit();
+      } else {
+        return;
+      }
+      e.preventDefault();
+      e.stopPropagation();
+    });
+    input == null ? void 0 : input.focus();
+  }
   function createDialog(context, html, options) {
     var _a2, _b2, _c2;
     const host = context.host;
@@ -559,6 +907,233 @@ var LiteGraphTSMigration = (function(exports) {
       }
     });
     return dialog;
+  }
+  function showLinkMenuController(context, link, event2) {
+    var _a2;
+    const host = context.host;
+    const nodeLeft = context.graphcanvas.graph.getNodeById(link.origin_id);
+    const nodeRight = context.graphcanvas.graph.getNodeById(link.target_id);
+    let fromType = false;
+    if (nodeLeft && nodeLeft.outputs && nodeLeft.outputs[link.origin_slot]) {
+      fromType = nodeLeft.outputs[link.origin_slot].type;
+    }
+    let destType = false;
+    if (nodeRight && nodeRight.outputs && nodeRight.outputs[link.target_slot]) {
+      destType = nodeRight.inputs[link.target_slot].type;
+    }
+    const menu = new host.ContextMenu(
+      ["Add Node", null, "Delete", null],
+      {
+        event: event2,
+        title: link.data != null ? ((_a2 = link.data.constructor) == null ? void 0 : _a2.name) || null : null,
+        callback: (value, _opts, menuEvent) => {
+          if (value === "Add Node") {
+            context.menuClass.onMenuAdd(null, null, menuEvent, menu, (node2) => {
+              if (!node2.inputs || !node2.inputs.length || !node2.outputs || !node2.outputs.length) {
+                return;
+              }
+              if (nodeLeft.connectByType(link.origin_slot, node2, fromType)) {
+                node2.connectByType(link.target_slot, nodeRight, destType);
+                node2.pos[0] -= node2.size[0] * 0.5;
+              }
+            });
+          } else if (value === "Delete") {
+            context.graphcanvas.graph.removeLink(link.id);
+          }
+        }
+      },
+      context.graphcanvas.getCanvasWindow()
+    );
+    return false;
+  }
+  function showGraphOptionsPanel(context) {
+    var _a2, _b2;
+    const { graphcanvas, host } = context;
+    graphcanvas.closePanels();
+    const ref_window2 = graphcanvas.getCanvasWindow();
+    const panel = graphcanvas.createPanel("Options", {
+      closable: true,
+      window: ref_window2,
+      onOpen: () => {
+        graphcanvas.OPTIONPANEL_IS_OPEN = true;
+      },
+      onClose: () => {
+        graphcanvas.OPTIONPANEL_IS_OPEN = false;
+        graphcanvas.options_panel = null;
+      }
+    });
+    graphcanvas.options_panel = panel;
+    panel.id = "option-panel";
+    panel.classList.add("settings");
+    const refresh = () => {
+      panel.content.innerHTML = "";
+      const update = (name, value, options) => {
+        if (options == null ? void 0 : options.key) {
+          name = options.key;
+        }
+        if (options == null ? void 0 : options.values) {
+          value = Object.values(options.values).indexOf(value);
+        }
+        graphcanvas[name] = value;
+      };
+      const props = [...host.availableCanvasOptions || []];
+      props.sort();
+      for (const prop of props) {
+        panel.addWidget(
+          "boolean",
+          prop,
+          graphcanvas[prop],
+          { key: prop, on: "True", off: "False" },
+          update
+        );
+      }
+      const renderModes = host.LINK_RENDER_MODES || [];
+      panel.addWidget(
+        "combo",
+        "Render mode",
+        renderModes[graphcanvas.links_render_mode],
+        { key: "links_render_mode", values: renderModes },
+        update
+      );
+      panel.addSeparator();
+      panel.footer.innerHTML = "";
+    };
+    refresh();
+    (_b2 = (_a2 = graphcanvas.canvas) == null ? void 0 : _a2.parentNode) == null ? void 0 : _b2.appendChild(panel);
+  }
+  function showNodePanel(context, node2) {
+    var _a2, _b2;
+    const { graphcanvas, host, menuClass, state } = context;
+    state.setSelectedNode(node2);
+    graphcanvas.closePanels();
+    const panel = graphcanvas.createPanel(node2.title || "", {
+      closable: true,
+      window: graphcanvas.getCanvasWindow(),
+      onOpen: () => {
+        state.setNodePanelOpen(true);
+      },
+      onClose: () => {
+        state.setNodePanelOpen(false);
+        state.setNodePanel(null);
+      }
+    });
+    state.setNodePanel(panel);
+    panel.id = "node-panel";
+    panel.node = node2;
+    panel.classList.add("settings");
+    const refresh = () => {
+      var _a3, _b3, _c2, _d2;
+      panel.content.innerHTML = "";
+      panel.addHTML(
+        "<span class='node_type'>" + node2.type + "</span><span class='node_desc'>" + (node2.constructor.desc || "") + "</span><span class='separator'></span>"
+      );
+      panel.addHTML("<h3>Properties</h3>");
+      const update = (name, value) => {
+        var _a4, _b4, _c3, _d3, _e, _f, _g;
+        (_b4 = (_a4 = graphcanvas.graph).beforeChange) == null ? void 0 : _b4.call(_a4, node2);
+        if (name === "Title") {
+          node2.title = value;
+        } else if (name === "Mode") {
+          const idx = Object.values(host.NODE_MODES || {}).indexOf(value);
+          if (idx >= 0) {
+            (_c3 = node2.changeMode) == null ? void 0 : _c3.call(node2, idx);
+          }
+        } else if (name === "Color") {
+          const color = (_d3 = menuClass.node_colors) == null ? void 0 : _d3[value];
+          if (color) {
+            node2.color = color.color;
+            node2.bgcolor = color.bgcolor;
+          }
+        } else {
+          (_e = node2.setProperty) == null ? void 0 : _e.call(node2, name, value);
+        }
+        (_g = (_f = graphcanvas.graph).afterChange) == null ? void 0 : _g.call(_f);
+        state.markDirty();
+      };
+      panel.addWidget("string", "Title", node2.title, {}, update);
+      panel.addWidget(
+        "combo",
+        "Mode",
+        (_a3 = host.NODE_MODES) == null ? void 0 : _a3[node2.mode],
+        { values: host.NODE_MODES },
+        update
+      );
+      const nodeColor = node2.color !== void 0 ? Object.keys(menuClass.node_colors || {}).filter(
+        (key) => {
+          var _a4;
+          return ((_a4 = menuClass.node_colors) == null ? void 0 : _a4[key].color) == node2.color;
+        }
+      ) : "";
+      panel.addWidget(
+        "combo",
+        "Color",
+        nodeColor,
+        { values: Object.keys(menuClass.node_colors || {}) },
+        update
+      );
+      for (const propertyName in node2.properties) {
+        const value = node2.properties[propertyName];
+        const info = ((_b3 = node2.getPropertyInfo) == null ? void 0 : _b3.call(node2, propertyName)) || {};
+        if ((_c2 = node2.onAddPropertyToPanel) == null ? void 0 : _c2.call(node2, propertyName, panel)) {
+          continue;
+        }
+        panel.addWidget(
+          info.widget || info.type || "string",
+          propertyName,
+          value,
+          info,
+          update
+        );
+      }
+      panel.addSeparator();
+      (_d2 = node2.onShowCustomPanelInfo) == null ? void 0 : _d2.call(node2, panel);
+      panel.footer.innerHTML = "";
+      panel.addButton("Delete", () => {
+        var _a4, _b4;
+        if (node2.block_delete) {
+          return;
+        }
+        (_b4 = (_a4 = node2.graph).remove) == null ? void 0 : _b4.call(_a4, node2);
+        panel.close();
+      }).classList.add("delete");
+    };
+    panel.inner_showCodePad = (propertyName) => {
+      panel.classList.remove("settings");
+      panel.classList.add("centered");
+      panel.alt_content.innerHTML = "<textarea class='code'></textarea>";
+      const textarea = panel.alt_content.querySelector("textarea");
+      const done = () => {
+        var _a3;
+        panel.toggleAltContent(false);
+        panel.toggleFooterVisibility(true);
+        (_a3 = textarea.parentNode) == null ? void 0 : _a3.removeChild(textarea);
+        panel.classList.add("settings");
+        panel.classList.remove("centered");
+        refresh();
+      };
+      textarea.value = node2.properties[propertyName];
+      textarea.addEventListener("keydown", (e) => {
+        var _a3;
+        if (e.code === "Enter" && e.ctrlKey) {
+          (_a3 = node2.setProperty) == null ? void 0 : _a3.call(node2, propertyName, textarea.value);
+          done();
+        }
+      });
+      panel.toggleAltContent(true);
+      panel.toggleFooterVisibility(false);
+      textarea.style.height = "calc(100% - 40px)";
+      const assign = panel.addButton("Assign", () => {
+        var _a3;
+        (_a3 = node2.setProperty) == null ? void 0 : _a3.call(node2, propertyName, textarea.value);
+        done();
+      });
+      panel.alt_content.appendChild(assign);
+      const close = panel.addButton("Close", done);
+      close.style.float = "right";
+      panel.alt_content.appendChild(close);
+    };
+    refresh();
+    (_b2 = (_a2 = graphcanvas.canvas) == null ? void 0 : _a2.parentNode) == null ? void 0 : _b2.appendChild(panel);
   }
   function createPanel(context, title, options) {
     var _a2;
@@ -715,6 +1290,210 @@ var LiteGraphTSMigration = (function(exports) {
     };
     (_a2 = root.onOpen) == null ? void 0 : _a2.call(root);
     return root;
+  }
+  function showEditPropertyValueDialog(context, node2, property, options) {
+    if (!node2 || node2.properties[property] === void 0) {
+      return;
+    }
+    options = options || {};
+    const info = node2.getPropertyInfo(property);
+    const type = info.type;
+    let inputHtml = "";
+    if (type == "string" || type == "number" || type == "array" || type == "object") {
+      inputHtml = "<input autofocus type='text' class='value'/>";
+    } else if ((type == "enum" || type == "combo") && info.values) {
+      inputHtml = "<select autofocus type='text' class='value'>";
+      for (const key in info.values) {
+        let value = key;
+        if (info.values.constructor === Array) {
+          value = info.values[key];
+        }
+        inputHtml += "<option value='" + value + "' " + (value == node2.properties[property] ? "selected" : "") + ">" + info.values[key] + "</option>";
+      }
+      inputHtml += "</select>";
+    } else if (type == "boolean" || type == "toggle") {
+      inputHtml = "<input autofocus type='checkbox' class='value' " + (node2.properties[property] ? "checked" : "") + "/>";
+    } else {
+      console.warn("unknown type: " + type);
+      return;
+    }
+    const dialog = context.createDialog(
+      "<span class='name'>" + (info.label ? info.label : property) + "</span>" + inputHtml + "<button>OK</button>",
+      options
+    );
+    let input = false;
+    if ((type == "enum" || type == "combo") && info.values) {
+      input = dialog.querySelector("select");
+      input.addEventListener("change", function(e) {
+        dialog.modified();
+        setValue(e.target.value);
+      });
+    } else if (type == "boolean" || type == "toggle") {
+      input = dialog.querySelector("input");
+      if (input) {
+        input.addEventListener("click", function() {
+          dialog.modified();
+          setValue(!!input.checked);
+        });
+      }
+    } else {
+      input = dialog.querySelector("input");
+      if (input) {
+        input.addEventListener("blur", function() {
+          this.focus();
+        });
+        let currentValue = node2.properties[property] !== void 0 ? node2.properties[property] : "";
+        if (type !== "string") {
+          currentValue = JSON.stringify(currentValue);
+        }
+        input.value = currentValue;
+        input.addEventListener("keydown", function(e) {
+          if (e.keyCode == 27) {
+            dialog.close();
+          } else if (e.keyCode == 13) {
+            commit();
+          } else if (e.keyCode != 13) {
+            dialog.modified();
+            return;
+          }
+          e.preventDefault();
+          e.stopPropagation();
+        });
+      }
+    }
+    if (input) input.focus();
+    const button = dialog.querySelector("button");
+    button == null ? void 0 : button.addEventListener("click", commit);
+    function commit() {
+      setValue(input.value);
+    }
+    function setValue(value) {
+      if (info && info.values && info.values.constructor === Object && info.values[value] != void 0) {
+        value = info.values[value];
+      }
+      if (typeof node2.properties[property] == "number") {
+        value = Number(value);
+      }
+      if (type == "array" || type == "object") {
+        value = JSON.parse(value);
+      }
+      node2.properties[property] = value;
+      if (node2.graph) {
+        node2.graph._version++;
+      }
+      if (node2.onPropertyChanged) {
+        node2.onPropertyChanged(property, value);
+      }
+      if (options.onclose) {
+        options.onclose();
+      }
+      dialog.close();
+      node2.setDirtyCanvas(true, true);
+    }
+    return dialog;
+  }
+  function showPromptDialog(context, title, value, callback, event2, multiline) {
+    var _a2, _b2, _c2, _d2;
+    const host = context.host;
+    const canvas = context.canvas;
+    const rootDocument = (canvas == null ? void 0 : canvas.ownerDocument) || document;
+    const dialog = rootDocument.createElement("div");
+    dialog.is_modified = false;
+    dialog.className = "graphdialog rounded";
+    dialog.innerHTML = multiline ? "<span class='name'></span> <textarea autofocus class='value'></textarea><button class='rounded'>OK</button>" : "<span class='name'></span> <input autofocus type='text' class='value'/><button class='rounded'>OK</button>";
+    dialog.modified = () => {
+      dialog.is_modified = true;
+    };
+    dialog.close = () => {
+      var _a3;
+      context.setPromptBox(null);
+      (_a3 = dialog.parentNode) == null ? void 0 : _a3.removeChild(dialog);
+    };
+    (_a2 = canvas == null ? void 0 : canvas.parentNode) == null ? void 0 : _a2.appendChild(dialog);
+    if (context.scale > 1) {
+      dialog.style.transform = "scale(" + context.scale + ")";
+    }
+    let closeTimer = null;
+    let prevent_timeout = false;
+    (_b2 = host.pointerListenerAdd) == null ? void 0 : _b2.call(host, dialog, "leave", () => {
+      if (prevent_timeout) {
+        return;
+      }
+      if (host.dialog_close_on_mouse_leave && !dialog.is_modified) {
+        closeTimer = setTimeout(dialog.close, host.dialog_close_on_mouse_leave_delay);
+      }
+    });
+    (_c2 = host.pointerListenerAdd) == null ? void 0 : _c2.call(host, dialog, "enter", () => {
+      if (closeTimer) {
+        clearTimeout(closeTimer);
+      }
+    });
+    const selects = dialog.querySelectorAll("select");
+    if (selects) {
+      selects.forEach((select) => {
+        select.addEventListener("click", () => {
+          prevent_timeout++;
+        });
+        select.addEventListener("blur", () => {
+          prevent_timeout = 0;
+        });
+        select.addEventListener("change", () => {
+          prevent_timeout = -1;
+        });
+      });
+    }
+    const currentPrompt = context.getPromptBox();
+    if (currentPrompt) {
+      currentPrompt.close();
+    }
+    context.setPromptBox(dialog);
+    const nameElement = dialog.querySelector(".name");
+    const inputElement = dialog.querySelector(".value");
+    if (nameElement) {
+      nameElement.innerText = title || "";
+    }
+    if (inputElement) {
+      inputElement.value = value;
+      inputElement.addEventListener("keydown", (e) => {
+        const keyEvent = e;
+        dialog.is_modified = true;
+        if (keyEvent.key === "Escape") {
+          dialog.close();
+        } else if (keyEvent.key === "Enter" && keyEvent.target.localName != "textarea") {
+          callback == null ? void 0 : callback(inputElement.value);
+          dialog.close();
+        } else {
+          return;
+        }
+        keyEvent.preventDefault();
+        keyEvent.stopPropagation();
+      });
+    }
+    (_d2 = dialog.querySelector("button")) == null ? void 0 : _d2.addEventListener("click", () => {
+      callback == null ? void 0 : callback(inputElement == null ? void 0 : inputElement.value);
+      context.graphcanvas.setDirty(true, false);
+      dialog.close();
+    });
+    if (canvas) {
+      const rect = canvas.getBoundingClientRect();
+      let x2 = -20;
+      let y2 = -20;
+      if (rect) {
+        x2 -= rect.left;
+        y2 -= rect.top;
+      }
+      if (event2) {
+        x2 += event2.clientX;
+        y2 += event2.clientY;
+      } else {
+        x2 += canvas.width * 0.5;
+        y2 += canvas.height * 0.5;
+      }
+      dialog.style.left = x2 + "px";
+      dialog.style.top = y2 + "px";
+    }
+    setTimeout(() => inputElement == null ? void 0 : inputElement.focus(), 10);
+    return dialog;
   }
   function showSearchBoxController(context, event2, options) {
     var _a2, _b2, _c2;
@@ -1184,6 +1963,82 @@ var LiteGraphTSMigration = (function(exports) {
       }
     }
     return dialog;
+  }
+  function showSubgraphIoPanel(context, node2, side) {
+    var _a2, _b2, _c2, _d2, _e, _f, _g;
+    const oldPanel = (_b2 = (_a2 = context.canvas) == null ? void 0 : _a2.parentNode) == null ? void 0 : _b2.querySelector(".subgraph_dialog");
+    (_c2 = oldPanel == null ? void 0 : oldPanel.close) == null ? void 0 : _c2.call(oldPanel);
+    const isInputs = side === "inputs";
+    const panel = context.createPanel(
+      isInputs ? "Subgraph Inputs" : "Subgraph Outputs",
+      { closable: true, width: 500 }
+    );
+    panel.node = node2;
+    panel.classList.add("subgraph_dialog");
+    const refresh = () => {
+      var _a3;
+      panel.clear();
+      const slots = isInputs ? node2.inputs : node2.outputs;
+      if (!slots) {
+        return;
+      }
+      for (let i2 = 0; i2 < slots.length; ++i2) {
+        const slot = slots[i2];
+        if (isInputs && slot.not_subgraph_input || !isInputs && slot.not_subgraph_output) {
+          continue;
+        }
+        const html2 = "<button>&#10005;</button> <span class='bullet_icon'></span><span class='name'></span><span class='type'></span>";
+        const elem = panel.addHTML(html2, "subgraph_property");
+        elem.dataset.name = slot.name;
+        elem.dataset.slot = String(i2);
+        elem.querySelector(".name").innerText = slot.name;
+        elem.querySelector(".type").innerText = slot.type;
+        (_a3 = elem.querySelector("button")) == null ? void 0 : _a3.addEventListener("click", function() {
+          var _a4, _b3;
+          const index = Number(this.parentNode.dataset.slot);
+          if (isInputs) {
+            (_a4 = node2.removeInput) == null ? void 0 : _a4.call(node2, index);
+          } else {
+            (_b3 = node2.removeOutput) == null ? void 0 : _b3.call(node2, index);
+          }
+          refresh();
+        });
+      }
+    };
+    const html = " + <span class='label'>Name</span><input class='name'/><span class='label'>Type</span><input class='type'></input><button>+</button>";
+    const addRow = panel.addHTML(html, "subgraph_property extra", true);
+    const addSlot = function() {
+      var _a3, _b3, _c3, _d3;
+      const parent = this.parentNode;
+      const name = parent.querySelector(".name").value;
+      const type = parent.querySelector(".type").value;
+      const findIndex = isInputs ? (_a3 = node2.findInputSlot) == null ? void 0 : _a3.call(node2, name) : (_b3 = node2.findOutputSlot) == null ? void 0 : _b3.call(node2, name);
+      if (!name || findIndex != -1) {
+        return;
+      }
+      if (isInputs) {
+        (_c3 = node2.addInput) == null ? void 0 : _c3.call(node2, name, type);
+      } else {
+        (_d3 = node2.addOutput) == null ? void 0 : _d3.call(node2, name, type);
+      }
+      parent.querySelector(".name").value = "";
+      parent.querySelector(".type").value = "";
+      refresh();
+    };
+    if (!isInputs) {
+      (_d2 = addRow.querySelector(".name")) == null ? void 0 : _d2.addEventListener("keydown", function(e) {
+        const keyEvent = e;
+        if (keyEvent.key === "Enter") {
+          addSlot.apply(this);
+        }
+      });
+    }
+    (_e = addRow.querySelector("button")) == null ? void 0 : _e.addEventListener("click", function() {
+      addSlot.apply(this);
+    });
+    refresh();
+    (_g = (_f = context.canvas) == null ? void 0 : _f.parentNode) == null ? void 0 : _g.appendChild(panel);
+    return panel;
   }
   const classHostCache = /* @__PURE__ */ new WeakMap();
   function resolveOwnerConstructor(owner) {
@@ -6811,346 +7666,58 @@ var LiteGraphTSMigration = (function(exports) {
       this.menuClass().active_canvas = this;
     }
     showLinkMenu(link, e) {
-      var _a2;
       this.setActiveCanvas();
-      const host = this.menuHost();
-      const node_left = this.graph.getNodeById(link.origin_id);
-      const node_right = this.graph.getNodeById(link.target_id);
-      let fromType = false;
-      if (node_left && node_left.outputs && node_left.outputs[link.origin_slot]) {
-        fromType = node_left.outputs[link.origin_slot].type;
-      }
-      let destType = false;
-      if (node_right && node_right.outputs && node_right.outputs[link.target_slot]) {
-        destType = node_right.inputs[link.target_slot].type;
-      }
-      const menu = new host.ContextMenu(
-        ["Add Node", null, "Delete", null],
+      return showLinkMenuController(
         {
-          event: e,
-          title: link.data != null ? ((_a2 = link.data.constructor) == null ? void 0 : _a2.name) || null : null,
-          callback: (v2, _opts, menuEvent) => {
-            if (v2 === "Add Node") {
-              this.menuClass().onMenuAdd(null, null, menuEvent, menu, (node2) => {
-                if (!node2.inputs || !node2.inputs.length || !node2.outputs || !node2.outputs.length) {
-                  return;
-                }
-                if (node_left.connectByType(link.origin_slot, node2, fromType)) {
-                  node2.connectByType(link.target_slot, node_right, destType);
-                  node2.pos[0] -= node2.size[0] * 0.5;
-                }
-              });
-            } else if (v2 === "Delete") {
-              this.graph.removeLink(link.id);
-            }
-          }
+          host: this.menuHost(),
+          menuClass: this.menuClass(),
+          graphcanvas: this
         },
-        this.getCanvasWindow()
+        link,
+        e
       );
-      return false;
     }
     createDefaultNodeForSlot(optPass) {
-      const host = this.menuHost();
-      const opts = Object.assign(
+      return createDefaultNodeForSlotController(
         {
-          nodeFrom: null,
-          slotFrom: null,
-          nodeTo: null,
-          slotTo: null,
-          position: [0, 0],
-          nodeType: null,
-          posAdd: [0, 0],
-          posSizeFix: [0, 0]
+          host: this.menuHost(),
+          menuClass: this.menuClass(),
+          graphcanvas: this
         },
-        optPass || {}
+        optPass
       );
-      const isFrom = !!(opts.nodeFrom && opts.slotFrom !== null);
-      const isTo = !isFrom && !!(opts.nodeTo && opts.slotTo !== null);
-      if (!isFrom && !isTo) {
-        console.warn("No data passed to createDefaultNodeForSlot " + opts.nodeFrom + " " + opts.slotFrom + " " + opts.nodeTo + " " + opts.slotTo);
-        return false;
-      }
-      if (!opts.nodeType) {
-        console.warn("No type to createDefaultNodeForSlot");
-        return false;
-      }
-      const nodeX = isFrom ? opts.nodeFrom : opts.nodeTo;
-      let slotX = isFrom ? opts.slotFrom : opts.slotTo;
-      let iSlotConn = false;
-      if (typeof slotX === "string") {
-        iSlotConn = isFrom ? nodeX.findOutputSlot(slotX, false) : nodeX.findInputSlot(slotX, false);
-        slotX = isFrom ? nodeX.outputs[slotX] : nodeX.inputs[slotX];
-      } else if (typeof slotX === "object") {
-        iSlotConn = isFrom ? nodeX.findOutputSlot(slotX.name) : nodeX.findInputSlot(slotX.name);
-      } else if (typeof slotX === "number") {
-        iSlotConn = slotX;
-        slotX = isFrom ? nodeX.outputs[slotX] : nodeX.inputs[slotX];
-      } else {
-        console.warn("Cant get slot information " + slotX);
-        return false;
-      }
-      if (slotX === false || iSlotConn === false) {
-        console.warn("createDefaultNodeForSlot bad slotX " + slotX + " " + iSlotConn);
-      }
-      const fromSlotType = slotX.type == host.EVENT ? "_event_" : slotX.type;
-      const slotTypesDefault = isFrom ? host.slot_types_default_out : host.slot_types_default_in;
-      const slotDefault = slotTypesDefault == null ? void 0 : slotTypesDefault[fromSlotType];
-      if (!slotDefault) {
-        return false;
-      }
-      let nodeNewType = false;
-      if (typeof slotDefault === "object") {
-        for (const i2 in slotDefault) {
-          if (opts.nodeType == slotDefault[i2] || opts.nodeType == "AUTO") {
-            nodeNewType = slotDefault[i2];
-            break;
-          }
-        }
-      } else if (opts.nodeType == slotDefault || opts.nodeType == "AUTO") {
-        nodeNewType = slotDefault;
-      }
-      if (!nodeNewType) {
-        return false;
-      }
-      let nodeNewOpts = null;
-      if (typeof nodeNewType === "object" && nodeNewType.node) {
-        nodeNewOpts = nodeNewType;
-        nodeNewType = nodeNewType.node;
-      }
-      const newNode = host.createNode(nodeNewType);
-      if (!newNode) {
-        console.log("failed creating " + nodeNewType);
-        return false;
-      }
-      if (nodeNewOpts) {
-        if (nodeNewOpts.properties) {
-          for (const i2 in nodeNewOpts.properties) {
-            newNode.addProperty(i2, nodeNewOpts.properties[i2]);
-          }
-        }
-        if (nodeNewOpts.inputs) {
-          newNode.inputs = [];
-          for (const i2 in nodeNewOpts.inputs) {
-            newNode.addOutput(
-              nodeNewOpts.inputs[i2][0],
-              nodeNewOpts.inputs[i2][1]
-            );
-          }
-        }
-        if (nodeNewOpts.outputs) {
-          newNode.outputs = [];
-          for (const i2 in nodeNewOpts.outputs) {
-            newNode.addOutput(
-              nodeNewOpts.outputs[i2][0],
-              nodeNewOpts.outputs[i2][1]
-            );
-          }
-        }
-        if (nodeNewOpts.title) {
-          newNode.title = nodeNewOpts.title;
-        }
-        if (nodeNewOpts.json) {
-          newNode.configure(nodeNewOpts.json);
-        }
-      }
-      this.graph.add(newNode);
-      newNode.pos = [
-        opts.position[0] + opts.posAdd[0] + (opts.posSizeFix[0] ? opts.posSizeFix[0] * newNode.size[0] : 0),
-        opts.position[1] + opts.posAdd[1] + (opts.posSizeFix[1] ? opts.posSizeFix[1] * newNode.size[1] : 0)
-      ];
-      if (isFrom) {
-        opts.nodeFrom.connectByType(iSlotConn, newNode, fromSlotType);
-      } else {
-        opts.nodeTo.connectByTypeOutput(iSlotConn, newNode, fromSlotType);
-      }
-      return true;
     }
     showConnectionMenu(optPass) {
-      var _a2, _b2, _c2, _d2, _e, _f, _g, _h;
       this.setActiveCanvas();
-      const host = this.menuHost();
-      const opts = Object.assign(
+      return showConnectionMenuController(
         {
-          nodeFrom: null,
-          slotFrom: null,
-          nodeTo: null,
-          slotTo: null,
-          e: null
+          host: this.menuHost(),
+          menuClass: this.menuClass(),
+          graphcanvas: this
         },
-        optPass || {}
+        optPass
       );
-      const isFrom = !!(opts.nodeFrom && opts.slotFrom != null);
-      const isTo = !isFrom && !!(opts.nodeTo && opts.slotTo != null);
-      if (!isFrom && !isTo) {
-        return false;
-      }
-      const nodeX = isFrom ? opts.nodeFrom : opts.nodeTo;
-      let slotX = isFrom ? opts.slotFrom : opts.slotTo;
-      let iSlotConn = false;
-      if (typeof slotX === "string") {
-        iSlotConn = isFrom ? (_a2 = nodeX.findOutputSlot) == null ? void 0 : _a2.call(nodeX, slotX, false) : (_b2 = nodeX.findInputSlot) == null ? void 0 : _b2.call(nodeX, slotX, false);
-        slotX = isFrom ? (_c2 = nodeX.outputs) == null ? void 0 : _c2[iSlotConn] : (_d2 = nodeX.inputs) == null ? void 0 : _d2[iSlotConn];
-      } else if (typeof slotX === "object") {
-        iSlotConn = isFrom ? (_e = nodeX.findOutputSlot) == null ? void 0 : _e.call(nodeX, slotX.name) : (_f = nodeX.findInputSlot) == null ? void 0 : _f.call(nodeX, slotX.name);
-      } else if (typeof slotX === "number") {
-        iSlotConn = slotX;
-        slotX = isFrom ? (_g = nodeX.outputs) == null ? void 0 : _g[slotX] : (_h = nodeX.inputs) == null ? void 0 : _h[slotX];
-      } else {
-        return false;
-      }
-      const fromSlotType = slotX.type == host.EVENT ? "_event_" : slotX.type;
-      const options = ["Add Node", null];
-      if (this.allow_searchbox) {
-        options.push("Search", null);
-      }
-      const slotTypesDefault = isFrom ? host.slot_types_default_out : host.slot_types_default_in;
-      if (slotTypesDefault == null ? void 0 : slotTypesDefault[fromSlotType]) {
-        if (typeof slotTypesDefault[fromSlotType] === "object") {
-          for (const i2 in slotTypesDefault[fromSlotType]) {
-            options.push(slotTypesDefault[fromSlotType][i2]);
-          }
-        } else {
-          options.push(slotTypesDefault[fromSlotType]);
-        }
-      }
-      const menu = new host.ContextMenu(options, {
-        event: opts.e,
-        title: ((slotX == null ? void 0 : slotX.name) ? slotX.name + (fromSlotType ? " | " : "") : "") + (fromSlotType || ""),
-        callback: (v2, _menuOpt, e) => {
-          if (v2 === "Add Node") {
-            this.menuClass().onMenuAdd(null, null, e, menu, (node2) => {
-              if (isFrom) {
-                opts.nodeFrom.connectByType(iSlotConn, node2, fromSlotType);
-              } else {
-                opts.nodeTo.connectByTypeOutput(iSlotConn, node2, fromSlotType);
-              }
-            });
-          } else if (v2 === "Search") {
-            if (isFrom) {
-              this.showSearchBox(e, {
-                node_from: opts.nodeFrom,
-                slot_from: slotX,
-                type_filter_in: fromSlotType
-              });
-            } else {
-              this.showSearchBox(e, {
-                node_to: opts.nodeTo,
-                slot_from: slotX,
-                type_filter_out: fromSlotType
-              });
-            }
-          } else {
-            this.createDefaultNodeForSlot(
-              Object.assign(opts, {
-                position: [opts.e.canvasX, opts.e.canvasY],
-                nodeType: v2
-              })
-            );
-          }
-        }
-      });
-      return false;
     }
     prompt(title, value, callback, event2, multiline) {
-      var _a2, _b2, _c2;
+      var _a2;
       this.setActiveCanvas();
-      const host = this.menuHost();
-      title = title || "";
-      const dialog = document.createElement("div");
-      dialog.is_modified = false;
-      dialog.className = "graphdialog rounded";
-      dialog.innerHTML = multiline ? "<span class='name'></span> <textarea autofocus class='value'></textarea><button class='rounded'>OK</button>" : "<span class='name'></span> <input autofocus type='text' class='value'/><button class='rounded'>OK</button>";
-      dialog.modified = () => {
-        dialog.is_modified = true;
-      };
-      dialog.close = () => {
-        var _a3;
-        this.prompt_box = null;
-        (_a3 = dialog.parentNode) == null ? void 0 : _a3.removeChild(dialog);
-      };
-      const canvas = ((_a2 = this.menuClass().active_canvas) == null ? void 0 : _a2.canvas) || this.canvas;
-      (_b2 = canvas.parentNode) == null ? void 0 : _b2.appendChild(dialog);
-      if (this.ds.scale > 1) {
-        dialog.style.transform = "scale(" + this.ds.scale + ")";
-      }
-      let closeTimer = null;
-      let prevent_timeout = false;
-      host.pointerListenerAdd(dialog, "leave", () => {
-        if (prevent_timeout) {
-          return;
-        }
-        if (host.dialog_close_on_mouse_leave && !dialog.is_modified) {
-          closeTimer = setTimeout(dialog.close, host.dialog_close_on_mouse_leave_delay);
-        }
-      });
-      host.pointerListenerAdd(dialog, "enter", () => {
-        if (closeTimer) {
-          clearTimeout(closeTimer);
-        }
-      });
-      const selInDia = dialog.querySelectorAll("select");
-      if (selInDia) {
-        selInDia.forEach((selIn) => {
-          selIn.addEventListener("click", () => {
-            prevent_timeout++;
-          });
-          selIn.addEventListener("blur", () => {
-            prevent_timeout = 0;
-          });
-          selIn.addEventListener("change", () => {
-            prevent_timeout = -1;
-          });
-        });
-      }
-      if (this.prompt_box) {
-        this.prompt_box.close();
-      }
-      this.prompt_box = dialog;
-      const nameEl = dialog.querySelector(".name");
-      const inputEl = dialog.querySelector(".value");
-      if (nameEl) {
-        nameEl.innerText = title || "";
-      }
-      if (inputEl) {
-        inputEl.value = value;
-        inputEl.addEventListener("keydown", (e) => {
-          const keyEvent = e;
-          dialog.is_modified = true;
-          if (keyEvent.key === "Escape") {
-            dialog.close();
-          } else if (keyEvent.key === "Enter" && keyEvent.target.localName != "textarea") {
-            callback == null ? void 0 : callback(inputEl.value);
-            dialog.close();
-          } else {
-            return;
+      return showPromptDialog(
+        {
+          host: this.menuHost(),
+          canvas: ((_a2 = this.menuClass().active_canvas) == null ? void 0 : _a2.canvas) || this.canvas,
+          scale: this.ds.scale,
+          graphcanvas: this,
+          getPromptBox: () => this.prompt_box || null,
+          setPromptBox: (dialog) => {
+            this.prompt_box = dialog;
           }
-          keyEvent.preventDefault();
-          keyEvent.stopPropagation();
-        });
-      }
-      (_c2 = dialog.querySelector("button")) == null ? void 0 : _c2.addEventListener("click", () => {
-        callback == null ? void 0 : callback(inputEl == null ? void 0 : inputEl.value);
-        this.setDirty(true, false);
-        dialog.close();
-      });
-      const rect = canvas.getBoundingClientRect();
-      let x2 = -20;
-      let y2 = -20;
-      if (rect) {
-        x2 -= rect.left;
-        y2 -= rect.top;
-      }
-      if (event2) {
-        x2 += event2.clientX;
-        y2 += event2.clientY;
-      } else {
-        x2 += canvas.width * 0.5;
-        y2 += canvas.height * 0.5;
-      }
-      dialog.style.left = x2 + "px";
-      dialog.style.top = y2 + "px";
-      setTimeout(() => inputEl == null ? void 0 : inputEl.focus(), 10);
-      return dialog;
+        },
+        title || "",
+        value,
+        callback,
+        event2,
+        multiline
+      );
     }
     showSearchBox(event2, options) {
       this.setActiveCanvas();
@@ -7181,105 +7748,14 @@ var LiteGraphTSMigration = (function(exports) {
       );
     }
     showEditPropertyValue(node2, property, options) {
-      if (!node2 || node2.properties[property] === void 0) {
-        return;
-      }
-      options = options || {};
-      const info = node2.getPropertyInfo(property);
-      const type = info.type;
-      let input_html = "";
-      if (type == "string" || type == "number" || type == "array" || type == "object") {
-        input_html = "<input autofocus type='text' class='value'/>";
-      } else if ((type == "enum" || type == "combo") && info.values) {
-        input_html = "<select autofocus type='text' class='value'>";
-        for (const i2 in info.values) {
-          let v2 = i2;
-          if (info.values.constructor === Array) {
-            v2 = info.values[i2];
-          }
-          input_html += "<option value='" + v2 + "' " + (v2 == node2.properties[property] ? "selected" : "") + ">" + info.values[i2] + "</option>";
-        }
-        input_html += "</select>";
-      } else if (type == "boolean" || type == "toggle") {
-        input_html = "<input autofocus type='checkbox' class='value' " + (node2.properties[property] ? "checked" : "") + "/>";
-      } else {
-        console.warn("unknown type: " + type);
-        return;
-      }
-      const dialog = this.createDialog(
-        "<span class='name'>" + (info.label ? info.label : property) + "</span>" + input_html + "<button>OK</button>",
+      return showEditPropertyValueDialog(
+        {
+          createDialog: this.createDialog.bind(this)
+        },
+        node2,
+        property,
         options
       );
-      let input = false;
-      if ((type == "enum" || type == "combo") && info.values) {
-        input = dialog.querySelector("select");
-        input.addEventListener("change", function(e) {
-          dialog.modified();
-          setValue(e.target.value);
-        });
-      } else if (type == "boolean" || type == "toggle") {
-        input = dialog.querySelector("input");
-        if (input) {
-          input.addEventListener("click", function() {
-            dialog.modified();
-            setValue(!!input.checked);
-          });
-        }
-      } else {
-        input = dialog.querySelector("input");
-        if (input) {
-          input.addEventListener("blur", function() {
-            this.focus();
-          });
-          let v2 = node2.properties[property] !== void 0 ? node2.properties[property] : "";
-          if (type !== "string") {
-            v2 = JSON.stringify(v2);
-          }
-          input.value = v2;
-          input.addEventListener("keydown", function(e) {
-            if (e.keyCode == 27) {
-              dialog.close();
-            } else if (e.keyCode == 13) {
-              inner();
-            } else if (e.keyCode != 13) {
-              dialog.modified();
-              return;
-            }
-            e.preventDefault();
-            e.stopPropagation();
-          });
-        }
-      }
-      if (input) input.focus();
-      const button = dialog.querySelector("button");
-      button == null ? void 0 : button.addEventListener("click", inner);
-      function inner() {
-        setValue(input.value);
-      }
-      function setValue(value) {
-        if (info && info.values && info.values.constructor === Object && info.values[value] != void 0) {
-          value = info.values[value];
-        }
-        if (typeof node2.properties[property] == "number") {
-          value = Number(value);
-        }
-        if (type == "array" || type == "object") {
-          value = JSON.parse(value);
-        }
-        node2.properties[property] = value;
-        if (node2.graph) {
-          node2.graph._version++;
-        }
-        if (node2.onPropertyChanged) {
-          node2.onPropertyChanged(property, value);
-        }
-        if (options.onclose) {
-          options.onclose();
-        }
-        dialog.close();
-        node2.setDirtyCanvas(true, true);
-      }
-      return dialog;
     }
     createDialog(html, options) {
       return createDialog(
@@ -7310,7 +7786,7 @@ var LiteGraphTSMigration = (function(exports) {
       (_b2 = optionPanel == null ? void 0 : optionPanel.close) == null ? void 0 : _b2.call(optionPanel);
     }
     showShowGraphOptionsPanel(_refOpts, obEv) {
-      var _a2, _b2, _c2, _d2;
+      var _a2, _b2, _c2;
       let graphcanvas;
       if (((_a2 = this.constructor) == null ? void 0 : _a2.name) === "HTMLDivElement") {
         if (!((_c2 = (_b2 = obEv == null ? void 0 : obEv.event) == null ? void 0 : _b2.target) == null ? void 0 : _c2.lgraphcanvas)) {
@@ -7320,291 +7796,60 @@ var LiteGraphTSMigration = (function(exports) {
       } else {
         graphcanvas = this;
       }
-      const host = this.menuHost();
-      graphcanvas.closePanels();
-      const ref_window2 = graphcanvas.getCanvasWindow();
-      const panel = graphcanvas.createPanel("Options", {
-        closable: true,
-        window: ref_window2,
-        onOpen: () => {
-          graphcanvas.OPTIONPANEL_IS_OPEN = true;
-        },
-        onClose: () => {
-          graphcanvas.OPTIONPANEL_IS_OPEN = false;
-          graphcanvas.options_panel = null;
-        }
+      showGraphOptionsPanel({
+        host: this.menuHost(),
+        graphcanvas
       });
-      graphcanvas.options_panel = panel;
-      panel.id = "option-panel";
-      panel.classList.add("settings");
-      const refresh = () => {
-        panel.content.innerHTML = "";
-        const update = (name, value, options) => {
-          if (options == null ? void 0 : options.key) {
-            name = options.key;
-          }
-          if (options == null ? void 0 : options.values) {
-            value = Object.values(options.values).indexOf(value);
-          }
-          graphcanvas[name] = value;
-        };
-        const props = [...host.availableCanvasOptions];
-        props.sort();
-        for (const p of props) {
-          panel.addWidget(
-            "boolean",
-            p,
-            graphcanvas[p],
-            { key: p, on: "True", off: "False" },
-            update
-          );
-        }
-        panel.addWidget(
-          "combo",
-          "Render mode",
-          host.LINK_RENDER_MODES[graphcanvas.links_render_mode],
-          { key: "links_render_mode", values: host.LINK_RENDER_MODES },
-          update
-        );
-        panel.addSeparator();
-        panel.footer.innerHTML = "";
-      };
-      refresh();
-      (_d2 = graphcanvas.canvas.parentNode) == null ? void 0 : _d2.appendChild(panel);
     }
     showShowNodePanel(node2) {
-      var _a2, _b2;
-      this.SELECTED_NODE = node2;
-      this.closePanels();
-      const host = this.menuHost();
-      const panel = this.createPanel(node2.title || "", {
-        closable: true,
-        window: this.getCanvasWindow(),
-        onOpen: () => {
-          this.NODEPANEL_IS_OPEN = true;
+      showNodePanel(
+        {
+          host: this.menuHost(),
+          menuClass: this.menuClass(),
+          graphcanvas: {
+            closePanels: this.closePanels.bind(this),
+            createPanel: this.createPanel.bind(this),
+            getCanvasWindow: this.getCanvasWindow.bind(this),
+            canvas: this.canvas,
+            graph: this.graph
+          },
+          state: {
+            setSelectedNode: (selectedNode) => {
+              this.SELECTED_NODE = selectedNode;
+            },
+            setNodePanel: (panel) => {
+              this.node_panel = panel;
+            },
+            setNodePanelOpen: (open) => {
+              this.NODEPANEL_IS_OPEN = open;
+            },
+            markDirty: () => {
+              this.dirty_canvas = true;
+            }
+          }
         },
-        onClose: () => {
-          this.NODEPANEL_IS_OPEN = false;
-          this.node_panel = null;
-        }
-      });
-      this.node_panel = panel;
-      panel.id = "node-panel";
-      panel.node = node2;
-      panel.classList.add("settings");
-      const refresh = () => {
-        var _a3, _b3, _c2;
-        panel.content.innerHTML = "";
-        panel.addHTML(
-          "<span class='node_type'>" + node2.type + "</span><span class='node_desc'>" + (node2.constructor.desc || "") + "</span><span class='separator'></span>"
-        );
-        panel.addHTML("<h3>Properties</h3>");
-        const update = (name, value) => {
-          var _a4, _b4, _c3, _d2, _e, _f, _g;
-          (_b4 = (_a4 = this.graph).beforeChange) == null ? void 0 : _b4.call(_a4, node2);
-          if (name === "Title") {
-            node2.title = value;
-          } else if (name === "Mode") {
-            const idx = Object.values(host.NODE_MODES).indexOf(value);
-            if (idx >= 0) {
-              (_c3 = node2.changeMode) == null ? void 0 : _c3.call(node2, idx);
-            }
-          } else if (name === "Color") {
-            const color = (_d2 = this.menuClass().node_colors) == null ? void 0 : _d2[value];
-            if (color) {
-              node2.color = color.color;
-              node2.bgcolor = color.bgcolor;
-            }
-          } else {
-            (_e = node2.setProperty) == null ? void 0 : _e.call(node2, name, value);
-          }
-          (_g = (_f = this.graph).afterChange) == null ? void 0 : _g.call(_f);
-          this.dirty_canvas = true;
-        };
-        panel.addWidget("string", "Title", node2.title, {}, update);
-        panel.addWidget(
-          "combo",
-          "Mode",
-          host.NODE_MODES[node2.mode],
-          { values: host.NODE_MODES },
-          update
-        );
-        const nodeCol = node2.color !== void 0 ? Object.keys(this.menuClass().node_colors || {}).filter(
-          (k) => this.menuClass().node_colors[k].color == node2.color
-        ) : "";
-        panel.addWidget(
-          "combo",
-          "Color",
-          nodeCol,
-          { values: Object.keys(this.menuClass().node_colors || {}) },
-          update
-        );
-        for (const pName in node2.properties) {
-          const value = node2.properties[pName];
-          const info = ((_a3 = node2.getPropertyInfo) == null ? void 0 : _a3.call(node2, pName)) || {};
-          if ((_b3 = node2.onAddPropertyToPanel) == null ? void 0 : _b3.call(node2, pName, panel)) {
-            continue;
-          }
-          panel.addWidget(info.widget || info.type || "string", pName, value, info, update);
-        }
-        panel.addSeparator();
-        (_c2 = node2.onShowCustomPanelInfo) == null ? void 0 : _c2.call(node2, panel);
-        panel.footer.innerHTML = "";
-        panel.addButton("Delete", () => {
-          var _a4, _b4;
-          if (node2.block_delete) {
-            return;
-          }
-          (_b4 = (_a4 = node2.graph).remove) == null ? void 0 : _b4.call(_a4, node2);
-          panel.close();
-        }).classList.add("delete");
-      };
-      panel.inner_showCodePad = (propname) => {
-        panel.classList.remove("settings");
-        panel.classList.add("centered");
-        panel.alt_content.innerHTML = "<textarea class='code'></textarea>";
-        const textarea = panel.alt_content.querySelector("textarea");
-        const done = () => {
-          var _a3;
-          panel.toggleAltContent(false);
-          panel.toggleFooterVisibility(true);
-          (_a3 = textarea.parentNode) == null ? void 0 : _a3.removeChild(textarea);
-          panel.classList.add("settings");
-          panel.classList.remove("centered");
-          refresh();
-        };
-        textarea.value = node2.properties[propname];
-        textarea.addEventListener("keydown", (e) => {
-          var _a3;
-          if (e.code === "Enter" && e.ctrlKey) {
-            (_a3 = node2.setProperty) == null ? void 0 : _a3.call(node2, propname, textarea.value);
-            done();
-          }
-        });
-        panel.toggleAltContent(true);
-        panel.toggleFooterVisibility(false);
-        textarea.style.height = "calc(100% - 40px)";
-        const assign = panel.addButton("Assign", () => {
-          var _a3;
-          (_a3 = node2.setProperty) == null ? void 0 : _a3.call(node2, propname, textarea.value);
-          done();
-        });
-        panel.alt_content.appendChild(assign);
-        const close = panel.addButton("Close", done);
-        close.style.float = "right";
-        panel.alt_content.appendChild(close);
-      };
-      refresh();
-      (_b2 = (_a2 = this.canvas) == null ? void 0 : _a2.parentNode) == null ? void 0 : _b2.appendChild(panel);
+        node2
+      );
     }
     showSubgraphPropertiesDialog(node2) {
-      var _a2, _b2, _c2, _d2, _e, _f;
-      const old_panel = (_b2 = (_a2 = this.canvas) == null ? void 0 : _a2.parentNode) == null ? void 0 : _b2.querySelector(".subgraph_dialog");
-      (_c2 = old_panel == null ? void 0 : old_panel.close) == null ? void 0 : _c2.call(old_panel);
-      const panel = this.createPanel("Subgraph Inputs", { closable: true, width: 500 });
-      panel.node = node2;
-      panel.classList.add("subgraph_dialog");
-      const refresh = () => {
-        var _a3;
-        panel.clear();
-        if (!node2.inputs) {
-          return;
-        }
-        for (let i2 = 0; i2 < node2.inputs.length; ++i2) {
-          const input = node2.inputs[i2];
-          if (input.not_subgraph_input) {
-            continue;
-          }
-          const html2 = "<button>&#10005;</button> <span class='bullet_icon'></span><span class='name'></span><span class='type'></span>";
-          const elem = panel.addHTML(html2, "subgraph_property");
-          elem.dataset.name = input.name;
-          elem.dataset.slot = String(i2);
-          elem.querySelector(".name").innerText = input.name;
-          elem.querySelector(".type").innerText = input.type;
-          (_a3 = elem.querySelector("button")) == null ? void 0 : _a3.addEventListener("click", function() {
-            var _a4;
-            (_a4 = node2.removeInput) == null ? void 0 : _a4.call(node2, Number(this.parentNode.dataset.slot));
-            refresh();
-          });
-        }
-      };
-      const html = " + <span class='label'>Name</span><input class='name'/><span class='label'>Type</span><input class='type'></input><button>+</button>";
-      const addRow = panel.addHTML(html, "subgraph_property extra", true);
-      (_d2 = addRow.querySelector("button")) == null ? void 0 : _d2.addEventListener("click", function() {
-        var _a3, _b3;
-        const p = this.parentNode;
-        const name = p.querySelector(".name").value;
-        const type = p.querySelector(".type").value;
-        if (!name || ((_a3 = node2.findInputSlot) == null ? void 0 : _a3.call(node2, name)) != -1) {
-          return;
-        }
-        (_b3 = node2.addInput) == null ? void 0 : _b3.call(node2, name, type);
-        p.querySelector(".name").value = "";
-        p.querySelector(".type").value = "";
-        refresh();
-      });
-      refresh();
-      (_f = (_e = this.canvas) == null ? void 0 : _e.parentNode) == null ? void 0 : _f.appendChild(panel);
-      return panel;
+      return showSubgraphIoPanel(
+        {
+          createPanel: this.createPanel.bind(this),
+          canvas: this.canvas
+        },
+        node2,
+        "inputs"
+      );
     }
     showSubgraphPropertiesDialogRight(node2) {
-      var _a2, _b2, _c2, _d2, _e, _f, _g;
-      const old_panel = (_b2 = (_a2 = this.canvas) == null ? void 0 : _a2.parentNode) == null ? void 0 : _b2.querySelector(".subgraph_dialog");
-      (_c2 = old_panel == null ? void 0 : old_panel.close) == null ? void 0 : _c2.call(old_panel);
-      const panel = this.createPanel("Subgraph Outputs", { closable: true, width: 500 });
-      panel.node = node2;
-      panel.classList.add("subgraph_dialog");
-      const refresh = () => {
-        var _a3;
-        panel.clear();
-        if (!node2.outputs) {
-          return;
-        }
-        for (let i2 = 0; i2 < node2.outputs.length; ++i2) {
-          const output = node2.outputs[i2];
-          if (output.not_subgraph_output) {
-            continue;
-          }
-          const html2 = "<button>&#10005;</button> <span class='bullet_icon'></span><span class='name'></span><span class='type'></span>";
-          const elem = panel.addHTML(html2, "subgraph_property");
-          elem.dataset.name = output.name;
-          elem.dataset.slot = String(i2);
-          elem.querySelector(".name").innerText = output.name;
-          elem.querySelector(".type").innerText = output.type;
-          (_a3 = elem.querySelector("button")) == null ? void 0 : _a3.addEventListener("click", function() {
-            var _a4;
-            (_a4 = node2.removeOutput) == null ? void 0 : _a4.call(node2, Number(this.parentNode.dataset.slot));
-            refresh();
-          });
-        }
-      };
-      const html = " + <span class='label'>Name</span><input class='name'/><span class='label'>Type</span><input class='type'></input><button>+</button>";
-      const addRow = panel.addHTML(html, "subgraph_property extra", true);
-      const addOutput = function() {
-        var _a3, _b3;
-        const p = this.parentNode;
-        const name = p.querySelector(".name").value;
-        const type = p.querySelector(".type").value;
-        if (!name || ((_a3 = node2.findOutputSlot) == null ? void 0 : _a3.call(node2, name)) != -1) {
-          return;
-        }
-        (_b3 = node2.addOutput) == null ? void 0 : _b3.call(node2, name, type);
-        p.querySelector(".name").value = "";
-        p.querySelector(".type").value = "";
-        refresh();
-      };
-      (_d2 = addRow.querySelector(".name")) == null ? void 0 : _d2.addEventListener("keydown", function(e) {
-        const keyEvent = e;
-        if (keyEvent.key === "Enter") {
-          addOutput.apply(this);
-        }
-      });
-      (_e = addRow.querySelector("button")) == null ? void 0 : _e.addEventListener("click", function() {
-        addOutput.apply(this);
-      });
-      refresh();
-      (_g = (_f = this.canvas) == null ? void 0 : _f.parentNode) == null ? void 0 : _g.appendChild(panel);
-      return panel;
+      return showSubgraphIoPanel(
+        {
+          createPanel: this.createPanel.bind(this),
+          canvas: this.canvas
+        },
+        node2,
+        "outputs"
+      );
     }
     checkPanels() {
       var _a2;
@@ -7632,138 +7877,16 @@ var LiteGraphTSMigration = (function(exports) {
       return buildGroupMenuOptions(this.menuClass());
     }
     processContextMenu(node2, event2) {
-      var _a2, _b2, _c2, _d2, _e, _f, _g;
       this.setActiveCanvas();
-      const host = this.menuHost();
-      const CanvasClass = this.menuClass();
-      const ref_window2 = this.getCanvasWindow();
-      let menu_info = null;
-      const options = {
-        event: event2,
-        callback: inner_option_clicked,
-        extra: node2
-      };
-      if (node2) {
-        options.title = node2.type;
-      }
-      let slot = null;
-      if (node2) {
-        slot = (_a2 = node2.getSlotInPosition) == null ? void 0 : _a2.call(node2, event2.canvasX, event2.canvasY);
-        CanvasClass.active_node = node2;
-      }
-      if (slot) {
-        menu_info = [];
-        if (node2.getSlotMenuOptions) {
-          menu_info = node2.getSlotMenuOptions(slot);
-        } else {
-          if ((_c2 = (_b2 = slot == null ? void 0 : slot.output) == null ? void 0 : _b2.links) == null ? void 0 : _c2.length) {
-            menu_info.push({ content: "Disconnect Links", slot });
-          }
-          const s = slot.input || slot.output;
-          if (s == null ? void 0 : s.removable) {
-            menu_info.push(s.locked ? "Cannot remove" : { content: "Remove Slot", slot });
-          }
-          if (!(s == null ? void 0 : s.nameLocked)) {
-            menu_info.push({ content: "Rename Slot", slot });
-          }
-        }
-        options.title = (slot.input ? slot.input.type : slot.output.type) || "*";
-        if (((_d2 = slot.input) == null ? void 0 : _d2.type) == host.ACTION) {
-          options.title = "Action";
-        }
-        if (((_e = slot.output) == null ? void 0 : _e.type) == host.EVENT) {
-          options.title = "Event";
-        }
-      } else if (node2) {
-        menu_info = this.getNodeMenuOptions(node2);
-      } else {
-        menu_info = this.getCanvasMenuOptions();
-        const group = (_g = (_f = this.graph).getGroupOnPos) == null ? void 0 : _g.call(_f, event2.canvasX, event2.canvasY);
-        if (group) {
-          menu_info.push(
-            null,
-            {
-              content: "Edit Group",
-              has_submenu: true,
-              submenu: {
-                title: "Group",
-                extra: group,
-                options: this.getGroupMenuOptions(group)
-              }
-            }
-          );
-        }
-      }
-      if (!menu_info) {
-        return;
-      }
-      new host.ContextMenu(menu_info, options, ref_window2);
-      const that2 = this;
-      function inner_option_clicked(v2, opts) {
-        var _a3, _b3, _c3;
-        if (!v2) {
-          return;
-        }
-        if (v2.content == "Remove Slot") {
-          const info = v2.slot;
-          node2.graph.beforeChange();
-          if (info.input) {
-            node2.removeInput(info.slot);
-          } else if (info.output) {
-            node2.removeOutput(info.slot);
-          }
-          node2.graph.afterChange();
-          return;
-        }
-        if (v2.content == "Disconnect Links") {
-          const info = v2.slot;
-          node2.graph.beforeChange();
-          if (info.output) {
-            node2.disconnectOutput(info.slot);
-          } else if (info.input) {
-            node2.disconnectInput(info.slot);
-          }
-          node2.graph.afterChange();
-          return;
-        }
-        if (v2.content == "Rename Slot") {
-          const info = v2.slot;
-          const slot_info = info.input ? (_a3 = node2.getInputInfo) == null ? void 0 : _a3.call(node2, info.slot) : (_b3 = node2.getOutputInfo) == null ? void 0 : _b3.call(node2, info.slot);
-          const dialog = that2.createDialog(
-            "<span class='name'>Name</span><input autofocus type='text'/><button>OK</button>",
-            opts
-          );
-          const input = dialog.querySelector("input");
-          if (input && slot_info) {
-            input.value = slot_info.label || "";
-          }
-          const inner = () => {
-            node2.graph.beforeChange();
-            if (input == null ? void 0 : input.value) {
-              if (slot_info) {
-                slot_info.label = input.value;
-              }
-              that2.setDirty(true, false);
-            }
-            dialog.close();
-            node2.graph.afterChange();
-          };
-          (_c3 = dialog.querySelector("button")) == null ? void 0 : _c3.addEventListener("click", inner);
-          input == null ? void 0 : input.addEventListener("keydown", (e) => {
-            dialog.is_modified = true;
-            if (e.key === "Escape") {
-              dialog.close();
-            } else if (e.key === "Enter") {
-              inner();
-            } else {
-              return;
-            }
-            e.preventDefault();
-            e.stopPropagation();
-          });
-          input == null ? void 0 : input.focus();
-        }
-      }
+      processContextMenuController(
+        {
+          host: this.menuHost(),
+          menuClass: this.menuClass(),
+          graphcanvas: this
+        },
+        node2,
+        event2
+      );
     }
   }
   function createTimeSource() {

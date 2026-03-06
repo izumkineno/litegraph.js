@@ -137,3 +137,24 @@ export function buildGroupMenuOptions(
         { content: "Remove", callback: menuClass.onMenuNodeRemove },
     ];
 }
+
+export function buildSlotMenuOptions(node: any, slot: any): any[] {
+    if (node.getSlotMenuOptions) {
+        return node.getSlotMenuOptions(slot);
+    }
+
+    const options: any[] = [];
+    if (slot?.output?.links?.length) {
+        options.push({ content: "Disconnect Links", slot });
+    }
+    const slotDefinition = slot.input || slot.output;
+    if (slotDefinition?.removable) {
+        options.push(
+            slotDefinition.locked ? "Cannot remove" : { content: "Remove Slot", slot }
+        );
+    }
+    if (!slotDefinition?.nameLocked) {
+        options.push({ content: "Rename Slot", slot });
+    }
+    return options;
+}
