@@ -57,6 +57,7 @@
 | 文件 | 作用 | 主要内容 |
 | --- | --- | --- |
 | `README.md` | 目录导航文档 | 说明 `src/ts-migration` 的分层结构、继承链以及每个文件的职责与主要内容。 |
+| `DECOUPLING_PERFORMANCE_ROADMAP.md` | 解耦与性能路线图 | 记录 `ts-migration` 当前的高耦合点、性能优先级和建议重构阶段，供后续结构收敛参考。 |
 | `index.ts` | 迁移层总装配入口 | 组装 `LiteGraph` 命名空间，拼接 `core`、`models`、`canvas`、`ui`、`compat`，导出 `assembleLiteGraph()`，并支持挂到全局或 CommonJS。 |
 
 ### `core/`

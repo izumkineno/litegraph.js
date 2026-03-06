@@ -1,3 +1,4 @@
+import type { ContextMenuPort } from "../contracts/ui";
 import type { LiteGraphConstantsShape } from "../core/litegraph.constants";
 import type { ContextMenuItem, IContextMenuOptions } from "../types/core-types";
 
@@ -91,7 +92,7 @@ const defaultHost: ContextMenuHost = {
  *
  * Source: `function ContextMenu` + `ContextMenu.prototype.*` + static methods.
  */
-export class ContextMenu {
+export class ContextMenu implements ContextMenuPort {
     static liteGraph?: Partial<ContextMenuHost>;
 
     options: ContextMenuOptions;

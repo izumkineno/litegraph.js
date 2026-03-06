@@ -1,15 +1,15 @@
 import type { Vector2 } from "../types/core-types";
-import type { LGraphCanvasMenuPanel as LGraphCanvas } from "../canvas/LGraphCanvas.menu-panel";
+import type {
+    GraphCanvasCapturePort,
+    GraphCanvasViewportPort,
+} from "../contracts/canvas";
 import type { LiteGraphConstantsShape } from "../core/litegraph.constants";
 import { LGraphNodeConnectGeometry } from "./LGraphNode.connect-geometry";
 
 interface LGraphNodeCanvasCollabHost
     extends Pick<LiteGraphConstantsShape, "CANVAS_GRID_SIZE" | "node_images_path"> {}
 
-type LGraphNodeCanvasLike = Pick<LGraphCanvas, "node_capturing_input"> & {
-    scale: number;
-    offset: Vector2;
-};
+type LGraphNodeCanvasLike = GraphCanvasCapturePort<LGraphNodeCanvasCollab>;
 
 interface LGraphNodeCanvasCollabGraphLike {
     _version: number;
@@ -178,10 +178,14 @@ export class LGraphNodeCanvasCollab extends LGraphNodeConnectGeometry {
         }
     }
 
-    localToScreen(x: number, y: number, graphCanvas: LGraphNodeCanvasLike): Vector2 {
+    localToScreen(
+        x: number,
+        y: number,
+        graphCanvas: GraphCanvasViewportPort
+    ): Vector2 {
         return [
-            (x + this.pos[0]) * graphCanvas.scale + graphCanvas.offset[0],
-            (y + this.pos[1]) * graphCanvas.scale + graphCanvas.offset[1],
+            (x + this.pos[0]) * graphCanvas.ds.scale + graphCanvas.ds.offset[0],
+            (y + this.pos[1]) * graphCanvas.ds.scale + graphCanvas.ds.offset[1],
         ] as Vector2;
     }
 }

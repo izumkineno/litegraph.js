@@ -1,4 +1,7 @@
-import type { LGraphCanvasMenuPanel as LGraphCanvas } from "../canvas/LGraphCanvas.menu-panel";
+import type {
+    GraphCanvasConstructorPort,
+    GraphCanvasLifecyclePort,
+} from "../contracts/canvas";
 import type { LiteGraphConstantsShape } from "../core/litegraph.constants";
 import type { LGraphNodeCanvasCollab as LGraphNode } from "./LGraphNode.canvas-collab";
 
@@ -8,15 +11,19 @@ export interface LGraphNodeLifecycleLike extends LGraphNodeLifecycleIdentity {
     onRemoved?: () => void;
 }
 
-export interface LGraphCanvasLifecycleLike {
-    graph: LGraph | null;
+interface LGraphCanvasLifecycleGraphLike {
+    detachCanvas: (canvas: LGraphCanvasLifecycleLike) => void;
+}
+
+export interface LGraphCanvasLifecycleLike
+    extends GraphCanvasLifecyclePort<LGraphCanvasLifecycleGraphLike> {
     constructor: unknown;
 }
 
 export interface LiteGraphLifecycleHost
     extends Pick<LiteGraphConstantsShape, "debug"> {
     getTime: () => number;
-    LGraphCanvas?: new (...args: any[]) => LGraphCanvas;
+    LGraphCanvas?: GraphCanvasConstructorPort<LGraphCanvasLifecycleLike>;
 }
 
 const defaultLiteGraphLifecycleHost: LiteGraphLifecycleHost = {

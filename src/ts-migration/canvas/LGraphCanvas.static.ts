@@ -1,4 +1,5 @@
 import type { Vector2 } from "../types/core-types";
+import type { GraphCanvasPalettePort } from "../contracts/canvas";
 import type { LiteGraphConstantsShape } from "../core/litegraph.constants";
 import type { LGraphGroup } from "../models/LGraphGroup";
 import type { LGraphNodeCanvasCollab as LGraphNode } from "../models/LGraphNode.canvas-collab";
@@ -1255,3 +1256,6 @@ export class LGraphCanvas {
         return url.substr(point + 1).toLowerCase();
     }
 }
+
+const graphCanvasPalettePortCheck: GraphCanvasPalettePort = LGraphCanvas;
+void graphCanvasPalettePortCheck;

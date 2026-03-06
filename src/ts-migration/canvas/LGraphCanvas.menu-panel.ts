@@ -1,3 +1,4 @@
+import type { GraphCanvasWidgetPort } from "../contracts/canvas";
 import type { LiteGraphConstantsShape } from "../core/litegraph.constants";
 import type { LGraphPersistence as LGraph } from "../models/LGraph.persistence";
 import type { LGraphGroup } from "../models/LGraphGroup";
@@ -83,7 +84,9 @@ type LGraphCanvasMenuPanelHost = Partial<LiteGraphConstantsShape> & {
  * LGraphCanvas menu / panel / search layer.
  * Source: `showLinkMenu/showConnectionMenu/showSearchBox/createDialog/createPanel/processContextMenu`.
  */
-export class LGraphCanvasMenuPanel extends LGraphCanvasRender {
+export class LGraphCanvasMenuPanel
+    extends LGraphCanvasRender
+    implements GraphCanvasWidgetPort {
     [key: string]: any;
 
     private menuClass(): any {

@@ -1,5 +1,5 @@
 import type { Vector2, Vector4 } from "../types/core-types";
-import type { LGraphCanvasMenuPanel as LGraphCanvas } from "../canvas/LGraphCanvas.menu-panel";
+import type { GraphCanvasPalettePort } from "../contracts/canvas";
 import { overlapBounding } from "../utils/math-geometry";
 import type { LGraphPersistence as LGraph } from "./LGraph.persistence";
 import { LGraphNodeCanvasCollab } from "./LGraphNode.canvas-collab";
@@ -17,16 +17,7 @@ interface LGraphGroupGraphLike extends Pick<LGraph, "sendActionToCanvas" | "isLi
     _nodes: LGraphGroupNodeLike[];
 }
 
-type LGraphCanvasConstructorLike = {
-    new (...args: any[]): LGraphCanvas;
-    node_colors?: {
-        pale_blue?: {
-            groupcolor?: string;
-        };
-    };
-};
-
-type LGraphGroupCanvasColorsLike = Pick<LGraphCanvasConstructorLike, "node_colors">;
+type LGraphGroupCanvasColorsLike = GraphCanvasPalettePort;
 
 const defaultCanvasColors: LGraphGroupCanvasColorsLike = {
     node_colors: {

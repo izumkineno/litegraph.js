@@ -1,6 +1,6 @@
-import type { LGraphCanvasMenuPanel as LGraphCanvasLike } from "../canvas/LGraphCanvas.menu-panel";
+import type { GraphCanvasWidgetPort } from "../contracts/canvas";
+import type { ContextMenuPort as ContextMenuLike } from "../contracts/ui";
 import type { LGraphNodeCanvasCollab as LGraphNodeLike } from "../models/LGraphNode.canvas-collab";
-import type { ContextMenu as ContextMenuLike } from "../ui/ContextMenu";
 
 export type Vector2 = [number, number];
 export type Vector4 = [number, number, number, number];
@@ -46,7 +46,7 @@ export interface INodeOutputSlot extends INodeSlot {
 export type WidgetCallback<T extends IWidget = IWidget> = (
     this: T,
     value: T["value"],
-    graphCanvas: LGraphCanvasLike,
+    graphCanvas: GraphCanvasWidgetPort,
     node: LGraphNodeLike,
     pos: Vector2,
     event?: MouseEvent
@@ -131,7 +131,7 @@ export interface IContextMenuItem {
 export interface IContextMenuOptions {
     callback?: ContextMenuEventListener;
     ignore_item_callbacks?: Boolean;
-    event?: MouseEvent | CustomEvent;
+    event?: MouseEvent | CustomEvent | PointerEvent;
     parentMenu?: ContextMenuLike;
     autoopen?: boolean;
     title?: string;
