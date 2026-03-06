@@ -157,6 +157,11 @@ module.exports = {
   //   "**/__tests__/**/*.[jt]s?(x)",
   //   "**/?(*.)+(spec|test).[tj]s?(x)"
   // ],
+  testPathIgnorePatterns: [
+    "\\\\node_modules\\\\",
+    "\\\\tests\\\\playwright\\\\",
+    "\\\\tests\\\\editor-ab-test\\.spec\\.ts$",
+  ],
 
   // An array of regexp pattern strings that are matched against all test paths, matched tests are skipped
   // testPathIgnorePatterns: [
@@ -173,7 +178,9 @@ module.exports = {
   // testRunner: "jest-circus/runner",
 
   // A map from regular expressions to paths to transformers
-  // transform: undefined,
+  transform: {
+    "^.+\\.tsx?$": "<rootDir>/tests/migration-unit/ts-transformer.cjs",
+  },
 
   // An array of regexp pattern strings that are matched against all source file paths, matched files will skip transformation
   // transformIgnorePatterns: [

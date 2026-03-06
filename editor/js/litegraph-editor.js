@@ -56,6 +56,13 @@ function Editor(container_id, options) {
             ".tools-right"
         );
     }
+    this.addToolsButton(
+        "benchmark_button",
+        "基准",
+        null,
+        this.openBenchmarkPanel.bind(this),
+        ".tools-right"
+    );
     if (!options.skip_maximize) {
         this.addToolsButton(
             "maximize_button",
@@ -77,6 +84,10 @@ function Editor(container_id, options) {
 
     graphcanvas.resize();
     //graphcanvas.draw(true,true);
+    if (LiteGraph.EditorBenchmark) {
+        this.benchmark = new LiteGraph.EditorBenchmark(this);
+    }
+    this.refreshRuntimeButtons();
 }
 
 Editor.prototype.addLoadCounter = function() {
@@ -112,6 +123,31 @@ Editor.prototype.addToolsButton = function( id, name, icon_url, callback, contai
     var button = this.createButton(name, icon_url, callback);
     button.id = id;
     this.root.querySelector(container).appendChild(button);
+    return button;
+};
+
+Editor.prototype.refreshRuntimeButtons = function(options) {
+    options = options || {};
+    var running =
+        options.running != null
+            ? !!options.running
+            : this.graph.status == LGraph.STATUS_RUNNING;
+    var live_mode =
+        options.live_mode != null
+            ? !!options.live_mode
+            : !!this.graphcanvas.live_mode;
+    var playButton = this.root.querySelector("#playnode_button");
+    if (playButton) {
+        playButton.innerHTML = running
+            ? "<img src='imgs/icon-stop.png'/> Stop"
+            : "<img src='imgs/icon-play.png'/> Play";
+    }
+    var liveButton = this.root.querySelector("#livemode_button");
+    if (liveButton) {
+        liveButton.innerHTML = live_mode
+            ? "<img src='imgs/icon-gear.png'/> Edit"
+            : "<img src='imgs/icon-record.png'/> Live";
+    }
 };
 
 Editor.prototype.createButton = function(name, icon_url, callback) {
@@ -137,15 +173,13 @@ Editor.prototype.onSaveButton = function() {};
 
 Editor.prototype.onPlayButton = function() {
     var graph = this.graph;
-    var button = this.root.querySelector("#playnode_button");
 
     if (graph.status == LGraph.STATUS_STOPPED) {
-        button.innerHTML = "<img src='imgs/icon-stop.png'/> Stop";
         graph.start();
     } else {
-        button.innerHTML = "<img src='imgs/icon-play.png'/> Play";
         graph.stop();
     }
+    this.refreshRuntimeButtons();
 };
 
 Editor.prototype.onPlayStepButton = function() {
@@ -158,13 +192,37 @@ Editor.prototype.onLiveButton = function() {
     var is_live_mode = !this.graphcanvas.live_mode;
     this.graphcanvas.switchLiveMode(true);
     this.graphcanvas.draw();
-    var url = this.graphcanvas.live_mode
-        ? "imgs/gauss_bg_medium.jpg"
-        : "imgs/gauss_bg.jpg";
-    var button = this.root.querySelector("#livemode_button");
-    button.innerHTML = !is_live_mode
-        ? "<img src='imgs/icon-record.png'/> Live"
-        : "<img src='imgs/icon-gear.png'/> Edit";
+    this.refreshRuntimeButtons({ live_mode: is_live_mode });
+};
+
+Editor.prototype.openBenchmarkPanel = function() {
+    if (!this.benchmark && LiteGraph.EditorBenchmark) {
+        this.benchmark = new LiteGraph.EditorBenchmark(this);
+    }
+    if (!this.benchmark) {
+        return null;
+    }
+    return this.benchmark.openBenchmarkPanel();
+};
+
+Editor.prototype.runBenchmarkSuite = function(presetId) {
+    if (!this.benchmark && LiteGraph.EditorBenchmark) {
+        this.benchmark = new LiteGraph.EditorBenchmark(this);
+    }
+    if (!this.benchmark) {
+        return Promise.resolve(null);
+    }
+    return this.benchmark.runBenchmarkSuite(presetId);
+};
+
+Editor.prototype.exportBenchmarkResults = function() {
+    if (!this.benchmark && LiteGraph.EditorBenchmark) {
+        this.benchmark = new LiteGraph.EditorBenchmark(this);
+    }
+    if (!this.benchmark) {
+        return null;
+    }
+    return this.benchmark.exportBenchmarkResults();
 };
 
 Editor.prototype.onDropItem = function(e)

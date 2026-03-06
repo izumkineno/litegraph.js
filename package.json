@@ -20,6 +20,9 @@
     "scripts": {
         "build": "bun run build:dist",
         "build:dist": "node scripts/build-dist.mjs",
+        "build:ts-migration": "node scripts/build-ts-migration.mjs",
+        "build:all": "bun run build:dist && bun run build:ts-migration",
+        "typecheck": "bunx tsc -p tsconfig.typecheck.json",
         "test": "bunx jest",
         "test:e2e": "npx playwright test",
         "test:e2e:full": "npx playwright test",
@@ -49,6 +52,7 @@
         "eslint-plugin-jest": "^29.15.0",
         "@playwright/test": "^1.55.0",
         "jest": "^30.2.0",
-        "@types/jest": "^30.0.0"
+        "@types/jest": "^30.0.0",
+        "typescript": "^5.9.3"
     }
 }

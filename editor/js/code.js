@@ -3,6 +3,7 @@ var webgl_canvas = null;
 LiteGraph.node_images_path = "../nodes_data/";
 
 var editor = new LiteGraph.Editor("main",{miniwindow:false});
+window.editor = editor;
 window.graphcanvas = editor.graphcanvas;
 window.graph = editor.graph;
 updateEditorHiPPICanvas();
@@ -12,6 +13,8 @@ window.addEventListener("resize", function() {
 } );
 //window.addEventListener("keydown", editor.graphcanvas.processKey.bind(editor.graphcanvas) );
 window.onbeforeunload = function(){
+	if(editor.benchmark && typeof editor.benchmark.isEphemeralStateActive === "function" && editor.benchmark.isEphemeralStateActive())
+		return;
 	var data = JSON.stringify( graph.serialize() );
 	localStorage.setItem("litegraphg demo backup", data );
 }
@@ -98,7 +101,7 @@ function addDemo( name, url )
 
 //some examples
 addDemo("Features", "examples/features.json");
-addDemo("Benchmark", "examples/benchmark.json");
+addDemo("性能基准示例", "examples/benchmark.json");
 addDemo("Subgraph", "examples/subgraph.json");
 addDemo("Audio", "examples/audio.json");
 addDemo("Audio Delay", "examples/audio_delay.json");

@@ -2,6 +2,15 @@
 
 这里汇总了使用 LiteGraph 时的实用信息。
 
+## 索引导航（2026-03-03 更新）
+
+- [源码总索引（类/方法/关键流转）](./CORE_INDEX.md)
+- [渲染机制与操作时序 + 函数行号索引](./rendering-and-operations.md)
+- [节点注册、生命周期与 API 指南](./node-registration-and-lifecycle.md)
+- [TS 迁移蓝图与进度追踪](./Migration_Plan_and_Progress.md)
+
+行号会随源码变化而漂移。需要精确定位时，建议在仓库根目录使用 `rg -n \"函数名\" src/litegraph.js`。
+
 ## 附加指南
 
 - [LiteGraph 渲染机制与基础操作时序图](./rendering-and-operations.md)

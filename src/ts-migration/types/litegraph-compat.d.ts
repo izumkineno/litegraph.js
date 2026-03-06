@@ -1,0 +1,214 @@
+/**
+ * Supplemental compatibility declarations for `src/litegraph.d.ts` vs runtime.
+ * Task 30 deliverable: type-level contract bridge and alias map declarations.
+ */
+
+export type CompatCallback = (...args: unknown[]) => unknown;
+
+export type SerializedLLinkDtsOrder = [
+    number,
+    string,
+    number,
+    number,
+    number,
+    number
+];
+
+export type SerializedLLinkRuntimeOrder = [
+    number,
+    number,
+    number,
+    number,
+    number,
+    string
+];
+
+export type SerializedLLinkDtsInput = readonly [
+    number,
+    string,
+    number,
+    number,
+    number,
+    number
+];
+
+export type SerializedLLinkRuntimeInput = readonly [
+    number,
+    number,
+    number,
+    number,
+    number,
+    string
+];
+
+export type SerializedLLinkCompatInput =
+    | SerializedLLinkDtsOrder
+    | SerializedLLinkRuntimeOrder
+    | SerializedLLinkDtsInput
+    | SerializedLLinkRuntimeInput;
+
+export type SerializedLLinkRuntime = SerializedLLinkRuntimeOrder;
+
+export interface SerializedLGraphGroupDtsShape {
+    title: string;
+    bounding: [number, number, number, number];
+    color: string;
+    font: string;
+}
+
+export interface SerializedLGraphGroupRuntimeShape {
+    title: string;
+    bounding: [number, number, number, number];
+    color: string;
+    font_size: number;
+}
+
+export type SerializedLGraphGroupRuntime = SerializedLGraphGroupRuntimeShape;
+
+export type SerializedLGraphGroupCompatInput =
+    | SerializedLGraphGroupDtsShape
+    | SerializedLGraphGroupRuntimeShape
+    | {
+          title: string;
+          bounding: [number, number, number, number];
+          color: string;
+          font?: string | number;
+          font_size?: string | number;
+      };
+
+export interface LiteGraphConstantAliasHost {
+    GRID_SHAPE?: number;
+    SQUARE_SHAPE?: number;
+    [key: string]: unknown;
+}
+
+export interface LGraphCanvasStaticCompatHost {
+    onMenuResizeNode?: CompatCallback;
+    onResizeNode?: CompatCallback;
+    onMenuNodeToSubgraph?: CompatCallback;
+    onNodeToSubgraph?: CompatCallback;
+    getBoundaryNodes?: CompatCallback;
+    alignNodes?: CompatCallback;
+    onNodeAlign?: CompatCallback;
+    onGroupAlign?: CompatCallback;
+    getPropertyPrintableValue?: CompatCallback;
+    [key: string]: unknown;
+}
+
+export interface LGraphCanvasPrototypeCompatHost {
+    deselectNode?: (node: unknown) => void;
+    processNodeDeselected?: (node: unknown) => void;
+    drawSlotGraphic?: CompatCallback;
+    touchHandler?: (event: unknown) => void;
+    [key: string]: unknown;
+}
+
+export interface ContextMenuCloseCompatHost {
+    closeAllContextMenus?: (refWindow?: Window) => void;
+}
+
+export interface LiteGraphContextMenuCompatHost {
+    closeAllContextMenus?: (refWindow?: Window) => void;
+    ContextMenu?: ContextMenuCloseCompatHost;
+    [key: string]: unknown;
+}
+
+export interface LGraphHooksCompatHost {
+    onNodeAdded?: ((node: unknown) => void) | null;
+    [key: string]: unknown;
+}
+
+export type LiteGraphCompatArea =
+    | "constants"
+    | "canvas-static"
+    | "canvas-instance"
+    | "serialization"
+    | "ui"
+    | "graph-hooks";
+
+/**
+ * Contract diff identifiers.
+ * Keep this union in sync with:
+ * - `src/ts-migration/types/litegraph-compat.ts` (`LITEGRAPH_API_DIFF_MATRIX`)
+ * - `src/ts-migration/types/contract-diff-matrix.md`
+ */
+export type LiteGraphCompatDiffId =
+    | "constants.grid-square-alias"
+    | "canvas-static.resize"
+    | "canvas-static.subgraph-menu"
+    | "canvas-instance.deselected"
+    | "canvas-instance.slot-graphic"
+    | "canvas-instance.touch-handler"
+    | "serialization.link-tuple-order"
+    | "serialization.group-font-field"
+    | "ui.close-all-context-menus"
+    | "graph-hooks.on-node-added"
+    | "canvas-static.missing-apis";
+
+export interface LiteGraphCompatDiffItem {
+    id: LiteGraphCompatDiffId;
+    area: LiteGraphCompatArea;
+    dts: string;
+    runtime: string;
+    strategy: string;
+}
+
+export declare const LITEGRAPH_API_DIFF_MATRIX: readonly LiteGraphCompatDiffItem[];
+
+export declare function isSerializedLLinkDtsOrder(
+    tuple: readonly unknown[]
+): tuple is SerializedLLinkDtsOrder | SerializedLLinkDtsInput;
+
+export declare function normalizeSerializedLLinkTuple(
+    tuple: SerializedLLinkCompatInput
+): SerializedLLinkRuntimeOrder;
+
+export declare function denormalizeSerializedLLinkTuple(
+    tuple: SerializedLLinkRuntimeOrder | SerializedLLinkRuntimeInput,
+    order?: "runtime" | "dts"
+): SerializedLLinkRuntimeOrder | SerializedLLinkDtsOrder;
+
+export declare function normalizeSerializedLGraphGroup(
+    group: SerializedLGraphGroupCompatInput,
+    defaultFontSize?: number
+): SerializedLGraphGroupRuntimeShape;
+
+export declare function denormalizeSerializedLGraphGroup(
+    group: SerializedLGraphGroupRuntimeShape
+): SerializedLGraphGroupDtsShape;
+
+export declare function applyLiteGraphConstantAliases(
+    host: LiteGraphConstantAliasHost,
+    fallbackValue?: number
+): number;
+
+export declare function applyLGraphCanvasStaticCompatAliases(
+    host: LGraphCanvasStaticCompatHost
+): void;
+
+export declare function applyLGraphCanvasStaticCompat(
+    host: LGraphCanvasStaticCompatHost
+): void;
+
+export declare function applyLGraphCanvasPrototypeCompatShims(
+    host: LGraphCanvasPrototypeCompatHost
+): void;
+
+export declare function applyContextMenuCloseAllCompat(
+    liteGraph: LiteGraphContextMenuCompatHost
+): void;
+
+export declare function invokeGraphOnNodeAddedCompatHook(
+    graph: LGraphHooksCompatHost,
+    node: unknown
+): void;
+
+export interface LiteGraphApiCompatTargets {
+    liteGraph?: LiteGraphConstantAliasHost & LiteGraphContextMenuCompatHost;
+    canvasStatic?: LGraphCanvasStaticCompatHost;
+    canvasPrototype?: LGraphCanvasPrototypeCompatHost;
+}
+
+export declare function applyLiteGraphApiCompatAliases(
+    targets: LiteGraphApiCompatTargets
+): void;

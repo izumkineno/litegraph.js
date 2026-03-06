@@ -1,0 +1,248 @@
+# Migration_Plan_and_Progress
+
+## 摘要
+
+本文件是 `src/litegraph.js`（约 14k 行，IIFE + Prototype）与 `src/litegraph.d.ts` 的 TypeScript 迁移蓝图与进度追踪器。
+拆分依据来自 `guides/CORE_INDEX.md` 的结构分层与 `guides/rendering-and-operations.md` 的运行时调用链，目标是在**不修改原 `.js` / `.d.ts`** 的前提下，按模块增量迁移到独立 `.ts` 文件。
+
+## 迁移纪律（锁定）
+
+- [X] 原始文件只读：不修改 `src/litegraph.js` 与 `src/litegraph.d.ts`。
+- [X] 增量迁移：每次只迁移一个明确模块或子模块。
+- [X] 隔离产出：所有新增代码放入新目录 `src/ts-migration/`。
+- [X] 行为优先：先保证运行时行为一致，再做类型收紧和结构优化。
+
+## 分析基线
+
+- 源码主文件：`src/litegraph.js`（构造函数：`LGraph`、`LLink`、`LGraphNode`、`LGraphGroup`、`DragAndScale`、`LGraphCanvas`、`ContextMenu`、`CurveEditor`）。
+- 类型声明：`src/litegraph.d.ts`（核心类型、接口、类声明与 `LiteGraph` 命名空间契约）。
+- 指南参考：
+  - `guides/CORE_INDEX.md`（模块边界、方法索引、行号地图）
+  - `guides/rendering-and-operations.md`（渲染双层管线、执行循环、交互时序）
+  - `guides/README.md`（节点注册混入机制、核心类关系）
+
+## 模块划分（目标 TS 结构）
+
+| 模块ID | 逻辑模块                                 | 来源（JS / d.ts）                                                                             | 目标产物（新文件）                                                                                                                          |
+| ------ | ---------------------------------------- | --------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| M00    | 类型基础层                               | `Vector2/Vector4`、`INode*`、`IWidget*`、`IContextMenu*`、序列化类型                  | `src/ts-migration/types/core-types.ts`、`src/ts-migration/types/serialization.ts`                                                       |
+| M01    | LiteGraph 核心命名空间（常量/枚举/配置） | `LiteGraph` 对象常量区与全局配置区                                                          | `src/ts-migration/core/litegraph.constants.ts`                                                                                            |
+| M02    | LiteGraph 注册与工厂                     | `registerNodeType`、`createNode`、`getNodeType*`、`addNodeMethod`                     | `src/ts-migration/core/litegraph.registry.ts`                                                                                             |
+| M03    | LiteGraph 运行时辅助                     | `isValidConnection`、`fetchFile`、`cloneObject`、`uuidv4`、`registerSearchboxExtra` | `src/ts-migration/core/litegraph.runtime.ts`                                                                                              |
+| M04    | 通用工具函数组                           | `compareObjects`、`distance`、`colorToString`、包围盒/颜色转换、`clamp`               | `src/ts-migration/utils/math-geometry.ts`、`src/ts-migration/utils/color.ts`                                                            |
+| M05    | 环境兼容辅助                             | `getTime` 适配、`pointerListenerAdd/Remove`、`getParameterNames`                        | `src/ts-migration/compat/time-source.ts`、`src/ts-migration/compat/pointer-events.ts`、`src/ts-migration/utils/function-signature.ts` |
+| M06    | LLink 连线模型                           | `function LLink` + `LLink.prototype.*`                                                    | `src/ts-migration/models/LLink.ts`                                                                                                        |
+| M07    | LGraph 图运行时容器                      | `function LGraph` + `LGraph.prototype.*`（生命周期/执行/I/O/序列化）                      | `src/ts-migration/models/LGraph.ts` + 分片文件                                                                                            |
+| M08    | LGraphNode 节点基类                      | `function LGraphNode` + `LGraphNode.prototype.*`                                          | `src/ts-migration/models/LGraphNode.ts` + 分片文件                                                                                        |
+| M09    | LGraphGroup 分组模型                     | `function LGraphGroup` + `LGraphGroup.prototype.*` + 复用方法                             | `src/ts-migration/models/LGraphGroup.ts`                                                                                                  |
+| M10    | DragAndScale 视图变换                    | `function DragAndScale` + `DragAndScale.prototype.*`                                      | `src/ts-migration/canvas/DragAndScale.ts`                                                                                                 |
+| M11    | LGraphCanvas 静态 API                    | `LGraphCanvas.*` 静态方法与静态资源                                                         | `src/ts-migration/canvas/LGraphCanvas.static.ts`                                                                                          |
+| M12    | LGraphCanvas 实例：生命周期与输入        | `LGraphCanvas.prototype` 生命周期、事件绑定、鼠标键盘拖放、选择剪贴板                       | `src/ts-migration/canvas/LGraphCanvas.lifecycle.ts`、`src/ts-migration/canvas/LGraphCanvas.input.ts`                                    |
+| M13    | LGraphCanvas 实例：渲染管线              | `draw*`、`renderLink`、`drawNodeWidgets`、`processNodeWidgets` 等                     | `src/ts-migration/canvas/LGraphCanvas.render.ts`                                                                                          |
+| M14    | LGraphCanvas 实例：菜单/面板/搜索/子图   | `showSearchBox`、`createDialog`、`processContextMenu` 等                                | `src/ts-migration/canvas/LGraphCanvas.menu-panel.ts`                                                                                      |
+| M15    | ContextMenu UI 组件                      | `function ContextMenu` + `ContextMenu.prototype.*` + 静态方法                             | `src/ts-migration/ui/ContextMenu.ts`                                                                                                      |
+| M16    | CurveEditor UI 组件                      | `function CurveEditor` + `CurveEditor.prototype.*`                                        | `src/ts-migration/ui/CurveEditor.ts`                                                                                                      |
+| M17    | 兼容导出桥接层                           | IIFE 全局挂载 + CommonJS 导出                                                                 | `src/ts-migration/compat/global-bridge.ts`、`src/ts-migration/compat/cjs-exports.ts`                                                    |
+| M18    | 入口聚合层                               | 对外统一导出                                                                                  | `src/ts-migration/index.ts`                                                                                                               |
+
+## 依赖关系与转换顺序
+
+1. `M00 -> M01/M02/M03/M04/M05`
+2. `M01/M02/M03 + M00 -> M06/M08`
+3. `M06/M08 + M00 -> M07`
+4. `M08 + M11(静态色板) -> M09`
+5. `M00/M04/M05 -> M10`
+6. `M07/M08/M09/M10/M15 + M11 -> M12/M13/M14`
+7. `M04/M05 -> M15/M16`
+8. `M01..M16 -> M17 -> M18`
+
+默认先后（建议执行顺序）：`M00 -> M01~M05 -> M06 -> M08 -> M07 -> M10 -> M15 -> M11 -> M12~M14 -> M09 -> M16 -> M17 -> M18`。
+说明：`M09 (LGraphGroup)` 在 JS 中引用 `LGraphCanvas.node_colors`，迁移时采用“颜色提供器注入/延迟绑定”打破循环依赖。
+
+## 公共 API / 接口 / 类型变更策略（仅迁移层）
+
+- 对外名称保持兼容：`LiteGraph`、`LGraph`、`LLink`、`LGraphNode`、`LGraphGroup`、`DragAndScale`、`LGraphCanvas`、`ContextMenu`。
+- 不改原始 `src/litegraph.d.ts`；新增迁移补充声明：`src/ts-migration/types/litegraph-compat.d.ts`。
+- 已识别的契约差异在迁移层做别名或补充声明，不改旧声明文件：
+  - `onResizeNode`（声明）与 `onMenuResizeNode`（实现）命名差异。
+  - `onMenuNodeToSubgraph`（实现存在，声明缺失）。
+  - `processNodeDeselected` / `drawSlotGraphic` / `touchHandler`（声明与实现存在差异，需建立兼容策略）。
+  - `GRID_SHAPE`（实现）与 `SQUARE_SHAPE`（声明）常量命名差异（同值 `6`）。
+  - `SerializedLLink` 元组字段顺序差异（声明与实现不一致，需双格式兼容）。
+  - `SerializedLGraphGroup` 的 `font`（声明）与 `font_size`（实现）字段差异。
+  - `ContextMenu.closeAllContextMenus`（声明）与 `LiteGraph.closeAllContextMenus`（实现）归属差异。
+  - `LGraph.onNodeAdded` 在声明中存在、在实现中仅作为可选回调调用点存在。
+  - `LGraphCanvas` 静态 API 缺口：`getBoundaryNodes`、`alignNodes`、`onNodeAlign`、`onGroupAlign`、`getPropertyPrintableValue`。
+- 先行为一致，再逐步收紧类型（`any` -> 明确泛型/联合类型）。
+
+## Task Checklist（核心）
+
+### Phase A：基础与契约冻结
+
+- [x] **Task 01: 迁移目录与入口骨架** — 来源：迁移约束与模块划分；目标产物：`src/ts-migration/index.ts`、目录结构占位。
+- [x] **Task 02: 核心类型契约提取** — 来源：`litegraph.d.ts` 的 `Vector*`、`INode*`、`IWidget*`、`IContextMenu*`；目标产物：`types/core-types.ts`。
+- [x] **Task 03: 序列化契约提取** — 来源：`serializedLGraph`、`SerializedLLink`、`SerializedLGraphNode`、`SerializedLGraphGroup`；目标产物：`types/serialization.ts`。
+- [x] **Task 04: LiteGraph 常量与枚举迁移** — 来源：`src/litegraph.js` LiteGraph 常量区；目标产物：`core/litegraph.constants.ts`。
+- [x] **Task 05: LiteGraph 注册与工厂 API 迁移** — 来源：`registerNodeType`、`unregisterNodeType`、`createNode`、`getNodeType*`、`addNodeMethod`；目标产物：`core/litegraph.registry.ts`。
+- [x] **Task 06: LiteGraph 运行辅助 API 迁移** — 来源：`registerNodeAndSlotType`、`buildNodeClassFromObject`、`wrapFunctionAsNode`、`isValidConnection`、`fetchFile` 等；目标产物：`core/litegraph.runtime.ts`。
+- [x] **Task 07: 通用函数组迁移** — 来源：`compareObjects`、`distance`、`colorToString`、包围盒、`hex2num/num2hex`、`clamp`；目标产物：`utils/math-geometry.ts`、`utils/color.ts`、`utils/clamp.ts`。
+- [x] **Task 08: 运行时兼容辅助迁移** — 来源：`getTime` 适配、`pointerListenerAdd/Remove`、`getParameterNames`；目标产物：`compat/time-source.ts`、`compat/pointer-events.ts`、`utils/function-signature.ts`。
+
+### Phase B：数据模型与执行内核
+
+- [x] **Task 09: LLink 类迁移** — 来源：`function LLink` 与 `LLink.prototype.configure/serialize`；目标产物：`models/LLink.ts`。
+- [x] **Task 10: LGraph 生命周期迁移** — 来源：`LGraph` 构造、`clear/start/stop/getTime*`；目标产物：`models/LGraph.lifecycle.ts`。
+- [x] **Task 11: LGraph 执行调度迁移** — 来源：`runStep/updateExecutionOrder/computeExecutionOrder/getAncestors/arrange`；目标产物：`models/LGraph.execution.ts`。
+- [x] **Task 12: LGraph 结构管理迁移** — 来源：`add/remove/getNodeById/find*`、`getNodeOnPos/getGroupOnPos`；目标产物：`models/LGraph.structure.ts`。
+- [x] **Task 13: LGraph 图级 I/O 与事件迁移** — 来源：`addInput/addOutput/triggerInput/sendEventToAllNodes/connectionChange`；目标产物：`models/LGraph.io-events.ts`。
+- [x] **Task 14: LGraph 序列化与加载迁移** — 来源：`serialize/configure/load/removeLink/onNodeTrace`；目标产物：`models/LGraph.persistence.ts`。
+- [x] **Task 15: LGraphNode 构造与状态层迁移** — 来源：`_ctor/configure/serialize/clone/toString/getTitle/setProperty`；目标产物：`models/LGraphNode.state.ts`。
+- [x] **Task 16: LGraphNode 数据通道与执行层迁移** — 来源：`setOutputData/getInputData/doExecute/actionDo/trigger/triggerSlot/clearTriggeredSlot`；目标产物：`models/LGraphNode.execution.ts`。
+- [x] **Task 17: LGraphNode 端口与 Widget 层迁移** — 来源：`addInput/addOutput/addWidget/addCustomWidget/computeSize/getPropertyInfo`；目标产物：`models/LGraphNode.ports-widgets.ts`。
+- [x] **Task 18: LGraphNode 连接与几何层迁移** — 来源：`find*Slot*`、`connect*`、`disconnect*`、`getConnectionPos/getBounding/isPointInside`；目标产物：`models/LGraphNode.connect-geometry.ts`。
+- [x] **Task 19: LGraphNode 画布协作层迁移** — 来源：`alignToGrid/trace/setDirtyCanvas/loadImage/executeAction/captureInput/collapse/pin/localToScreen`；目标产物：`models/LGraphNode.canvas-collab.ts`。
+- [x] **Task 20: LGraphGroup 类迁移** — 来源：`_ctor/configure/serialize/move/recomputeInsideNodes` + 复用 `isPointInside/setDirtyCanvas`；目标产物：`models/LGraphGroup.ts`。
+- [x] **Task 21: DragAndScale 类迁移** — 来源：`bindEvents/computeVisibleArea/onMouse/changeScale/reset`；目标产物：`canvas/DragAndScale.ts`。
+
+### Phase C：Canvas、UI 与兼容桥
+
+- [x] **Task 22: LGraphCanvas 静态区迁移** — 来源：`LGraphCanvas.*` 静态方法与静态字段（含菜单命令处理器）；需显式覆盖 `getBoundaryNodes/alignNodes/onNodeAlign/onGroupAlign/getPropertyPrintableValue/onMenuResizeNode/onMenuNodeToSubgraph`；目标产物：`canvas/LGraphCanvas.static.ts`。
+- [x] **Task 23: LGraphCanvas 生命周期与事件绑定迁移** — 来源：构造、`clear/setGraph/openSubgraph/closeSubgraph/setCanvas/bindEvents/unbindEvents`；目标产物：`canvas/LGraphCanvas.lifecycle.ts`。
+- [x] **Task 24: LGraphCanvas 输入交互迁移** — 来源：`processMouse*`、`processKey`、`copy/paste`、`processDrop`、选择与视图控制；目标产物：`canvas/LGraphCanvas.input.ts`。
+- [x] **Task 25: LGraphCanvas 渲染管线迁移** — 来源：`draw/drawFrontCanvas/drawBackCanvas/drawNode/drawConnections/renderLink/drawNodeWidgets/processNodeWidgets`；目标产物：`canvas/LGraphCanvas.render.ts`。
+- [x] **Task 26: LGraphCanvas 菜单/面板/搜索迁移** — 来源：`showLinkMenu/showConnectionMenu/showSearchBox/createDialog/createPanel/processContextMenu` 等；目标产物：`canvas/LGraphCanvas.menu-panel.ts`。
+- [x] **Task 27: ContextMenu 组件迁移** — 来源：`ContextMenu` 构造、实例方法、静态 `trigger/isCursorOverElement`；目标产物：`ui/ContextMenu.ts`。
+- [x] **Task 28: CurveEditor 组件迁移** — 来源：`sampleCurve/draw/onMouse*/getCloserPoint`；目标产物：`ui/CurveEditor.ts`。
+- [x] **Task 29: 全局与 CommonJS 兼容桥迁移** — 来源：IIFE 全局挂载与末尾 `exports.*`；目标产物：`compat/global-bridge.ts`、`compat/cjs-exports.ts`。
+- [x] **Task 30: API 差异对齐与兼容别名** — 来源：`d.ts` 与 JS 命名/存在性差异；需产出“差异矩阵 + 兼容映射”，覆盖常量、静态 API、序列化字段顺序与字段名冲突；目标产物：`types/litegraph-compat.d.ts`、兼容别名映射模块。
+- [x] **Task 31: 聚合导出与装配** — 来源：全部迁移模块；目标产物：`src/ts-migration/index.ts`。
+
+### Phase D：验证与回归门禁
+
+- [x] **Task 32: 行为对齐测试（单元）** — 来源：核心方法行为；目标产物：`tests/migration-unit/*.test.ts`。
+- [x] **Task 33: 序列化回归测试（对比旧实现）** — 来源：`serialize/configure` 结果一致性；需覆盖 `SerializedLLink` 双输入顺序与 `SerializedLGraphGroup(font/font_size)` 双输入字段；目标产物：`tests/migration-parity/serialization.test.ts`。
+- [x] **Task 34: UI 关键链路回归（E2E）** — 来源：现有 Playwright `@core` 用例；需补充菜单对齐、子图转换、属性打印值路径；目标产物：`tests/playwright` 增补/复用用例与报告。
+- [x] **Task 35: 进度与风险更新** — 来源：每个阶段完成后；目标产物：更新本文件“进度快照/风险清单”。
+
+### Phase E：契约冲突与兼容收敛（补充）
+
+- [x] **Task 36: JS 与 d.ts 契约差异矩阵落地** — 来源：`src/litegraph.js` 与 `src/litegraph.d.ts` 差异项；目标产物：`types/contract-diff-matrix.md`、`types/litegraph-compat.d.ts`。
+- [x] **Task 37: 常量别名兼容层** — 来源：`GRID_SHAPE` vs `SQUARE_SHAPE`；目标产物：`core/litegraph.constants.compat.ts`。
+- [x] **Task 38: LLink 序列化兼容解析器** — 来源：`SerializedLLink` 顺序冲突；目标产物：`models/LLink.serialization.compat.ts`。
+- [x] **Task 39: LGraphGroup 序列化字段兼容** — 来源：`font` vs `font_size`；目标产物：`models/LGraphGroup.serialization.compat.ts`。
+- [x] **Task 40: ContextMenu/LiteGraph 菜单关闭 API 对齐** — 来源：`closeAllContextMenus` 归属差异；目标产物：`ui/context-menu-compat.ts`。
+- [x] **Task 41: LGraph hook 契约对齐** — 来源：`onNodeAdded` 声明/实现差异；目标产物：`models/LGraph.hooks.ts`。
+- [x] **Task 42: LGraphCanvas 静态 API 补全** — 来源：静态方法声明缺口；目标产物：`canvas/LGraphCanvas.static.compat.ts`。
+- [x] **Task 43: 契约快照测试** — 来源：Phase E 全部兼容点；目标产物：`tests/migration-parity/contracts.test.ts`。
+- [x] **Task 44: 兼容模式回归 E2E** — 来源：菜单、子图、对齐菜单、属性展示路径；目标产物：`tests/playwright/specs/migration-compat-guard.spec.cjs`。
+
+### Phase F：风险收敛（增量）
+
+- [x] **Task 45: Pointer Events 类型收敛修复** — 来源：`compat/pointer-events.ts` 的 `TS2322` 导致单文件 `tsc` 验证链路受阻；目标产物：`src/ts-migration/compat/pointer-events.ts`。
+
+## 测试场景与验收标准
+
+1. **注册与节点创建**：`registerNodeType/createNode/getNodeType*` 行为与旧实现一致。
+2. **图执行闭环**：`LGraph.start/runStep/stop` + `LGraphNode.doExecute/triggerSlot` 行为一致。
+3. **连线协议**：`connect/disconnect/removeLink/isValidConnection` 与旧实现一致。
+4. **序列化闭环**：`serialize -> configure` 后结构与关键字段一致（节点、连线、分组、属性）。
+5. **画布交互闭环**：鼠标拖拽、缩放、选择、复制粘贴、搜索加点、上下文菜单动作有效。
+6. **子图闭环**：`openSubgraph/closeSubgraph` 与子图面板联动一致。
+7. **兼容导出**：全局与 CommonJS 名称可用且与旧入口一致。
+8. **常量别名兼容**：`GRID_SHAPE` 与 `SQUARE_SHAPE` 同值可用。
+9. **Link 双格式反序列化**：`SerializedLLink` 两种顺序均可正确解析。
+10. **Group 双字段反序列化**：`font` 与 `font_size` 输入均可配置成功。
+11. **菜单关闭双入口兼容**：`LiteGraph.closeAllContextMenus` 与 `ContextMenu.closeAllContextMenus` 行为一致。
+12. **Canvas 静态能力完整**：补齐的静态 API 均可调用并通过类型检查。
+13. **兼容模式不回归**：新增兼容守卫用例通过且不影响现有 `@core`。
+
+验收门槛：
+
+1. 迁移模块编译通过（TypeScript 无阻断错误）。
+2. Parity 用例通过率 100%。
+3. 现有 `@core` Playwright 不回归。
+4. 对外 API 名称与旧版保持可兼容访问。
+5. 契约冲突点（常量/序列化/静态 API）全部有测试守卫。
+
+## 默认假设与已锁定决策
+
+1. 新代码目录固定为 `src/ts-migration/`，不混入原 `src/`。
+2. 迁移阶段不改构建产物入口；先完成行为对齐，再接入正式构建。
+3. 采用“分片文件 + 聚合导出”管理超大类（尤其 `LGraphNode` 与 `LGraphCanvas`）。
+4. 对 `LGraphGroup` 与 `LGraphCanvas.node_colors` 的循环依赖采用注入/延迟绑定解决。
+5. `vec2` 等外部全局依赖在迁移层显式声明，不隐式依赖 window。
+6. 原 `src/litegraph.d.ts` 保持不变，兼容差异通过新增补充声明解决。
+7. 对声明与实现冲突项采用“兼容输入 + 规范输出”策略，优先保持运行时行为一致。
+
+## 进度快照
+
+- 当前阶段：`Phase F 进行中（Task 45 已完成）`
+- 总任务数：`45`
+- 已完成：`45`
+- 进行中：`0`
+- 待开始：`0`
+
+## 风险清单（当前）
+
+1. `高`：全量 TypeScript 检查仍被既有历史问题阻断（外部依赖缺失与迁移层未收敛类型）。
+2. `低`：`compat/pointer-events.ts` 的已知 `TS2322` 已修复；后续需持续防止同类“字面量联合过窄”回归。
+3. `低`：Phase E 已完成，兼容层“实现-契约测试-E2E 守卫”闭环已建立，后续主要风险转为回归维护成本。
+4. `低`：迁移层仍保留一定数量的 `TODO/占位` 注释，需在 Phase E 分批清零并回归验证。
+
+## 风险处理计划（对应下一阶段）
+
+1. 维持 Task 36 差异矩阵为唯一差异源，新增兼容实现必须绑定矩阵 ID。
+2. 将 Task 43 契约快照测试与 Task 44 兼容 E2E 纳入持续回归门禁。
+3. 对后续新增 API 差异，采用“矩阵登记 -> 兼容实现 -> 单测/Parity -> E2E”闭环流程。
+4. 增量收敛编译风险：优先修复迁移层可定位的类型错误，并为后续建立 `tsconfig` 编译基线预留条件。
+
+## 进度日志（模板）
+
+| 日期       | 阶段 | 完成任务 | 变更摘要                                   | 风险/阻塞                         | 下一步              |
+| ---------- | ---- | -------- | ------------------------------------------ | --------------------------------- | ------------------- |
+| 2026-03-03 | 规划 | 蓝图建立 | 完成模块拆分、依赖顺序、任务清单与验收标准 | d.ts 与实现存在命名差异，需兼容层 | 从 Task 01 开始执行 |
+| 2026-03-03 | 执行 | Task 01 | 创建 `src/ts-migration/` 目录骨架与 `index.ts` 聚合入口占位 | 暂无；后续需从 `litegraph.d.ts` 精确抽取类型 | 执行 Task 02 |
+| 2026-03-03 | 执行 | Task 02 | 提取 `Vector*`、`INode*`、`IWidget*`、`IContextMenu*` 到 `types/core-types.ts`，并保留相关注释与依赖 TODO | `Like` 占位类型需在后续模型迁移阶段替换为真实类型导入 | 执行 Task 03 |
+| 2026-03-03 | 执行 | Task 03 | 提取 `serializedLGraph`、`SerializedLLink`、`SerializedLGraphNode`、`SerializedLGraphGroup` 到 `types/serialization.ts`，并保留 issue 注释与依赖 TODO | `SerializedLLink` 元组顺序存在实现差异，后续在兼容层任务处理 | 执行 Task 04 |
+| 2026-03-03 | 执行 | Task 04 | 提取 LiteGraph 常量与枚举配置到 `core/litegraph.constants.ts`，保留配置注释与修饰键/触摸检测逻辑 | `GRID_SHAPE` 与旧声明 `SQUARE_SHAPE` 的兼容命名差异留待兼容层任务处理 | 执行 Task 05 |
+| 2026-03-03 | 执行 | Task 05 | 提取注册与工厂 API 到 `core/litegraph.registry.ts`（`register/unregister/createNode/getNodeType*`、`addNodeMethod`），保留原 JSDoc 与行为分支 | 依赖 `LGraphNode` 真实类型与 `registerNodeAndSlotType` 的完整契约待后续任务收敛 | 执行 Task 06 |
+| 2026-03-03 | 执行 | Task 06 | 提取运行辅助 API 到 `core/litegraph.runtime.ts`（`registerNodeAndSlotType/buildNodeClassFromObject/wrapFunctionAsNode/reloadNodes/cloneObject/uuidv4/isValidConnection/registerSearchboxExtra/fetchFile`） | `fetchFile` 在 `FileReader` 分支保留原返回行为（`void`），以及 DOM/浏览器依赖需在后续兼容层测试验证 | 执行 Task 07 |
+| 2026-03-03 | 执行 | Task 07 | 提取通用函数组到 `utils/math-geometry.ts`、`utils/color.ts`、`utils/clamp.ts`，保留原算法与注释语义 | `isInsideBounding` 在源码与声明存在入参形态差异，已在迁移层做兼容分支，后续可在契约任务收敛 | 执行 Task 08 |
+| 2026-03-03 | 执行 | Task 08 | 提取兼容辅助到 `compat/time-source.ts`、`compat/pointer-events.ts` 与 `utils/function-signature.ts`，保留时间源回退、触摸归一化与监听器注册行为 | Pointer 兼容分支依赖浏览器环境，需在后续 UI/E2E 阶段做跨输入模式回归 | 执行 Task 09 |
+| 2026-03-03 | 执行 | Task 09 | 迁移 `LLink` 到 `models/LLink.ts`，实现 `configure/serialize` 并兼容声明元组与运行时元组顺序 | `SerializedLLink` 顺序冲突仍需在兼容专项任务中统一出口策略 | 执行 Task 10 |
+| 2026-03-03 | 执行 | Task 10 | 迁移 `LGraph` 生命周期到 `models/LGraph.lifecycle.ts`（构造、`clear/start/stop/getTime*`），并保留原 JSDoc | `runStep/sendEventToAllNodes/change/sendActionToCanvas` 由后续任务实现，当前以占位方法维持可编译与增量落地 | 执行 Task 11 |
+| 2026-03-03 | 执行 | Task 11 | 迁移 `LGraph` 执行调度到 `models/LGraph.execution.ts`（`runStep/updateExecutionOrder/computeExecutionOrder/getAncestors/arrange`）并保留原 JSDoc | 当前采用继承 `LGraph` 的增量结构，后续需在模型收敛阶段统一单一导出入口 | 执行 Task 12 |
+| 2026-03-03 | 执行 | Task 12 | 迁移 `LGraph` 结构管理到 `models/LGraph.structure.ts`（`add/remove/getNodeById/find*/getNodeOnPos/getGroupOnPos`），并保留原 JSDoc 与 `beforeChange/afterChange` 注释语义 | `id` 在 UUID/数字双模式下依赖后续模型类型统一，`setDirtyCanvas` 仍为占位等待后续任务落地 | 执行 Task 13 |
+| 2026-03-03 | 执行 | Task 13 | 迁移 `LGraph` 图级 I/O 与事件到 `models/LGraph.io-events.ts`（`sendEventToAllNodes/onAction/trigger/addInput/addOutput/triggerInput/connectionChange` 及相关变更通知）并保留原 JSDoc 与变更前后钩子语义 | 事件分发依赖 `LiteGraph.Subgraph/GraphInput` 运行时注入，后续需在聚合导出阶段统一宿主绑定 | 执行 Task 14 |
+| 2026-03-03 | 执行 | Task 14 | 迁移 `LGraph` 序列化与加载到 `models/LGraph.persistence.ts`（`removeLink/serialize/configure/load/onNodeTrace`），保留链路修复、容错反序列化与 `onSerialize/onConfigure` 钩子行为 | `load` 依赖浏览器 `FileReader/XMLHttpRequest`，以及缺失节点类型时的降级构造依赖后续 `LGraphNode` 模块完成后再统一 | 执行 Task 15 |
+| 2026-03-04 | 执行 | Task 15 | 迁移 `LGraphNode` 构造与状态层到 `models/LGraphNode.state.ts`（`_ctor/configure/serialize/clone/toString/getTitle/setProperty`），保留属性回调、连接回调与序列化钩子语义 | 当前通过 `LiteGraph host` 注入 `createNode/cloneObject` 等运行时能力，后续在入口装配阶段需统一绑定真实宿主 | 执行 Task 16 |
+| 2026-03-04 | 执行 | Task 16 | 迁移 `LGraphNode` 数据通道与执行层到 `models/LGraphNode.execution.ts`（`setOutputData/getInputData/doExecute/actionDo/trigger/triggerSlot/clearTriggeredSlot`，并补齐同段 `setOutputDataType/getInputDataType/getInputDataByName/executePendingActions`） | 触发链仍依赖 `findInputSlot` 与完整连接/端口实现，待后续 Task 17-18 收敛 | 执行 Task 17 |
+| 2026-03-04 | 执行 | Task 17 | 迁移 `LGraphNode` 端口与 Widget 层到 `models/LGraphNode.ports-widgets.ts`（`addInput/addOutput/addWidget/addCustomWidget/computeSize/getPropertyInfo`，并补齐 `addInputs/addOutputs/setSize`） | `removeInput/removeOutput` 与断连链路依赖后续连接层任务统一收敛，`setDirtyCanvas` 仍为占位待 Task 19 落地 | 执行 Task 18 |
+| 2026-03-04 | 执行 | Task 18 | 迁移 `LGraphNode` 连接与几何层到 `models/LGraphNode.connect-geometry.ts`（`find*Slot*`、`connect*`、`disconnect*`、`getConnectionPos/getBounding/isPointInside`）并保留类型匹配与连接回调链路 | 当前 `setDirtyCanvas` 继续占位，且 `connectByType` 的过滤扩展位（TODO filter）仍待后续专项收敛 | 执行 Task 19 |
+| 2026-03-04 | 执行 | Task 19 | 迁移 `LGraphNode` 画布协作层到 `models/LGraphNode.canvas-collab.ts`（`alignToGrid/trace/setDirtyCanvas/loadImage/captureInput/collapse/pin/localToScreen`），并保留 `executeAction` 的“源码中禁用”语义说明 | `loadImage` 返回值与现有 `d.ts` 的 `void` 签名存在差异，后续在契约兼容任务统一收敛 | 执行 Task 20 |
+| 2026-03-04 | 执行 | Task 20 | 迁移 `LGraphGroup` 到 `models/LGraphGroup.ts`（`_ctor/configure/serialize/move/recomputeInsideNodes`），并通过委托复用节点 `isPointInside/setDirtyCanvas` 行为 | `SerializedLGraphGroup(font/font_size)` 双字段差异仍属契约兼容范围，后续在 Phase E 统一收敛 | 执行 Task 21 |
+| 2026-03-04 | 执行 | Task 21 | 迁移 `DragAndScale` 到 `canvas/DragAndScale.ts`（`bindEvents/computeVisibleArea/onMouse/toCanvasContext/convert*/mouseDrag/changeScale/changeDeltaScale/reset`），保留指针事件语义与缩放中心偏移补偿逻辑 | `pointer-events` 模块仍存在既有类型收敛问题，不属于本任务范围，后续在兼容层任务统一处理 | 执行 Task 22 |
+| 2026-03-04 | 执行 | Task 22 | 迁移 `LGraphCanvas` 静态区到 `canvas/LGraphCanvas.static.ts`，覆盖静态资源与菜单命令处理器，并显式补齐 `getBoundaryNodes/alignNodes/onNodeAlign/onGroupAlign/getPropertyPrintableValue/onMenuResizeNode/onMenuNodeToSubgraph` | 静态区与实例区仍未装配到同一最终类导出，待后续 Task 23-31 分层收敛 | 执行 Task 23 |
+| 2026-03-04 | 执行 | Task 23 | 迁移 `LGraphCanvas` 生命周期与事件绑定到 `canvas/LGraphCanvas.lifecycle.ts`（构造、`clear/setGraph/openSubgraph/closeSubgraph/setCanvas/bindEvents/unbindEvents`，并补齐 `processTouch/processPointerCancel/getCanvasWindow/setDirty/startRendering` 支撑链路） | 受既有 `compat/pointer-events.ts` 类型问题影响，单文件检查会连带报错；该问题已在前序任务记录，后续集中收敛 | 执行 Task 24 |
+| 2026-03-04 | 执行 | Task 24 | 新增 `canvas/LGraphCanvas.input.ts`，迁移输入交互主链路（`blockClick/processMouse*`、`processKey`、剪贴板、拖放、选择、坐标换算、可见节点计算），并补齐 `isOverNodeBox/isOverNodeInput/isOverNodeOutput` | `npx tsc --noEmit src/ts-migration/canvas/LGraphCanvas.input.ts` 仅剩既有 `compat/pointer-events.ts` 的 `TS2322`，非本任务引入 | 执行 Task 25 |
+| 2026-03-04 | 执行 | Task 25 | 新增 `canvas/LGraphCanvas.render.ts`，迁移渲染主链路（`draw/drawFrontCanvas/drawBackCanvas/drawNode/drawConnections/renderLink/drawNodeWidgets/processNodeWidgets`）并补齐 `renderInfo/drawExecutionOrder/drawGroups/resize/switchLiveMode` 等关联方法 | `npx tsc --noEmit src/ts-migration/canvas/LGraphCanvas.render.ts` 仅剩既有 `compat/pointer-events.ts` 的 `TS2322`；子图面板细节将在后续菜单/面板任务继续收敛 | 执行 Task 26 |
+| 2026-03-04 | 执行 | Task 26 | 新增 `canvas/LGraphCanvas.menu-panel.ts`，迁移菜单/面板/搜索主链路（`showLinkMenu/createDefaultNodeForSlot/showConnectionMenu/prompt/showSearchBox/showEditPropertyValue/createDialog/createPanel/closePanels/showShowGraphOptionsPanel/showShowNodePanel/showSubgraphPropertiesDialog/showSubgraphPropertiesDialogRight/checkPanels/getCanvasMenuOptions/getNodeMenuOptions/getGroupMenuOptions/processContextMenu`） | `npx tsc --noEmit src/ts-migration/canvas/LGraphCanvas.menu-panel.ts` 仅剩既有 `compat/pointer-events.ts` 的 `TS2322`；`showSearchBox` 的类型过滤与扩展项路径已迁移到模块内，后续可在 ContextMenu 任务中继续收敛 UI 细节 | 执行 Task 27 |
+| 2026-03-04 | 执行 | Task 27 | 新增 `ui/ContextMenu.ts`，迁移 `ContextMenu` 构造流程、`addItem/close/getTopMenu/getFirstEvent` 与静态 `trigger/isCursorOverElement`，并补充 `closeAllContextMenus` 静态兼容入口 | `npx tsc --noEmit src/ts-migration/ui/ContextMenu.ts` 通过；菜单与画布层之间的最终宿主装配将随后续聚合任务收敛 | 执行 Task 28 |
+| 2026-03-04 | 执行 | Task 28 | 新增 `ui/CurveEditor.ts`，迁移 `CurveEditor` 组件（`sampleCurve/draw/onMouseDown/onMouseMove/onMouseUp/getCloserPoint`），并复用迁移层 `clamp/distance` 工具保持原算法行为 | `src/litegraph.d.ts` 未提供 `CurveEditor` 独立声明，当前以局部类型接口承接 `graphcanvas.ds.scale` 依赖；最终类型收敛留待后续兼容与聚合任务处理 | 执行 Task 29 |
+| 2026-03-04 | 执行 | Task 29 | 新增 `compat/global-bridge.ts` 与 `compat/cjs-exports.ts`，迁移 IIFE 全局挂载与 CommonJS 导出桥接逻辑，并补充 `requestAnimationFrame` shim 与 `exports` 回退到 `LiteGraph.*` 的兼容分支 | 当前仅完成桥接函数，最终装配到入口与聚合导出将在 Task 31 统一收敛 | 执行 Task 30 |
+| 2026-03-04 | 执行 | Task 30 | 新增 `types/litegraph-compat.ts` 与 `types/litegraph-compat.d.ts`，落地 API 差异矩阵与兼容别名映射（`GRID_SHAPE/SQUARE_SHAPE`、`onResizeNode/onMenuResizeNode`、`closeAllContextMenus`、`SerializedLLink` 顺序、`SerializedLGraphGroup(font/font_size)` 双字段等） | 兼容入口当前为可调用 helper，最终在 Task 31 聚合装配时统一挂接到迁移入口 | 执行 Task 31 |
+| 2026-03-04 | 执行 | Task 31 | 重写 `src/ts-migration/index.ts`，完成聚合导出与装配：提供标准类导出别名（`LGraph/LGraphNode/LGraphCanvas`）、`assembleLiteGraph` 入口、LiteGraph 命名空间组装、Task29/30 兼容桥接挂载（全局与 CommonJS 可选） | 全量 TS 检查仍被既有历史问题阻断（依赖缺失、`compat/pointer-events.ts` 与多处模型类型收敛项）；本任务未新增新的入口层类型错误，并顺带修复了 `LGraph.structure.ts` 注释中的 `find*/` 语法陷阱 | 执行 Task 32 |
+| 2026-03-04 | 执行 | Task 32 | 新增 `tests/migration-unit` 行为对齐单元测试（`litegraph-compat.test.ts`、`compat-bridge.test.ts`、`utils-parity.test.ts`），覆盖序列化兼容、别名映射、全局/CommonJS 桥接与工具函数行为；并新增 Jest TS 转换器以执行迁移层 `.ts` 测试 | 当前仅验证迁移层低依赖纯函数与兼容 helper；图执行/序列化全链路对比将在 Task 33 继续完善 | 执行 Task 33 |
+| 2026-03-04 | 执行 | Task 33 | 新增 `tests/migration-parity/serialization.test.ts`，对比旧版 `src/litegraph.js` 与迁移实现在 `LLink/LGraphGroup` 的 `configure/serialize` 行为一致性，并覆盖 `SerializedLLink` 双输入顺序与 `font/font_size` 双字段兼容路径 | 当前序列化回归覆盖集中在 LLink/LGraphGroup 兼容断面；图级全链路契约快照将在 Task 43 进一步收敛 | 执行 Task 34 |
+| 2026-03-04 | 执行 | Task 34 | 新增 `tests/playwright/specs/migration-ui-keypaths.spec.cjs`，复用现有 Harness/菜单遍历工具补齐 UI 关键链路：菜单对齐、`To Subgraph` 转换与进出子图、属性菜单 printable value 展示；并输出 `tests/playwright/reports/migration-ui-keypaths-report.{json,md}` | 当前回归聚焦关键链路闭环，尚未覆盖所有兼容模式 E2E（Task 44） | 执行 Task 35 |
+| 2026-03-04 | 执行 | Task 35 | 更新进度快照与风险清单：标记 Phase D 完成，补充当前风险等级与处理计划，明确 Phase E 的收敛顺序与门禁目标 | 风险已归档但仍待 Task 36-44 实际消解；本任务不新增代码变更 | 执行 Task 36 |
+| 2026-03-04 | 执行 | Task 36 | 新增 `src/ts-migration/types/contract-diff-matrix.md`，按 JS/d.ts 证据行号固化差异矩阵；并收紧 `types/litegraph-compat.d.ts` 的 `LiteGraphCompatDiffId` 联合类型，确保矩阵项与类型声明一一对应 | 仅完成矩阵固化与声明约束，兼容实现与守卫仍需后续 Task 37-44 收敛 | 执行 Task 37 |
+| 2026-03-04 | 执行 | Task 37 | 新增 `core/litegraph.constants.compat.ts`，落地 `GRID_SHAPE/SQUARE_SHAPE` 别名兼容层（解析、应用、同步检测）；在 `index.ts` 组装时接入并导出；新增 `tests/migration-unit/constants-compat.test.ts` 覆盖常量别名策略 | 常量别名已具备独立兼容层，但仍需 Task 43/44 将其纳入契约快照与兼容 E2E 守卫 | 执行 Task 38 |
+| 2026-03-04 | 执行 | Task 38 | 新增 `models/LLink.serialization.compat.ts`，实现 `SerializedLLink` 双顺序兼容解析/归一化/反归一化与 shape 序列化；`LLink.ts` 改为复用该解析器；`index.ts` 聚合导出解析器能力；新增 `tests/migration-unit/llink-serialization-compat.test.ts` 覆盖核心路径 | LLink 兼容解析已独立化，下一步 Task 39 需对 `LGraphGroup font/font_size` 做同等模块化收敛 | 执行 Task 39 |
+| 2026-03-04 | 执行 | Task 39 | 新增 `models/LGraphGroup.serialization.compat.ts`，实现 `SerializedLGraphGroup` 的 `font/font_size` 双字段兼容归一化与反归一化；`LGraphGroup.ts` 改为复用该解析器；`index.ts` 聚合导出相关接口；新增 `tests/migration-unit/lgraphgroup-serialization-compat.test.ts` 覆盖核心路径 | Group 兼容解析已独立化，下一步 Task 40 需对 `ContextMenu/LiteGraph` 菜单关闭 API 做归属对齐 | 执行 Task 40 |
+| 2026-03-04 | 执行 | Task 40 | 新增 `ui/context-menu-compat.ts`，落地 `closeAllContextMenus` 双入口对齐逻辑与同步检测；`types/litegraph-compat.ts` 复用该实现；`index.ts` 聚合导出兼容常量与函数；新增 `tests/migration-unit/context-menu-compat.test.ts` 覆盖来源优先级/fallback/同步判定 | 菜单关闭 API 归属已独立收敛，下一步 Task 41 需对 `LGraph.onNodeAdded` 声明与实现差异建立 hooks 兼容层 | 执行 Task 41 |
+| 2026-03-04 | 执行 | Task 41 | 新增 `models/LGraph.hooks.ts`，落地 `onNodeAdded` 兼容 helper（可选钩子安全触发、存在性守卫、固定 diff-id）；`LGraph.structure.ts` 改为复用 helper；`types/litegraph-compat.ts` 复用该实现；`index.ts` 聚合导出相关常量与函数；新增 `tests/migration-unit/lgraph-hooks-compat.test.ts` 覆盖触发/跳过/抛错传播 | 图级 hook 契约已独立收敛，下一步 Task 42 需补齐 `LGraphCanvas` 静态 API 兼容守卫层 | 执行 Task 42 |
+| 2026-03-04 | 执行 | Task 42 | 新增 `canvas/LGraphCanvas.static.compat.ts`，落地静态 API 兼容层：`onResizeNode/onMenuResizeNode` 与 `onNodeToSubgraph/onMenuNodeToSubgraph` 双向别名对齐、`getBoundaryNodes/alignNodes/onNodeAlign/onGroupAlign/getPropertyPrintableValue` 缺失守卫；`types/litegraph-compat.ts` 改为复用该层并在统一入口启用；`index.ts` 聚合导出差异常量与检测/应用函数；新增 `tests/migration-unit/lgraphcanvas-static-compat.test.ts` 覆盖别名/守卫/完整性检查 | Canvas 静态兼容守卫已收敛，下一步 Task 43 需建立 Phase E 全量契约快照测试门禁 | 执行 Task 43 |
+| 2026-03-04 | 执行 | Task 43 | 新增 `tests/migration-parity/contracts.test.ts`，建立 Phase E 契约快照门禁：校验 `LITEGRAPH_API_DIFF_MATRIX` ID 快照、`contract-diff-matrix.md` 与运行时矩阵同步、Task 37-42 差异 ID 全量挂接、以及 `applyLiteGraphApiCompatAliases` 的聚合行为快照（含常量别名、菜单关闭对齐、Canvas 静态 API 守卫、钩子触发与序列化规范化） | 契约快照门禁已落地，下一步 Task 44 需补齐兼容模式 E2E 守卫规格 | 执行 Task 44 |
+| 2026-03-04 | 执行 | Task 44 | 新增 `tests/playwright/specs/migration-compat-guard.spec.cjs`，落地兼容模式 E2E 守卫：静态兼容 API 可用性与可调用性、菜单对齐路径、`To Subgraph` 转换与进出子图、属性 printable value 菜单展示；生成 `tests/playwright/reports/migration-compat-guard-report.{json,md}` 报告 | `npx playwright test tests/playwright/specs/migration-compat-guard.spec.cjs --project=chromium` 与 `npx playwright test --project=chromium --grep "@core"` 全绿 | Phase E 收口并转入持续回归维护 |
+| 2026-03-04 | 执行 | Task 45 | 修复 `src/ts-migration/compat/pointer-events.ts` 中 `resolvePointerEventName` 的类型收敛问题（`dom_event` 由字面量联合放宽为 `string \| undefined`），消除 `TS2322` | `npx tsc --noEmit src/ts-migration/compat/pointer-events.ts` 通过；`LGraphCanvas.input/render/menu-panel.ts` 单文件 `tsc` 复测通过 | 下一步处理高风险：建立迁移层全量 `tsc -p` 编译基线 |
