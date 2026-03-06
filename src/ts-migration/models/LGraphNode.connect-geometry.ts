@@ -1,4 +1,5 @@
 import type { INodeInputSlot, INodeOutputSlot, Vector2, Vector4 } from "../types/core-types";
+import { createClassHostResolver } from "../core/host-resolver";
 import type { LiteGraphConstantsShape } from "../core/litegraph.constants";
 import { LLink } from "./LLink";
 import { LGraphNodePortsWidgets } from "./LGraphNode.ports-widgets";
@@ -141,6 +142,11 @@ const hostDefaults: Host = {
     getTime: () => Date.now(),
 };
 
+const resolveConnectGeometryHost = createClassHostResolver(hostDefaults, {
+    cacheKey: "LGraphNode.connect-geometry",
+    fallbackOwners: [() => LGraphNodeConnectGeometry],
+});
+
 /**
  * LGraphNode connection and geometry methods.
  * Source: `find*Slot*`、`connect*`、`disconnect*`、`getConnectionPos/getBounding/isPointInside`.
@@ -155,15 +161,6 @@ export class LGraphNodeConnectGeometry extends LGraphNodePortsWidgets {
         targetNode: NodeLike,
         targetSlot: number
     ) => boolean | void;
-
-    private host(): Host {
-        const classHost = (LGraphNodeConnectGeometry as typeof LGraphNodeConnectGeometry & {
-            liteGraph?: Partial<Host>;
-        }).liteGraph;
-        const ctorHost = (this.constructor as typeof LGraphNodeConnectGeometry & { liteGraph?: Partial<Host> })
-            .liteGraph;
-        return { ...hostDefaults, ...(classHost || {}), ...(ctorHost || {}) };
-    }
 
     private graphRef(): GraphLike | null {
         return (this.graph as GraphLike) || null;
@@ -183,7 +180,7 @@ export class LGraphNodeConnectGeometry extends LGraphNodePortsWidgets {
 
     /** returns the bounding of the object, used for rendering purposes */
     getBounding(out?: Vector4, compute_outer?: boolean): Vector4 {
-        const h = this.host();
+        const h = resolveConnectGeometryHost(this);
         const o = (out || (new Float32Array(4) as unknown as Vector4)) as Vector4;
         const isCollapsed = !!this.flags.collapsed;
         const p = this.pos;
@@ -210,7 +207,7 @@ export class LGraphNodeConnectGeometry extends LGraphNodePortsWidgets {
 
     /** checks if a point is inside the shape of a node */
     isPointInside(x: number, y: number, margin?: number, skip_title?: boolean): boolean {
-        const h = this.host();
+        const h = resolveConnectGeometryHost(this);
         const m = margin || 0;
         let margin_top = this.graphRef()?.isLive?.() ? 0 : h.NODE_TITLE_HEIGHT;
         if (skip_title) {
@@ -339,7 +336,7 @@ export class LGraphNodeConnectGeometry extends LGraphNodePortsWidgets {
         preferFreeSlot?: boolean,
         doNotUseOccupied?: boolean
     ): number | InSlot | OutSlot {
-        const h = this.host();
+        const h = resolveConnectGeometryHost(this);
         const slots = (input ? this.inputs : this.outputs) as (InSlot | OutSlot)[] | undefined;
         if (!slots) {
             return -1;
@@ -401,7 +398,7 @@ export class LGraphNodeConnectGeometry extends LGraphNodePortsWidgets {
     }
 
     addOnTriggerInput(): number {
-        const h = this.host();
+        const h = resolveConnectGeometryHost(this);
         const triggerSlot = this.findInputSlot("onTrigger") as number;
         if (triggerSlot === -1) {
             const extra = this.markSlotOptional<Partial<INodeInputSlot>>({
@@ -414,7 +411,7 @@ export class LGraphNodeConnectGeometry extends LGraphNodePortsWidgets {
     }
 
     addOnExecutedOutput(): number {
-        const h = this.host();
+        const h = resolveConnectGeometryHost(this);
         const triggerSlot = this.findOutputSlot("onExecuted") as number;
         if (triggerSlot === -1) {
             const extra = this.markSlotOptional<Partial<INodeOutputSlot>>({
@@ -437,7 +434,7 @@ export class LGraphNodeConnectGeometry extends LGraphNodePortsWidgets {
     };
 
     changeMode(modeTo: number): boolean {
-        const h = this.host();
+        const h = resolveConnectGeometryHost(this);
         switch (modeTo) {
             case h.ON_EVENT:
                 break;
@@ -465,7 +462,7 @@ export class LGraphNodeConnectGeometry extends LGraphNodePortsWidgets {
         target_slotType: string | number,
         optsIn?: { createEventInCase?: boolean; firstFreeIfOutputGeneralInCase?: boolean; generalTypeInCase?: boolean; filter?: unknown }
     ): LinkLike | null {
-        const h = this.host();
+        const h = resolveConnectGeometryHost(this);
         const opts = Object.assign(
             { createEventInCase: true, firstFreeIfOutputGeneralInCase: true, generalTypeInCase: true },
             optsIn || {}
@@ -510,7 +507,7 @@ export class LGraphNodeConnectGeometry extends LGraphNodePortsWidgets {
         source_slotType: string | number,
         optsIn?: { createEventInCase?: boolean; firstFreeIfInputGeneralInCase?: boolean; generalTypeInCase?: boolean; filter?: unknown }
     ): LinkLike | null {
-        const h = this.host();
+        const h = resolveConnectGeometryHost(this);
         const opts = Object.assign(
             { createEventInCase: true, firstFreeIfInputGeneralInCase: true, generalTypeInCase: true },
             optsIn || {}
@@ -554,7 +551,7 @@ export class LGraphNodeConnectGeometry extends LGraphNodePortsWidgets {
 
     /** connect this node output to the input of another node */
     connect(slot: SlotId, target_node: NodeLike | number, target_slot?: SlotId): LinkLike | null {
-        const h = this.host();
+        const h = resolveConnectGeometryHost(this);
         const graph = this.graphRef();
         if (!graph) {
             console.log("Connect: Error, node doesn't belong to any graph. Nodes must be added first to a graph before connecting them.");
@@ -681,7 +678,7 @@ export class LGraphNodeConnectGeometry extends LGraphNodePortsWidgets {
 
     /** disconnect one output to an specific node */
     disconnectOutput(slot: SlotId, target_node?: NodeLike | number | false | null, _opts?: unknown): boolean {
-        const h = this.host();
+        const h = resolveConnectGeometryHost(this);
         const graph = this.graphRef();
         if (!graph) {
             return false;
@@ -751,7 +748,7 @@ export class LGraphNodeConnectGeometry extends LGraphNodePortsWidgets {
 
     /** disconnect one input */
     disconnectInput(slot: SlotId, _opts?: unknown): boolean {
-        const h = this.host();
+        const h = resolveConnectGeometryHost(this);
         const graph = this.graphRef();
         if (!graph) {
             return false;
@@ -804,7 +801,7 @@ export class LGraphNodeConnectGeometry extends LGraphNodePortsWidgets {
 
     /** returns the center of a connection point in canvas coords */
     getConnectionPos(is_input: boolean, slot_number: SlotId, out?: Vector2): Vector2 {
-        const h = this.host();
+        const h = resolveConnectGeometryHost(this);
         const o = (out || (new Float32Array(2) as unknown as Vector2)) as Vector2;
         let num_slots = 0;
         if (is_input && this.inputs) {

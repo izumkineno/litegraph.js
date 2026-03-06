@@ -1,4 +1,5 @@
 import type { Vector2, Vector4 } from "../types/core-types";
+import { createClassHostResolver } from "../core/host-resolver";
 import type { LiteGraphConstantsShape } from "../core/litegraph.constants";
 import type { LGraphPersistence as LGraph } from "../models/LGraph.persistence";
 import type { LGraphGroup } from "../models/LGraphGroup";
@@ -193,6 +194,33 @@ const defaultLifecycleHost: LGraphCanvasLifecycleHost = {
         );
     },
 };
+
+const resolveCanvasLifecycleHost = createClassHostResolver(defaultLifecycleHost, {
+    cacheKey: "LGraphCanvas.lifecycle",
+    transform: (merged) => ({
+        ...merged,
+        pointerListenerAdd:
+            merged.pointerListenerAdd ||
+            ((dom, ev, cb, capture) =>
+                defaultPointerListenerAdd(
+                    merged.pointerevents_method,
+                    dom,
+                    ev,
+                    cb,
+                    capture
+                )),
+        pointerListenerRemove:
+            merged.pointerListenerRemove ||
+            ((dom, ev, cb, capture) =>
+                defaultPointerListenerRemove(
+                    merged.pointerevents_method,
+                    dom,
+                    ev,
+                    cb,
+                    capture
+                )),
+    }),
+});
 
 /**
  * LGraphCanvas lifecycle and event-binding layer.
@@ -461,33 +489,7 @@ export class LGraphCanvasLifecycle extends LGraphCanvasStatic {
     }
 
     private host(): LGraphCanvasLifecycleHost {
-        const injected = (this.constructor as typeof LGraphCanvasLifecycle & {
-            liteGraph?: Partial<LGraphCanvasLifecycleHost>;
-        }).liteGraph;
-        const merged = { ...defaultLifecycleHost, ...(injected || {}) };
-        return {
-            ...merged,
-            pointerListenerAdd:
-                merged.pointerListenerAdd ||
-                ((dom, ev, cb, capture) =>
-                    defaultPointerListenerAdd(
-                        merged.pointerevents_method,
-                        dom,
-                        ev,
-                        cb,
-                        capture
-                    )),
-            pointerListenerRemove:
-                merged.pointerListenerRemove ||
-                ((dom, ev, cb, capture) =>
-                    defaultPointerListenerRemove(
-                        merged.pointerevents_method,
-                        dom,
-                        ev,
-                        cb,
-                        capture
-                    )),
-        };
+        return resolveCanvasLifecycleHost(this);
     }
 
     clear(): void {

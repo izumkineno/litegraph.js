@@ -3,6 +3,7 @@ import type {
     GraphCanvasCapturePort,
     GraphCanvasViewportPort,
 } from "../contracts/canvas";
+import { createClassHostResolver } from "../core/host-resolver";
 import type { LiteGraphConstantsShape } from "../core/litegraph.constants";
 import { LGraphNodeConnectGeometry } from "./LGraphNode.connect-geometry";
 
@@ -33,6 +34,11 @@ const defaultCanvasCollabHost: LGraphNodeCanvasCollabHost = {
     node_images_path: "",
 };
 
+const resolveCanvasCollabHost = createClassHostResolver(defaultCanvasCollabHost, {
+    cacheKey: "LGraphNode.canvas-collab",
+    fallbackOwners: [() => LGraphNodeCanvasCollab],
+});
+
 /**
  * LGraphNode canvas-collaboration methods.
  * Source: `alignToGrid/trace/setDirtyCanvas/loadImage/executeAction/captureInput/collapse/pin/localToScreen`.
@@ -40,20 +46,13 @@ const defaultCanvasCollabHost: LGraphNodeCanvasCollabHost = {
 export class LGraphNodeCanvasCollab extends LGraphNodeConnectGeometry {
     console?: string[];
 
-    private getCanvasCollabHost(): LGraphNodeCanvasCollabHost {
-        const host = (this.constructor as typeof LGraphNodeCanvasCollab & {
-            liteGraph?: Partial<LGraphNodeCanvasCollabHost>;
-        }).liteGraph;
-        return { ...defaultCanvasCollabHost, ...(host || {}) };
-    }
-
     private canvasGraphRef(): LGraphNodeCanvasCollabGraphLike | null {
         return (this.graph as unknown as LGraphNodeCanvasCollabGraphLike) || null;
     }
 
     /* Force align to grid */
     alignToGrid(): void {
-        const host = this.getCanvasCollabHost();
+        const host = resolveCanvasCollabHost(this);
         this.pos[0] =
             host.CANVAS_GRID_SIZE *
             Math.round(this.pos[0] / host.CANVAS_GRID_SIZE);
@@ -106,7 +105,7 @@ export class LGraphNodeCanvasCollab extends LGraphNodeConnectGeometry {
     }
 
     loadImage(url: string): ReadyImage {
-        const host = this.getCanvasCollabHost();
+        const host = resolveCanvasCollabHost(this);
         const img = new Image() as ReadyImage;
         img.src = host.node_images_path + url;
         img.ready = false;

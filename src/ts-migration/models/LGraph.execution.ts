@@ -1,4 +1,5 @@
 import type { LGraphNodeCanvasCollab as LGraphNode } from "./LGraphNode.canvas-collab";
+import { createClassHostResolver } from "../core/host-resolver";
 import { LGraph, type LiteGraphLifecycleHost } from "./LGraph.lifecycle";
 
 interface LiteGraphExecutionHost extends LiteGraphLifecycleHost {
@@ -18,6 +19,11 @@ const defaultExecutionHost: LiteGraphExecutionHost = {
     NODE_TITLE_HEIGHT: 30,
     VERTICAL_LAYOUT: "vertical",
 };
+
+const resolveExecutionHost = createClassHostResolver(defaultExecutionHost, {
+    cacheKey: "LGraph.execution",
+    fallbackOwners: [() => LGraphExecution, () => LGraph],
+});
 
 interface GraphInputSlot {
     link: number | null;
@@ -58,22 +64,6 @@ export class LGraphExecution extends LGraph {
     onExecuteStep?: () => void;
     onAfterExecute?: () => void;
 
-    private getExecutionHost(): LiteGraphExecutionHost {
-        const ctor = this.constructor as {
-            liteGraph?: Partial<LiteGraphExecutionHost>;
-        };
-        const host =
-            (ctor.liteGraph ||
-                (LGraphExecution as unknown as {
-                    liteGraph?: Partial<LiteGraphExecutionHost>;
-                }).liteGraph ||
-                (LGraph as unknown as {
-                    liteGraph?: Partial<LiteGraphExecutionHost>;
-                }).liteGraph ||
-                {}) as Partial<LiteGraphExecutionHost>;
-        return { ...defaultExecutionHost, ...host };
-    }
-
     private getNodeByIdExecution(id: number | string): GraphNodeExecutionLike | null {
         const nodesById = this._nodes_by_id as unknown as Record<
             string,
@@ -90,7 +80,7 @@ export class LGraphExecution extends LGraph {
      * @param {number} limit max number of nodes to execute (used to execute from start to a node)
      */
     runStep(num?: number, do_not_catch_errors?: boolean, limit?: number): void {
-        const liteGraph = this.getExecutionHost();
+        const liteGraph = resolveExecutionHost(this);
 
         num = num || 1;
 
@@ -320,7 +310,7 @@ export class LGraphExecution extends LGraph {
             L.push(M[i]);
         }
 
-        if (L.length != this._nodes.length && this.getExecutionHost().debug) {
+        if (L.length != this._nodes.length && resolveExecutionHost(this).debug) {
             console.warn("something went wrong, nodes missing");
         }
 
@@ -391,7 +381,7 @@ export class LGraphExecution extends LGraph {
      * @method arrange
      */
     arrange(margin?: number, layout?: string): void {
-        const liteGraph = this.getExecutionHost();
+        const liteGraph = resolveExecutionHost(this);
         margin = margin || 100;
 
         const nodes = this.computeExecutionOrder(false, true);

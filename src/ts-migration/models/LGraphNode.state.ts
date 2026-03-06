@@ -4,6 +4,7 @@ import type {
     IWidget,
     Vector2,
 } from "../types/core-types";
+import { createClassHostResolver } from "../core/host-resolver";
 import type { LiteGraphConstantsShape } from "../core/litegraph.constants";
 import type { SerializedLGraphNode } from "../types/serialization";
 import type { LGraphPersistence as LGraph } from "./LGraph.persistence";
@@ -52,6 +53,11 @@ const defaultLiteGraphNodeHost: LiteGraphNodeStateHost = {
         return target;
     },
 };
+
+const resolveNodeStateHost = createClassHostResolver(defaultLiteGraphNodeHost, {
+    cacheKey: "LGraphNode.state",
+    fallbackOwners: [() => LGraphNode],
+});
 
 interface NodeInputSlotState extends INodeInputSlot {
     link: number | null;
@@ -195,18 +201,14 @@ export class LGraphNode {
         this._pos[1] = v[1];
     }
 
-    private getHost(): LiteGraphNodeStateHost {
-        const host = (LGraphNode.liteGraph || {}) as Partial<LiteGraphNodeStateHost>;
-        return { ...defaultLiteGraphNodeHost, ...host };
-    }
-
     private getClassMeta(): LGraphNodeClassMetadata {
         return this.constructor as LGraphNodeClassMetadata;
     }
 
     _ctor(title?: string): void {
+        const host = resolveNodeStateHost(this);
         this.title = title || "Unnamed";
-        this.size = [this.getHost().NODE_WIDTH, 60];
+        this.size = [host.NODE_WIDTH, 60];
         this.graph = null;
 
         this._pos = new Float32Array(10);
@@ -222,8 +224,8 @@ export class LGraphNode {
             enumerable: true,
         });
 
-        if (this.getHost().use_uuids) {
-            this.id = this.getHost().uuidv4();
+        if (host.use_uuids) {
+            this.id = host.uuidv4();
         } else {
             this.id = -1; // not know till not added
         }
@@ -277,7 +279,7 @@ export class LGraphNode {
                 if (configuredField && configuredField.configure) {
                     configuredField.configure(fieldValue);
                 } else {
-                    self[j] = this.getHost().cloneObject(
+                    self[j] = resolveNodeStateHost(this).cloneObject(
                         fieldValue as object,
                         selfField as object | undefined
                     );
@@ -303,7 +305,7 @@ export class LGraphNode {
                         : null;
                 if (this.onConnectionsChange) {
                     this.onConnectionsChange(
-                        this.getHost().INPUT,
+                        resolveNodeStateHost(this).INPUT,
                         i,
                         true,
                         link_info,
@@ -331,7 +333,7 @@ export class LGraphNode {
                         : null;
                     if (this.onConnectionsChange) {
                         this.onConnectionsChange(
-                            this.getHost().OUTPUT,
+                            resolveNodeStateHost(this).OUTPUT,
                             i,
                             true,
                             link_info,
@@ -383,7 +385,7 @@ export class LGraphNode {
      */
     serialize(): SerializedLGraphNodeState {
         // create serialization object
-        const host = this.getHost();
+        const host = resolveNodeStateHost(this);
         const o: SerializedLGraphNodeState = {
             id: this.id,
             type: this.type,
@@ -460,7 +462,7 @@ export class LGraphNode {
 
     /* Creates a clone of this node */
     clone(): this | null {
-        const createNode = this.getHost().createNode as (
+        const createNode = resolveNodeStateHost(this).createNode as (
             type: string | null
         ) => LGraphNode | null;
         const node = createNode(this.type);
@@ -469,7 +471,7 @@ export class LGraphNode {
         }
 
         // we clone it because serialize returns shared containers
-        const data = this.getHost().cloneObject(
+        const data = resolveNodeStateHost(this).cloneObject(
             this.serialize()
         ) as SerializedLGraphNodeState;
 
@@ -494,8 +496,9 @@ export class LGraphNode {
 
         delete data.id;
 
-        if (this.getHost().use_uuids) {
-            data.id = this.getHost().uuidv4();
+        const host = resolveNodeStateHost(this);
+        if (host.use_uuids) {
+            data.id = host.uuidv4();
         }
 
         // remove links

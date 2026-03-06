@@ -1,5 +1,6 @@
 import type { LiteGraphConstantsShape } from "../core/litegraph.constants";
 import type { LGraphNodeCanvasCollab as LGraphNode } from "./LGraphNode.canvas-collab";
+import { createClassHostResolver } from "../core/host-resolver";
 import { type LiteGraphLifecycleHost } from "./LGraph.lifecycle";
 import { LGraphStructure } from "./LGraph.structure";
 
@@ -15,6 +16,11 @@ const defaultIOEventsHost: LiteGraphIOEventsHost = {
     getTime: () => Date.now(),
     ALWAYS: 0,
 };
+
+const resolveIOEventsHost = createClassHostResolver(defaultIOEventsHost, {
+    cacheKey: "LGraph.io-events",
+    fallbackOwners: [() => LGraphIOEvents, () => LGraphStructure],
+});
 
 type GraphNodeEventBase = Pick<LGraphNode, "id" | "mode">;
 
@@ -82,22 +88,6 @@ export class LGraphIOEvents extends LGraphStructure {
 
     private _input_nodes: GraphNodeEventLike[] = [];
 
-    private getIOEventsHost(): LiteGraphIOEventsHost {
-        const ctor = this.constructor as {
-            liteGraph?: Partial<LiteGraphIOEventsHost>;
-        };
-        const host =
-            (ctor.liteGraph ||
-                (LGraphIOEvents as unknown as {
-                    liteGraph?: Partial<LiteGraphIOEventsHost>;
-                }).liteGraph ||
-                (LGraphStructure as unknown as {
-                    liteGraph?: Partial<LiteGraphIOEventsHost>;
-                }).liteGraph ||
-                {}) as Partial<LiteGraphIOEventsHost>;
-        return { ...defaultIOEventsHost, ...host };
-    }
-
     private getNodesInEventOrder(): GraphNodeEventLike[] {
         const ordered = this._nodes_in_order as unknown as GraphNodeEventLike[] | null;
         const fallback = this._nodes as unknown as GraphNodeEventLike[];
@@ -123,7 +113,7 @@ export class LGraphIOEvents extends LGraphStructure {
      * @param {Array} params parameters in array format
      */
     sendEventToAllNodes(eventname: string, params?: unknown, mode?: number): void {
-        const host = this.getIOEventsHost();
+        const host = resolveIOEventsHost(this);
         const targetMode = mode || host.ALWAYS;
 
         const nodes = this.getNodesInEventOrder();
@@ -176,7 +166,7 @@ export class LGraphIOEvents extends LGraphStructure {
     }
 
     onAction(action: string, param?: unknown, options?: unknown): void {
-        const host = this.getIOEventsHost();
+        const host = resolveIOEventsHost(this);
         this._input_nodes = this.findNodesByClass(
             host.GraphInput as Function,
             this._input_nodes as unknown as never[]
@@ -548,7 +538,7 @@ export class LGraphIOEvents extends LGraphStructure {
 
     /* Called when something visually changed (not the graph!) */
     change(): void {
-        if (this.getIOEventsHost().debug) {
+        if (resolveIOEventsHost(this).debug) {
             console.log("Graph changed");
         }
         this.sendActionToCanvas("setDirty", [true, true]);

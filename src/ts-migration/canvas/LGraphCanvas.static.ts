@@ -1,5 +1,6 @@
 import type { Vector2 } from "../types/core-types";
 import type { GraphCanvasPalettePort } from "../contracts/canvas";
+import { createClassHostResolver } from "../core/host-resolver";
 import type { LiteGraphConstantsShape } from "../core/litegraph.constants";
 import type { LGraphGroup } from "../models/LGraphGroup";
 import type { LGraphNodeCanvasCollab as LGraphNode } from "../models/LGraphNode.canvas-collab";
@@ -142,6 +143,10 @@ const defaultHost: LiteGraphCanvasStaticHost = {
     slot_types_default_out: {},
 };
 
+const resolveCanvasStaticHost = createClassHostResolver(defaultHost, {
+    cacheKey: "LGraphCanvas.static",
+});
+
 /**
  * LGraphCanvas static zone methods and resources.
  * Source: `LGraphCanvas.*` static methods / fields.
@@ -184,16 +189,16 @@ export class LGraphCanvas {
     static active_node: LGraphNodeLike | null = null;
 
     private static host(): LiteGraphCanvasStaticHost {
-        return { ...defaultHost, ...(this.liteGraph || {}) };
+        return resolveCanvasStaticHost(this);
     }
 
     private static callbackHost(): LiteGraphCanvasStaticHost {
         const activeCtor = (
             (LGraphCanvas.active_canvas as unknown as { constructor?: unknown } | null)
-                ?.constructor as { host?: () => LiteGraphCanvasStaticHost } | undefined
+                ?.constructor as Function | undefined
         );
-        if (activeCtor && typeof activeCtor.host === "function") {
-            return activeCtor.host();
+        if (activeCtor) {
+            return resolveCanvasStaticHost(activeCtor);
         }
         return LGraphCanvas.host();
     }

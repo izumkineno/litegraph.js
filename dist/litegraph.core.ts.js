@@ -1,6 +1,87 @@
 var LiteGraphTSMigration = (function(exports) {
   "use strict";
   var _a, _b, _c, _d;
+  const classHostCache = /* @__PURE__ */ new WeakMap();
+  function resolveOwnerConstructor(owner) {
+    if (typeof owner === "function") {
+      return owner;
+    }
+    if (!owner || typeof owner !== "object") {
+      return null;
+    }
+    const ctor = owner.constructor;
+    return typeof ctor === "function" ? ctor : null;
+  }
+  function resolveHostSource(owner, hostField) {
+    if (!owner) {
+      return void 0;
+    }
+    const ctor = resolveOwnerConstructor(owner);
+    if (!ctor) {
+      return void 0;
+    }
+    return ctor[hostField];
+  }
+  function createClassHostResolver(defaults, options) {
+    const hostField = (options == null ? void 0 : options.hostField) || "liteGraph";
+    const cacheKey = (options == null ? void 0 : options.cacheKey) || hostField;
+    const fallbackOwners = (options == null ? void 0 : options.fallbackOwners) || [];
+    const transform = (options == null ? void 0 : options.transform) || ((merged) => merged);
+    return function resolveClassHost(owner) {
+      const ctor = resolveOwnerConstructor(owner);
+      if (!ctor) {
+        return transform(defaults);
+      }
+      let bucket = classHostCache.get(ctor);
+      if (!bucket) {
+        bucket = /* @__PURE__ */ new Map();
+        classHostCache.set(ctor, bucket);
+      }
+      const cached = bucket.get(cacheKey);
+      if (cached && cached.defaultsRef === defaults) {
+        let cacheMatches = cached.sourceRefs.length === fallbackOwners.length + 1;
+        if (cacheMatches) {
+          for (let i2 = 0; i2 < fallbackOwners.length; ++i2) {
+            if (cached.sourceRefs[i2] !== resolveHostSource(fallbackOwners[i2](), hostField)) {
+              cacheMatches = false;
+              break;
+            }
+          }
+        }
+        if (cacheMatches && cached.sourceRefs[fallbackOwners.length] === resolveHostSource(ctor, hostField)) {
+          return cached.value;
+        }
+      }
+      const sourceRefs = [];
+      let merged = defaults;
+      let didMerge = false;
+      let lastSource;
+      for (let i2 = 0; i2 < fallbackOwners.length; ++i2) {
+        const source = resolveHostSource(fallbackOwners[i2](), hostField);
+        sourceRefs.push(source);
+        if (!source) {
+          continue;
+        }
+        merged = didMerge ? { ...merged, ...source } : { ...defaults, ...source };
+        didMerge = true;
+        lastSource = source;
+      }
+      const ownerSource = resolveHostSource(ctor, hostField);
+      sourceRefs.push(ownerSource);
+      if (ownerSource) {
+        merged = didMerge ? { ...merged, ...ownerSource } : { ...defaults, ...ownerSource };
+        didMerge = true;
+        lastSource = ownerSource;
+      }
+      const value = transform(merged, lastSource);
+      bucket.set(cacheKey, {
+        defaultsRef: defaults,
+        sourceRefs,
+        value
+      });
+      return value;
+    };
+  }
   class DefaultContextMenu {
     constructor(_values, _options, _ref_window) {
     }
@@ -25,15 +106,18 @@ var LiteGraphTSMigration = (function(exports) {
     slot_types_default_in: {},
     slot_types_default_out: {}
   };
+  const resolveCanvasStaticHost = createClassHostResolver(defaultHost$1, {
+    cacheKey: "LGraphCanvas.static"
+  });
   let LGraphCanvas$1 = (_a = class {
     static host() {
-      return { ...defaultHost$1, ...this.liteGraph || {} };
+      return resolveCanvasStaticHost(this);
     }
     static callbackHost() {
       var _a2;
       const activeCtor = (_a2 = _a.active_canvas) == null ? void 0 : _a2.constructor;
-      if (activeCtor && typeof activeCtor.host === "function") {
-        return activeCtor.host();
+      if (activeCtor) {
+        return resolveCanvasStaticHost(activeCtor);
       }
       return _a.host();
     }
@@ -1406,6 +1490,26 @@ var LiteGraphTSMigration = (function(exports) {
       );
     }
   };
+  const resolveCanvasLifecycleHost = createClassHostResolver(defaultLifecycleHost, {
+    cacheKey: "LGraphCanvas.lifecycle",
+    transform: (merged) => ({
+      ...merged,
+      pointerListenerAdd: merged.pointerListenerAdd || ((dom, ev, cb, capture) => defaultPointerListenerAdd(
+        merged.pointerevents_method,
+        dom,
+        ev,
+        cb,
+        capture
+      )),
+      pointerListenerRemove: merged.pointerListenerRemove || ((dom, ev, cb, capture) => defaultPointerListenerRemove(
+        merged.pointerevents_method,
+        dom,
+        ev,
+        cb,
+        capture
+      ))
+    })
+  });
   class LGraphCanvasLifecycle extends LGraphCanvas$1 {
     constructor(canvas, graph, options) {
       super();
@@ -1538,25 +1642,7 @@ var LiteGraphTSMigration = (function(exports) {
       this.autoresize = this.options.autoresize;
     }
     host() {
-      const injected = this.constructor.liteGraph;
-      const merged = { ...defaultLifecycleHost, ...injected || {} };
-      return {
-        ...merged,
-        pointerListenerAdd: merged.pointerListenerAdd || ((dom, ev, cb, capture) => defaultPointerListenerAdd(
-          merged.pointerevents_method,
-          dom,
-          ev,
-          cb,
-          capture
-        )),
-        pointerListenerRemove: merged.pointerListenerRemove || ((dom, ev, cb, capture) => defaultPointerListenerRemove(
-          merged.pointerevents_method,
-          dom,
-          ev,
-          cb,
-          capture
-        ))
-      };
+      return resolveCanvasLifecycleHost(this);
     }
     clear() {
       var _a2;
@@ -2063,6 +2149,9 @@ var LiteGraphTSMigration = (function(exports) {
       }
     }
   };
+  const resolveCanvasInputHost = createClassHostResolver(defaultLiteGraphHost, {
+    cacheKey: "LGraphCanvas.input"
+  });
   const temp = new Float32Array(4);
   class LGraphCanvasInput extends LGraphCanvasLifecycle {
     constructor() {
@@ -2081,8 +2170,7 @@ var LiteGraphTSMigration = (function(exports) {
       this._highlight_input_slot = null;
     }
     getLiteGraphHost() {
-      const injected = this.constructor.liteGraph || {};
-      return { ...defaultLiteGraphHost, ...injected };
+      return resolveCanvasInputHost(this);
     }
     graphRef() {
       return this.graph;
@@ -8362,6 +8450,10 @@ var LiteGraphTSMigration = (function(exports) {
     debug: false,
     getTime: () => Date.now()
   };
+  const resolveLifecycleHost = createClassHostResolver(defaultLiteGraphLifecycleHost, {
+    cacheKey: "LGraph.lifecycle",
+    fallbackOwners: [() => LGraph$1]
+  });
   let LGraph$1 = (_b = class {
     constructor(o) {
       this.list_of_graphcanvas = null;
@@ -8393,7 +8485,7 @@ var LiteGraphTSMigration = (function(exports) {
       this.inputs = {};
       this.outputs = {};
       this.execution_timer_id = null;
-      if (this.getLifecycleHost().debug) {
+      if (resolveLifecycleHost(this).debug) {
         console.log("Graph created");
       }
       this.list_of_graphcanvas = null;
@@ -8401,11 +8493,6 @@ var LiteGraphTSMigration = (function(exports) {
       if (o) {
         this.configure(o);
       }
-    }
-    getLifecycleHost() {
-      const ctor = this.constructor;
-      const host = ctor.liteGraph || _b.liteGraph || {};
-      return { ...defaultLiteGraphLifecycleHost, ...host };
     }
     getSupportedTypes() {
       return this.supported_types || _b.supported_types;
@@ -8459,7 +8546,7 @@ var LiteGraphTSMigration = (function(exports) {
      * @method attachCanvas
      */
     attachCanvas(graphcanvas) {
-      const host = this.getLifecycleHost();
+      const host = resolveLifecycleHost(this);
       if (!graphcanvas || typeof graphcanvas !== "object" || host.LGraphCanvas && graphcanvas.constructor != host.LGraphCanvas) {
         throw "attachCanvas expects a LGraphCanvas instance";
       }
@@ -8502,7 +8589,7 @@ var LiteGraphTSMigration = (function(exports) {
         this.onPlayEvent();
       }
       this.sendEventToAllNodes("onStart");
-      this.starttime = this.getLifecycleHost().getTime();
+      this.starttime = resolveLifecycleHost(this).getTime();
       this.last_update_time = this.starttime;
       interval = interval || 0;
       const that2 = this;
@@ -8601,16 +8688,15 @@ var LiteGraphTSMigration = (function(exports) {
     NODE_TITLE_HEIGHT: 30,
     VERTICAL_LAYOUT: "vertical"
   };
+  const resolveExecutionHost = createClassHostResolver(defaultExecutionHost$1, {
+    cacheKey: "LGraph.execution",
+    fallbackOwners: [() => LGraphExecution, () => LGraph$1]
+  });
   class LGraphExecution extends LGraph$1 {
     constructor() {
       super(...arguments);
       this.errors_in_execution = false;
       this.execution_time = 0;
-    }
-    getExecutionHost() {
-      const ctor = this.constructor;
-      const host = ctor.liteGraph || LGraphExecution.liteGraph || LGraph$1.liteGraph || {};
-      return { ...defaultExecutionHost$1, ...host };
     }
     getNodeByIdExecution(id) {
       const nodesById = this._nodes_by_id;
@@ -8624,7 +8710,7 @@ var LiteGraphTSMigration = (function(exports) {
      * @param {number} limit max number of nodes to execute (used to execute from start to a node)
      */
     runStep(num, do_not_catch_errors, limit) {
-      const liteGraph = this.getExecutionHost();
+      const liteGraph = resolveExecutionHost(this);
       num = num || 1;
       const start = liteGraph.getTime();
       this.globaltime = 1e-3 * (start - this.starttime);
@@ -8790,7 +8876,7 @@ var LiteGraphTSMigration = (function(exports) {
       for (const i2 in M) {
         L.push(M[i2]);
       }
-      if (L.length != this._nodes.length && this.getExecutionHost().debug) {
+      if (L.length != this._nodes.length && resolveExecutionHost(this).debug) {
         console.warn("something went wrong, nodes missing");
       }
       const l = L.length;
@@ -8846,7 +8932,7 @@ var LiteGraphTSMigration = (function(exports) {
      * @method arrange
      */
     arrange(margin, layout) {
-      const liteGraph = this.getExecutionHost();
+      const liteGraph = resolveExecutionHost(this);
       margin = margin || 100;
       const nodes = this.computeExecutionOrder(false, true);
       const columns = [];
@@ -8905,12 +8991,11 @@ var LiteGraphTSMigration = (function(exports) {
     MAX_NUMBER_OF_NODES: 1e3,
     registered_node_types: {}
   };
+  const resolveStructureHost = createClassHostResolver(defaultStructureHost, {
+    cacheKey: "LGraph.structure",
+    fallbackOwners: [() => LGraphStructure, () => LGraphExecution]
+  });
   class LGraphStructure extends LGraphExecution {
-    getStructureHost() {
-      const ctor = this.constructor;
-      const host = ctor.liteGraph || LGraphStructure.liteGraph || LGraphExecution.liteGraph || {};
-      return { ...defaultStructureHost, ...host };
-    }
     getNodesByIdMap() {
       return this._nodes_by_id;
     }
@@ -8939,7 +9024,7 @@ var LiteGraphTSMigration = (function(exports) {
       if (!node2) {
         return void 0;
       }
-      const host = this.getStructureHost();
+      const host = resolveStructureHost(this);
       if (this.isGroupNode(node2, host)) {
         this.getGroupArray().push(node2);
         this.setDirtyCanvas(true);
@@ -9001,7 +9086,7 @@ var LiteGraphTSMigration = (function(exports) {
      * @param {LGraphNode} node the instance of the node
      */
     remove(node2) {
-      const host = this.getStructureHost();
+      const host = resolveStructureHost(this);
       if (this.isGroupNode(node2, host)) {
         const groups = this.getGroupArray();
         const index = groups.indexOf(node2);
@@ -9158,7 +9243,7 @@ var LiteGraphTSMigration = (function(exports) {
      * @return {LGraphNode} the node at this position or null
      */
     getNodeOnPos(x2, y2, nodes_list, margin) {
-      const host = this.getStructureHost();
+      const host = resolveStructureHost(this);
       const list = nodes_list || this._nodes;
       let nRet = null;
       for (let i2 = list.length - 1; i2 >= 0; i2--) {
@@ -9198,7 +9283,7 @@ var LiteGraphTSMigration = (function(exports) {
      * @method checkNodeTypes
      */
     checkNodeTypes() {
-      const host = this.getStructureHost();
+      const host = resolveStructureHost(this);
       const nodes = this.getNodeArray();
       const nodesById = this.getNodesByIdMap();
       for (let i2 = 0; i2 < nodes.length; i2++) {
@@ -9235,15 +9320,14 @@ var LiteGraphTSMigration = (function(exports) {
     getTime: () => Date.now(),
     ALWAYS: 0
   };
+  const resolveIOEventsHost = createClassHostResolver(defaultIOEventsHost, {
+    cacheKey: "LGraph.io-events",
+    fallbackOwners: [() => LGraphIOEvents, () => LGraphStructure]
+  });
   class LGraphIOEvents extends LGraphStructure {
     constructor() {
       super(...arguments);
       this._input_nodes = [];
-    }
-    getIOEventsHost() {
-      const ctor = this.constructor;
-      const host = ctor.liteGraph || LGraphIOEvents.liteGraph || LGraphStructure.liteGraph || {};
-      return { ...defaultIOEventsHost, ...host };
     }
     getNodesInEventOrder() {
       const ordered = this._nodes_in_order;
@@ -9266,7 +9350,7 @@ var LiteGraphTSMigration = (function(exports) {
      * @param {Array} params parameters in array format
      */
     sendEventToAllNodes(eventname, params, mode) {
-      const host = this.getIOEventsHost();
+      const host = resolveIOEventsHost(this);
       const targetMode = mode || host.ALWAYS;
       const nodes = this.getNodesInEventOrder();
       if (!nodes) {
@@ -9311,7 +9395,7 @@ var LiteGraphTSMigration = (function(exports) {
       }
     }
     onAction(action, param, options) {
-      const host = this.getIOEventsHost();
+      const host = resolveIOEventsHost(this);
       this._input_nodes = this.findNodesByClass(
         host.GraphInput,
         this._input_nodes
@@ -9628,7 +9712,7 @@ var LiteGraphTSMigration = (function(exports) {
     }
     /* Called when something visually changed (not the graph!) */
     change() {
-      if (this.getIOEventsHost().debug) {
+      if (resolveIOEventsHost(this).debug) {
         console.log("Graph changed");
       }
       this.sendActionToCanvas("setDirty", [true, true]);
@@ -9645,14 +9729,13 @@ var LiteGraphTSMigration = (function(exports) {
     getTime: () => Date.now(),
     VERSION: 0
   };
+  const resolvePersistenceHost = createClassHostResolver(defaultPersistenceHost, {
+    cacheKey: "LGraph.persistence",
+    fallbackOwners: [() => LGraphPersistence, () => LGraphIOEvents]
+  });
   class LGraphPersistence extends LGraphIOEvents {
-    getPersistenceHost() {
-      const ctor = this.constructor;
-      const host = ctor.liteGraph || LGraphPersistence.liteGraph || LGraphIOEvents.liteGraph || {};
-      return { ...defaultPersistenceHost, ...host };
-    }
     createFallbackNode(nInfo) {
-      const host = this.getPersistenceHost();
+      const host = resolvePersistenceHost(this);
       const LGraphNodeCtor = host.LGraphNode;
       const node2 = new LGraphNodeCtor();
       node2.last_serialization = nInfo;
@@ -9718,7 +9801,7 @@ var LiteGraphTSMigration = (function(exports) {
         groups: groupsInfo,
         config: this.config,
         extra: this.extra,
-        version: this.getPersistenceHost().VERSION
+        version: resolvePersistenceHost(this).VERSION
       };
       if (this.onSerialize) {
         this.onSerialize(data);
@@ -9763,7 +9846,7 @@ var LiteGraphTSMigration = (function(exports) {
       let error = false;
       this._nodes = [];
       if (nodes) {
-        const host = this.getPersistenceHost();
+        const host = resolvePersistenceHost(this);
         for (let i2 = 0, l = nodes.length; i2 < l; ++i2) {
           const nInfo = nodes[i2];
           const createNode = host.createNode;
@@ -9795,7 +9878,7 @@ var LiteGraphTSMigration = (function(exports) {
       }
       this._groups.length = 0;
       if (graphData.groups) {
-        const host = this.getPersistenceHost();
+        const host = resolvePersistenceHost(this);
         const LGraphGroupCtor = host.LGraphGroup;
         for (let i2 = 0; i2 < graphData.groups.length; ++i2) {
           const group = new LGraphGroupCtor();
@@ -9869,6 +9952,10 @@ var LiteGraphTSMigration = (function(exports) {
       return target;
     }
   };
+  const resolveNodeStateHost = createClassHostResolver(defaultLiteGraphNodeHost, {
+    cacheKey: "LGraphNode.state",
+    fallbackOwners: [() => LGraphNode$1]
+  });
   let LGraphNode$1 = (_c = class {
     constructor(title) {
       this.graph_version = 0;
@@ -9904,16 +9991,13 @@ var LiteGraphTSMigration = (function(exports) {
       this._pos[0] = v2[0];
       this._pos[1] = v2[1];
     }
-    getHost() {
-      const host = _c.liteGraph || {};
-      return { ...defaultLiteGraphNodeHost, ...host };
-    }
     getClassMeta() {
       return this.constructor;
     }
     _ctor(title) {
+      const host = resolveNodeStateHost(this);
       this.title = title || "Unnamed";
-      this.size = [this.getHost().NODE_WIDTH, 60];
+      this.size = [host.NODE_WIDTH, 60];
       this.graph = null;
       this._pos = new Float32Array(10);
       Object.defineProperty(this, "pos", {
@@ -9927,8 +10011,8 @@ var LiteGraphTSMigration = (function(exports) {
         get: () => this._pos,
         enumerable: true
       });
-      if (this.getHost().use_uuids) {
-        this.id = this.getHost().uuidv4();
+      if (host.use_uuids) {
+        this.id = host.uuidv4();
       } else {
         this.id = -1;
       }
@@ -9971,7 +10055,7 @@ var LiteGraphTSMigration = (function(exports) {
           if (configuredField && configuredField.configure) {
             configuredField.configure(fieldValue);
           } else {
-            self[j] = this.getHost().cloneObject(
+            self[j] = resolveNodeStateHost(this).cloneObject(
               fieldValue,
               selfField
             );
@@ -9989,7 +10073,7 @@ var LiteGraphTSMigration = (function(exports) {
           const link_info = this.graph && input ? this.graph.links[input.link] : null;
           if (this.onConnectionsChange) {
             this.onConnectionsChange(
-              this.getHost().INPUT,
+              resolveNodeStateHost(this).INPUT,
               i2,
               true,
               link_info,
@@ -10011,7 +10095,7 @@ var LiteGraphTSMigration = (function(exports) {
             const link_info = this.graph ? this.graph.links[output.links[j]] : null;
             if (this.onConnectionsChange) {
               this.onConnectionsChange(
-                this.getHost().OUTPUT,
+                resolveNodeStateHost(this).OUTPUT,
                 i2,
                 true,
                 link_info,
@@ -10054,7 +10138,7 @@ var LiteGraphTSMigration = (function(exports) {
      * @method serialize
      */
     serialize() {
-      const host = this.getHost();
+      const host = resolveNodeStateHost(this);
       const o = {
         id: this.id,
         type: this.type,
@@ -10118,12 +10202,12 @@ var LiteGraphTSMigration = (function(exports) {
     }
     /* Creates a clone of this node */
     clone() {
-      const createNode = this.getHost().createNode;
+      const createNode = resolveNodeStateHost(this).createNode;
       const node2 = createNode(this.type);
       if (!node2) {
         return null;
       }
-      const data = this.getHost().cloneObject(
+      const data = resolveNodeStateHost(this).cloneObject(
         this.serialize()
       );
       if (data.inputs) {
@@ -10143,8 +10227,9 @@ var LiteGraphTSMigration = (function(exports) {
         }
       }
       delete data.id;
-      if (this.getHost().use_uuids) {
-        data.id = this.getHost().uuidv4();
+      const host = resolveNodeStateHost(this);
+      if (host.use_uuids) {
+        data.id = host.uuidv4();
       }
       node2.configure(data);
       return node2;
@@ -10206,11 +10291,11 @@ var LiteGraphTSMigration = (function(exports) {
     use_deferred_actions: true,
     getTime: () => Date.now()
   };
+  const resolveNodeExecutionHost = createClassHostResolver(defaultExecutionHost, {
+    cacheKey: "LGraphNode.execution",
+    fallbackOwners: [() => LGraphNode$1]
+  });
   class LGraphNodeExecution extends LGraphNode$1 {
-    getExecutionHost() {
-      const host = LGraphNode$1.liteGraph || {};
-      return { ...defaultExecutionHost, ...host };
-    }
     getExecutionGraph() {
       return this.graph || null;
     }
@@ -10619,7 +10704,7 @@ var LiteGraphTSMigration = (function(exports) {
       if (!this.outputs || !this.outputs.length) {
         return;
       }
-      const host = this.getExecutionHost();
+      const host = resolveNodeExecutionHost(this);
       const graph = this.getExecutionGraph();
       if (graph) {
         graph._last_trigger_time = host.getTime();
@@ -10661,7 +10746,7 @@ var LiteGraphTSMigration = (function(exports) {
       if (!links || !links.length) {
         return;
       }
-      const host = this.getExecutionHost();
+      const host = resolveNodeExecutionHost(this);
       const graph = this.getExecutionGraph();
       if (!graph) {
         return;
@@ -10756,12 +10841,11 @@ var LiteGraphTSMigration = (function(exports) {
     NODE_WIDGET_HEIGHT: 20,
     auto_load_slot_types: false
   };
+  const resolvePortsWidgetsHost = createClassHostResolver(defaultPortsWidgetsHost, {
+    cacheKey: "LGraphNode.ports-widgets",
+    fallbackOwners: [() => LGraphNodePortsWidgets]
+  });
   class LGraphNodePortsWidgets extends LGraphNodeExecution {
-    getPortsWidgetsHost() {
-      const classHost = LGraphNodePortsWidgets.liteGraph;
-      const ctorHost = this.constructor.liteGraph;
-      return { ...defaultPortsWidgetsHost, ...classHost || {}, ...ctorHost || {} };
-    }
     getPortsWidgetsClassMeta() {
       return this.constructor;
     }
@@ -10830,7 +10914,7 @@ var LiteGraphTSMigration = (function(exports) {
       if (this.onOutputAdded) {
         this.onOutputAdded(output);
       }
-      const host = this.getPortsWidgetsHost();
+      const host = resolvePortsWidgetsHost(this);
       if (host.auto_load_slot_types) {
         host.registerNodeAndSlotType(this, type, true);
       }
@@ -10844,7 +10928,7 @@ var LiteGraphTSMigration = (function(exports) {
      * @param {Array} array of triplets like [[name,type,extra_info],[...]]
      */
     addOutputs(array) {
-      const host = this.getPortsWidgetsHost();
+      const host = resolvePortsWidgetsHost(this);
       for (let i2 = 0; i2 < array.length; ++i2) {
         const info = array[i2];
         const o = {
@@ -10927,7 +11011,7 @@ var LiteGraphTSMigration = (function(exports) {
       if (this.onInputAdded) {
         this.onInputAdded(input);
       }
-      const host = this.getPortsWidgetsHost();
+      const host = resolvePortsWidgetsHost(this);
       host.registerNodeAndSlotType(this, normalizedType);
       this.setDirtyCanvas(true, true);
       return input;
@@ -10938,7 +11022,7 @@ var LiteGraphTSMigration = (function(exports) {
      * @param {Array} array of triplets like [[name,type,extra_info],[...]]
      */
     addInputs(array) {
-      const host = this.getPortsWidgetsHost();
+      const host = resolvePortsWidgetsHost(this);
       for (let i2 = 0; i2 < array.length; ++i2) {
         const info = array[i2];
         const o = { name: info[0], type: info[1], link: null };
@@ -11012,7 +11096,7 @@ var LiteGraphTSMigration = (function(exports) {
      */
     computeSize(out) {
       const classMeta = this.getPortsWidgetsClassMeta();
-      const host = this.getPortsWidgetsHost();
+      const host = resolvePortsWidgetsHost(this);
       if (classMeta.size) {
         return classMeta.size.concat();
       }
@@ -11218,6 +11302,10 @@ var LiteGraphTSMigration = (function(exports) {
     isValidConnection: () => true,
     getTime: () => Date.now()
   };
+  const resolveConnectGeometryHost = createClassHostResolver(hostDefaults, {
+    cacheKey: "LGraphNode.connect-geometry",
+    fallbackOwners: [() => LGraphNodeConnectGeometry]
+  });
   class LGraphNodeConnectGeometry extends LGraphNodePortsWidgets {
     constructor() {
       super(...arguments);
@@ -11227,11 +11315,6 @@ var LiteGraphTSMigration = (function(exports) {
           this.triggerSlot(triggerSlot, param, null, options);
         }
       };
-    }
-    host() {
-      const classHost = LGraphNodeConnectGeometry.liteGraph;
-      const ctorHost = this.constructor.liteGraph;
-      return { ...hostDefaults, ...classHost || {}, ...ctorHost || {} };
     }
     graphRef() {
       return this.graph || null;
@@ -11250,7 +11333,7 @@ var LiteGraphTSMigration = (function(exports) {
     /** returns the bounding of the object, used for rendering purposes */
     getBounding(out, compute_outer) {
       var _a2;
-      const h = this.host();
+      const h = resolveConnectGeometryHost(this);
       const o = out || new Float32Array(4);
       const isCollapsed = !!this.flags.collapsed;
       const p = this.pos;
@@ -11275,7 +11358,7 @@ var LiteGraphTSMigration = (function(exports) {
     /** checks if a point is inside the shape of a node */
     isPointInside(x2, y2, margin, skip_title) {
       var _a2, _b2, _c2;
-      const h = this.host();
+      const h = resolveConnectGeometryHost(this);
       const m = margin || 0;
       let margin_top = ((_b2 = (_a2 = this.graphRef()) == null ? void 0 : _a2.isLive) == null ? void 0 : _b2.call(_a2)) ? 0 : h.NODE_TITLE_HEIGHT;
       if (skip_title) {
@@ -11382,7 +11465,7 @@ var LiteGraphTSMigration = (function(exports) {
     }
     /** returns the output (or input) slot with a given type, -1 if not found */
     findSlotByType(input, type, returnObj, preferFreeSlot, doNotUseOccupied) {
-      const h = this.host();
+      const h = resolveConnectGeometryHost(this);
       const slots = input ? this.inputs : this.outputs;
       if (!slots) {
         return -1;
@@ -11443,7 +11526,7 @@ var LiteGraphTSMigration = (function(exports) {
       return -1;
     }
     addOnTriggerInput() {
-      const h = this.host();
+      const h = resolveConnectGeometryHost(this);
       const triggerSlot = this.findInputSlot("onTrigger");
       if (triggerSlot === -1) {
         const extra = this.markSlotOptional({
@@ -11455,7 +11538,7 @@ var LiteGraphTSMigration = (function(exports) {
       return triggerSlot;
     }
     addOnExecutedOutput() {
-      const h = this.host();
+      const h = resolveConnectGeometryHost(this);
       const triggerSlot = this.findOutputSlot("onExecuted");
       if (triggerSlot === -1) {
         const extra = this.markSlotOptional({
@@ -11467,7 +11550,7 @@ var LiteGraphTSMigration = (function(exports) {
       return triggerSlot;
     }
     changeMode(modeTo) {
-      const h = this.host();
+      const h = resolveConnectGeometryHost(this);
       switch (modeTo) {
         case h.ON_EVENT:
           break;
@@ -11489,7 +11572,7 @@ var LiteGraphTSMigration = (function(exports) {
       return true;
     }
     connectByType(slot, target_node, target_slotType, optsIn) {
-      const h = this.host();
+      const h = resolveConnectGeometryHost(this);
       const opts = Object.assign(
         { createEventInCase: true, firstFreeIfOutputGeneralInCase: true, generalTypeInCase: true },
         optsIn || {}
@@ -11524,7 +11607,7 @@ var LiteGraphTSMigration = (function(exports) {
       return null;
     }
     connectByTypeOutput(slot, source_node, source_slotType, optsIn) {
-      const h = this.host();
+      const h = resolveConnectGeometryHost(this);
       const opts = Object.assign(
         { createEventInCase: true, firstFreeIfInputGeneralInCase: true, generalTypeInCase: true },
         optsIn || {}
@@ -11561,7 +11644,7 @@ var LiteGraphTSMigration = (function(exports) {
     /** connect this node output to the input of another node */
     connect(slot, target_node, target_slot) {
       var _a2, _b2, _c2, _d2, _e, _f, _g, _h, _i;
-      const h = this.host();
+      const h = resolveConnectGeometryHost(this);
       const graph = this.graphRef();
       if (!graph) {
         console.log("Connect: Error, node doesn't belong to any graph. Nodes must be added first to a graph before connecting them.");
@@ -11673,7 +11756,7 @@ var LiteGraphTSMigration = (function(exports) {
     /** disconnect one output to an specific node */
     disconnectOutput(slot, target_node, _opts) {
       var _a2, _b2, _c2, _d2, _e, _f, _g, _h, _i, _j, _k;
-      const h = this.host();
+      const h = resolveConnectGeometryHost(this);
       const graph = this.graphRef();
       if (!graph) {
         return false;
@@ -11741,7 +11824,7 @@ var LiteGraphTSMigration = (function(exports) {
     /** disconnect one input */
     disconnectInput(slot, _opts) {
       var _a2, _b2, _c2, _d2, _e;
-      const h = this.host();
+      const h = resolveConnectGeometryHost(this);
       const graph = this.graphRef();
       if (!graph) {
         return false;
@@ -11791,7 +11874,7 @@ var LiteGraphTSMigration = (function(exports) {
     }
     /** returns the center of a connection point in canvas coords */
     getConnectionPos(is_input, slot_number, out) {
-      const h = this.host();
+      const h = resolveConnectGeometryHost(this);
       const o = out || new Float32Array(2);
       let num_slots = 0;
       if (is_input && this.inputs) {
@@ -11846,17 +11929,17 @@ var LiteGraphTSMigration = (function(exports) {
     CANVAS_GRID_SIZE: 10,
     node_images_path: ""
   };
+  const resolveCanvasCollabHost = createClassHostResolver(defaultCanvasCollabHost, {
+    cacheKey: "LGraphNode.canvas-collab",
+    fallbackOwners: [() => LGraphNodeCanvasCollab]
+  });
   class LGraphNodeCanvasCollab extends LGraphNodeConnectGeometry {
-    getCanvasCollabHost() {
-      const host = this.constructor.liteGraph;
-      return { ...defaultCanvasCollabHost, ...host || {} };
-    }
     canvasGraphRef() {
       return this.graph || null;
     }
     /* Force align to grid */
     alignToGrid() {
-      const host = this.getCanvasCollabHost();
+      const host = resolveCanvasCollabHost(this);
       this.pos[0] = host.CANVAS_GRID_SIZE * Math.round(this.pos[0] / host.CANVAS_GRID_SIZE);
       this.pos[1] = host.CANVAS_GRID_SIZE * Math.round(this.pos[1] / host.CANVAS_GRID_SIZE);
     }
@@ -11887,7 +11970,7 @@ var LiteGraphTSMigration = (function(exports) {
       ]);
     }
     loadImage(url) {
-      const host = this.getCanvasCollabHost();
+      const host = resolveCanvasCollabHost(this);
       const img = new Image();
       img.src = host.node_images_path + url;
       img.ready = false;
@@ -11947,8 +12030,8 @@ var LiteGraphTSMigration = (function(exports) {
     }
     localToScreen(x2, y2, graphCanvas) {
       return [
-        (x2 + this.pos[0]) * graphCanvas.scale + graphCanvas.offset[0],
-        (y2 + this.pos[1]) * graphCanvas.scale + graphCanvas.offset[1]
+        (x2 + this.pos[0]) * graphCanvas.ds.scale + graphCanvas.ds.offset[0],
+        (y2 + this.pos[1]) * graphCanvas.ds.scale + graphCanvas.ds.offset[1]
       ];
     }
   }

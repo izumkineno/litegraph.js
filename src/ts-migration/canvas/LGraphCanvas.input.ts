@@ -1,4 +1,5 @@
 import type { Vector2, Vector4 } from "../types/core-types";
+import { createClassHostResolver } from "../core/host-resolver";
 import type { LiteGraphConstantsShape } from "../core/litegraph.constants";
 import type { LGraphPersistence as LGraph } from "../models/LGraph.persistence";
 import type { LGraphGroup } from "../models/LGraphGroup";
@@ -77,6 +78,10 @@ const defaultLiteGraphHost: LGraphCanvasInputHost = {
     },
 };
 
+const resolveCanvasInputHost = createClassHostResolver(defaultLiteGraphHost, {
+    cacheKey: "LGraphCanvas.input",
+});
+
 const temp = new Float32Array(4) as unknown as Vector4;
 
 /**
@@ -119,8 +124,7 @@ export class LGraphCanvasInput extends LGraphCanvasLifecycle {
     onNodeDblClicked?: (node: any) => void;
 
     protected getLiteGraphHost(): LGraphCanvasInputHost & Record<string, any> {
-        const injected = (this.constructor as any).liteGraph || {};
-        return { ...defaultLiteGraphHost, ...injected };
+        return resolveCanvasInputHost(this) as LGraphCanvasInputHost & Record<string, any>;
     }
 
     protected graphRef(): any {

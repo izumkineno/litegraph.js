@@ -2,6 +2,7 @@ import type {
     GraphCanvasConstructorPort,
     GraphCanvasLifecyclePort,
 } from "../contracts/canvas";
+import { createClassHostResolver } from "../core/host-resolver";
 import type { LiteGraphConstantsShape } from "../core/litegraph.constants";
 import type { LGraphNodeCanvasCollab as LGraphNode } from "./LGraphNode.canvas-collab";
 
@@ -30,6 +31,11 @@ const defaultLiteGraphLifecycleHost: LiteGraphLifecycleHost = {
     debug: false,
     getTime: () => Date.now(),
 };
+
+const resolveLifecycleHost = createClassHostResolver(defaultLiteGraphLifecycleHost, {
+    cacheKey: "LGraph.lifecycle",
+    fallbackOwners: [() => LGraph],
+});
 
 /**
  * LGraph is the class that contain a full graph. We instantiate one and add nodes to it, and then we can run the execution loop.
@@ -99,21 +105,8 @@ export class LGraph {
     onBeforeStep?: () => void;
     onAfterStep?: () => void;
 
-    protected getLifecycleHost(): LiteGraphLifecycleHost {
-        const ctor = this.constructor as {
-            liteGraph?: Partial<LiteGraphLifecycleHost>;
-        };
-        const host =
-            (ctor.liteGraph ||
-                (LGraph as unknown as {
-                    liteGraph?: Partial<LiteGraphLifecycleHost>;
-                }).liteGraph ||
-                {}) as Partial<LiteGraphLifecycleHost>;
-        return { ...defaultLiteGraphLifecycleHost, ...host };
-    }
-
     constructor(o?: object) {
-        if (this.getLifecycleHost().debug) {
+        if (resolveLifecycleHost(this).debug) {
             console.log("Graph created");
         }
         this.list_of_graphcanvas = null;
@@ -200,7 +193,7 @@ export class LGraph {
      * @method attachCanvas
      */
     attachCanvas(graphcanvas: LGraphCanvasLifecycleLike): void {
-        const host = this.getLifecycleHost();
+        const host = resolveLifecycleHost(this);
         if (
             !graphcanvas ||
             typeof graphcanvas !== "object" ||
@@ -258,7 +251,7 @@ export class LGraph {
         this.sendEventToAllNodes("onStart");
 
         // launch
-        this.starttime = this.getLifecycleHost().getTime();
+        this.starttime = resolveLifecycleHost(this).getTime();
         this.last_update_time = this.starttime;
         interval = interval || 0;
         const that = this;

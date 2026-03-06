@@ -1,4 +1,5 @@
 import type { LiteGraphConstantsShape } from "../core/litegraph.constants";
+import { createClassHostResolver } from "../core/host-resolver";
 import type { LGraphPersistence as LGraph } from "./LGraph.persistence";
 import { LGraphNode } from "./LGraphNode.state";
 
@@ -22,6 +23,11 @@ const defaultExecutionHost: LiteGraphNodeExecutionHost = {
     use_deferred_actions: true,
     getTime: () => Date.now(),
 };
+
+const resolveNodeExecutionHost = createClassHostResolver(defaultExecutionHost, {
+    cacheKey: "LGraphNode.execution",
+    fallbackOwners: [() => LGraphNode],
+});
 
 interface NodeInputExecutionLike {
     name?: string;
@@ -104,11 +110,6 @@ export class LGraphNodeExecution extends LGraphNode {
     ) => void;
     onAfterExecuteNode?: (param?: unknown, options?: TriggerOptions) => void;
     updateOutputData?: (slot: number) => void;
-
-    private getExecutionHost(): LiteGraphNodeExecutionHost {
-        const host = (LGraphNode.liteGraph || {}) as Partial<LiteGraphNodeExecutionHost>;
-        return { ...defaultExecutionHost, ...host };
-    }
 
     private getExecutionGraph(): LGraphExecutionStateLike | null {
         return (this.graph as unknown as LGraphExecutionStateLike) || null;
@@ -615,7 +616,7 @@ export class LGraphNodeExecution extends LGraphNode {
             return;
         }
 
-        const host = this.getExecutionHost();
+        const host = resolveNodeExecutionHost(this);
         const graph = this.getExecutionGraph();
         if (graph) {
             graph._last_trigger_time = host.getTime();
@@ -673,7 +674,7 @@ export class LGraphNodeExecution extends LGraphNode {
             return;
         }
 
-        const host = this.getExecutionHost();
+        const host = resolveNodeExecutionHost(this);
         const graph = this.getExecutionGraph() as LGraphExecutionStateLike | null;
         if (!graph) {
             return;

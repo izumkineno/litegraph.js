@@ -1,4 +1,5 @@
 import type { LiteGraphConstantsShape } from "../core/litegraph.constants";
+import { createClassHostResolver } from "../core/host-resolver";
 import type { SerializedLGraph } from "../types/serialization";
 import type { LGraphGroup } from "./LGraphGroup";
 import type { LGraphNodeCanvasCollab as LGraphNode } from "./LGraphNode.canvas-collab";
@@ -22,6 +23,11 @@ const defaultPersistenceHost: LiteGraphPersistenceHost = {
     getTime: () => Date.now(),
     VERSION: 0,
 };
+
+const resolvePersistenceHost = createClassHostResolver(defaultPersistenceHost, {
+    cacheKey: "LGraph.persistence",
+    fallbackOwners: [() => LGraphPersistence, () => LGraphIOEvents],
+});
 
 interface SerializedNodePersistenceLike {
     id: number;
@@ -78,26 +84,10 @@ export class LGraphPersistence extends LGraphIOEvents {
     onSerialize?: (data: GraphDataForSerialize) => void;
     onConfigure?: (data: SerializedGraphPersistenceLike) => void;
 
-    private getPersistenceHost(): LiteGraphPersistenceHost {
-        const ctor = this.constructor as {
-            liteGraph?: Partial<LiteGraphPersistenceHost>;
-        };
-        const host =
-            (ctor.liteGraph ||
-                (LGraphPersistence as unknown as {
-                    liteGraph?: Partial<LiteGraphPersistenceHost>;
-                }).liteGraph ||
-                (LGraphIOEvents as unknown as {
-                    liteGraph?: Partial<LiteGraphPersistenceHost>;
-                }).liteGraph ||
-                {}) as Partial<LiteGraphPersistenceHost>;
-        return { ...defaultPersistenceHost, ...host };
-    }
-
     private createFallbackNode(
         nInfo: SerializedNodePersistenceLike
     ): GraphNodePersistenceLike {
-        const host = this.getPersistenceHost();
+        const host = resolvePersistenceHost(this);
         const LGraphNodeCtor = host.LGraphNode as new () => GraphNodePersistenceLike;
         const node = new LGraphNodeCtor();
         node.last_serialization = nInfo;
@@ -176,7 +166,7 @@ export class LGraphPersistence extends LGraphIOEvents {
             groups: groupsInfo,
             config: this.config,
             extra: this.extra,
-            version: this.getPersistenceHost().VERSION,
+            version: resolvePersistenceHost(this).VERSION,
         };
 
         if (this.onSerialize) {
@@ -241,7 +231,7 @@ export class LGraphPersistence extends LGraphIOEvents {
         // create nodes
         this._nodes = [];
         if (nodes) {
-            const host = this.getPersistenceHost();
+            const host = resolvePersistenceHost(this);
             for (let i = 0, l = nodes.length; i < l; ++i) {
                 const nInfo = nodes[i]; // stored info
                 const createNode = host.createNode as (
@@ -285,7 +275,7 @@ export class LGraphPersistence extends LGraphIOEvents {
         // groups
         this._groups.length = 0;
         if (graphData.groups) {
-            const host = this.getPersistenceHost();
+            const host = resolvePersistenceHost(this);
             const LGraphGroupCtor = host.LGraphGroup as new () => GraphGroupPersistenceLike;
             for (let i = 0; i < graphData.groups.length; ++i) {
                 const group = new LGraphGroupCtor();

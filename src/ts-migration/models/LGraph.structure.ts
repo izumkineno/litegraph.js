@@ -1,6 +1,7 @@
 import type { LiteGraphConstantsShape } from "../core/litegraph.constants";
 import type { LGraphGroup } from "./LGraphGroup";
 import type { LGraphNodeCanvasCollab as LGraphNode } from "./LGraphNode.canvas-collab";
+import { createClassHostResolver } from "../core/host-resolver";
 import { type LiteGraphLifecycleHost } from "./LGraph.lifecycle";
 import { LGraphExecution } from "./LGraph.execution";
 import { invokeGraphOnNodeAddedCompatHook } from "./LGraph.hooks";
@@ -24,6 +25,11 @@ const defaultStructureHost: LiteGraphStructureHost = {
     MAX_NUMBER_OF_NODES: 1000,
     registered_node_types: {},
 };
+
+const resolveStructureHost = createClassHostResolver(defaultStructureHost, {
+    cacheKey: "LGraph.structure",
+    fallbackOwners: [() => LGraphStructure, () => LGraphExecution],
+});
 
 interface GraphInputSlotStructureLike {
     link: number | null;
@@ -78,22 +84,6 @@ export class LGraphStructure extends LGraphExecution {
     onNodeAdded?: (node: GraphNodeStructureLike) => void;
     onNodeRemoved?: (node: GraphNodeStructureLike) => void;
 
-    private getStructureHost(): LiteGraphStructureHost {
-        const ctor = this.constructor as {
-            liteGraph?: Partial<LiteGraphStructureHost>;
-        };
-        const host =
-            (ctor.liteGraph ||
-                (LGraphStructure as unknown as {
-                    liteGraph?: Partial<LiteGraphStructureHost>;
-                }).liteGraph ||
-                (LGraphExecution as unknown as {
-                    liteGraph?: Partial<LiteGraphStructureHost>;
-                }).liteGraph ||
-                {}) as Partial<LiteGraphStructureHost>;
-        return { ...defaultStructureHost, ...host };
-    }
-
     private getNodesByIdMap(): Record<string, GraphNodeStructureLike> {
         return this._nodes_by_id as unknown as Record<string, GraphNodeStructureLike>;
     }
@@ -136,7 +126,7 @@ export class LGraphStructure extends LGraphExecution {
             return undefined;
         }
 
-        const host = this.getStructureHost();
+        const host = resolveStructureHost(this);
 
         // groups
         if (this.isGroupNode(node, host)) {
@@ -220,7 +210,7 @@ export class LGraphStructure extends LGraphExecution {
      * @param {LGraphNode} node the instance of the node
      */
     remove(node: GraphNodeStructureLike | GraphGroupStructureLike): void {
-        const host = this.getStructureHost();
+        const host = resolveStructureHost(this);
 
         if (this.isGroupNode(node, host)) {
             const groups = this.getGroupArray();
@@ -428,7 +418,7 @@ export class LGraphStructure extends LGraphExecution {
         nodes_list?: Array<GraphNodeStructureLike | GraphGroupStructureLike>,
         margin?: number
     ): T | GraphGroupStructureLike | null {
-        const host = this.getStructureHost();
+        const host = resolveStructureHost(this);
         const list =
             nodes_list ||
             (this._nodes as unknown as Array<
@@ -474,7 +464,7 @@ export class LGraphStructure extends LGraphExecution {
      * @method checkNodeTypes
      */
     checkNodeTypes(): void {
-        const host = this.getStructureHost();
+        const host = resolveStructureHost(this);
         const nodes = this.getNodeArray();
         const nodesById = this.getNodesByIdMap();
         let changes = false;

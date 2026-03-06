@@ -5,6 +5,7 @@ import type {
     Vector2,
     WidgetCallback,
 } from "../types/core-types";
+import { createClassHostResolver } from "../core/host-resolver";
 import type { LiteGraphConstantsShape } from "../core/litegraph.constants";
 import { LGraphNodeExecution } from "./LGraphNode.execution";
 
@@ -31,6 +32,11 @@ const defaultPortsWidgetsHost: LiteGraphNodePortsWidgetsHost = {
     NODE_WIDGET_HEIGHT: 20,
     auto_load_slot_types: false,
 };
+
+const resolvePortsWidgetsHost = createClassHostResolver(defaultPortsWidgetsHost, {
+    cacheKey: "LGraphNode.ports-widgets",
+    fallbackOwners: [() => LGraphNodePortsWidgets],
+});
 
 interface LGraphNodePortsWidgetsClassMetadata extends Function {
     size?: Vector2;
@@ -77,16 +83,6 @@ export class LGraphNodePortsWidgets extends LGraphNodeExecution {
     declare onInputAdded?: (input: InputSlot) => void;
     onInputRemoved?: (slot: number, slot_info: InputSlot) => void;
     onGetPropertyInfo?: (property: string) => PropertyInfo | null;
-
-    private getPortsWidgetsHost(): LiteGraphNodePortsWidgetsHost {
-        const classHost = (LGraphNodePortsWidgets as typeof LGraphNodePortsWidgets & {
-            liteGraph?: Partial<LiteGraphNodePortsWidgetsHost>;
-        }).liteGraph;
-        const ctorHost = (this.constructor as typeof LGraphNodePortsWidgets & {
-            liteGraph?: Partial<LiteGraphNodePortsWidgetsHost>;
-        }).liteGraph;
-        return { ...defaultPortsWidgetsHost, ...(classHost || {}), ...(ctorHost || {}) };
-    }
 
     private getPortsWidgetsClassMeta(): LGraphNodePortsWidgetsClassMetadata {
         return this.constructor as LGraphNodePortsWidgetsClassMetadata;
@@ -177,7 +173,7 @@ export class LGraphNodePortsWidgets extends LGraphNodeExecution {
             this.onOutputAdded(output);
         }
 
-        const host = this.getPortsWidgetsHost();
+        const host = resolvePortsWidgetsHost(this);
         if (host.auto_load_slot_types) {
             (
                 host.registerNodeAndSlotType as NonNullable<
@@ -199,7 +195,7 @@ export class LGraphNodePortsWidgets extends LGraphNodeExecution {
     addOutputs(
         array: [string, string | -1, Partial<INodeOutputSlot> | undefined][]
     ): void {
-        const host = this.getPortsWidgetsHost();
+        const host = resolvePortsWidgetsHost(this);
         for (let i = 0; i < array.length; ++i) {
             const info = array[i];
             const o = {
@@ -307,7 +303,7 @@ export class LGraphNodePortsWidgets extends LGraphNodeExecution {
             this.onInputAdded(input);
         }
 
-        const host = this.getPortsWidgetsHost();
+        const host = resolvePortsWidgetsHost(this);
         (
             host.registerNodeAndSlotType as NonNullable<
                 LiteGraphNodePortsWidgetsHost["registerNodeAndSlotType"]
@@ -326,7 +322,7 @@ export class LGraphNodePortsWidgets extends LGraphNodeExecution {
     addInputs(
         array: [string, string | -1, Partial<INodeInputSlot> | undefined][]
     ): void {
-        const host = this.getPortsWidgetsHost();
+        const host = resolvePortsWidgetsHost(this);
         for (let i = 0; i < array.length; ++i) {
             const info = array[i];
             const o: InputSlot = { name: info[0], type: info[1], link: null };
@@ -418,7 +414,7 @@ export class LGraphNodePortsWidgets extends LGraphNodeExecution {
      */
     computeSize(out?: Vector2): Vector2 {
         const classMeta = this.getPortsWidgetsClassMeta();
-        const host = this.getPortsWidgetsHost();
+        const host = resolvePortsWidgetsHost(this);
         if (classMeta.size) {
             return classMeta.size.concat() as Vector2;
         }
