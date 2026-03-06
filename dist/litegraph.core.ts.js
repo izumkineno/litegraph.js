@@ -299,6 +299,892 @@ var LiteGraphTSMigration = (function(exports) {
   function isGridSquareShapeAliasSynced(host) {
     return typeof host.GRID_SHAPE === "number" && typeof host.SQUARE_SHAPE === "number" && host.GRID_SHAPE === host.SQUARE_SHAPE;
   }
+  function buildCanvasMenuOptions(canvas, menuClass) {
+    let options = [];
+    if (canvas.getMenuOptions) {
+      options = canvas.getMenuOptions();
+    } else {
+      options = [
+        { content: "Add Node", has_submenu: true, callback: menuClass.onMenuAdd },
+        { content: "Add Group", callback: menuClass.onGroupAdd }
+      ];
+      if (Object.keys(canvas.selected_nodes || {}).length > 1) {
+        options.push({
+          content: "Align",
+          has_submenu: true,
+          callback: menuClass.onGroupAlign
+        });
+      }
+      if (canvas._graph_stack && canvas._graph_stack.length > 0) {
+        options.push(
+          null,
+          { content: "Close subgraph", callback: canvas.closeSubgraph.bind(canvas) }
+        );
+      }
+    }
+    if (canvas.getExtraMenuOptions) {
+      const extra = canvas.getExtraMenuOptions(canvas, options);
+      if (extra) {
+        options = options.concat(extra);
+      }
+    }
+    return options;
+  }
+  function buildNodeMenuOptions(canvas, menuClass, node2) {
+    var _a2, _b2, _c2, _d2, _e, _f;
+    let options = [];
+    if (node2.getMenuOptions) {
+      options = node2.getMenuOptions(canvas);
+    } else {
+      options = [
+        {
+          content: "Inputs",
+          has_submenu: true,
+          disabled: true,
+          callback: menuClass.showMenuNodeOptionalInputs
+        },
+        {
+          content: "Outputs",
+          has_submenu: true,
+          disabled: true,
+          callback: menuClass.showMenuNodeOptionalOutputs
+        },
+        null,
+        {
+          content: "Properties",
+          has_submenu: true,
+          callback: menuClass.onShowMenuNodeProperties
+        },
+        null,
+        { content: "Title", callback: menuClass.onShowPropertyEditor },
+        { content: "Mode", has_submenu: true, callback: menuClass.onMenuNodeMode }
+      ];
+      if (node2.resizable !== false) {
+        options.push({ content: "Resize", callback: menuClass.onMenuResizeNode });
+      }
+      options.push(
+        { content: "Collapse", callback: menuClass.onMenuNodeCollapse },
+        { content: "Pin", callback: menuClass.onMenuNodePin },
+        { content: "Colors", has_submenu: true, callback: menuClass.onMenuNodeColors },
+        { content: "Shapes", has_submenu: true, callback: menuClass.onMenuNodeShapes },
+        null
+      );
+    }
+    if ((_b2 = (_a2 = node2.onGetInputs) == null ? void 0 : _a2.call(node2)) == null ? void 0 : _b2.length) {
+      options[0].disabled = false;
+    }
+    if ((_d2 = (_c2 = node2.onGetOutputs) == null ? void 0 : _c2.call(node2)) == null ? void 0 : _d2.length) {
+      options[1].disabled = false;
+    }
+    if (node2.getExtraMenuOptions) {
+      const extra = node2.getExtraMenuOptions(canvas, options);
+      if (extra) {
+        extra.push(null);
+        options = extra.concat(options);
+      }
+    }
+    if (node2.clonable !== false) {
+      options.push({ content: "Clone", callback: menuClass.onMenuNodeClone });
+    }
+    options.push({
+      content: "To Subgraph",
+      disabled: node2.type == "graph/subgraph",
+      callback: menuClass.onMenuNodeToSubgraph
+    });
+    if (Object.keys(canvas.selected_nodes || {}).length > 1) {
+      options.push({
+        content: "Align Selected To",
+        has_submenu: true,
+        callback: menuClass.onNodeAlign
+      });
+    }
+    options.push(
+      null,
+      {
+        content: "Remove",
+        disabled: !(node2.removable !== false && !node2.block_delete),
+        callback: menuClass.onMenuNodeRemove
+      }
+    );
+    (_f = (_e = node2.graph) == null ? void 0 : _e.onGetNodeMenuOptions) == null ? void 0 : _f.call(_e, options, node2);
+    return options;
+  }
+  function buildGroupMenuOptions(menuClass) {
+    return [
+      { content: "Title", callback: menuClass.onShowPropertyEditor },
+      { content: "Color", has_submenu: true, callback: menuClass.onMenuNodeColors },
+      {
+        content: "Font size",
+        property: "font_size",
+        type: "Number",
+        callback: menuClass.onShowPropertyEditor
+      },
+      null,
+      { content: "Remove", callback: menuClass.onMenuNodeRemove }
+    ];
+  }
+  function createDialog(context, html, options) {
+    var _a2, _b2, _c2;
+    const host = context.host;
+    const opts = Object.assign(
+      {
+        checkForInput: false,
+        closeOnLeave: true,
+        closeOnLeave_checkModified: true,
+        closeOnClickOutside: true
+      },
+      options || {}
+    );
+    const close_on_leave = !!(opts.closeOnLeave && host.dialog_close_on_mouse_leave);
+    const dialog = document.createElement("div");
+    dialog.className = "graphdialog";
+    dialog.innerHTML = html;
+    dialog.is_modified = false;
+    dialog.modified = () => {
+      dialog.is_modified = true;
+    };
+    dialog.close = () => {
+      var _a3;
+      if (dialog._remove_outside_close) {
+        dialog._remove_outside_close();
+        dialog._remove_outside_close = null;
+      }
+      (_a3 = dialog.parentNode) == null ? void 0 : _a3.removeChild(dialog);
+    };
+    const canvas = context.canvas;
+    if (!canvas) {
+      return dialog;
+    }
+    const rect = canvas.getBoundingClientRect();
+    let x2 = -20;
+    let y2 = -20;
+    if (rect) {
+      x2 -= rect.left;
+      y2 -= rect.top;
+    }
+    if (opts.position) {
+      x2 += opts.position[0];
+      y2 += opts.position[1];
+    } else if (opts.event) {
+      x2 += opts.event.clientX;
+      y2 += opts.event.clientY;
+    } else {
+      x2 += canvas.width * 0.5;
+      y2 += canvas.height * 0.5;
+    }
+    dialog.style.left = x2 + "px";
+    dialog.style.top = y2 + "px";
+    (_a2 = canvas.parentNode) == null ? void 0 : _a2.appendChild(dialog);
+    if (opts.checkForInput) {
+      const inputs = dialog.querySelectorAll("input");
+      let focused = false;
+      if (inputs) {
+        inputs.forEach((input) => {
+          input.addEventListener("keydown", function(e) {
+            dialog.modified();
+            if (e.keyCode == 27) {
+              dialog.close();
+            } else if (e.keyCode != 13) {
+              return;
+            }
+            e.preventDefault();
+            e.stopPropagation();
+          });
+          if (!focused) {
+            input.focus();
+            focused = true;
+          }
+        });
+      }
+    }
+    let dialogCloseTimer = null;
+    let prevent_timeout = false;
+    (_b2 = host.pointerListenerAdd) == null ? void 0 : _b2.call(host, dialog, "leave", () => {
+      if (prevent_timeout) {
+        return;
+      }
+      if (!close_on_leave) {
+        return;
+      }
+      if (opts.closeOnLeave_checkModified && dialog.is_modified) {
+        return;
+      }
+      dialogCloseTimer = setTimeout(dialog.close, host.dialog_close_on_mouse_leave_delay);
+    });
+    (_c2 = host.pointerListenerAdd) == null ? void 0 : _c2.call(host, dialog, "enter", () => {
+      if (dialogCloseTimer) {
+        clearTimeout(dialogCloseTimer);
+      }
+    });
+    const selects = dialog.querySelectorAll("select");
+    if (selects) {
+      selects.forEach((select) => {
+        select.addEventListener("click", () => {
+          prevent_timeout++;
+        });
+        select.addEventListener("blur", () => {
+          prevent_timeout = 0;
+        });
+        select.addEventListener("change", () => {
+          prevent_timeout = -1;
+        });
+      });
+    }
+    if (opts.closeOnClickOutside) {
+      const root = canvas.ownerDocument || document;
+      const onOutsideDown = (e) => {
+        if (!dialog.parentNode) {
+          return;
+        }
+        if (dialog.contains(e.target)) {
+          return;
+        }
+        dialog.close();
+      };
+      root.addEventListener("mousedown", onOutsideDown, true);
+      root.addEventListener("touchstart", onOutsideDown, {
+        capture: true,
+        passive: true
+      });
+      dialog._remove_outside_close = () => {
+        root.removeEventListener("mousedown", onOutsideDown, true);
+        root.removeEventListener("touchstart", onOutsideDown, true);
+      };
+    }
+    dialog.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") {
+        dialog.close();
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    });
+    return dialog;
+  }
+  function createPanel(context, title, options) {
+    var _a2;
+    const root = document.createElement("div");
+    const host = context.host;
+    const menuClass = context.menuClass;
+    const panelOptions = options || {};
+    const ref_window2 = panelOptions.window || context.window;
+    root.className = "litegraph dialog";
+    root.innerHTML = "<div class='dialog-header'><span class='dialog-title'></span></div><div class='dialog-content'></div><div style='display:none;' class='dialog-alt-content'></div><div class='dialog-footer'></div>";
+    root.header = root.querySelector(".dialog-header");
+    if (panelOptions.width) {
+      root.style.width = panelOptions.width + (panelOptions.width.constructor === Number ? "px" : "");
+    }
+    if (panelOptions.height) {
+      root.style.height = panelOptions.height + (panelOptions.height.constructor === Number ? "px" : "");
+    }
+    if (panelOptions.closable) {
+      const close = document.createElement("span");
+      close.innerHTML = "&#10005;";
+      close.classList.add("close");
+      close.addEventListener("click", () => root.close());
+      root.header.appendChild(close);
+    }
+    root.title_element = root.querySelector(".dialog-title");
+    root.title_element.innerText = title;
+    root.content = root.querySelector(".dialog-content");
+    root.alt_content = root.querySelector(".dialog-alt-content");
+    root.footer = root.querySelector(".dialog-footer");
+    root.onOpen = panelOptions.onOpen;
+    root.onClose = panelOptions.onClose;
+    root.close = () => {
+      var _a3, _b2;
+      (_a3 = root.onClose) == null ? void 0 : _a3.call(root);
+      (_b2 = root.parentNode) == null ? void 0 : _b2.removeChild(root);
+    };
+    root.toggleAltContent = (force) => {
+      const showAlt = typeof force !== "undefined" ? !!force : root.alt_content.style.display !== "block";
+      root.alt_content.style.display = showAlt ? "block" : "none";
+      root.content.style.display = showAlt ? "none" : "block";
+    };
+    root.toggleFooterVisibility = (force) => {
+      const show = typeof force !== "undefined" ? !!force : root.footer.style.display !== "block";
+      root.footer.style.display = show ? "block" : "none";
+    };
+    root.clear = () => {
+      root.content.innerHTML = "";
+    };
+    root.addHTML = (code, className, on_footer) => {
+      const elem = document.createElement("div");
+      if (className) {
+        elem.className = className;
+      }
+      elem.innerHTML = code;
+      if (on_footer) {
+        root.footer.appendChild(elem);
+      } else {
+        root.content.appendChild(elem);
+      }
+      return elem;
+    };
+    root.addButton = (name, callback, buttonOptions) => {
+      const elem = document.createElement("button");
+      elem.innerText = name;
+      elem.options = buttonOptions;
+      elem.classList.add("btn");
+      elem.addEventListener("click", callback);
+      root.footer.appendChild(elem);
+      return elem;
+    };
+    root.addSeparator = () => {
+      const elem = document.createElement("div");
+      elem.className = "separator";
+      root.content.appendChild(elem);
+    };
+    root.addWidget = (type, name, value, widgetOptions, callback) => {
+      var _a3;
+      const localOpts = widgetOptions || {};
+      type = String(type || "string").toLowerCase();
+      let strValue = String(value);
+      if (type === "number" && typeof value === "number") {
+        strValue = value.toFixed(3);
+      }
+      const elem = document.createElement("div");
+      elem.className = "property";
+      elem.innerHTML = "<span class='property_name'></span><span class='property_value'></span>";
+      elem.querySelector(".property_name").innerText = localOpts.label || name;
+      const valueElement = elem.querySelector(".property_value");
+      valueElement.innerText = strValue;
+      elem.dataset.property = name;
+      elem.dataset.type = localOpts.type || type;
+      elem.options = localOpts;
+      elem.value = value;
+      const change = (key, nextValue) => {
+        var _a4;
+        (_a4 = localOpts.callback) == null ? void 0 : _a4.call(localOpts, key, nextValue, localOpts);
+        callback == null ? void 0 : callback(key, nextValue, localOpts);
+      };
+      if (type === "code") {
+        elem.addEventListener("click", function() {
+          var _a4;
+          (_a4 = root.inner_showCodePad) == null ? void 0 : _a4.call(root, this.dataset.property);
+        });
+      } else if (type === "boolean") {
+        elem.classList.add("boolean");
+        if (value) {
+          elem.classList.add("bool-on");
+        }
+        elem.addEventListener("click", function() {
+          const propname = this.dataset.property;
+          this.value = !this.value;
+          this.classList.toggle("bool-on");
+          this.querySelector(".property_value").innerText = this.value ? "true" : "false";
+          change(propname, this.value);
+        });
+      } else if (type === "string" || type === "number") {
+        valueElement.setAttribute("contenteditable", "true");
+        valueElement.addEventListener("keydown", (e) => {
+          if (e.code === "Enter" && (type !== "string" || !e.shiftKey)) {
+            e.preventDefault();
+            valueElement.blur();
+          }
+        });
+        valueElement.addEventListener("blur", function() {
+          let nextValue = this.innerText;
+          const prop = this.parentNode.dataset.property;
+          if (this.parentNode.dataset.type === "number") {
+            nextValue = Number(nextValue);
+          }
+          change(prop, nextValue);
+        });
+      } else if (type === "enum" || type === "combo") {
+        valueElement.innerText = ((_a3 = menuClass.getPropertyPrintableValue) == null ? void 0 : _a3.call(menuClass, value, localOpts.values)) || String(value);
+        valueElement.addEventListener("click", (event2) => {
+          const values = localOpts.values || [];
+          const propname = valueElement.parentNode.dataset.property;
+          new host.ContextMenu(
+            values,
+            {
+              event: event2,
+              className: "dark",
+              callback: (selectedValue) => {
+                valueElement.innerText = String(selectedValue);
+                change(propname, selectedValue);
+                return false;
+              }
+            },
+            ref_window2
+          );
+        });
+      }
+      root.content.appendChild(elem);
+      return elem;
+    };
+    (_a2 = root.onOpen) == null ? void 0 : _a2.call(root);
+    return root;
+  }
+  function showSearchBoxController(context, event2, options) {
+    var _a2, _b2, _c2;
+    const host = context.host;
+    const menuClass = context.menuClass;
+    const graphcanvas = context.graphcanvas;
+    const canvas = graphcanvas.canvas;
+    const getSearchBox = () => graphcanvas.getSearchBox();
+    const setSearchBox = (dialog2) => {
+      graphcanvas.setSearchBox(dialog2);
+    };
+    const has_slot_types = !!(host.slot_types_in && host.slot_types_in.length || host.slot_types_out && host.slot_types_out.length);
+    const def_options = {
+      slot_from: null,
+      node_from: null,
+      node_to: null,
+      do_type_filter: host.search_filter_enabled && has_slot_types,
+      type_filter_in: false,
+      type_filter_out: false,
+      show_general_if_none_on_typefilter: true,
+      show_general_after_typefiltered: true,
+      hide_on_mouse_leave: host.search_hide_on_mouse_leave,
+      show_all_if_empty: true,
+      show_all_on_open: host.search_show_all_on_open
+    };
+    const opts = Object.assign(def_options, options || {});
+    if (opts.do_type_filter && !has_slot_types) {
+      opts.do_type_filter = false;
+    }
+    const root_document = (canvas == null ? void 0 : canvas.ownerDocument) || document;
+    const dialog = root_document.createElement("div");
+    dialog.className = "litegraph litesearchbox graphdialog rounded";
+    dialog.innerHTML = "<span class='name'>Search</span> <input autofocus type='text' class='value rounded'/>";
+    if (opts.do_type_filter) {
+      dialog.innerHTML += "<select class='slot_in_type_filter'><option value=''></option></select>";
+      dialog.innerHTML += "<select class='slot_out_type_filter'><option value=''></option></select>";
+    }
+    dialog.innerHTML += "<div class='helper'></div>";
+    if (root_document.fullscreenElement) {
+      root_document.fullscreenElement.appendChild(dialog);
+    } else {
+      root_document.body.appendChild(dialog);
+      root_document.body.style.overflow = "hidden";
+    }
+    const selIn = opts.do_type_filter ? dialog.querySelector(".slot_in_type_filter") : null;
+    const selOut = opts.do_type_filter ? dialog.querySelector(".slot_out_type_filter") : null;
+    dialog.close = () => {
+      setSearchBox(null);
+      dialog.blur();
+      canvas == null ? void 0 : canvas.focus();
+      root_document.body.style.overflow = "";
+      if (dialog._remove_outside_close) {
+        dialog._remove_outside_close();
+        dialog._remove_outside_close = null;
+      }
+      setTimeout(() => {
+        graphcanvas.focusCanvas();
+      }, 20);
+      if (dialog.parentNode) {
+        dialog.parentNode.removeChild(dialog);
+      }
+    };
+    if (graphcanvas.ds.scale > 1) {
+      dialog.style.transform = "scale(" + graphcanvas.ds.scale + ")";
+    }
+    const open_time = host.getTime ? host.getTime() : Date.now();
+    const bindOutsideClose = () => {
+      const onOutsideDown = (e) => {
+        if (!dialog || !getSearchBox()) {
+          return;
+        }
+        const now = host.getTime ? host.getTime() : Date.now();
+        if (now - open_time < 60) {
+          return;
+        }
+        if (dialog.contains(e.target)) {
+          return;
+        }
+        dialog.close();
+      };
+      root_document.addEventListener("mousedown", onOutsideDown, true);
+      root_document.addEventListener("touchstart", onOutsideDown, {
+        capture: true,
+        passive: true
+      });
+      dialog._remove_outside_close = () => {
+        root_document.removeEventListener("mousedown", onOutsideDown, true);
+        root_document.removeEventListener("touchstart", onOutsideDown, true);
+      };
+    };
+    bindOutsideClose();
+    if (opts.hide_on_mouse_leave) {
+      let prevent_timeout = false;
+      let timeout_close = null;
+      (_a2 = host.pointerListenerAdd) == null ? void 0 : _a2.call(host, dialog, "enter", () => {
+        if (timeout_close) {
+          clearTimeout(timeout_close);
+          timeout_close = null;
+        }
+      });
+      (_b2 = host.pointerListenerAdd) == null ? void 0 : _b2.call(host, dialog, "leave", () => {
+        if (prevent_timeout) {
+          return;
+        }
+        timeout_close = setTimeout(() => {
+          dialog.close();
+        }, 500);
+      });
+      if (opts.do_type_filter && selIn && selOut) {
+        selIn.addEventListener("click", () => {
+          prevent_timeout++;
+        });
+        selIn.addEventListener("blur", () => {
+          prevent_timeout = 0;
+        });
+        selIn.addEventListener("change", () => {
+          prevent_timeout = -1;
+        });
+        selOut.addEventListener("click", () => {
+          prevent_timeout++;
+        });
+        selOut.addEventListener("blur", () => {
+          prevent_timeout = 0;
+        });
+        selOut.addEventListener("change", () => {
+          prevent_timeout = -1;
+        });
+      }
+    }
+    if (getSearchBox()) {
+      (_c2 = getSearchBox()) == null ? void 0 : _c2.close();
+    }
+    setSearchBox(dialog);
+    const helper = dialog.querySelector(".helper");
+    let first = null;
+    let timeout = null;
+    let selected = null;
+    const input = dialog.querySelector("input");
+    if (input) {
+      input.addEventListener("blur", function() {
+        if (getSearchBox() && !opts.hide_on_mouse_leave) {
+          setTimeout(function() {
+            if (!getSearchBox()) {
+              return;
+            }
+            const active_element = root_document.activeElement;
+            if (!active_element || !dialog.contains(active_element)) {
+              dialog.close();
+            }
+          }, 0);
+          return;
+        }
+        if (getSearchBox() && opts.hide_on_mouse_leave) {
+          this.focus();
+        }
+      });
+      input.addEventListener("keydown", (e) => {
+        if (e.keyCode == 38) {
+          changeSelection(false);
+        } else if (e.keyCode == 40) {
+          changeSelection(true);
+        } else if (e.keyCode == 27) {
+          dialog.close();
+        } else if (e.keyCode == 13) {
+          refreshHelper();
+          if (selected) {
+            select(selected.innerHTML);
+          } else if (first) {
+            select(first);
+          } else {
+            dialog.close();
+          }
+        } else {
+          if (timeout) {
+            clearInterval(timeout);
+          }
+          timeout = setTimeout(refreshHelper, 250);
+          return;
+        }
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+      });
+    }
+    if (opts.do_type_filter && selIn && selOut) {
+      const slotsIn = host.slot_types_in || [];
+      let inType = opts.type_filter_in;
+      if (inType == host.EVENT || inType == host.ACTION) {
+        inType = "_event_";
+      }
+      for (let i2 = 0; i2 < slotsIn.length; i2++) {
+        const opt = document.createElement("option");
+        opt.value = slotsIn[i2];
+        opt.innerHTML = slotsIn[i2];
+        selIn.appendChild(opt);
+        if (inType !== false && (inType + "").toLowerCase() == (slotsIn[i2] + "").toLowerCase()) {
+          opt.selected = true;
+        }
+      }
+      selIn.addEventListener("change", refreshHelper);
+      const slotsOut = host.slot_types_out || [];
+      let outType = opts.type_filter_out;
+      if (outType == host.EVENT || outType == host.ACTION) {
+        outType = "_event_";
+      }
+      for (let i2 = 0; i2 < slotsOut.length; i2++) {
+        const opt = document.createElement("option");
+        opt.value = slotsOut[i2];
+        opt.innerHTML = slotsOut[i2];
+        selOut.appendChild(opt);
+        if (outType !== false && (outType + "").toLowerCase() == (slotsOut[i2] + "").toLowerCase()) {
+          opt.selected = true;
+        }
+      }
+      selOut.addEventListener("change", refreshHelper);
+    }
+    const rect = canvas == null ? void 0 : canvas.getBoundingClientRect();
+    const left = (event2 ? event2.clientX : ((rect == null ? void 0 : rect.left) || 0) + ((rect == null ? void 0 : rect.width) || 0) * 0.5) - 80;
+    const top = (event2 ? event2.clientY : ((rect == null ? void 0 : rect.top) || 0) + ((rect == null ? void 0 : rect.height) || 0) * 0.5) - 20;
+    dialog.style.left = left + "px";
+    dialog.style.top = top + "px";
+    if (event2 && rect && event2.layerY > rect.height - 200) {
+      helper.style.maxHeight = rect.height - event2.layerY - 20 + "px";
+    }
+    input.focus();
+    if (opts.show_all_on_open) {
+      refreshHelper();
+    }
+    function select(name) {
+      var _a3, _b3, _c3, _d2, _e, _f;
+      if (name) {
+        if (graphcanvas.onSearchBoxSelection) {
+          graphcanvas.onSearchBoxSelection(name, event2, graphcanvas);
+        } else {
+          const extra = (_a3 = host.searchbox_extras) == null ? void 0 : _a3[name.toLowerCase()];
+          if (extra) {
+            name = extra.type;
+          }
+          (_c3 = (_b3 = graphcanvas.graph).beforeChange) == null ? void 0 : _c3.call(_b3);
+          const node2 = (_d2 = host.createNode) == null ? void 0 : _d2.call(host, name);
+          if (node2) {
+            node2.pos = graphcanvas.convertEventToCanvasOffset(event2);
+            graphcanvas.graph.add(node2, false);
+          }
+          if (extra && extra.data && node2) {
+            const nodeCompat = node2;
+            if (extra.data.properties) {
+              for (const i2 in extra.data.properties) {
+                nodeCompat.addProperty(i2, extra.data.properties[i2]);
+              }
+            }
+            if (extra.data.inputs) {
+              nodeCompat.inputs = [];
+              for (const i2 in extra.data.inputs) {
+                nodeCompat.addOutput(extra.data.inputs[i2][0], extra.data.inputs[i2][1]);
+              }
+            }
+            if (extra.data.outputs) {
+              nodeCompat.outputs = [];
+              for (const i2 in extra.data.outputs) {
+                nodeCompat.addOutput(extra.data.outputs[i2][0], extra.data.outputs[i2][1]);
+              }
+            }
+            if (extra.data.title) {
+              nodeCompat.title = extra.data.title;
+            }
+            if (extra.data.json) {
+              nodeCompat.configure(extra.data.json);
+            }
+          }
+          if (opts.node_from && node2) {
+            let iS = false;
+            switch (typeof opts.slot_from) {
+              case "string":
+                iS = opts.node_from.findOutputSlot(opts.slot_from);
+                break;
+              case "object":
+                if (opts.slot_from.name) {
+                  iS = opts.node_from.findOutputSlot(opts.slot_from.name);
+                } else {
+                  iS = -1;
+                }
+                if (iS == -1 && typeof opts.slot_from.slot_index !== "undefined") {
+                  iS = opts.slot_from.slot_index;
+                }
+                break;
+              case "number":
+                iS = opts.slot_from;
+                break;
+              default:
+                iS = 0;
+            }
+            if (typeof opts.node_from.outputs[iS] !== "undefined") {
+              if (iS !== false && iS > -1) {
+                opts.node_from.connectByType(
+                  iS,
+                  node2,
+                  opts.node_from.outputs[iS].type
+                );
+              }
+            }
+          }
+          if (opts.node_to && node2) {
+            let iS = false;
+            switch (typeof opts.slot_from) {
+              case "string":
+                iS = opts.node_to.findInputSlot(opts.slot_from);
+                break;
+              case "object":
+                if (opts.slot_from.name) {
+                  iS = opts.node_to.findInputSlot(opts.slot_from.name);
+                } else {
+                  iS = -1;
+                }
+                if (iS == -1 && typeof opts.slot_from.slot_index !== "undefined") {
+                  iS = opts.slot_from.slot_index;
+                }
+                break;
+              case "number":
+                iS = opts.slot_from;
+                break;
+              default:
+                iS = 0;
+            }
+            if (typeof opts.node_to.inputs[iS] !== "undefined") {
+              if (iS !== false && iS > -1) {
+                opts.node_to.connectByTypeOutput(
+                  iS,
+                  node2,
+                  opts.node_to.inputs[iS].type
+                );
+              }
+            }
+          }
+          (_f = (_e = graphcanvas.graph).afterChange) == null ? void 0 : _f.call(_e);
+        }
+      }
+      dialog.close();
+    }
+    function changeSelection(forward) {
+      const prev = selected;
+      if (selected) {
+        selected.classList.remove("selected");
+      }
+      if (!selected) {
+        selected = forward ? helper.childNodes[0] : helper.childNodes[helper.childNodes.length];
+      } else {
+        selected = forward ? selected.nextSibling : selected.previousSibling;
+        if (!selected) {
+          selected = prev;
+        }
+      }
+      if (!selected) {
+        return;
+      }
+      selected.classList.add("selected");
+      selected.scrollIntoView({ block: "end", behavior: "smooth" });
+    }
+    function refreshHelper() {
+      var _a3;
+      timeout = null;
+      let str = input.value;
+      first = null;
+      helper.innerHTML = "";
+      if (!str && !opts.show_all_if_empty) {
+        return;
+      }
+      if (graphcanvas.onSearchBox) {
+        const list = graphcanvas.onSearchBox(helper, str, graphcanvas);
+        if (list) {
+          for (let i2 = 0; i2 < list.length; ++i2) {
+            addResult(list[i2]);
+          }
+        }
+      } else {
+        let c = 0;
+        str = str.toLowerCase();
+        const filter = graphcanvas.filter || graphcanvas.graph.filter;
+        const currentSearchBox = getSearchBox();
+        const sIn = opts.do_type_filter && currentSearchBox ? currentSearchBox.querySelector(
+          ".slot_in_type_filter"
+        ) : null;
+        const sOut = opts.do_type_filter && currentSearchBox ? currentSearchBox.querySelector(
+          ".slot_out_type_filter"
+        ) : null;
+        const search_limit = menuClass.search_limit !== void 0 ? menuClass.search_limit : -1;
+        const inner_test_filter = (type, optsIn) => {
+          var _a4, _b3, _c3;
+          const optsDef = {
+            skipFilter: false,
+            inTypeOverride: false,
+            outTypeOverride: false
+          };
+          const local = Object.assign(optsDef, {});
+          const ctor = (_a4 = host.registered_node_types) == null ? void 0 : _a4[type];
+          if (filter && ctor.filter != filter) {
+            return false;
+          }
+          if ((!opts.show_all_if_empty || str) && type.toLowerCase().indexOf(str) === -1) {
+            return false;
+          }
+          if (opts.do_type_filter && !local.skipFilter) {
+            let sV = sIn == null ? void 0 : sIn.value;
+            if (local.inTypeOverride !== false) sV = local.inTypeOverride;
+            if (sIn && sV) {
+              if (((_b3 = host.registered_slot_in_types) == null ? void 0 : _b3[sV]) && host.registered_slot_in_types[sV].nodes) {
+                const doesInc = host.registered_slot_in_types[sV].nodes.includes(type);
+                if (doesInc === false) {
+                  return false;
+                }
+              }
+            }
+            sV = sOut == null ? void 0 : sOut.value;
+            if (local.outTypeOverride !== false) sV = local.outTypeOverride;
+            if (sOut && sV) {
+              if (((_c3 = host.registered_slot_out_types) == null ? void 0 : _c3[sV]) && host.registered_slot_out_types[sV].nodes) {
+                const doesInc = host.registered_slot_out_types[sV].nodes.includes(type);
+                if (doesInc === false) {
+                  return false;
+                }
+              }
+            }
+          }
+          return true;
+        };
+        for (const i2 in host.searchbox_extras || {}) {
+          const extra = host.searchbox_extras[i2];
+          if ((!opts.show_all_if_empty || str) && extra.desc.toLowerCase().indexOf(str) === -1) {
+            continue;
+          }
+          const ctor = (_a3 = host.registered_node_types) == null ? void 0 : _a3[extra.type];
+          if (ctor && ctor.filter != filter) {
+            continue;
+          }
+          if (!inner_test_filter(extra.type)) {
+            continue;
+          }
+          addResult(extra.desc, "searchbox_extra");
+          if (search_limit !== -1 && c++ > search_limit) {
+            break;
+          }
+        }
+        const keys = Object.keys(host.registered_node_types || {});
+        const filtered = keys.filter((type) => inner_test_filter(type));
+        for (let i2 = 0; i2 < filtered.length; i2++) {
+          addResult(filtered[i2]);
+          if (search_limit !== -1 && c++ > search_limit) {
+            break;
+          }
+        }
+      }
+      function addResult(type, className) {
+        const help = document.createElement("div");
+        if (!first) {
+          first = type;
+        }
+        help.innerText = type;
+        help.dataset["type"] = escape(type);
+        help.className = "litegraph lite-search-item";
+        if (className) {
+          help.className += " " + className;
+        }
+        help.addEventListener("click", function() {
+          select(unescape(this.dataset["type"]));
+        });
+        helper.appendChild(help);
+      }
+    }
+    return dialog;
+  }
   const classHostCache = /* @__PURE__ */ new WeakMap();
   function resolveOwnerConstructor(owner) {
     if (typeof owner === "function") {
@@ -6268,445 +7154,31 @@ var LiteGraphTSMigration = (function(exports) {
     }
     showSearchBox(event2, options) {
       this.setActiveCanvas();
-      const host = this.menuHost();
-      const has_slot_types = !!(host.slot_types_in && host.slot_types_in.length || host.slot_types_out && host.slot_types_out.length);
-      const def_options = {
-        slot_from: null,
-        node_from: null,
-        node_to: null,
-        do_type_filter: host.search_filter_enabled && has_slot_types,
-        type_filter_in: false,
-        type_filter_out: false,
-        show_general_if_none_on_typefilter: true,
-        show_general_after_typefiltered: true,
-        hide_on_mouse_leave: host.search_hide_on_mouse_leave,
-        show_all_if_empty: true,
-        show_all_on_open: host.search_show_all_on_open
-      };
-      const opts = Object.assign(def_options, options || {});
-      if (opts.do_type_filter && !has_slot_types) {
-        opts.do_type_filter = false;
-      }
-      const that2 = this;
-      const graphcanvas = this.menuClass().active_canvas;
-      const canvas = graphcanvas.canvas;
-      const root_document = canvas.ownerDocument || document;
-      const dialog = document.createElement("div");
-      dialog.className = "litegraph litesearchbox graphdialog rounded";
-      dialog.innerHTML = "<span class='name'>Search</span> <input autofocus type='text' class='value rounded'/>";
-      if (opts.do_type_filter) {
-        dialog.innerHTML += "<select class='slot_in_type_filter'><option value=''></option></select>";
-        dialog.innerHTML += "<select class='slot_out_type_filter'><option value=''></option></select>";
-      }
-      dialog.innerHTML += "<div class='helper'></div>";
-      if (root_document.fullscreenElement) {
-        root_document.fullscreenElement.appendChild(dialog);
-      } else {
-        root_document.body.appendChild(dialog);
-        root_document.body.style.overflow = "hidden";
-      }
-      const selIn = opts.do_type_filter ? dialog.querySelector(".slot_in_type_filter") : null;
-      const selOut = opts.do_type_filter ? dialog.querySelector(".slot_out_type_filter") : null;
-      dialog.close = () => {
-        that2.search_box = null;
-        dialog.blur();
-        canvas.focus();
-        root_document.body.style.overflow = "";
-        if (dialog._remove_outside_close) {
-          dialog._remove_outside_close();
-          dialog._remove_outside_close = null;
-        }
-        setTimeout(() => {
-          var _a2;
-          (_a2 = that2.canvas) == null ? void 0 : _a2.focus();
-        }, 20);
-        if (dialog.parentNode) {
-          dialog.parentNode.removeChild(dialog);
-        }
-      };
-      if (this.ds.scale > 1) {
-        dialog.style.transform = "scale(" + this.ds.scale + ")";
-      }
-      const open_time = host.getTime ? host.getTime() : Date.now();
-      const bindOutsideClose = () => {
-        const onOutsideDown = (e) => {
-          if (!dialog || !that2.search_box) {
-            return;
-          }
-          const now = host.getTime ? host.getTime() : Date.now();
-          if (now - open_time < 60) {
-            return;
-          }
-          if (dialog.contains(e.target)) {
-            return;
-          }
-          dialog.close();
-        };
-        root_document.addEventListener("mousedown", onOutsideDown, true);
-        root_document.addEventListener("touchstart", onOutsideDown, { capture: true, passive: true });
-        dialog._remove_outside_close = () => {
-          root_document.removeEventListener("mousedown", onOutsideDown, true);
-          root_document.removeEventListener("touchstart", onOutsideDown, true);
-        };
-      };
-      bindOutsideClose();
-      if (opts.hide_on_mouse_leave) {
-        let prevent_timeout = false;
-        let timeout_close = null;
-        host.pointerListenerAdd(dialog, "enter", () => {
-          if (timeout_close) {
-            clearTimeout(timeout_close);
-            timeout_close = null;
-          }
-        });
-        host.pointerListenerAdd(dialog, "leave", () => {
-          if (prevent_timeout) {
-            return;
-          }
-          timeout_close = setTimeout(() => {
-            dialog.close();
-          }, 500);
-        });
-        if (opts.do_type_filter && selIn && selOut) {
-          selIn.addEventListener("click", () => {
-            prevent_timeout++;
-          });
-          selIn.addEventListener("blur", () => {
-            prevent_timeout = 0;
-          });
-          selIn.addEventListener("change", () => {
-            prevent_timeout = -1;
-          });
-          selOut.addEventListener("click", () => {
-            prevent_timeout++;
-          });
-          selOut.addEventListener("blur", () => {
-            prevent_timeout = 0;
-          });
-          selOut.addEventListener("change", () => {
-            prevent_timeout = -1;
-          });
-        }
-      }
-      if (that2.search_box) {
-        that2.search_box.close();
-      }
-      that2.search_box = dialog;
-      const helper = dialog.querySelector(".helper");
-      let first = null;
-      let timeout = null;
-      let selected = null;
-      const input = dialog.querySelector("input");
-      if (input) {
-        input.addEventListener("blur", function() {
-          if (that2.search_box && !opts.hide_on_mouse_leave) {
-            setTimeout(function() {
-              if (!that2.search_box) {
-                return;
-              }
-              const active_element = root_document.activeElement;
-              if (!active_element || !dialog.contains(active_element)) {
-                dialog.close();
-              }
-            }, 0);
-            return;
-          }
-          if (that2.search_box && opts.hide_on_mouse_leave) {
-            this.focus();
-          }
-        });
-        input.addEventListener("keydown", (e) => {
-          if (e.keyCode == 38) {
-            changeSelection(false);
-          } else if (e.keyCode == 40) {
-            changeSelection(true);
-          } else if (e.keyCode == 27) {
-            dialog.close();
-          } else if (e.keyCode == 13) {
-            refreshHelper();
-            if (selected) {
-              select(selected.innerHTML);
-            } else if (first) {
-              select(first);
-            } else {
-              dialog.close();
-            }
-          } else {
-            if (timeout) {
-              clearInterval(timeout);
-            }
-            timeout = setTimeout(refreshHelper, 250);
-            return;
-          }
-          e.preventDefault();
-          e.stopPropagation();
-          e.stopImmediatePropagation();
-        });
-      }
-      if (opts.do_type_filter && selIn && selOut) {
-        const aSlotsIn = host.slot_types_in || [];
-        let inType = opts.type_filter_in;
-        if (inType == host.EVENT || inType == host.ACTION) {
-          inType = "_event_";
-        }
-        for (let i2 = 0; i2 < aSlotsIn.length; i2++) {
-          const opt = document.createElement("option");
-          opt.value = aSlotsIn[i2];
-          opt.innerHTML = aSlotsIn[i2];
-          selIn.appendChild(opt);
-          if (inType !== false && (inType + "").toLowerCase() == (aSlotsIn[i2] + "").toLowerCase()) {
-            opt.selected = true;
-          }
-        }
-        selIn.addEventListener("change", refreshHelper);
-        const aSlotsOut = host.slot_types_out || [];
-        let outType = opts.type_filter_out;
-        if (outType == host.EVENT || outType == host.ACTION) {
-          outType = "_event_";
-        }
-        for (let i2 = 0; i2 < aSlotsOut.length; i2++) {
-          const opt = document.createElement("option");
-          opt.value = aSlotsOut[i2];
-          opt.innerHTML = aSlotsOut[i2];
-          selOut.appendChild(opt);
-          if (outType !== false && (outType + "").toLowerCase() == (aSlotsOut[i2] + "").toLowerCase()) {
-            opt.selected = true;
-          }
-        }
-        selOut.addEventListener("change", refreshHelper);
-      }
-      const rect = canvas.getBoundingClientRect();
-      const left = (event2 ? event2.clientX : rect.left + rect.width * 0.5) - 80;
-      const top = (event2 ? event2.clientY : rect.top + rect.height * 0.5) - 20;
-      dialog.style.left = left + "px";
-      dialog.style.top = top + "px";
-      if (event2 && event2.layerY > rect.height - 200) {
-        helper.style.maxHeight = rect.height - event2.layerY - 20 + "px";
-      }
-      input.focus();
-      if (opts.show_all_on_open) {
-        refreshHelper();
-      }
-      function select(name) {
-        if (name) {
-          if (that2.onSearchBoxSelection) {
-            that2.onSearchBoxSelection(name, event2, graphcanvas);
-          } else {
-            const extra = host.searchbox_extras[name.toLowerCase()];
-            if (extra) {
-              name = extra.type;
-            }
-            graphcanvas.graph.beforeChange();
-            const node2 = host.createNode(name);
-            if (node2) {
-              node2.pos = graphcanvas.convertEventToCanvasOffset(event2);
-              graphcanvas.graph.add(node2, false);
-            }
-            if (extra && extra.data && node2) {
-              if (extra.data.properties) {
-                for (const i2 in extra.data.properties) {
-                  node2.addProperty(i2, extra.data.properties[i2]);
-                }
-              }
-              if (extra.data.inputs) {
-                node2.inputs = [];
-                for (const i2 in extra.data.inputs) {
-                  node2.addOutput(extra.data.inputs[i2][0], extra.data.inputs[i2][1]);
-                }
-              }
-              if (extra.data.outputs) {
-                node2.outputs = [];
-                for (const i2 in extra.data.outputs) {
-                  node2.addOutput(extra.data.outputs[i2][0], extra.data.outputs[i2][1]);
-                }
-              }
-              if (extra.data.title) {
-                node2.title = extra.data.title;
-              }
-              if (extra.data.json) {
-                node2.configure(extra.data.json);
-              }
-            }
-            if (opts.node_from && node2) {
-              let iS = false;
-              switch (typeof opts.slot_from) {
-                case "string":
-                  iS = opts.node_from.findOutputSlot(opts.slot_from);
-                  break;
-                case "object":
-                  if (opts.slot_from.name) {
-                    iS = opts.node_from.findOutputSlot(opts.slot_from.name);
-                  } else {
-                    iS = -1;
-                  }
-                  if (iS == -1 && typeof opts.slot_from.slot_index !== "undefined") iS = opts.slot_from.slot_index;
-                  break;
-                case "number":
-                  iS = opts.slot_from;
-                  break;
-                default:
-                  iS = 0;
-              }
-              if (typeof opts.node_from.outputs[iS] !== "undefined") {
-                if (iS !== false && iS > -1) {
-                  opts.node_from.connectByType(iS, node2, opts.node_from.outputs[iS].type);
-                }
-              }
-            }
-            if (opts.node_to && node2) {
-              let iS = false;
-              switch (typeof opts.slot_from) {
-                case "string":
-                  iS = opts.node_to.findInputSlot(opts.slot_from);
-                  break;
-                case "object":
-                  if (opts.slot_from.name) {
-                    iS = opts.node_to.findInputSlot(opts.slot_from.name);
-                  } else {
-                    iS = -1;
-                  }
-                  if (iS == -1 && typeof opts.slot_from.slot_index !== "undefined") iS = opts.slot_from.slot_index;
-                  break;
-                case "number":
-                  iS = opts.slot_from;
-                  break;
-                default:
-                  iS = 0;
-              }
-              if (typeof opts.node_to.inputs[iS] !== "undefined") {
-                if (iS !== false && iS > -1) {
-                  opts.node_to.connectByTypeOutput(iS, node2, opts.node_to.inputs[iS].type);
-                }
-              }
-            }
-            graphcanvas.graph.afterChange();
-          }
-        }
-        dialog.close();
-      }
-      function changeSelection(forward) {
-        const prev = selected;
-        if (selected) {
-          selected.classList.remove("selected");
-        }
-        if (!selected) {
-          selected = forward ? helper.childNodes[0] : helper.childNodes[helper.childNodes.length];
-        } else {
-          selected = forward ? selected.nextSibling : selected.previousSibling;
-          if (!selected) {
-            selected = prev;
-          }
-        }
-        if (!selected) {
-          return;
-        }
-        selected.classList.add("selected");
-        selected.scrollIntoView({ block: "end", behavior: "smooth" });
-      }
-      function refreshHelper() {
-        timeout = null;
-        let str = input.value;
-        first = null;
-        helper.innerHTML = "";
-        if (!str && !opts.show_all_if_empty) {
-          return;
-        }
-        if (that2.onSearchBox) {
-          const list = that2.onSearchBox(helper, str, graphcanvas);
-          if (list) {
-            for (let i2 = 0; i2 < list.length; ++i2) {
-              addResult(list[i2]);
+      return showSearchBoxController(
+        {
+          host: this.menuHost(),
+          menuClass: this.menuClass(),
+          graphcanvas: {
+            canvas: this.canvas,
+            ds: this.ds,
+            graph: this.graph,
+            filter: this.filter,
+            getSearchBox: () => this.search_box || null,
+            setSearchBox: (dialog) => {
+              this.search_box = dialog;
+            },
+            onSearchBoxSelection: this.onSearchBoxSelection,
+            onSearchBox: this.onSearchBox,
+            convertEventToCanvasOffset: this.convertEventToCanvasOffset.bind(this),
+            focusCanvas: () => {
+              var _a2;
+              (_a2 = this.canvas) == null ? void 0 : _a2.focus();
             }
           }
-        } else {
-          let c = 0;
-          str = str.toLowerCase();
-          const filter = graphcanvas.filter || graphcanvas.graph.filter;
-          const sIn = opts.do_type_filter && that2.search_box ? that2.search_box.querySelector(".slot_in_type_filter") : null;
-          const sOut = opts.do_type_filter && that2.search_box ? that2.search_box.querySelector(".slot_out_type_filter") : null;
-          const search_limit = that2.menuClass().search_limit !== void 0 ? that2.menuClass().search_limit : -1;
-          const inner_test_filter = (type, optsIn) => {
-            const optsDef = {
-              skipFilter: false,
-              inTypeOverride: false,
-              outTypeOverride: false
-            };
-            const local = Object.assign(optsDef, {});
-            const ctor = host.registered_node_types[type];
-            if (filter && ctor.filter != filter) {
-              return false;
-            }
-            if ((!opts.show_all_if_empty || str) && type.toLowerCase().indexOf(str) === -1) {
-              return false;
-            }
-            if (opts.do_type_filter && !local.skipFilter) {
-              let sV = sIn == null ? void 0 : sIn.value;
-              if (local.inTypeOverride !== false) sV = local.inTypeOverride;
-              if (sIn && sV) {
-                if (host.registered_slot_in_types[sV] && host.registered_slot_in_types[sV].nodes) {
-                  const doesInc = host.registered_slot_in_types[sV].nodes.includes(type);
-                  if (doesInc === false) {
-                    return false;
-                  }
-                }
-              }
-              sV = sOut == null ? void 0 : sOut.value;
-              if (local.outTypeOverride !== false) sV = local.outTypeOverride;
-              if (sOut && sV) {
-                if (host.registered_slot_out_types[sV] && host.registered_slot_out_types[sV].nodes) {
-                  const doesInc = host.registered_slot_out_types[sV].nodes.includes(type);
-                  if (doesInc === false) {
-                    return false;
-                  }
-                }
-              }
-            }
-            return true;
-          };
-          for (const i2 in host.searchbox_extras) {
-            const extra = host.searchbox_extras[i2];
-            if ((!opts.show_all_if_empty || str) && extra.desc.toLowerCase().indexOf(str) === -1) {
-              continue;
-            }
-            const ctor = host.registered_node_types[extra.type];
-            if (ctor && ctor.filter != filter) {
-              continue;
-            }
-            if (!inner_test_filter(extra.type)) {
-              continue;
-            }
-            addResult(extra.desc, "searchbox_extra");
-            if (search_limit !== -1 && c++ > search_limit) {
-              break;
-            }
-          }
-          const keys = Object.keys(host.registered_node_types);
-          const filtered = keys.filter((t) => inner_test_filter(t));
-          for (let i2 = 0; i2 < filtered.length; i2++) {
-            addResult(filtered[i2]);
-            if (search_limit !== -1 && c++ > search_limit) {
-              break;
-            }
-          }
-        }
-        function addResult(type, className) {
-          const help = document.createElement("div");
-          if (!first) {
-            first = type;
-          }
-          help.innerText = type;
-          help.dataset["type"] = escape(type);
-          help.className = "litegraph lite-search-item";
-          if (className) {
-            help.className += " " + className;
-          }
-          help.addEventListener("click", function() {
-            select(unescape(this.dataset["type"]));
-          });
-          helper.appendChild(help);
-        }
-      }
-      return dialog;
+        },
+        event2,
+        options
+      );
     }
     showEditPropertyValue(node2, property, options) {
       if (!node2 || node2.properties[property] === void 0) {
@@ -6810,294 +7282,25 @@ var LiteGraphTSMigration = (function(exports) {
       return dialog;
     }
     createDialog(html, options) {
-      var _a2;
-      const host = this.menuHost();
-      const opts = Object.assign(
+      return createDialog(
         {
-          checkForInput: false,
-          closeOnLeave: true,
-          closeOnLeave_checkModified: true,
-          closeOnClickOutside: true
+          canvas: this.canvas,
+          host: this.menuHost()
         },
-        options || {}
+        html,
+        options
       );
-      const close_on_leave = !!(opts.closeOnLeave && host.dialog_close_on_mouse_leave);
-      const dialog = document.createElement("div");
-      dialog.className = "graphdialog";
-      dialog.innerHTML = html;
-      dialog.is_modified = false;
-      dialog.modified = () => {
-        dialog.is_modified = true;
-      };
-      dialog.close = () => {
-        var _a3;
-        if (dialog._remove_outside_close) {
-          dialog._remove_outside_close();
-          dialog._remove_outside_close = null;
-        }
-        (_a3 = dialog.parentNode) == null ? void 0 : _a3.removeChild(dialog);
-      };
-      const canvas = this.canvas;
-      if (!canvas) {
-        return dialog;
-      }
-      const rect = canvas.getBoundingClientRect();
-      let x2 = -20;
-      let y2 = -20;
-      if (rect) {
-        x2 -= rect.left;
-        y2 -= rect.top;
-      }
-      if (opts.position) {
-        x2 += opts.position[0];
-        y2 += opts.position[1];
-      } else if (opts.event) {
-        x2 += opts.event.clientX;
-        y2 += opts.event.clientY;
-      } else {
-        x2 += canvas.width * 0.5;
-        y2 += canvas.height * 0.5;
-      }
-      dialog.style.left = x2 + "px";
-      dialog.style.top = y2 + "px";
-      (_a2 = canvas.parentNode) == null ? void 0 : _a2.appendChild(dialog);
-      if (opts.checkForInput) {
-        const aI = dialog.querySelectorAll("input");
-        let focused = false;
-        if (aI) {
-          aI.forEach((iX) => {
-            iX.addEventListener("keydown", function(e) {
-              dialog.modified();
-              if (e.keyCode == 27) {
-                dialog.close();
-              } else if (e.keyCode != 13) {
-                return;
-              }
-              e.preventDefault();
-              e.stopPropagation();
-            });
-            if (!focused) {
-              iX.focus();
-              focused = true;
-            }
-          });
-        }
-      }
-      let dialogCloseTimer = null;
-      let prevent_timeout = false;
-      host.pointerListenerAdd(dialog, "leave", () => {
-        if (prevent_timeout) {
-          return;
-        }
-        if (!close_on_leave) {
-          return;
-        }
-        if (opts.closeOnLeave_checkModified && dialog.is_modified) {
-          return;
-        }
-        dialogCloseTimer = setTimeout(dialog.close, host.dialog_close_on_mouse_leave_delay);
-      });
-      host.pointerListenerAdd(dialog, "enter", () => {
-        if (dialogCloseTimer) {
-          clearTimeout(dialogCloseTimer);
-        }
-      });
-      const selInDia = dialog.querySelectorAll("select");
-      if (selInDia) {
-        selInDia.forEach((selIn) => {
-          selIn.addEventListener("click", () => {
-            prevent_timeout++;
-          });
-          selIn.addEventListener("blur", () => {
-            prevent_timeout = 0;
-          });
-          selIn.addEventListener("change", () => {
-            prevent_timeout = -1;
-          });
-        });
-      }
-      if (opts.closeOnClickOutside) {
-        const root = canvas.ownerDocument || document;
-        const onOutsideDown = (e) => {
-          if (!dialog.parentNode) {
-            return;
-          }
-          if (dialog.contains(e.target)) {
-            return;
-          }
-          dialog.close();
-        };
-        root.addEventListener("mousedown", onOutsideDown, true);
-        root.addEventListener("touchstart", onOutsideDown, { capture: true, passive: true });
-        dialog._remove_outside_close = () => {
-          root.removeEventListener("mousedown", onOutsideDown, true);
-          root.removeEventListener("touchstart", onOutsideDown, true);
-        };
-      }
-      dialog.addEventListener("keydown", (e) => {
-        if (e.key === "Escape") {
-          dialog.close();
-          e.preventDefault();
-          e.stopPropagation();
-        }
-      });
-      return dialog;
     }
     createPanel(title, options) {
-      var _a2;
-      options = options || {};
-      const host = this.menuHost();
-      const ref_window2 = options.window || window;
-      const root = document.createElement("div");
-      root.className = "litegraph dialog";
-      root.innerHTML = "<div class='dialog-header'><span class='dialog-title'></span></div><div class='dialog-content'></div><div style='display:none;' class='dialog-alt-content'></div><div class='dialog-footer'></div>";
-      root.header = root.querySelector(".dialog-header");
-      if (options.width) {
-        root.style.width = options.width + (options.width.constructor === Number ? "px" : "");
-      }
-      if (options.height) {
-        root.style.height = options.height + (options.height.constructor === Number ? "px" : "");
-      }
-      if (options.closable) {
-        const close = document.createElement("span");
-        close.innerHTML = "&#10005;";
-        close.classList.add("close");
-        close.addEventListener("click", () => root.close());
-        root.header.appendChild(close);
-      }
-      root.title_element = root.querySelector(".dialog-title");
-      root.title_element.innerText = title;
-      root.content = root.querySelector(".dialog-content");
-      root.alt_content = root.querySelector(".dialog-alt-content");
-      root.footer = root.querySelector(".dialog-footer");
-      root.close = () => {
-        var _a3, _b2;
-        (_a3 = root.onClose) == null ? void 0 : _a3.call(root);
-        (_b2 = root.parentNode) == null ? void 0 : _b2.removeChild(root);
-      };
-      root.toggleAltContent = (force) => {
-        const showAlt = typeof force !== "undefined" ? !!force : root.alt_content.style.display !== "block";
-        root.alt_content.style.display = showAlt ? "block" : "none";
-        root.content.style.display = showAlt ? "none" : "block";
-      };
-      root.toggleFooterVisibility = (force) => {
-        const show = typeof force !== "undefined" ? !!force : root.footer.style.display !== "block";
-        root.footer.style.display = show ? "block" : "none";
-      };
-      root.clear = () => {
-        root.content.innerHTML = "";
-      };
-      root.addHTML = (code, className, on_footer) => {
-        const elem = document.createElement("div");
-        if (className) {
-          elem.className = className;
-        }
-        elem.innerHTML = code;
-        if (on_footer) {
-          root.footer.appendChild(elem);
-        } else {
-          root.content.appendChild(elem);
-        }
-        return elem;
-      };
-      root.addButton = (name, callback, buttonOptions) => {
-        const elem = document.createElement("button");
-        elem.innerText = name;
-        elem.options = buttonOptions;
-        elem.classList.add("btn");
-        elem.addEventListener("click", callback);
-        root.footer.appendChild(elem);
-        return elem;
-      };
-      root.addSeparator = () => {
-        const elem = document.createElement("div");
-        elem.className = "separator";
-        root.content.appendChild(elem);
-      };
-      root.addWidget = (type, name, value, widgetOptions, callback) => {
-        const CanvasClass = this.menuClass();
-        const localOpts = widgetOptions || {};
-        type = String(type || "string").toLowerCase();
-        let strValue = String(value);
-        if (type === "number" && typeof value === "number") {
-          strValue = value.toFixed(3);
-        }
-        const elem = document.createElement("div");
-        elem.className = "property";
-        elem.innerHTML = "<span class='property_name'></span><span class='property_value'></span>";
-        elem.querySelector(".property_name").innerText = localOpts.label || name;
-        const valueElement = elem.querySelector(".property_value");
-        valueElement.innerText = strValue;
-        elem.dataset.property = name;
-        elem.dataset.type = localOpts.type || type;
-        elem.options = localOpts;
-        elem.value = value;
-        const change = (key, v2) => {
-          var _a3;
-          (_a3 = localOpts.callback) == null ? void 0 : _a3.call(localOpts, key, v2, localOpts);
-          callback == null ? void 0 : callback(key, v2, localOpts);
-        };
-        if (type === "code") {
-          elem.addEventListener("click", function() {
-            var _a3;
-            (_a3 = root.inner_showCodePad) == null ? void 0 : _a3.call(root, this.dataset.property);
-          });
-        } else if (type === "boolean") {
-          elem.classList.add("boolean");
-          if (value) {
-            elem.classList.add("bool-on");
-          }
-          elem.addEventListener("click", function() {
-            const propname = this.dataset.property;
-            this.value = !this.value;
-            this.classList.toggle("bool-on");
-            this.querySelector(".property_value").innerText = this.value ? "true" : "false";
-            change(propname, this.value);
-          });
-        } else if (type === "string" || type === "number") {
-          valueElement.setAttribute("contenteditable", "true");
-          valueElement.addEventListener("keydown", (e) => {
-            if (e.code === "Enter" && (type !== "string" || !e.shiftKey)) {
-              e.preventDefault();
-              valueElement.blur();
-            }
-          });
-          valueElement.addEventListener("blur", function() {
-            let v2 = this.innerText;
-            const prop = this.parentNode.dataset.property;
-            if (this.parentNode.dataset.type === "number") {
-              v2 = Number(v2);
-            }
-            change(prop, v2);
-          });
-        } else if (type === "enum" || type === "combo") {
-          valueElement.innerText = CanvasClass.getPropertyPrintableValue(
-            value,
-            localOpts.values
-          );
-          valueElement.addEventListener("click", (event2) => {
-            const values = localOpts.values || [];
-            const propname = valueElement.parentNode.dataset.property;
-            new host.ContextMenu(
-              values,
-              {
-                event: event2,
-                className: "dark",
-                callback: (v2) => {
-                  valueElement.innerText = String(v2);
-                  change(propname, v2);
-                  return false;
-                }
-              },
-              ref_window2
-            );
-          });
-        }
-        root.content.appendChild(elem);
-        return elem;
-      };
-      (_a2 = root.onOpen) == null ? void 0 : _a2.call(root);
-      return root;
+      return createPanel(
+        {
+          host: this.menuHost(),
+          menuClass: this.menuClass(),
+          window: this.getCanvasWindow()
+        },
+        title,
+        options
+      );
     }
     closePanels() {
       var _a2, _b2;
@@ -7420,131 +7623,13 @@ var LiteGraphTSMigration = (function(exports) {
       });
     }
     getCanvasMenuOptions() {
-      const CanvasClass = this.menuClass();
-      let options = [];
-      if (this.getMenuOptions) {
-        options = this.getMenuOptions();
-      } else {
-        options = [
-          { content: "Add Node", has_submenu: true, callback: CanvasClass.onMenuAdd },
-          { content: "Add Group", callback: CanvasClass.onGroupAdd }
-        ];
-        if (Object.keys(this.selected_nodes || {}).length > 1) {
-          options.push({
-            content: "Align",
-            has_submenu: true,
-            callback: CanvasClass.onGroupAlign
-          });
-        }
-        if (this._graph_stack && this._graph_stack.length > 0) {
-          options.push(
-            null,
-            { content: "Close subgraph", callback: this.closeSubgraph.bind(this) }
-          );
-        }
-      }
-      if (this.getExtraMenuOptions) {
-        const extra = this.getExtraMenuOptions(this, options);
-        if (extra) {
-          options = options.concat(extra);
-        }
-      }
-      return options;
+      return buildCanvasMenuOptions(this, this.menuClass());
     }
     getNodeMenuOptions(node2) {
-      var _a2, _b2, _c2, _d2, _e, _f;
-      const CanvasClass = this.menuClass();
-      let options = [];
-      if (node2.getMenuOptions) {
-        options = node2.getMenuOptions(this);
-      } else {
-        options = [
-          {
-            content: "Inputs",
-            has_submenu: true,
-            disabled: true,
-            callback: CanvasClass.showMenuNodeOptionalInputs
-          },
-          {
-            content: "Outputs",
-            has_submenu: true,
-            disabled: true,
-            callback: CanvasClass.showMenuNodeOptionalOutputs
-          },
-          null,
-          {
-            content: "Properties",
-            has_submenu: true,
-            callback: CanvasClass.onShowMenuNodeProperties
-          },
-          null,
-          { content: "Title", callback: CanvasClass.onShowPropertyEditor },
-          { content: "Mode", has_submenu: true, callback: CanvasClass.onMenuNodeMode }
-        ];
-        if (node2.resizable !== false) {
-          options.push({ content: "Resize", callback: CanvasClass.onMenuResizeNode });
-        }
-        options.push(
-          { content: "Collapse", callback: CanvasClass.onMenuNodeCollapse },
-          { content: "Pin", callback: CanvasClass.onMenuNodePin },
-          { content: "Colors", has_submenu: true, callback: CanvasClass.onMenuNodeColors },
-          { content: "Shapes", has_submenu: true, callback: CanvasClass.onMenuNodeShapes },
-          null
-        );
-      }
-      if ((_b2 = (_a2 = node2.onGetInputs) == null ? void 0 : _a2.call(node2)) == null ? void 0 : _b2.length) {
-        options[0].disabled = false;
-      }
-      if ((_d2 = (_c2 = node2.onGetOutputs) == null ? void 0 : _c2.call(node2)) == null ? void 0 : _d2.length) {
-        options[1].disabled = false;
-      }
-      if (node2.getExtraMenuOptions) {
-        const extra = node2.getExtraMenuOptions(this, options);
-        if (extra) {
-          extra.push(null);
-          options = extra.concat(options);
-        }
-      }
-      if (node2.clonable !== false) {
-        options.push({ content: "Clone", callback: CanvasClass.onMenuNodeClone });
-      }
-      options.push({
-        content: "To Subgraph",
-        disabled: node2.type == "graph/subgraph",
-        callback: CanvasClass.onMenuNodeToSubgraph
-      });
-      if (Object.keys(this.selected_nodes || {}).length > 1) {
-        options.push({
-          content: "Align Selected To",
-          has_submenu: true,
-          callback: CanvasClass.onNodeAlign
-        });
-      }
-      options.push(
-        null,
-        {
-          content: "Remove",
-          disabled: !(node2.removable !== false && !node2.block_delete),
-          callback: CanvasClass.onMenuNodeRemove
-        }
-      );
-      (_f = (_e = node2.graph) == null ? void 0 : _e.onGetNodeMenuOptions) == null ? void 0 : _f.call(_e, options, node2);
-      return options;
+      return buildNodeMenuOptions(this, this.menuClass(), node2);
     }
     getGroupMenuOptions(_node) {
-      const CanvasClass = this.menuClass();
-      return [
-        { content: "Title", callback: CanvasClass.onShowPropertyEditor },
-        { content: "Color", has_submenu: true, callback: CanvasClass.onMenuNodeColors },
-        {
-          content: "Font size",
-          property: "font_size",
-          type: "Number",
-          callback: CanvasClass.onShowPropertyEditor
-        },
-        null,
-        { content: "Remove", callback: CanvasClass.onMenuNodeRemove }
-      ];
+      return buildGroupMenuOptions(this.menuClass());
     }
     processContextMenu(node2, event2) {
       var _a2, _b2, _c2, _d2, _e, _f, _g;
