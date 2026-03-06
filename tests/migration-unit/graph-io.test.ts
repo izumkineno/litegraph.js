@@ -61,7 +61,7 @@ describe("graph serializer / deserializer", () => {
                 this._groups.push(item);
             },
             getNodeById(id: number): any {
-                return this._nodes.find((node) => node.id === id) || null;
+                return this._nodes.find((node: { id: number }) => node.id === id) || null;
             },
             updateExecutionOrder: jest.fn(),
             setDirtyCanvas: jest.fn(),
@@ -95,15 +95,20 @@ describe("graph serializer / deserializer", () => {
                 createNode: () => ({
                     id: -1,
                     graph: null,
-                    serialize: () => null,
-                    disconnectInput: () => undefined,
+                    serialize: () => ({ id: -1, type: "test/node" }),
+                    disconnectInput: () => false,
                     configure(data: unknown): void {
                         configuredNodes.push(data);
                     },
                 }),
                 createGroup: () => ({
                     graph: null,
-                    serialize: () => null,
+                    serialize: () => ({
+                        title: "Group",
+                        bounding: [0, 0, 10, 10],
+                        color: "#000",
+                        font_size: 24,
+                    }),
                     configure(data: unknown): void {
                         configuredGroups.push(data);
                     },

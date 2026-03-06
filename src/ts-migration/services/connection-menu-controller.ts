@@ -101,9 +101,10 @@ export function createDefaultNodeForSlotController(
 
     let nodeNewType: any = false;
     if (typeof slotDefault === "object") {
-        for (const key in slotDefault) {
-            if (opts.nodeType == slotDefault[key] || opts.nodeType == "AUTO") {
-                nodeNewType = slotDefault[key];
+        const slotDefaultMap = slotDefault as Record<string, unknown>;
+        for (const key in slotDefaultMap) {
+            if (opts.nodeType == slotDefaultMap[key] || opts.nodeType == "AUTO") {
+                nodeNewType = slotDefaultMap[key];
                 break;
             }
         }
@@ -221,8 +222,12 @@ export function showConnectionMenuController(
         : host.slot_types_default_in;
     if (slotTypesDefault?.[fromSlotType]) {
         if (typeof slotTypesDefault[fromSlotType] === "object") {
-            for (const key in slotTypesDefault[fromSlotType]) {
-                options.push(slotTypesDefault[fromSlotType][key]);
+            const slotDefaults = slotTypesDefault[fromSlotType] as Record<
+                string,
+                unknown
+            >;
+            for (const key in slotDefaults) {
+                options.push(slotDefaults[key]);
             }
         } else {
             options.push(slotTypesDefault[fromSlotType]);

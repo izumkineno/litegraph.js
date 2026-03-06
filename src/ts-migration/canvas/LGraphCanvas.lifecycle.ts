@@ -1,9 +1,6 @@
 import type { Vector2, Vector4 } from "../types/core-types";
 import { createClassHostResolver } from "../core/host-resolver";
 import type { LiteGraphConstantsShape } from "../core/litegraph.constants";
-import type { LGraphPersistence as LGraph } from "../models/LGraph.persistence";
-import type { LGraphGroup } from "../models/LGraphGroup";
-import type { LGraphNodeCanvasCollab as LGraphNode } from "../models/LGraphNode.canvas-collab";
 import { DragAndScale } from "./DragAndScale";
 import { LGraphCanvas as LGraphCanvasStatic } from "./LGraphCanvas.static";
 
@@ -40,10 +37,6 @@ interface LGraphCanvasOptions {
     autoresize?: boolean;
     viewport?: Vector4 | null;
 }
-
-type CanvasGraphRuntime = LGraph;
-type CanvasNodeRuntime = LGraphNode;
-type CanvasGroupRuntime = LGraphGroup;
 
 interface GraphLike {
     _subgraph_node?: unknown;

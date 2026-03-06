@@ -147,7 +147,7 @@ describe("ts-migration litegraph compat parity", () => {
         applyContextMenuCloseAllCompat(liteGraph);
 
         expect(liteGraph.closeAllContextMenus).toBe(closeAll);
-        expect(liteGraph.ContextMenu.closeAllContextMenus).toBe(closeAll);
+        expect(liteGraph.ContextMenu!.closeAllContextMenus).toBe(closeAll);
     });
 
     test("graph onNodeAdded 仅在函数存在时调用", () => {

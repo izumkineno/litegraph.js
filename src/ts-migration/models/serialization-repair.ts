@@ -18,7 +18,7 @@ export interface GraphSerializationRepairResult {
 export interface RepairedSerializedGraphData
     extends Omit<SerializedGraphPersistenceLike, "nodes" | "links" | "groups" | "extra"> {
     nodes: SerializedNodePersistenceLike[];
-    links: unknown[];
+    links: GraphLinkPersistenceInput[];
     groups: unknown[];
     extra: Record<string, unknown>;
 }
@@ -89,7 +89,7 @@ export function repairSerializedGraphForDeserialization(
 ): GraphDeserializationRepairResult {
     const input = data as SerializedGraphPersistenceLike;
     const warnings: string[] = [];
-    const links: unknown[] = [];
+    const links: GraphLinkPersistenceInput[] = [];
     let skippedLinks = 0;
 
     if (Array.isArray(input.links)) {
@@ -105,12 +105,13 @@ export function repairSerializedGraphForDeserialization(
             links.push(linkData);
         }
     } else if (input.links && typeof input.links === "object") {
-        for (const id in input.links) {
-            const linkData = input.links[id];
+        const objectLinks = input.links as Record<string, unknown>;
+        for (const id in objectLinks) {
+            const linkData = objectLinks[id];
             if (!linkData) {
                 continue;
             }
-            links.push(linkData);
+            links.push(linkData as GraphLinkPersistenceInput);
         }
     }
 

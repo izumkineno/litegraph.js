@@ -20,6 +20,11 @@ export type PointerListener =
     | EventListenerObject
     | ((event: Event | TouchNormalizedEvent) => unknown);
 
+type PointerFunctionListener = (
+    this: unknown,
+    event: Event | TouchNormalizedEvent
+) => unknown;
+
 interface ListenerRegistryEntry {
     original: PointerListener;
     wrapped: PointerListener;
@@ -147,7 +152,7 @@ function invokePointerListener(
     event: Event | TouchNormalizedEvent
 ): unknown {
     if (typeof listener === "function") {
-        return listener.call(context, event);
+        return (listener as PointerFunctionListener).call(context, event);
     }
     return listener.handleEvent(event as Event);
 }

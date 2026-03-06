@@ -1,8 +1,5 @@
 import type { Vector2, Vector4 } from "../types/core-types";
 import type { LiteGraphConstantsShape } from "../core/litegraph.constants";
-import type { LGraphPersistence as LGraph } from "../models/LGraph.persistence";
-import type { LGraphGroup } from "../models/LGraphGroup";
-import type { LGraphNodeCanvasCollab as LGraphNode } from "../models/LGraphNode.canvas-collab";
 import type { ContextMenu } from "../ui/ContextMenu";
 import { clamp } from "../utils/clamp";
 import { distance, isInsideRectangle, overlapBounding } from "../utils/math-geometry";
@@ -309,7 +306,6 @@ export class LGraphCanvasRender extends LGraphCanvasInput {
      * @method drawBackCanvas
      **/
     drawBackCanvas(): void {
-        const LiteGraph = this.constants();
         const canvas = this.bgcanvas as HTMLCanvasElement;
         if (!canvas || !this.canvas) {
             return;
@@ -599,7 +595,6 @@ export class LGraphCanvasRender extends LGraphCanvasInput {
                         slot_shape = LiteGraph.GRID_SHAPE;
                     }
 
-                    let doStroke = true;
                     if (slot.type === LiteGraph.EVENT || slot.shape === LiteGraph.BOX_SHAPE) {
                         if (horizontal) {
                             ctx.rect(pos[0] - 5 + 0.5, pos[1] - 8 + 0.5, 10, 14);
@@ -621,7 +616,6 @@ export class LGraphCanvasRender extends LGraphCanvasInput {
                         ctx.rect(pos[0] - 4, pos[1] + 2, 2, 2);
                         ctx.rect(pos[0] - 1, pos[1] + 2, 2, 2);
                         ctx.rect(pos[0] + 2, pos[1] + 2, 2, 2);
-                        doStroke = false;
                     } else {
                         if (low_quality) {
                             ctx.rect(pos[0] - 4, pos[1] - 4, 8, 8);

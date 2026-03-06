@@ -2,7 +2,6 @@ import type { Vector2 } from "../types/core-types";
 import type { GraphCanvasPalettePort } from "../contracts/canvas";
 import { createClassHostResolver } from "../core/host-resolver";
 import type { LiteGraphConstantsShape } from "../core/litegraph.constants";
-import type { LGraphGroup } from "../models/LGraphGroup";
 import type { LGraphNodeCanvasCollab as LGraphNode } from "../models/LGraphNode.canvas-collab";
 import type { ContextMenu } from "../ui/ContextMenu";
 

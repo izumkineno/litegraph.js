@@ -185,7 +185,7 @@ export interface SearchBoxControllerPort {
 
 export interface MenuActionBuilderCanvasPort extends Record<string, unknown> {
     selected_nodes?: Record<string, unknown>;
-    _graph_stack?: unknown[];
+    _graph_stack?: unknown[] | null;
     closeSubgraph: () => void;
     getMenuOptions?: () => any[];
     getExtraMenuOptions?: (canvas: unknown, options: any[]) => any[] | null | undefined;

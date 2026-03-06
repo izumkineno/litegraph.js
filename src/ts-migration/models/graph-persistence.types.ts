@@ -4,6 +4,10 @@ import type { LGraphGroup } from "./LGraphGroup";
 import type { LiteGraphLifecycleHost } from "./LGraph.lifecycle";
 import type { LGraphNodeCanvasCollab as LGraphNode } from "./LGraphNode.canvas-collab";
 
+type BivariantHandler<TArg> = {
+    bivarianceHack(data: TArg): void;
+}["bivarianceHack"];
+
 export interface LiteGraphPersistenceHost
     extends LiteGraphLifecycleHost,
         Pick<LiteGraphConstantsShape, "VERSION"> {
@@ -54,11 +58,12 @@ export interface GraphLinkPersistenceLike {
     target_id: number | string;
     target_slot: number;
     serialize: () => unknown;
-    configure?: (data: unknown) => void;
+    configure?: BivariantHandler<GraphLinkPersistenceInput>;
 }
 
 export type GraphLinkPersistenceInput =
     | GraphLinkPersistenceLike
+    | readonly unknown[]
     | Record<string, unknown>;
 
 export interface GraphDataForSerialize

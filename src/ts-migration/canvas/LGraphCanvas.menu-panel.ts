@@ -1,5 +1,4 @@
 import type { GraphCanvasWidgetPort } from "../contracts/canvas";
-import type { LGraphPersistence as LGraph } from "../models/LGraph.persistence";
 import {
     buildCanvasMenuOptions,
     buildGroupMenuOptions,

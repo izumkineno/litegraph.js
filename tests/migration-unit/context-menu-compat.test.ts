@@ -21,7 +21,7 @@ describe("ts-migration context menu close-all compat", () => {
         expect(result.source).toBe("LiteGraph");
         expect(result.synced).toBe(true);
         expect(host.closeAllContextMenus).toBe(liteGraphClose);
-        expect(host.ContextMenu.closeAllContextMenus).toBe(liteGraphClose);
+        expect(host.ContextMenu!.closeAllContextMenus).toBe(liteGraphClose);
     });
 
     test("LiteGraph 缺失时回退 ContextMenu.closeAllContextMenus", () => {
@@ -36,7 +36,7 @@ describe("ts-migration context menu close-all compat", () => {
         expect(result.source).toBe("ContextMenu");
         expect(result.synced).toBe(true);
         expect(host.closeAllContextMenus).toBe(contextClose);
-        expect(host.ContextMenu.closeAllContextMenus).toBe(contextClose);
+        expect(host.ContextMenu!.closeAllContextMenus).toBe(contextClose);
     });
 
     test("两端都缺失时可使用 fallback，并补齐双入口", () => {

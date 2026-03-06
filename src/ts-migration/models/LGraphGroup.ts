@@ -170,7 +170,7 @@ export class LGraphGroup {
         LGraphNodeCanvasCollab.prototype.setDirtyCanvas;
 
     // Internal compatibility hooks consumed by delegated methods above.
-    private host(): {
+    host(): {
         NODE_TITLE_HEIGHT: number;
         NODE_COLLAPSED_WIDTH: number;
     } {
@@ -180,7 +180,7 @@ export class LGraphGroup {
         };
     }
 
-    private graphRef(): LGraphGroupGraphLike | null {
+    graphRef(): LGraphGroupGraphLike | null {
         return this.graph;
     }
 }

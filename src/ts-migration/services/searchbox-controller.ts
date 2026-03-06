@@ -480,8 +480,9 @@ export function showSearchBoxController(
                 return true;
             };
 
-            for (const i in host.searchbox_extras || {}) {
-                const extra = host.searchbox_extras[i];
+            const searchboxExtras = host.searchbox_extras || {};
+            for (const i in searchboxExtras) {
+                const extra = searchboxExtras[i];
                 if (
                     (!opts.show_all_if_empty || str) &&
                     extra.desc.toLowerCase().indexOf(str) === -1

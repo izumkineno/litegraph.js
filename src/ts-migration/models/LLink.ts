@@ -1,3 +1,4 @@
+import type { GraphLinkPersistenceInput } from "./graph-persistence.types";
 import {
     parseSerializedLLinkInput,
     type LLinkSerializedInput,
@@ -37,7 +38,9 @@ export class LLink {
         this._pos = new Float32Array(2); // center
     }
 
-    configure(o: LLink | LLinkSerializedInput): void {
+    configure(
+        o: LLink | LLinkSerializedInput | GraphLinkPersistenceInput
+    ): void {
         const parsed = parseSerializedLLinkInput(o as LLinkSerializedInput);
         this.id = parsed.id;
         this.type = parsed.type;

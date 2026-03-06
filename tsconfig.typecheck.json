@@ -8,7 +8,9 @@
         "noEmit": true,
         "allowJs": false,
         "checkJs": false,
-        "strict": false,
+        "strict": true,
+        "noUnusedLocals": true,
+        "noUnusedParameters": true,
         "skipLibCheck": true
     },
     "include": ["src/ts-migration/**/*.ts", "tests/**/*.ts"],

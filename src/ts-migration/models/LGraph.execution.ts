@@ -349,15 +349,16 @@ export class LGraphExecution extends LGraph {
     getAncestors(node: GraphNodeExecutionLike): GraphNodeExecutionLike[] {
         const ancestors: GraphNodeExecutionLike[] = [];
         const pending: GraphNodeExecutionLike[] = [node];
-        const visited: Record<number, boolean> = {};
+        const visited: Record<string, boolean> = {};
 
         while (pending.length) {
             const current = pending.shift()!;
             if (!current.inputs) {
                 continue;
             }
-            if (!visited[current.id] && current != node) {
-                visited[current.id] = true;
+            const currentId = String(current.id);
+            if (!visited[currentId] && current != node) {
+                visited[currentId] = true;
                 ancestors.push(current);
             }
 

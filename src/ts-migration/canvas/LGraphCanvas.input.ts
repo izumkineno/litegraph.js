@@ -1,16 +1,11 @@
 import type { Vector2, Vector4 } from "../types/core-types";
 import { createClassHostResolver } from "../core/host-resolver";
 import type { LiteGraphConstantsShape } from "../core/litegraph.constants";
-import type { LGraphPersistence as LGraph } from "../models/LGraph.persistence";
-import type { LGraphGroup } from "../models/LGraphGroup";
 import type { LGraphNodeCanvasCollab as LGraphNode } from "../models/LGraphNode.canvas-collab";
 import { distance, isInsideRectangle, overlapBounding } from "../utils/math-geometry";
 import { LGraphCanvasLifecycle } from "./LGraphCanvas.lifecycle";
 
 type CanvasMouseEventLike = any;
-type CanvasGraphRuntime = LGraph;
-type CanvasNodeRuntime = LGraphNode;
-type CanvasGroupRuntime = LGraphGroup;
 
 type LGraphCanvasInputHost = Pick<
     LiteGraphConstantsShape,

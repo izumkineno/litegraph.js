@@ -92,7 +92,6 @@ export function createDialog(
         }
     }
 
-    let dialogCloseTimer: ReturnType<typeof setTimeout> | null = null;
     let prevent_timeout: any = false;
     floating.watchCloseOnLeave({
         element: dialog,

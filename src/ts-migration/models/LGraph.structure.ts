@@ -360,7 +360,8 @@ export class LGraphStructure extends LGraphExecution {
         output.length = 0;
         const nodes = this.getNodeArray();
         for (let i = 0, l = nodes.length; i < l; ++i) {
-            if (nodes[i].type.toLowerCase() == loweredType) {
+            const nodeType = nodes[i].type;
+            if (typeof nodeType === "string" && nodeType.toLowerCase() == loweredType) {
                 output.push(nodes[i] as T);
             }
         }
@@ -471,16 +472,20 @@ export class LGraphStructure extends LGraphExecution {
 
         for (let i = 0; i < nodes.length; i++) {
             const node = nodes[i];
+            const nodeType = node.type;
+            if (!nodeType) {
+                continue;
+            }
             const ctor = host.registered_node_types
-                ? host.registered_node_types[node.type]
+                ? host.registered_node_types[nodeType]
                 : undefined;
             if (node.constructor == ctor) {
                 continue;
             }
-            console.log("node being replaced by newer version: " + node.type);
+            console.log("node being replaced by newer version: " + nodeType);
             const newnode = (
                 host.createNode as unknown as (type: string) => GraphNodeStructureLike
-            )(node.type);
+            )(nodeType);
             changes = true;
             nodes[i] = newnode;
             newnode.configure(node.serialize());

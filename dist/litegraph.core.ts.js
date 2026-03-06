@@ -764,9 +764,10 @@ var LiteGraphTSMigration = (function(exports) {
     }
     let nodeNewType = false;
     if (typeof slotDefault === "object") {
-      for (const key in slotDefault) {
-        if (opts.nodeType == slotDefault[key] || opts.nodeType == "AUTO") {
-          nodeNewType = slotDefault[key];
+      const slotDefaultMap = slotDefault;
+      for (const key in slotDefaultMap) {
+        if (opts.nodeType == slotDefaultMap[key] || opts.nodeType == "AUTO") {
+          nodeNewType = slotDefaultMap[key];
           break;
         }
       }
@@ -864,8 +865,9 @@ var LiteGraphTSMigration = (function(exports) {
     const slotTypesDefault = isFrom ? host.slot_types_default_out : host.slot_types_default_in;
     if (slotTypesDefault == null ? void 0 : slotTypesDefault[fromSlotType]) {
       if (typeof slotTypesDefault[fromSlotType] === "object") {
-        for (const key in slotTypesDefault[fromSlotType]) {
-          options.push(slotTypesDefault[fromSlotType][key]);
+        const slotDefaults = slotTypesDefault[fromSlotType];
+        for (const key in slotDefaults) {
+          options.push(slotDefaults[key]);
         }
       } else {
         options.push(slotTypesDefault[fromSlotType]);
@@ -3571,8 +3573,9 @@ var LiteGraphTSMigration = (function(exports) {
           }
           return true;
         };
-        for (const i2 in host.searchbox_extras || {}) {
-          const extra = host.searchbox_extras[i2];
+        const searchboxExtras = host.searchbox_extras || {};
+        for (const i2 in searchboxExtras) {
+          const extra = searchboxExtras[i2];
           if ((!opts.show_all_if_empty || str) && extra.desc.toLowerCase().indexOf(str) === -1) {
             continue;
           }
@@ -6630,7 +6633,6 @@ var LiteGraphTSMigration = (function(exports) {
      **/
     drawBackCanvas() {
       var _a2, _b2;
-      this.constants();
       const canvas = this.bgcanvas;
       if (!canvas || !this.canvas) {
         return;
@@ -9944,8 +9946,9 @@ var LiteGraphTSMigration = (function(exports) {
         if (!current.inputs) {
           continue;
         }
-        if (!visited[current.id] && current != node2) {
-          visited[current.id] = true;
+        const currentId = String(current.id);
+        if (!visited[currentId] && current != node2) {
+          visited[currentId] = true;
           ancestors.push(current);
         }
         for (let i2 = 0; i2 < current.inputs.length; ++i2) {
@@ -10218,7 +10221,8 @@ var LiteGraphTSMigration = (function(exports) {
       output.length = 0;
       const nodes = this.getNodeArray();
       for (let i2 = 0, l = nodes.length; i2 < l; ++i2) {
-        if (nodes[i2].type.toLowerCase() == loweredType) {
+        const nodeType = nodes[i2].type;
+        if (typeof nodeType === "string" && nodeType.toLowerCase() == loweredType) {
           output.push(nodes[i2]);
         }
       }
@@ -10309,12 +10313,16 @@ var LiteGraphTSMigration = (function(exports) {
       const nodesById = this.getNodesByIdMap();
       for (let i2 = 0; i2 < nodes.length; i2++) {
         const node2 = nodes[i2];
-        const ctor = host.registered_node_types ? host.registered_node_types[node2.type] : void 0;
+        const nodeType = node2.type;
+        if (!nodeType) {
+          continue;
+        }
+        const ctor = host.registered_node_types ? host.registered_node_types[nodeType] : void 0;
         if (node2.constructor == ctor) {
           continue;
         }
-        console.log("node being replaced by newer version: " + node2.type);
-        const newnode = host.createNode(node2.type);
+        console.log("node being replaced by newer version: " + nodeType);
+        const newnode = host.createNode(nodeType);
         nodes[i2] = newnode;
         newnode.configure(node2.serialize());
         newnode.graph = this;
@@ -10802,8 +10810,9 @@ var LiteGraphTSMigration = (function(exports) {
         links.push(linkData);
       }
     } else if (input.links && typeof input.links === "object") {
-      for (const id in input.links) {
-        const linkData = input.links[id];
+      const objectLinks = input.links;
+      for (const id in objectLinks) {
+        const linkData = objectLinks[id];
         if (!linkData) {
           continue;
         }
