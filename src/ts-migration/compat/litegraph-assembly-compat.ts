@@ -1,4 +1,4 @@
-import { applyLiteGraphApiCompatAliases } from "../types/litegraph-compat";
+import { applyLiteGraphApiCompatAliases } from "./compat-runtime";
 
 type LiteGraphAssemblyCanvasStaticLike = object & {
     prototype: Record<string, unknown>;

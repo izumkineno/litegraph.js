@@ -1,9 +1,10 @@
-export const LGRAPH_ON_NODE_ADDED_DIFF_ID = "graph-hooks.on-node-added" as const;
+import {
+    LITEGRAPH_COMPAT_DIFF_IDS,
+    type LGraphHooksCompatHost,
+} from "../compat/compat-schema";
 
-export interface LGraphHooksCompatHost<TNode = unknown> {
-    onNodeAdded?: ((node: TNode) => void) | null;
-    [key: string]: unknown;
-}
+export const LGRAPH_ON_NODE_ADDED_DIFF_ID =
+    LITEGRAPH_COMPAT_DIFF_IDS.graphHooksOnNodeAdded;
 
 export function hasGraphOnNodeAddedCompatHook<TNode = unknown>(
     graph: LGraphHooksCompatHost<TNode>

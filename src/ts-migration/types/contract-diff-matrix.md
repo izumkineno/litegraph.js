@@ -3,8 +3,8 @@
 本文档用于落地 `src/litegraph.js` 与 `src/litegraph.d.ts` 的契约差异矩阵，对应迁移计划 **Task 36**。
 矩阵项与以下两个文件保持一一对应：
 
-- `src/ts-migration/types/litegraph-compat.ts` 中 `LITEGRAPH_API_DIFF_MATRIX`
-- `src/ts-migration/types/litegraph-compat.d.ts` 中 `LiteGraphCompatDiffId`
+- `src/ts-migration/compat/compat-schema.ts` 中 `LITEGRAPH_API_DIFF_MATRIX`
+- `src/ts-migration/types/litegraph-compat.d.ts` 经由 `compat-schema.ts` 推导出的类型导出
 
 ## Matrix
 

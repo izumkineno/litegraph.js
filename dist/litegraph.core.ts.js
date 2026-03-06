@@ -1,9 +1,112 @@
 var LiteGraphTSMigration = (function(exports) {
   "use strict";
   var _a, _b, _c, _d;
-  const LGRAPHCANVAS_STATIC_RESIZE_DIFF_ID = "canvas-static.resize";
-  const LGRAPHCANVAS_STATIC_SUBGRAPH_MENU_DIFF_ID = "canvas-static.subgraph-menu";
-  const LGRAPHCANVAS_STATIC_MISSING_APIS_DIFF_ID = "canvas-static.missing-apis";
+  const LITEGRAPH_COMPAT_DIFF_IDS = {
+    constantsGridSquareAlias: "constants.grid-square-alias",
+    canvasStaticResize: "canvas-static.resize",
+    canvasStaticSubgraphMenu: "canvas-static.subgraph-menu",
+    canvasInstanceDeselected: "canvas-instance.deselected",
+    canvasInstanceSlotGraphic: "canvas-instance.slot-graphic",
+    canvasInstanceTouchHandler: "canvas-instance.touch-handler",
+    serializationLinkTupleOrder: "serialization.link-tuple-order",
+    serializationGroupFontField: "serialization.group-font-field",
+    uiCloseAllContextMenus: "ui.close-all-context-menus",
+    graphHooksOnNodeAdded: "graph-hooks.on-node-added",
+    canvasStaticMissingApis: "canvas-static.missing-apis"
+  };
+  const LITEGRAPH_API_DIFF_MATRIX = [
+    {
+      id: LITEGRAPH_COMPAT_DIFF_IDS.constantsGridSquareAlias,
+      area: "constants",
+      runtimeMode: "assembly",
+      dts: "LiteGraph.SQUARE_SHAPE = 6",
+      runtime: "LiteGraph.GRID_SHAPE = 6",
+      strategy: "双向常量别名，保持同值 6"
+    },
+    {
+      id: LITEGRAPH_COMPAT_DIFF_IDS.canvasStaticResize,
+      area: "canvas-static",
+      runtimeMode: "assembly",
+      dts: "LGraphCanvas.onResizeNode",
+      runtime: "LGraphCanvas.onMenuResizeNode",
+      strategy: "静态方法双向别名"
+    },
+    {
+      id: LITEGRAPH_COMPAT_DIFF_IDS.canvasStaticSubgraphMenu,
+      area: "canvas-static",
+      runtimeMode: "assembly",
+      dts: "缺失 onMenuNodeToSubgraph",
+      runtime: "存在 LGraphCanvas.onMenuNodeToSubgraph",
+      strategy: "提供 onNodeToSubgraph 兼容别名"
+    },
+    {
+      id: LITEGRAPH_COMPAT_DIFF_IDS.canvasInstanceDeselected,
+      area: "canvas-instance",
+      runtimeMode: "assembly",
+      dts: "LGraphCanvas.prototype.processNodeDeselected",
+      runtime: "缺失同名实现",
+      strategy: "可选 shim，回退到 deselectNode"
+    },
+    {
+      id: LITEGRAPH_COMPAT_DIFF_IDS.canvasInstanceSlotGraphic,
+      area: "canvas-instance",
+      runtimeMode: "assembly",
+      dts: "LGraphCanvas.prototype.drawSlotGraphic",
+      runtime: "缺失同名实现",
+      strategy: "可选 no-op shim"
+    },
+    {
+      id: LITEGRAPH_COMPAT_DIFF_IDS.canvasInstanceTouchHandler,
+      area: "canvas-instance",
+      runtimeMode: "assembly",
+      dts: "LGraphCanvas.prototype.touchHandler",
+      runtime: "源码注释掉实现",
+      strategy: "可选 no-op shim"
+    },
+    {
+      id: LITEGRAPH_COMPAT_DIFF_IDS.serializationLinkTupleOrder,
+      area: "serialization",
+      runtimeMode: "helper",
+      dts: "[id,type,origin_id,origin_slot,target_id,target_slot]",
+      runtime: "[id,origin_id,origin_slot,target_id,target_slot,type]",
+      strategy: "输入双格式归一化，输出可选 d.ts/runtime 顺序"
+    },
+    {
+      id: LITEGRAPH_COMPAT_DIFF_IDS.serializationGroupFontField,
+      area: "serialization",
+      runtimeMode: "helper",
+      dts: "SerializedLGraphGroup.font",
+      runtime: "SerializedLGraphGroup.font_size",
+      strategy: "输入双字段兼容，统一归一化为 font_size"
+    },
+    {
+      id: LITEGRAPH_COMPAT_DIFF_IDS.uiCloseAllContextMenus,
+      area: "ui",
+      runtimeMode: "assembly",
+      dts: "ContextMenu.closeAllContextMenus",
+      runtime: "LiteGraph.closeAllContextMenus",
+      strategy: "双向挂载同一函数引用"
+    },
+    {
+      id: LITEGRAPH_COMPAT_DIFF_IDS.graphHooksOnNodeAdded,
+      area: "graph-hooks",
+      runtimeMode: "helper",
+      dts: "LGraph.onNodeAdded",
+      runtime: "仅调用点存在，未强定义",
+      strategy: "统一通过 helper 安全触发"
+    },
+    {
+      id: LITEGRAPH_COMPAT_DIFF_IDS.canvasStaticMissingApis,
+      area: "canvas-static",
+      runtimeMode: "assembly",
+      dts: "getBoundaryNodes/alignNodes/onNodeAlign/onGroupAlign/getPropertyPrintableValue",
+      runtime: "均存在",
+      strategy: "迁移层已实现，兼容模块仅做存在性守卫"
+    }
+  ];
+  const LGRAPHCANVAS_STATIC_RESIZE_DIFF_ID = LITEGRAPH_COMPAT_DIFF_IDS.canvasStaticResize;
+  const LGRAPHCANVAS_STATIC_SUBGRAPH_MENU_DIFF_ID = LITEGRAPH_COMPAT_DIFF_IDS.canvasStaticSubgraphMenu;
+  const LGRAPHCANVAS_STATIC_MISSING_APIS_DIFF_ID = LITEGRAPH_COMPAT_DIFF_IDS.canvasStaticMissingApis;
   function applyLGraphCanvasStaticCompatAliases(host) {
     if (!host.onResizeNode && host.onMenuResizeNode) {
       host.onResizeNode = host.onMenuResizeNode;
@@ -72,7 +175,172 @@ var LiteGraphTSMigration = (function(exports) {
     exportsTarget.ContextMenu = globalScope.ContextMenu || (liteGraph == null ? void 0 : liteGraph.ContextMenu);
     return exportsTarget;
   }
-  const CONTEXT_MENU_CLOSE_ALL_DIFF_ID = "ui.close-all-context-menus";
+  const GRID_SQUARE_SHAPE_DIFF_ID = LITEGRAPH_COMPAT_DIFF_IDS.constantsGridSquareAlias;
+  const GRID_SQUARE_SHAPE_DEFAULT = 6;
+  function resolveGridSquareShapeValue(host, fallbackValue = GRID_SQUARE_SHAPE_DEFAULT) {
+    if (typeof host.GRID_SHAPE === "number") {
+      return { value: host.GRID_SHAPE, source: "GRID_SHAPE" };
+    }
+    if (typeof host.SQUARE_SHAPE === "number") {
+      return { value: host.SQUARE_SHAPE, source: "SQUARE_SHAPE" };
+    }
+    return { value: fallbackValue, source: "fallback" };
+  }
+  function applyGridSquareShapeAlias(host, fallbackValue = GRID_SQUARE_SHAPE_DEFAULT) {
+    const beforeGrid = host.GRID_SHAPE;
+    const beforeSquare = host.SQUARE_SHAPE;
+    const resolved = resolveGridSquareShapeValue(host, fallbackValue);
+    host.GRID_SHAPE = resolved.value;
+    host.SQUARE_SHAPE = resolved.value;
+    return {
+      diffId: GRID_SQUARE_SHAPE_DIFF_ID,
+      value: resolved.value,
+      source: resolved.source,
+      changed: beforeGrid !== host.GRID_SHAPE || beforeSquare !== host.SQUARE_SHAPE
+    };
+  }
+  function isGridSquareShapeAliasSynced(host) {
+    return typeof host.GRID_SHAPE === "number" && typeof host.SQUARE_SHAPE === "number" && host.GRID_SHAPE === host.SQUARE_SHAPE;
+  }
+  const LGRAPHGROUP_SERIALIZATION_DIFF_ID = LITEGRAPH_COMPAT_DIFF_IDS.serializationGroupFontField;
+  function normalizeSerializedLGraphGroup(group, defaultFontSize = 24) {
+    const anyGroup = group;
+    let fontSize = parseNumber(anyGroup.font_size);
+    if (fontSize == null) {
+      fontSize = parseNumber(anyGroup.font);
+    }
+    if (fontSize == null) {
+      fontSize = defaultFontSize;
+    }
+    return {
+      title: anyGroup.title,
+      bounding: anyGroup.bounding,
+      color: anyGroup.color,
+      font_size: fontSize
+    };
+  }
+  function denormalizeSerializedLGraphGroup(group) {
+    return {
+      title: group.title,
+      bounding: group.bounding,
+      color: group.color,
+      font: String(group.font_size)
+    };
+  }
+  function parseSerializedLGraphGroupInput(input, defaultFontSize = 24) {
+    return normalizeSerializedLGraphGroup(input, defaultFontSize);
+  }
+  function serializeLGraphGroupShape(shape, order = "runtime") {
+    const runtimeShape = {
+      title: shape.title,
+      bounding: shape.bounding,
+      color: shape.color,
+      font_size: shape.font_size
+    };
+    if (order === "runtime") {
+      return runtimeShape;
+    }
+    return denormalizeSerializedLGraphGroup(runtimeShape);
+  }
+  function parseNumber(v2) {
+    if (typeof v2 === "number" && Number.isFinite(v2)) {
+      return v2;
+    }
+    if (typeof v2 === "string" && v2.trim() !== "") {
+      const parsed = Number(v2);
+      if (Number.isFinite(parsed)) {
+        return parsed;
+      }
+    }
+    return null;
+  }
+  const LGRAPH_ON_NODE_ADDED_DIFF_ID = LITEGRAPH_COMPAT_DIFF_IDS.graphHooksOnNodeAdded;
+  function hasGraphOnNodeAddedCompatHook(graph) {
+    return typeof graph.onNodeAdded === "function";
+  }
+  function invokeGraphOnNodeAddedCompatHook(graph, node2) {
+    const rawHook = graph.onNodeAdded;
+    if (!rawHook) {
+      return false;
+    }
+    rawHook(node2);
+    return true;
+  }
+  const LLINK_SERIALIZATION_DIFF_ID = LITEGRAPH_COMPAT_DIFF_IDS.serializationLinkTupleOrder;
+  function isSerializedLLinkDtsOrder(tuple) {
+    return typeof tuple[1] === "string";
+  }
+  function normalizeSerializedLLinkTuple(tuple) {
+    var _a2, _b2, _c2, _d2, _e, _f, _g, _h, _i, _j, _k, _l;
+    const source = tuple;
+    if (isSerializedLLinkDtsOrder(source)) {
+      return [
+        Number((_a2 = source[0]) != null ? _a2 : 0),
+        Number((_b2 = source[2]) != null ? _b2 : 0),
+        Number((_c2 = source[3]) != null ? _c2 : 0),
+        Number((_d2 = source[4]) != null ? _d2 : 0),
+        Number((_e = source[5]) != null ? _e : 0),
+        String((_f = source[1]) != null ? _f : "")
+      ];
+    }
+    return [
+      Number((_g = source[0]) != null ? _g : 0),
+      Number((_h = source[1]) != null ? _h : 0),
+      Number((_i = source[2]) != null ? _i : 0),
+      Number((_j = source[3]) != null ? _j : 0),
+      Number((_k = source[4]) != null ? _k : 0),
+      String((_l = source[5]) != null ? _l : "")
+    ];
+  }
+  function denormalizeSerializedLLinkTuple(tuple, order = "runtime") {
+    if (order === "runtime") {
+      return [tuple[0], tuple[1], tuple[2], tuple[3], tuple[4], tuple[5]];
+    }
+    return [
+      tuple[0],
+      tuple[5],
+      tuple[1],
+      tuple[2],
+      tuple[3],
+      tuple[4]
+    ];
+  }
+  function parseSerializedLLinkInput(input) {
+    var _a2, _b2, _c2, _d2, _e, _f;
+    if (Array.isArray(input)) {
+      const normalized = normalizeSerializedLLinkTuple(input);
+      return {
+        id: normalized[0],
+        origin_id: normalized[1],
+        origin_slot: normalized[2],
+        target_id: normalized[3],
+        target_slot: normalized[4],
+        type: normalized[5]
+      };
+    }
+    const shape = input;
+    return {
+      id: Number((_a2 = shape.id) != null ? _a2 : 0),
+      type: String((_b2 = shape.type) != null ? _b2 : ""),
+      origin_id: Number((_c2 = shape.origin_id) != null ? _c2 : 0),
+      origin_slot: Number((_d2 = shape.origin_slot) != null ? _d2 : 0),
+      target_id: Number((_e = shape.target_id) != null ? _e : 0),
+      target_slot: Number((_f = shape.target_slot) != null ? _f : 0)
+    };
+  }
+  function serializeLLinkShape(shape, order = "runtime") {
+    var _a2, _b2, _c2, _d2, _e, _f;
+    const runtimeTuple = [
+      Number((_a2 = shape.id) != null ? _a2 : 0),
+      Number((_b2 = shape.origin_id) != null ? _b2 : 0),
+      Number((_c2 = shape.origin_slot) != null ? _c2 : 0),
+      Number((_d2 = shape.target_id) != null ? _d2 : 0),
+      Number((_e = shape.target_slot) != null ? _e : 0),
+      String((_f = shape.type) != null ? _f : "")
+    ];
+    return denormalizeSerializedLLinkTuple(runtimeTuple, order);
+  }
+  const CONTEXT_MENU_CLOSE_ALL_DIFF_ID = LITEGRAPH_COMPAT_DIFF_IDS.uiCloseAllContextMenus;
   function applyContextMenuCloseAllCompat$1(liteGraph, fallback) {
     var _a2;
     const beforeLiteGraph = liteGraph.closeAllContextMenus;
@@ -117,23 +385,53 @@ var LiteGraphTSMigration = (function(exports) {
     }
     return { source: "none" };
   }
-  const LGRAPH_ON_NODE_ADDED_DIFF_ID = "graph-hooks.on-node-added";
-  function hasGraphOnNodeAddedCompatHook(graph) {
-    return typeof graph.onNodeAdded === "function";
-  }
-  function invokeGraphOnNodeAddedCompatHook(graph, node2) {
-    const rawHook = graph.onNodeAdded;
-    if (!rawHook) {
-      return false;
+  const LITEGRAPH_ASSEMBLY_APPLIERS = {
+    [LITEGRAPH_COMPAT_DIFF_IDS.constantsGridSquareAlias]: (targets) => {
+      if (targets.liteGraph) {
+        applyLiteGraphConstantAliases(targets.liteGraph);
+      }
+    },
+    [LITEGRAPH_COMPAT_DIFF_IDS.canvasStaticResize]: (targets) => {
+      if (targets.canvasStatic) {
+        applyLGraphCanvasStaticCompat(targets.canvasStatic);
+      }
+    },
+    [LITEGRAPH_COMPAT_DIFF_IDS.canvasStaticSubgraphMenu]: (targets) => {
+      if (targets.canvasStatic) {
+        applyLGraphCanvasStaticCompat(targets.canvasStatic);
+      }
+    },
+    [LITEGRAPH_COMPAT_DIFF_IDS.canvasInstanceDeselected]: (targets) => {
+      if (targets.canvasPrototype) {
+        applyLGraphCanvasPrototypeCompatShims(targets.canvasPrototype);
+      }
+    },
+    [LITEGRAPH_COMPAT_DIFF_IDS.canvasInstanceSlotGraphic]: (targets) => {
+      if (targets.canvasPrototype) {
+        applyLGraphCanvasPrototypeCompatShims(targets.canvasPrototype);
+      }
+    },
+    [LITEGRAPH_COMPAT_DIFF_IDS.canvasInstanceTouchHandler]: (targets) => {
+      if (targets.canvasPrototype) {
+        applyLGraphCanvasPrototypeCompatShims(targets.canvasPrototype);
+      }
+    },
+    [LITEGRAPH_COMPAT_DIFF_IDS.uiCloseAllContextMenus]: (targets) => {
+      if (targets.liteGraph) {
+        applyContextMenuCloseAllCompat(targets.liteGraph);
+      }
+    },
+    [LITEGRAPH_COMPAT_DIFF_IDS.canvasStaticMissingApis]: (targets) => {
+      if (targets.canvasStatic) {
+        applyLGraphCanvasStaticCompat(targets.canvasStatic);
+      }
     }
-    rawHook(node2);
-    return true;
+  };
+  function isAssemblyCompatDiff(diff) {
+    return diff.runtimeMode === "assembly";
   }
-  function applyLiteGraphConstantAliases(host, fallbackValue = 6) {
-    const resolved = typeof host.GRID_SHAPE === "number" ? host.GRID_SHAPE : typeof host.SQUARE_SHAPE === "number" ? host.SQUARE_SHAPE : fallbackValue;
-    host.GRID_SHAPE = resolved;
-    host.SQUARE_SHAPE = resolved;
-    return resolved;
+  function applyLiteGraphConstantAliases(host, fallbackValue = GRID_SQUARE_SHAPE_DEFAULT) {
+    return applyGridSquareShapeAlias(host, fallbackValue).value;
   }
   function applyLGraphCanvasStaticCompat(host) {
     applyLGraphCanvasStaticCompat$1(host);
@@ -158,15 +456,11 @@ var LiteGraphTSMigration = (function(exports) {
     applyContextMenuCloseAllCompat$1(liteGraph);
   }
   function applyLiteGraphApiCompatAliases(targets) {
-    if (targets.liteGraph) {
-      applyLiteGraphConstantAliases(targets.liteGraph);
-      applyContextMenuCloseAllCompat(targets.liteGraph);
-    }
-    if (targets.canvasStatic) {
-      applyLGraphCanvasStaticCompat(targets.canvasStatic);
-    }
-    if (targets.canvasPrototype) {
-      applyLGraphCanvasPrototypeCompatShims(targets.canvasPrototype);
+    for (const diff of LITEGRAPH_API_DIFF_MATRIX) {
+      if (!isAssemblyCompatDiff(diff)) {
+        continue;
+      }
+      LITEGRAPH_ASSEMBLY_APPLIERS[diff.id](targets);
     }
   }
   function applyLiteGraphAssemblyCompat(bundle) {
@@ -271,33 +565,6 @@ var LiteGraphTSMigration = (function(exports) {
       );
     }
     return globalScope;
-  }
-  const GRID_SQUARE_SHAPE_DIFF_ID = "constants.grid-square-alias";
-  const GRID_SQUARE_SHAPE_DEFAULT = 6;
-  function resolveGridSquareShapeValue(host, fallbackValue = GRID_SQUARE_SHAPE_DEFAULT) {
-    if (typeof host.GRID_SHAPE === "number") {
-      return { value: host.GRID_SHAPE, source: "GRID_SHAPE" };
-    }
-    if (typeof host.SQUARE_SHAPE === "number") {
-      return { value: host.SQUARE_SHAPE, source: "SQUARE_SHAPE" };
-    }
-    return { value: fallbackValue, source: "fallback" };
-  }
-  function applyGridSquareShapeAlias(host, fallbackValue = GRID_SQUARE_SHAPE_DEFAULT) {
-    const beforeGrid = host.GRID_SHAPE;
-    const beforeSquare = host.SQUARE_SHAPE;
-    const resolved = resolveGridSquareShapeValue(host, fallbackValue);
-    host.GRID_SHAPE = resolved.value;
-    host.SQUARE_SHAPE = resolved.value;
-    return {
-      diffId: GRID_SQUARE_SHAPE_DIFF_ID,
-      value: resolved.value,
-      source: resolved.source,
-      changed: beforeGrid !== host.GRID_SHAPE || beforeSquare !== host.SQUARE_SHAPE
-    };
-  }
-  function isGridSquareShapeAliasSynced(host) {
-    return typeof host.GRID_SHAPE === "number" && typeof host.SQUARE_SHAPE === "number" && host.GRID_SHAPE === host.SQUARE_SHAPE;
   }
   function buildCanvasMenuOptions(canvas, menuClass) {
     let options = [];
@@ -9118,79 +9385,68 @@ var LiteGraphTSMigration = (function(exports) {
       return null;
     }
   }
-  const LLINK_SERIALIZATION_DIFF_ID = "serialization.link-tuple-order";
-  function isSerializedLLinkDtsOrder(tuple) {
-    return typeof tuple[1] === "string";
-  }
-  function normalizeSerializedLLinkTuple(tuple) {
-    var _a2, _b2, _c2, _d2, _e, _f, _g, _h, _i, _j, _k, _l;
-    const source = tuple;
-    if (isSerializedLLinkDtsOrder(source)) {
-      return [
-        Number((_a2 = source[0]) != null ? _a2 : 0),
-        Number((_b2 = source[2]) != null ? _b2 : 0),
-        Number((_c2 = source[3]) != null ? _c2 : 0),
-        Number((_d2 = source[4]) != null ? _d2 : 0),
-        Number((_e = source[5]) != null ? _e : 0),
-        String((_f = source[1]) != null ? _f : "")
-      ];
+  function deserializeGraphData(target, data, factories) {
+    for (const key in data) {
+      if (key === "nodes" || key === "groups" || key === "links") {
+        continue;
+      }
+      target[key] = data[key];
     }
-    return [
-      Number((_g = source[0]) != null ? _g : 0),
-      Number((_h = source[1]) != null ? _h : 0),
-      Number((_i = source[2]) != null ? _i : 0),
-      Number((_j = source[3]) != null ? _j : 0),
-      Number((_k = source[4]) != null ? _k : 0),
-      String((_l = source[5]) != null ? _l : "")
-    ];
-  }
-  function denormalizeSerializedLLinkTuple(tuple, order = "runtime") {
-    if (order === "runtime") {
-      return [tuple[0], tuple[1], tuple[2], tuple[3], tuple[4], tuple[5]];
+    const links = {};
+    for (let i2 = 0; i2 < data.links.length; ++i2) {
+      const link = factories.createLink();
+      if (typeof link.configure !== "function") {
+        throw new Error("Graph deserializer requires link.configure()");
+      }
+      link.configure(data.links[i2]);
+      links[link.id] = link;
     }
-    return [
-      tuple[0],
-      tuple[5],
-      tuple[1],
-      tuple[2],
-      tuple[3],
-      tuple[4]
-    ];
-  }
-  function parseSerializedLLinkInput(input) {
-    var _a2, _b2, _c2, _d2, _e, _f;
-    if (Array.isArray(input)) {
-      const normalized = normalizeSerializedLLinkTuple(input);
-      return {
-        id: normalized[0],
-        origin_id: normalized[1],
-        origin_slot: normalized[2],
-        target_id: normalized[3],
-        target_slot: normalized[4],
-        type: normalized[5]
-      };
+    target.links = links;
+    target._nodes = [];
+    for (let i2 = 0; i2 < data.nodes.length; ++i2) {
+      const nodeData = data.nodes[i2];
+      const node2 = factories.createNode(nodeData);
+      node2.id = nodeData.id;
+      target.add(node2, true);
     }
-    const shape = input;
+    for (let i2 = 0; i2 < data.nodes.length; ++i2) {
+      const nodeData = data.nodes[i2];
+      const node2 = target.getNodeById(nodeData.id);
+      if (!node2) {
+        throw new Error(
+          `Deserialized node missing after add: ${String(nodeData.id)}`
+        );
+      }
+      node2.configure(nodeData);
+    }
+    target._groups.length = 0;
+    for (let i2 = 0; i2 < data.groups.length; ++i2) {
+      const group = factories.createGroup();
+      group.configure(data.groups[i2]);
+      target.add(group);
+    }
+    target.updateExecutionOrder();
+    target.extra = data.extra || {};
+    if (target.onConfigure) {
+      target.onConfigure(data);
+    }
+    target._version++;
+    target.setDirtyCanvas(true, true);
+  }
+  function serializeGraphData(source) {
+    const nodes = source.nodes.map((node2) => node2.serialize());
+    const links = source.links.map((link) => link.serialize());
+    const groups = source.groups.map((group) => group.serialize());
     return {
-      id: Number((_a2 = shape.id) != null ? _a2 : 0),
-      type: String((_b2 = shape.type) != null ? _b2 : ""),
-      origin_id: Number((_c2 = shape.origin_id) != null ? _c2 : 0),
-      origin_slot: Number((_d2 = shape.origin_slot) != null ? _d2 : 0),
-      target_id: Number((_e = shape.target_id) != null ? _e : 0),
-      target_slot: Number((_f = shape.target_slot) != null ? _f : 0)
+      last_node_id: source.last_node_id,
+      last_link_id: source.last_link_id,
+      nodes,
+      links,
+      groups,
+      config: source.config,
+      extra: source.extra,
+      version: source.version
     };
-  }
-  function serializeLLinkShape(shape, order = "runtime") {
-    var _a2, _b2, _c2, _d2, _e, _f;
-    const runtimeTuple = [
-      Number((_a2 = shape.id) != null ? _a2 : 0),
-      Number((_b2 = shape.origin_id) != null ? _b2 : 0),
-      Number((_c2 = shape.origin_slot) != null ? _c2 : 0),
-      Number((_d2 = shape.target_id) != null ? _d2 : 0),
-      Number((_e = shape.target_slot) != null ? _e : 0),
-      String((_f = shape.type) != null ? _f : "")
-    ];
-    return denormalizeSerializedLLinkTuple(runtimeTuple, order);
   }
   class LLink {
     constructor(id, type, origin_id, origin_slot, target_id, target_slot) {
@@ -10489,6 +10745,106 @@ var LiteGraphTSMigration = (function(exports) {
       this.sendActionToCanvas("setDirty", [fg, bg]);
     }
   }
+  function prepareGraphForSerialization(graph, createLink = () => new LLink(0, "", 0, 0, 0, 0)) {
+    const warnings = [];
+    let repairedLinks = 0;
+    const graphLinks = graph.links || {};
+    const links = [];
+    for (const id in graphLinks) {
+      let link = graphLinks[id];
+      if (!link) {
+        continue;
+      }
+      if (typeof link.serialize !== "function") {
+        warnings.push(
+          "weird LLink bug, link info is not a LLink but a regular object"
+        );
+        const repairedLink = createLink();
+        for (const key in link) {
+          repairedLink[key] = link[key];
+        }
+        graphLinks[id] = repairedLink;
+        link = graphLinks[id];
+        repairedLinks += 1;
+      }
+      links.push(link);
+    }
+    return {
+      source: {
+        last_node_id: graph.last_node_id,
+        last_link_id: graph.last_link_id,
+        nodes: graph._nodes || [],
+        links,
+        groups: graph._groups || [],
+        config: graph.config,
+        extra: graph.extra || {},
+        version: graph.version || 0
+      },
+      repairedLinks,
+      warnings
+    };
+  }
+  function repairSerializedGraphForDeserialization(data) {
+    const input = data;
+    const warnings = [];
+    const links = [];
+    let skippedLinks = 0;
+    if (Array.isArray(input.links)) {
+      for (let i2 = 0; i2 < input.links.length; ++i2) {
+        const linkData = input.links[i2];
+        if (!linkData) {
+          warnings.push(
+            "serialized graph link data contains errors, skipping."
+          );
+          skippedLinks += 1;
+          continue;
+        }
+        links.push(linkData);
+      }
+    } else if (input.links && typeof input.links === "object") {
+      for (const id in input.links) {
+        const linkData = input.links[id];
+        if (!linkData) {
+          continue;
+        }
+        links.push(linkData);
+      }
+    }
+    return {
+      data: {
+        ...input,
+        nodes: Array.isArray(input.nodes) ? input.nodes : [],
+        links,
+        groups: Array.isArray(input.groups) ? input.groups : [],
+        extra: input.extra || {}
+      },
+      skippedLinks,
+      warnings
+    };
+  }
+  function createNodeWithSerializationRepair(host, data) {
+    const createNode = host.createNode;
+    let node2 = (createNode == null ? void 0 : createNode(data.type, data.title)) || null;
+    if (node2) {
+      return {
+        node: node2,
+        usedFallback: false
+      };
+    }
+    const LGraphNodeCtor = host.LGraphNode;
+    if (!LGraphNodeCtor) {
+      throw new Error(
+        `Unable to create node for serialized type "${String(data.type)}"`
+      );
+    }
+    node2 = new LGraphNodeCtor();
+    node2.last_serialization = data;
+    node2.has_errors = true;
+    return {
+      node: node2,
+      usedFallback: true
+    };
+  }
   const defaultPersistenceHost = {
     debug: false,
     getTime: () => Date.now(),
@@ -10499,14 +10855,6 @@ var LiteGraphTSMigration = (function(exports) {
     fallbackOwners: [() => LGraphPersistence, () => LGraphIOEvents]
   });
   class LGraphPersistence extends LGraphIOEvents {
-    createFallbackNode(nInfo) {
-      const host = resolvePersistenceHost(this);
-      const LGraphNodeCtor = host.LGraphNode;
-      const node2 = new LGraphNodeCtor();
-      node2.last_serialization = nInfo;
-      node2.has_errors = true;
-      return node2;
-    }
     /**
      * Destroys a link
      * @method removeLink
@@ -10531,43 +10879,17 @@ var LiteGraphTSMigration = (function(exports) {
      * @return {Object} value of the node
      */
     serialize() {
-      const nodesInfo = [];
-      const nodes = this._nodes;
-      for (let i2 = 0, l = nodes.length; i2 < l; ++i2) {
-        nodesInfo.push(nodes[i2].serialize());
+      const repaired = prepareGraphForSerialization(
+        this,
+        () => new LLink(0, "", 0, 0, 0, 0)
+      );
+      for (let i2 = 0; i2 < repaired.warnings.length; ++i2) {
+        console.warn(repaired.warnings[i2]);
       }
-      const links = [];
-      const graphLinks = this.links;
-      for (const i2 in graphLinks) {
-        let link = graphLinks[i2];
-        if (!link.serialize) {
-          console.warn(
-            "weird LLink bug, link info is not a LLink but a regular object"
-          );
-          const link2 = new LLink();
-          for (const j in link) {
-            link2[j] = link[j];
-          }
-          graphLinks[i2] = link2;
-          link = graphLinks[i2];
-        }
-        links.push(link.serialize());
-      }
-      const groupsInfo = [];
-      const groups = this._groups;
-      for (let i2 = 0; i2 < groups.length; ++i2) {
-        groupsInfo.push(groups[i2].serialize());
-      }
-      const data = {
-        last_node_id: this.last_node_id,
-        last_link_id: this.last_link_id,
-        nodes: nodesInfo,
-        links,
-        groups: groupsInfo,
-        config: this.config,
-        extra: this.extra,
+      const data = serializeGraphData({
+        ...repaired.source,
         version: resolvePersistenceHost(this).VERSION
-      };
+      });
       if (this.onSerialize) {
         this.onSerialize(data);
       }
@@ -10587,77 +10909,36 @@ var LiteGraphTSMigration = (function(exports) {
       if (!keep_old) {
         this.clear();
       }
-      const nodes = graphData.nodes;
-      if (graphData.links && graphData.links.constructor === Array) {
-        const links = [];
-        for (let i2 = 0; i2 < graphData.links.length; ++i2) {
-          const linkData = graphData.links[i2];
-          if (!linkData) {
-            console.warn("serialized graph link data contains errors, skipping.");
-            continue;
-          }
-          const link = new LLink();
-          link.configure(linkData);
-          links[link.id] = link;
-        }
-        graphData.links = links;
+      const repaired = repairSerializedGraphForDeserialization(graphData);
+      for (let i2 = 0; i2 < repaired.warnings.length; ++i2) {
+        console.warn(repaired.warnings[i2]);
       }
-      for (const i2 in graphData) {
-        if (i2 == "nodes" || i2 == "groups") {
-          continue;
-        }
-        this[i2] = graphData[i2];
-      }
+      const host = resolvePersistenceHost(this);
+      const LGraphGroupCtor = host.LGraphGroup;
       let error = false;
-      this._nodes = [];
-      if (nodes) {
-        const host = resolvePersistenceHost(this);
-        for (let i2 = 0, l = nodes.length; i2 < l; ++i2) {
-          const nInfo = nodes[i2];
-          const createNode = host.createNode;
-          let node2 = createNode(nInfo.type, nInfo.title);
-          if (!node2) {
-            if (host.debug) {
-              console.log(
-                "Node not found or has errors: " + nInfo.type
-              );
+      deserializeGraphData(
+        this,
+        repaired.data,
+        {
+          createLink: () => new LLink(0, "", 0, 0, 0, 0),
+          createNode: (nodeData) => {
+            const result = createNodeWithSerializationRepair(
+              host,
+              nodeData
+            );
+            if (result.usedFallback) {
+              error = true;
+              if (host.debug) {
+                console.log(
+                  "Node not found or has errors: " + nodeData.type
+                );
+              }
             }
-            node2 = this.createFallbackNode(nInfo);
-            error = true;
-          }
-          node2.id = nInfo.id;
-          this.add(
-            node2,
-            true
-          );
+            return result.node;
+          },
+          createGroup: () => new LGraphGroupCtor()
         }
-        for (let i2 = 0, l = nodes.length; i2 < l; ++i2) {
-          const nInfo = nodes[i2];
-          const node2 = this.getNodeById(
-            nInfo.id
-          );
-          if (node2) {
-            node2.configure(nInfo);
-          }
-        }
-      }
-      this._groups.length = 0;
-      if (graphData.groups) {
-        const host = resolvePersistenceHost(this);
-        const LGraphGroupCtor = host.LGraphGroup;
-        for (let i2 = 0; i2 < graphData.groups.length; ++i2) {
-          const group = new LGraphGroupCtor();
-          group.configure(graphData.groups[i2]);
-          this.add(group);
-        }
-      }
-      this.updateExecutionOrder();
-      this.extra = graphData.extra || {};
-      if (this.onConfigure) {
-        this.onConfigure(graphData);
-      }
-      this._version++;
-      this.setDirtyCanvas(true, true);
+      );
       return error;
     }
     load(url, callback) {
@@ -12799,58 +13080,6 @@ var LiteGraphTSMigration = (function(exports) {
         (y2 + this.pos[1]) * graphCanvas.ds.scale + graphCanvas.ds.offset[1]
       ];
     }
-  }
-  const LGRAPHGROUP_SERIALIZATION_DIFF_ID = "serialization.group-font-field";
-  function normalizeSerializedLGraphGroup(group, defaultFontSize = 24) {
-    const anyGroup = group;
-    let fontSize = parseNumber(anyGroup.font_size);
-    if (fontSize == null) {
-      fontSize = parseNumber(anyGroup.font);
-    }
-    if (fontSize == null) {
-      fontSize = defaultFontSize;
-    }
-    return {
-      title: anyGroup.title,
-      bounding: anyGroup.bounding,
-      color: anyGroup.color,
-      font_size: fontSize
-    };
-  }
-  function denormalizeSerializedLGraphGroup(group) {
-    return {
-      title: group.title,
-      bounding: group.bounding,
-      color: group.color,
-      font: String(group.font_size)
-    };
-  }
-  function parseSerializedLGraphGroupInput(input, defaultFontSize = 24) {
-    return normalizeSerializedLGraphGroup(input, defaultFontSize);
-  }
-  function serializeLGraphGroupShape(shape, order = "runtime") {
-    const runtimeShape = {
-      title: shape.title,
-      bounding: shape.bounding,
-      color: shape.color,
-      font_size: shape.font_size
-    };
-    if (order === "runtime") {
-      return runtimeShape;
-    }
-    return denormalizeSerializedLGraphGroup(runtimeShape);
-  }
-  function parseNumber(v2) {
-    if (typeof v2 === "number" && Number.isFinite(v2)) {
-      return v2;
-    }
-    if (typeof v2 === "string" && v2.trim() !== "") {
-      const parsed = Number(v2);
-      if (Number.isFinite(parsed)) {
-        return parsed;
-      }
-    }
-    return null;
   }
   const defaultCanvasColors = {
     node_colors: {

@@ -1,13 +1,14 @@
-export const GRID_SQUARE_SHAPE_DIFF_ID = "constants.grid-square-alias" as const;
+import {
+    LITEGRAPH_COMPAT_DIFF_IDS,
+    type LiteGraphConstantAliasHost,
+} from "../compat/compat-schema";
+
+export const GRID_SQUARE_SHAPE_DIFF_ID =
+    LITEGRAPH_COMPAT_DIFF_IDS.constantsGridSquareAlias;
 export const GRID_SQUARE_SHAPE_DEFAULT = 6;
 
 export type GridSquareShapeSource = "GRID_SHAPE" | "SQUARE_SHAPE" | "fallback";
-
-export interface LiteGraphShapeAliasHost {
-    GRID_SHAPE?: number;
-    SQUARE_SHAPE?: number;
-    [key: string]: unknown;
-}
+export type LiteGraphShapeAliasHost = LiteGraphConstantAliasHost;
 
 export interface GridSquareShapeAliasResult {
     diffId: typeof GRID_SQUARE_SHAPE_DIFF_ID;

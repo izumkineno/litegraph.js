@@ -1,4 +1,10 @@
-export const CONTEXT_MENU_CLOSE_ALL_DIFF_ID = "ui.close-all-context-menus" as const;
+import {
+    LITEGRAPH_COMPAT_DIFF_IDS,
+    type ContextMenuCloseCompatHost,
+    type LiteGraphContextMenuCompatHost,
+} from "../compat/compat-schema";
+
+export type { ContextMenuCloseCompatHost, LiteGraphContextMenuCompatHost };
 
 export type ContextMenuCloseAll = (refWindow?: Window) => void;
 export type ContextMenuCloseAllSource =
@@ -7,15 +13,8 @@ export type ContextMenuCloseAllSource =
     | "fallback"
     | "none";
 
-export interface ContextMenuCloseCompatHost {
-    closeAllContextMenus?: ContextMenuCloseAll;
-}
-
-export interface LiteGraphContextMenuCompatHost {
-    closeAllContextMenus?: ContextMenuCloseAll;
-    ContextMenu?: ContextMenuCloseCompatHost;
-    [key: string]: unknown;
-}
+export const CONTEXT_MENU_CLOSE_ALL_DIFF_ID =
+    LITEGRAPH_COMPAT_DIFF_IDS.uiCloseAllContextMenus;
 
 export interface ContextMenuCloseAllCompatResult {
     diffId: typeof CONTEXT_MENU_CLOSE_ALL_DIFF_ID;

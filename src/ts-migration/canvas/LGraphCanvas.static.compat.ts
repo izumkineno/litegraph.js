@@ -1,23 +1,17 @@
-export const LGRAPHCANVAS_STATIC_RESIZE_DIFF_ID = "canvas-static.resize" as const;
+import {
+    LITEGRAPH_COMPAT_DIFF_IDS,
+    type CompatCallback,
+    type LGraphCanvasStaticCompatHost,
+} from "../compat/compat-schema";
+
+export const LGRAPHCANVAS_STATIC_RESIZE_DIFF_ID =
+    LITEGRAPH_COMPAT_DIFF_IDS.canvasStaticResize;
 export const LGRAPHCANVAS_STATIC_SUBGRAPH_MENU_DIFF_ID =
-    "canvas-static.subgraph-menu" as const;
+    LITEGRAPH_COMPAT_DIFF_IDS.canvasStaticSubgraphMenu;
 export const LGRAPHCANVAS_STATIC_MISSING_APIS_DIFF_ID =
-    "canvas-static.missing-apis" as const;
+    LITEGRAPH_COMPAT_DIFF_IDS.canvasStaticMissingApis;
 
-export type LGraphCanvasStaticCompatCallback = (...args: unknown[]) => unknown;
-
-export interface LGraphCanvasStaticCompatHost {
-    onMenuResizeNode?: LGraphCanvasStaticCompatCallback;
-    onResizeNode?: LGraphCanvasStaticCompatCallback;
-    onMenuNodeToSubgraph?: LGraphCanvasStaticCompatCallback;
-    onNodeToSubgraph?: LGraphCanvasStaticCompatCallback;
-    getBoundaryNodes?: LGraphCanvasStaticCompatCallback;
-    alignNodes?: LGraphCanvasStaticCompatCallback;
-    onNodeAlign?: LGraphCanvasStaticCompatCallback;
-    onGroupAlign?: LGraphCanvasStaticCompatCallback;
-    getPropertyPrintableValue?: LGraphCanvasStaticCompatCallback;
-    [key: string]: unknown;
-}
+export type LGraphCanvasStaticCompatCallback = CompatCallback;
 
 export interface LGraphCanvasStaticMissingApiFallbackResult {
     diffId: typeof LGRAPHCANVAS_STATIC_MISSING_APIS_DIFF_ID;

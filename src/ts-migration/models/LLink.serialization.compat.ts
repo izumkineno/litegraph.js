@@ -1,39 +1,22 @@
+import {
+    LITEGRAPH_COMPAT_DIFF_IDS,
+    type SerializedLLinkCompatInput,
+    type SerializedLLinkDtsInput,
+    type SerializedLLinkOrder,
+    type SerializedLLinkRuntime,
+    type SerializedLLinkRuntimeInput,
+} from "../compat/compat-schema";
 import type { SerializedLLink } from "../types/serialization";
 
-export const LLINK_SERIALIZATION_DIFF_ID = "serialization.link-tuple-order" as const;
-
-export type SerializedLLinkRuntime = [
-    number,
-    number,
-    number,
-    number,
-    number,
-    string
-];
-
-export type SerializedLLinkRuntimeInput = readonly [
-    number,
-    number,
-    number,
-    number,
-    number,
-    string
-];
-
-export type SerializedLLinkDtsInput = readonly [
-    number,
-    string,
-    number,
-    number,
-    number,
-    number
-];
-
-export type SerializedLLinkCompatInput =
-    | SerializedLLink
-    | SerializedLLinkRuntimeInput
-    | SerializedLLinkDtsInput;
-export type SerializedLLinkOrder = "runtime" | "dts";
+export const LLINK_SERIALIZATION_DIFF_ID =
+    LITEGRAPH_COMPAT_DIFF_IDS.serializationLinkTupleOrder;
+export type {
+    SerializedLLinkCompatInput,
+    SerializedLLinkDtsInput,
+    SerializedLLinkOrder,
+    SerializedLLinkRuntime,
+    SerializedLLinkRuntimeInput,
+};
 
 export interface LLinkSerializedShape {
     id: number;

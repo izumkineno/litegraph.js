@@ -1,28 +1,19 @@
+import {
+    LITEGRAPH_COMPAT_DIFF_IDS,
+    type SerializedLGraphGroupCompatInput,
+    type SerializedLGraphGroupOrder,
+    type SerializedLGraphGroupRuntime,
+} from "../compat/compat-schema";
 import type { Vector4 } from "../types/core-types";
 import type { SerializedLGraphGroup } from "../types/serialization";
 
 export const LGRAPHGROUP_SERIALIZATION_DIFF_ID =
-    "serialization.group-font-field" as const;
-
-export interface SerializedLGraphGroupRuntime {
-    title: string;
-    bounding: Vector4;
-    color: string;
-    font_size: number;
-}
-
-export type SerializedLGraphGroupCompatInput =
-    | SerializedLGraphGroupRuntime
-    | SerializedLGraphGroup
-    | {
-          title: string;
-          bounding: Vector4;
-          color: string;
-          font?: string | number;
-          font_size?: string | number;
-      };
-
-export type SerializedLGraphGroupOrder = "runtime" | "dts";
+    LITEGRAPH_COMPAT_DIFF_IDS.serializationGroupFontField;
+export type {
+    SerializedLGraphGroupCompatInput,
+    SerializedLGraphGroupOrder,
+    SerializedLGraphGroupRuntime,
+};
 
 export function normalizeSerializedLGraphGroup(
     group: SerializedLGraphGroupCompatInput,
