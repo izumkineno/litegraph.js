@@ -7,6 +7,8 @@
 
 `ts-migration` 的目标不是重做一套新产品，而是把原先集中在 [`src/litegraph.js`](../litegraph.js) 的单文件实现，拆成可维护的 TypeScript 分层结构，同时保留对既有运行时契约、序列化格式和全局挂载方式的兼容。
 
+截至当前仓库状态，迁移层已经完成了 contracts 解耦、host resolver 收敛、assembly 入口瘦身、canvas 冷路径 UI 服务化、统一浮层基础设施、compat 单一真相，以及 persistence 的 `repair + serializer + deserializer + facade` 分层。
+
 目录大体分成 10 层：
 
 - `core/`: `LiteGraph` 常量、注册表、运行时辅助 API。
@@ -99,7 +101,11 @@
 | `models/LGraph.execution.ts` | 图执行调度层 | 实现 `runStep()`、执行计时、执行顺序更新、拓扑排序、节点布局等执行相关逻辑。 |
 | `models/LGraph.structure.ts` | 图结构管理层 | 实现节点/分组的 `add`、`remove`、`getNodeById`、按标题/类型查找、按坐标命中节点或分组。 |
 | `models/LGraph.io-events.ts` | 图级输入输出与事件层 | 管理 graph 级 input/output、触发 `onAction` / `trigger` / `sendEventToAllNodes`，并向 canvas 广播变更。 |
-| `models/LGraph.persistence.ts` | 图持久化层 | 负责 `serialize()`、`configure()`、`load()`、`removeLink()`，以及反序列化失败时的 fallback 节点策略。 |
+| `models/LGraph.persistence.ts` | 图持久化门面 | 现在只负责编排 `repair -> serializer/deserializer` 流程、`load()` 和 `removeLink()`，不再内嵌历史修补细节。 |
+| `models/graph-persistence.types.ts` | 持久化共享端口与 DTO 类型 | 提供 graph persistence 相关的 host、工厂、repair 结果和 facade 之间共享的最小类型。 |
+| `models/serialization-repair.ts` | 序列化修补层 | 负责历史遗留数据清洗、坏 link 过滤、未知节点 fallback 构造，是 persistence 的数据防腐层。 |
+| `models/graph-serializer.ts` | 纯序列化器 | 只负责把标准 graph / node / group / link 实例映射成序列化对象，不承担修补逻辑。 |
+| `models/graph-deserializer.ts` | 纯反序列化器 | 只负责把清洗后的序列化对象实例化回 graph 数据结构，依赖外部注入的工厂，不做兼容 if-else。 |
 | `models/LGraph.hooks.ts` | 图钩子兼容层 | 把 `onNodeAdded` 这类历史钩子抽成兼容判断与调用函数，避免不同契约散落在业务代码里。 |
 | `models/LGraphGroup.ts` | 节点分组模型 | 定义 group 的位置、尺寸、标题、颜色、命中判断、移动、序列化/反序列化和包围盒更新。 |
 | `models/LGraphGroup.serialization.compat.ts` | 分组序列化兼容层 | 处理 group 在 JS 运行时和 d.ts 之间的字段差异，提供 normalize / denormalize / parse / serialize。 |
@@ -158,8 +164,10 @@
 | --- | --- | --- |
 | `types/core-types.ts` | 核心共享类型 | 定义向量、slot、widget、节点/画布/菜单接口等基础类型，是其他 TS 文件的公共类型底座。 |
 | `types/serialization.ts` | 序列化类型定义 | 定义 graph / node / link / group 的序列化结构和泛型版本，给持久化层和兼容层复用。 |
-| `types/litegraph-compat.ts` | 兼容差异矩阵（运行时侧） | 维护 `LITEGRAPH_API_DIFF_MATRIX` 和一组 compat 类型/辅助函数，是迁移期契约差异的机器可读来源。 |
-| `types/litegraph-compat.d.ts` | 兼容差异矩阵（声明侧） | 与 `litegraph-compat.ts` 对应的 d.ts 版本，保证类型层面对同一批差异有明确声明。 |
+| `compat/compat-schema.ts` | compat 单一真相（Schema） | 维护 `LITEGRAPH_API_DIFF_MATRIX`、diff ids、compat host 契约和序列化兼容类型，是兼容层的唯一 schema 来源。 |
+| `compat/compat-runtime.ts` | compat 运行时装配 | 维护 compat apply façade 和基于 schema 的运行时映射，统一聚合常量别名、canvas shim、ContextMenu 对齐等 helper。 |
+| `types/litegraph-compat.ts` | 兼容门面导出 | 对外稳定导出 compat schema/runtime 能力，本身不再维护独立实现。 |
+| `types/litegraph-compat.d.ts` | 兼容声明门面 | 仅 re-export 由 `compat-schema.ts` / `compat-runtime.ts` 推导出的类型与函数声明，不再手写镜像契约。 |
 | `types/contract-diff-matrix.md` | 兼容差异说明文档 | 人类可读版差异矩阵，记录 JS 运行时和 d.ts 契约不一致处，以及兼容策略与后续收敛任务。 |
 
 ### `utils/`
@@ -179,12 +187,12 @@
 2. `core/litegraph.namespace.ts`、`core/host-resolver.ts`
 3. `contracts/*`
 4. `core/litegraph.constants.ts`、`core/litegraph.registry.ts`、`core/litegraph.runtime.ts`
-5. Graph 链：`models/LGraph.*`
+5. Graph 链：`models/LGraph.*`，然后接着看 `models/serialization-repair.ts`、`models/graph-serializer.ts`、`models/graph-deserializer.ts`
 6. Node 链：`models/LGraphNode.*`
 7. Canvas 链：`canvas/LGraphCanvas.*`
 8. `services/*`
 9. `ui/ContextMenu.ts`
-10. `compat/*` 与 `types/litegraph-compat.ts`
+10. `compat/*`、`compat/compat-schema.ts` 与 `types/litegraph-compat.ts`
 
 ## 现状备注
 
@@ -193,8 +201,9 @@
 - `index.ts` 已经收回成 assembly 入口，真正的 namespace 构建、compat apply 和 bridge 挂载都已经拆到独立模块。
 - `canvas/LGraphCanvas.menu-panel.ts` 已经从“大而全 UI 类”收缩成薄调度层；低频 DOM 构造和菜单流程主要位于 `services/`。
 - 浮层类 UI 现在共享 `floating-ui-service.ts`；新增弹层时，应优先复用这套挂载、outside click、leave close 和 cleanup 机制。
-- 兼容层文件不是“临时脚手架”这么简单，它们现在就是迁移工程对外稳定性的关键组成部分。
+- compat 已经建立 `compat-schema.ts -> compat-runtime.ts -> facade/.d.ts` 的单一真相；后续新增 diff 项时，应先改 schema，再补 runtime 和文档，而不是反过来。
+- persistence 已经按 `serialization-repair -> graph-deserializer/graph-serializer -> LGraph.persistence facade` 分层；历史数据兼容不应再回流进图模型本体。
 - 如果后续继续推进重构，这份目录最需要优先收敛的是：
   - `ui/ContextMenu.ts` 和其 host 解析模式的进一步收口
-  - `types/litegraph-compat.ts` / `.d.ts` / 文档之间的单一真相
   - `render/input/execution` 高频路径上的对象分配和命中逻辑
+  - 基于 `rbush` 的节点/分组空间索引与框选命中优化

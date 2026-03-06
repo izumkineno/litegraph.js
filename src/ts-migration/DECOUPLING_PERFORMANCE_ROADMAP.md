@@ -1,13 +1,25 @@
 # `ts-migration` 解耦与性能重构路线图
 
-本文档只服务于后续重构决策，不代表当前代码已经完成这些收敛。  
-目标是用最少的结构改动，优先解决 `src/ts-migration` 里的高耦合点和高频路径上的冗余开销。
+本文档只服务于后续重构决策。  
+前 7 个结构收敛阶段已经在当前仓库状态落地；本文档现在保留这些阶段的设计意图，同时记录剩余的热点与下一阶段的性能工作。
+
+目标是用最少的结构改动，继续解决 `src/ts-migration` 里剩余的高耦合点和高频路径上的冗余开销。
 
 ## 目标
 
 - 先解耦，再做类型收紧。
 - 先压缩高频路径复杂度，再处理低频管理代码。
 - 先建立稳定模块边界，再考虑更大规模的 API 清洗。
+
+## 当前进度
+
+- 阶段 1 已完成：`contracts/` 已建立，`models/types -> canvas/ui` 的反向依赖已经切断。
+- 阶段 2 已完成：`core/host-resolver.ts` 已统一 graph/node/canvas 的 host 注入解析，并带缓存。
+- 阶段 3 已完成：`index.ts` 已收回成纯 assembly 层，pointer compat / bridge / compat apply 已拆分。
+- 阶段 4 已完成：`LGraphCanvas.menu-panel.ts` 已从千行级 UI 类收敛成薄调度入口，低频 DOM 迁入 `services/`。
+- 阶段 5 已完成：菜单、dialog、panel、searchbox 已共享 `floating-ui-service.ts`。
+- 阶段 6 已完成：compat 已形成 `compat-schema.ts -> compat-runtime.ts -> facade/.d.ts` 的单一真相。
+- 阶段 7 已完成：persistence 已拆成 `serialization-repair + graph-serializer + graph-deserializer + facade`。
 
 ## 不做的事
 
@@ -126,29 +138,33 @@
 - 关闭策略、定位策略、outside click 策略无法统一。
 - 一旦要优化性能或定位行为，需要多处同时改。
 
-### P2. compat 信息存在多份真相
+### P2. compat 单一真相已建立，但仍需持续约束
 
 直接证据：
 
-- `types/litegraph-compat.ts`
+- `compat/compat-schema.ts`
+- `compat/compat-runtime.ts`
 - `types/litegraph-compat.d.ts`
 - `types/contract-diff-matrix.md`
 
-问题：
+当前状态：
 
-- 差异项、host 类型、apply 逻辑混杂。
-- `.ts`、`.d.ts`、文档容易失步。
+- 差异项、host 类型和 apply 逻辑已经按 schema/runtime/facade 拆开。
+- 剩余风险不在结构本身，而在后续新增 diff 项时绕过 schema 直接补 façade 或文档。
 
-### P2. `persistence` 混入了修补器和容错适配
+### P2. `persistence` 已分层，但需要继续守住边界
 
 直接证据：
 
-- `models/LGraph.persistence.ts` 里既做序列化/反序列化，也做 link fallback 修补和节点 fallback 构造。
+- `models/LGraph.persistence.ts`
+- `models/serialization-repair.ts`
+- `models/graph-serializer.ts`
+- `models/graph-deserializer.ts`
 
-问题：
+当前状态：
 
-- 数据模型层承担了迁移数据适配责任。
-- 后续如果继续收敛序列化契约，这个文件会越来越重。
+- 历史数据修补已经移入 `serialization-repair.ts`，纯 IO 已拆到 serializer/deserializer。
+- 剩余风险是未来有人把新的 fallback 逻辑重新写回 `LGraph.persistence.ts` 或 graph model。
 
 ## 目标架构
 
@@ -167,7 +183,7 @@
 
 #### `contracts/`
 
-建议新增目录，但只放最小接口：
+现状：目录已建立，并只保留最小接口：
 
 - `GraphCanvasPort`
 - `ContextMenuPort`
@@ -182,7 +198,7 @@
 
 #### `services/`
 
-建议后续新增轻量服务层，用来承接从大类里抽出的通用逻辑：
+现状：目录已建立，并承接从大类里抽出的通用逻辑：
 
 - `host-resolver`
 - `floating-ui-service`
@@ -427,13 +443,13 @@
 
 ## 当前最值得先做的一步
 
-如果下一轮开始实际改代码，最合理的第一步不是拆 `canvas`，而是：
+前 7 个阶段已经完成，下一轮最值得投入的不是继续拆文档边界，而是开始兑现高频路径收益：
 
-1. 新建 `contracts/`
-2. 把 `types/core-types.ts` 与 `models/*` 中对 `canvas/ui` 的类型依赖替换为最小 contracts
+1. 设计并落地 `rbush` 驱动的节点/分组空间索引
+2. 优先覆盖 `getNodeOnPos`、框选命中、可见节点裁剪，再逐步评估 link 命中是否值得纳入索引
 
 原因很直接：
 
-- 这一步最小、最稳。
-- 它先修正依赖方向。
-- 后续所有解耦和性能优化都建立在这个边界之上。
+- 结构边界已经足够稳定，继续做“纯解耦”边际收益开始下降。
+- 当前最贵的剩余问题在 `input/render` 热路径的线性扫描与命中成本。
+- 这一步能把前面 7 个阶段打下的边界优势转成实际的交互性能收益。
