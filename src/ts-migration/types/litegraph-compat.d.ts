@@ -23,9 +23,29 @@ export type SerializedLLinkRuntimeOrder = [
     string
 ];
 
+export type SerializedLLinkDtsInput = readonly [
+    number,
+    string,
+    number,
+    number,
+    number,
+    number
+];
+
+export type SerializedLLinkRuntimeInput = readonly [
+    number,
+    number,
+    number,
+    number,
+    number,
+    string
+];
+
 export type SerializedLLinkCompatInput =
     | SerializedLLinkDtsOrder
-    | SerializedLLinkRuntimeOrder;
+    | SerializedLLinkRuntimeOrder
+    | SerializedLLinkDtsInput
+    | SerializedLLinkRuntimeInput;
 
 export type SerializedLLinkRuntime = SerializedLLinkRuntimeOrder;
 
@@ -137,14 +157,14 @@ export declare const LITEGRAPH_API_DIFF_MATRIX: readonly LiteGraphCompatDiffItem
 
 export declare function isSerializedLLinkDtsOrder(
     tuple: readonly unknown[]
-): tuple is SerializedLLinkDtsOrder;
+): tuple is SerializedLLinkDtsOrder | SerializedLLinkDtsInput;
 
 export declare function normalizeSerializedLLinkTuple(
     tuple: SerializedLLinkCompatInput
 ): SerializedLLinkRuntimeOrder;
 
 export declare function denormalizeSerializedLLinkTuple(
-    tuple: SerializedLLinkRuntimeOrder,
+    tuple: SerializedLLinkRuntimeOrder | SerializedLLinkRuntimeInput,
     order?: "runtime" | "dts"
 ): SerializedLLinkRuntimeOrder | SerializedLLinkDtsOrder;
 

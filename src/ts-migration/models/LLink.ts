@@ -1,4 +1,5 @@
 import {
+    parseSerializedLLinkInput,
     type LLinkSerializedInput,
     type SerializedLLinkRuntime,
 } from "./LLink.serialization.compat";
@@ -37,35 +38,13 @@ export class LLink {
     }
 
     configure(o: LLink | LLinkSerializedInput): void {
-        const source = o as LLinkSerializedInput;
-        if (Array.isArray(source)) {
-            // d.ts tuple order: [id,type,origin_id,origin_slot,target_id,target_slot]
-            if (typeof source[1] === "string") {
-                this.id = source[0] as number;
-                this.type = source[1];
-                this.origin_id = source[2] as number;
-                this.origin_slot = source[3] as number;
-                this.target_id = source[4] as number;
-                this.target_slot = source[5] as number;
-                return;
-            }
-
-            // runtime tuple order: [id,origin_id,origin_slot,target_id,target_slot,type]
-            this.id = source[0] as number;
-            this.origin_id = source[1] as number;
-            this.origin_slot = source[2] as number;
-            this.target_id = source[3] as number;
-            this.target_slot = source[4] as number;
-            this.type = source[5] as string;
-            return;
-        }
-
-        this.id = source.id as number;
-        this.type = source.type as string;
-        this.origin_id = source.origin_id as number;
-        this.origin_slot = source.origin_slot as number;
-        this.target_id = source.target_id as number;
-        this.target_slot = source.target_slot as number;
+        const parsed = parseSerializedLLinkInput(o as LLinkSerializedInput);
+        this.id = parsed.id;
+        this.type = parsed.type;
+        this.origin_id = parsed.origin_id;
+        this.origin_slot = parsed.origin_slot;
+        this.target_id = parsed.target_id;
+        this.target_slot = parsed.target_slot;
     }
 
     serialize(): SerializedLLinkRuntime {

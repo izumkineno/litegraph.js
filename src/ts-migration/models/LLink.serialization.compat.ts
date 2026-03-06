@@ -11,7 +11,28 @@ export type SerializedLLinkRuntime = [
     string
 ];
 
-export type SerializedLLinkCompatInput = SerializedLLink | SerializedLLinkRuntime;
+export type SerializedLLinkRuntimeInput = readonly [
+    number,
+    number,
+    number,
+    number,
+    number,
+    string
+];
+
+export type SerializedLLinkDtsInput = readonly [
+    number,
+    string,
+    number,
+    number,
+    number,
+    number
+];
+
+export type SerializedLLinkCompatInput =
+    | SerializedLLink
+    | SerializedLLinkRuntimeInput
+    | SerializedLLinkDtsInput;
 export type SerializedLLinkOrder = "runtime" | "dts";
 
 export interface LLinkSerializedShape {
@@ -27,7 +48,7 @@ export type LLinkSerializedInput = SerializedLLinkCompatInput | LLinkSerializedS
 
 export function isSerializedLLinkDtsOrder(
     tuple: readonly unknown[]
-): tuple is SerializedLLink {
+): tuple is SerializedLLink | SerializedLLinkDtsInput {
     return typeof tuple[1] === "string";
 }
 
@@ -57,11 +78,11 @@ export function normalizeSerializedLLinkTuple(
 }
 
 export function denormalizeSerializedLLinkTuple(
-    tuple: SerializedLLinkRuntime,
+    tuple: SerializedLLinkRuntime | SerializedLLinkRuntimeInput,
     order: SerializedLLinkOrder = "runtime"
 ): SerializedLLinkRuntime | SerializedLLink {
     if (order === "runtime") {
-        return tuple;
+        return [tuple[0], tuple[1], tuple[2], tuple[3], tuple[4], tuple[5]];
     }
     return [
         tuple[0],
@@ -88,13 +109,14 @@ export function parseSerializedLLinkInput(
         };
     }
 
+    const shape = input as LLinkSerializedShape;
     return {
-        id: Number(input.id ?? 0),
-        type: String(input.type ?? ""),
-        origin_id: Number(input.origin_id ?? 0),
-        origin_slot: Number(input.origin_slot ?? 0),
-        target_id: Number(input.target_id ?? 0),
-        target_slot: Number(input.target_slot ?? 0),
+        id: Number(shape.id ?? 0),
+        type: String(shape.type ?? ""),
+        origin_id: Number(shape.origin_id ?? 0),
+        origin_slot: Number(shape.origin_slot ?? 0),
+        target_id: Number(shape.target_id ?? 0),
+        target_slot: Number(shape.target_slot ?? 0),
     };
 }
 

@@ -6,6 +6,11 @@ import {
     applyLiteGraphConstantAliases,
     denormalizeSerializedLGraphGroup,
     denormalizeSerializedLLinkTuple,
+    type LGraphCanvasPrototypeCompatHost,
+    type LGraphCanvasStaticCompatHost,
+    type LiteGraphApiCompatTargets,
+    type LiteGraphConstantAliasHost,
+    type LiteGraphContextMenuCompatHost,
     invokeGraphOnNodeAddedCompatHook,
     normalizeSerializedLGraphGroup,
     normalizeSerializedLLinkTuple,
@@ -106,7 +111,7 @@ describe("ts-migration litegraph compat parity", () => {
     test("LGraphCanvas 静态别名与子图菜单别名", () => {
         const resize = jest.fn();
         const nodeToSubgraph = jest.fn();
-        const host: Record<string, unknown> = {
+        const host: LGraphCanvasStaticCompatHost = {
             onMenuResizeNode: resize,
             onMenuNodeToSubgraph: nodeToSubgraph,
         };
@@ -119,7 +124,7 @@ describe("ts-migration litegraph compat parity", () => {
 
     test("LGraphCanvas 原型 shim：补齐方法并转发 deselect", () => {
         const deselectNode = jest.fn();
-        const host: Record<string, unknown> = { deselectNode };
+        const host: LGraphCanvasPrototypeCompatHost = { deselectNode };
 
         applyLGraphCanvasPrototypeCompatShims(host);
 
@@ -133,7 +138,7 @@ describe("ts-migration litegraph compat parity", () => {
 
     test("ContextMenu 关闭入口双向对齐", () => {
         const closeAll = jest.fn();
-        const liteGraph = {
+        const liteGraph: LiteGraphContextMenuCompatHost = {
             ContextMenu: {
                 closeAllContextMenus: closeAll,
             },
@@ -156,28 +161,29 @@ describe("ts-migration litegraph compat parity", () => {
     test("统一入口 applyLiteGraphApiCompatAliases", () => {
         const closeAll = jest.fn();
         const canvasDeselect = jest.fn();
-        const targets = {
-            liteGraph: {
-                SQUARE_SHAPE: 9,
-                ContextMenu: { closeAllContextMenus: closeAll },
-            },
-            canvasStatic: {
-                onMenuResizeNode: jest.fn(),
-            },
-            canvasPrototype: {
-                deselectNode: canvasDeselect,
-            },
+        const liteGraph: LiteGraphConstantAliasHost & LiteGraphContextMenuCompatHost = {
+            SQUARE_SHAPE: 9,
+            ContextMenu: { closeAllContextMenus: closeAll },
+        };
+        const canvasStatic: LGraphCanvasStaticCompatHost = {
+            onMenuResizeNode: jest.fn(),
+        };
+        const canvasPrototype: LGraphCanvasPrototypeCompatHost = {
+            deselectNode: canvasDeselect,
+        };
+        const targets: LiteGraphApiCompatTargets = {
+            liteGraph,
+            canvasStatic,
+            canvasPrototype,
         };
 
         applyLiteGraphApiCompatAliases(targets);
 
-        expect(targets.liteGraph.GRID_SHAPE).toBe(9);
-        expect(targets.liteGraph.SQUARE_SHAPE).toBe(9);
-        expect(targets.liteGraph.closeAllContextMenus).toBe(closeAll);
-        expect(targets.canvasStatic.onResizeNode).toBe(
-            targets.canvasStatic.onMenuResizeNode
-        );
-        expect(typeof targets.canvasPrototype.drawSlotGraphic).toBe("function");
-        expect(typeof targets.canvasPrototype.touchHandler).toBe("function");
+        expect(liteGraph.GRID_SHAPE).toBe(9);
+        expect(liteGraph.SQUARE_SHAPE).toBe(9);
+        expect(liteGraph.closeAllContextMenus).toBe(closeAll);
+        expect(canvasStatic.onResizeNode).toBe(canvasStatic.onMenuResizeNode);
+        expect(typeof canvasPrototype.drawSlotGraphic).toBe("function");
+        expect(typeof canvasPrototype.touchHandler).toBe("function");
     });
 });

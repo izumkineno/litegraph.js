@@ -1,6 +1,8 @@
 import { clamp } from "../utils/clamp";
 
-type UnknownCtor = new (...args: never[]) => unknown;
+type UnknownCtor =
+    | ((...args: never[]) => unknown)
+    | (new (...args: never[]) => unknown);
 
 interface LiteGraphNamespaceLike extends Record<string, unknown> {
     LGraph?: UnknownCtor;

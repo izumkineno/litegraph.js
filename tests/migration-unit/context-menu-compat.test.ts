@@ -2,13 +2,14 @@ import {
     applyContextMenuCloseAllCompat,
     CONTEXT_MENU_CLOSE_ALL_DIFF_ID,
     isContextMenuCloseAllCompatSynced,
+    type LiteGraphContextMenuCompatHost,
 } from "../../src/ts-migration/ui/context-menu-compat";
 
 describe("ts-migration context menu close-all compat", () => {
     test("优先使用 LiteGraph.closeAllContextMenus 作为对齐来源", () => {
         const liteGraphClose = jest.fn();
         const contextClose = jest.fn();
-        const host = {
+        const host: LiteGraphContextMenuCompatHost = {
             closeAllContextMenus: liteGraphClose,
             ContextMenu: {
                 closeAllContextMenus: contextClose,
@@ -25,7 +26,7 @@ describe("ts-migration context menu close-all compat", () => {
 
     test("LiteGraph 缺失时回退 ContextMenu.closeAllContextMenus", () => {
         const contextClose = jest.fn();
-        const host = {
+        const host: LiteGraphContextMenuCompatHost = {
             ContextMenu: {
                 closeAllContextMenus: contextClose,
             },
