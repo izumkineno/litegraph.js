@@ -1,19 +1,15 @@
-// TODO: Import LGraphCanvas from its future module
-// TODO: Import full LiteGraph runtime host from its future module
-
 import type { Vector2 } from "../types/core-types";
+import type { LGraphCanvasMenuPanel as LGraphCanvas } from "../canvas/LGraphCanvas.menu-panel";
+import type { LiteGraphConstantsShape } from "../core/litegraph.constants";
 import { LGraphNodeConnectGeometry } from "./LGraphNode.connect-geometry";
 
-interface LGraphNodeCanvasCollabHost {
-    CANVAS_GRID_SIZE: number;
-    node_images_path: string;
-}
+interface LGraphNodeCanvasCollabHost
+    extends Pick<LiteGraphConstantsShape, "CANVAS_GRID_SIZE" | "node_images_path"> {}
 
-interface LGraphNodeCanvasLike {
-    node_capturing_input: LGraphNodeCanvasCollab | null;
+type LGraphNodeCanvasLike = Pick<LGraphCanvas, "node_capturing_input"> & {
     scale: number;
     offset: Vector2;
-}
+};
 
 interface LGraphNodeCanvasCollabGraphLike {
     _version: number;

@@ -1,21 +1,24 @@
-// TODO: Import LGraph from its future module
-// TODO: Import LGraphNode from its future module
-// TODO: Import LGraphGroup from its future module
-
 import type { Vector2, Vector4 } from "../types/core-types";
+import type { LiteGraphConstantsShape } from "../core/litegraph.constants";
+import type { LGraphPersistence as LGraph } from "../models/LGraph.persistence";
+import type { LGraphGroup } from "../models/LGraphGroup";
+import type { LGraphNodeCanvasCollab as LGraphNode } from "../models/LGraphNode.canvas-collab";
 import { DragAndScale } from "./DragAndScale";
 import { LGraphCanvas as LGraphCanvasStatic } from "./LGraphCanvas.static";
 
 type CanvasPointerListener = (event: Event) => unknown;
 
-interface LGraphCanvasLifecycleHost {
-    NODE_TEXT_SIZE: number;
-    NODE_SUBTEXT_SIZE: number;
-    NODE_TITLE_COLOR: string;
-    LINK_COLOR: string;
-    SPLINE_LINK: number;
-    pointerevents_method: "mouse" | "pointer" | "touch" | string;
-    isTouchDevice: () => boolean;
+interface LGraphCanvasLifecycleHost
+    extends Pick<
+        LiteGraphConstantsShape,
+        | "NODE_TEXT_SIZE"
+        | "NODE_SUBTEXT_SIZE"
+        | "NODE_TITLE_COLOR"
+        | "LINK_COLOR"
+        | "SPLINE_LINK"
+        | "pointerevents_method"
+        | "isTouchDevice"
+    > {
     pointerListenerAdd: (
         dom: EventTarget,
         eventName: string,
@@ -36,6 +39,10 @@ interface LGraphCanvasOptions {
     autoresize?: boolean;
     viewport?: Vector4 | null;
 }
+
+type CanvasGraphRuntime = LGraph;
+type CanvasNodeRuntime = LGraphNode;
+type CanvasGroupRuntime = LGraphGroup;
 
 interface GraphLike {
     _subgraph_node?: unknown;

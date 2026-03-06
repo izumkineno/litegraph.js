@@ -1,14 +1,14 @@
-// TODO: Import LGraphNode from its future module
-// TODO: Import LGraphGroup from its future module
-// TODO: Import full LiteGraph runtime host from its future module
-
+import type { LiteGraphConstantsShape } from "../core/litegraph.constants";
 import type { SerializedLGraph } from "../types/serialization";
+import type { LGraphGroup } from "./LGraphGroup";
+import type { LGraphNodeCanvasCollab as LGraphNode } from "./LGraphNode.canvas-collab";
 import { LLink } from "./LLink";
 import { type LiteGraphLifecycleHost } from "./LGraph.lifecycle";
 import { LGraphIOEvents } from "./LGraph.io-events";
 
-interface LiteGraphPersistenceHost extends LiteGraphLifecycleHost {
-    VERSION: number;
+interface LiteGraphPersistenceHost
+    extends LiteGraphLifecycleHost,
+        Pick<LiteGraphConstantsShape, "VERSION"> {
     createNode?: (
         type: string | null | undefined,
         title?: string
@@ -37,21 +37,23 @@ interface SerializedGraphPersistenceLike extends Record<string, unknown> {
     extra?: Record<string, unknown>;
 }
 
-interface GraphNodePersistenceLike {
-    id: number | string;
+type GraphNodePersistenceBase = Pick<
+    LGraphNode,
+    "id" | "serialize" | "configure" | "disconnectInput"
+>;
+
+interface GraphNodePersistenceLike extends GraphNodePersistenceBase {
     graph: LGraphPersistence | null;
-    serialize: () => unknown;
-    configure: (info: SerializedNodePersistenceLike) => void;
-    disconnectInput: (slot: number) => void;
     last_serialization?: SerializedNodePersistenceLike;
     has_errors?: boolean;
     [key: string]: unknown;
 }
 
-interface GraphGroupPersistenceLike {
+type GraphGroupPersistenceBase = Pick<LGraphGroup, "serialize">;
+
+interface GraphGroupPersistenceLike extends GraphGroupPersistenceBase {
     graph: LGraphPersistence | null;
     configure: (data: unknown) => void;
-    serialize: () => unknown;
     [key: string]: unknown;
 }
 

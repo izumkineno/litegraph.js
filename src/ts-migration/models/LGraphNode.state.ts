@@ -1,17 +1,15 @@
-// TODO: Import LGraph from its future module
-// TODO: Import full LiteGraph runtime host from its future module
-
 import type {
     INodeInputSlot,
     INodeOutputSlot,
     IWidget,
     Vector2,
 } from "../types/core-types";
+import type { LiteGraphConstantsShape } from "../core/litegraph.constants";
 import type { SerializedLGraphNode } from "../types/serialization";
+import type { LGraphPersistence as LGraph } from "./LGraph.persistence";
 
-export interface LGraphNodeGraphLike {
+export interface LGraphNodeGraphLike extends Pick<LGraph, "links"> {
     _version: number;
-    links: Record<string, unknown>;
 }
 
 interface LGraphNodeClassMetadata extends Function {
@@ -19,12 +17,9 @@ interface LGraphNodeClassMetadata extends Function {
     type?: string | null;
 }
 
-interface LiteGraphNodeStateHost {
-    use_uuids: boolean;
+interface LiteGraphNodeStateHost
+    extends Pick<LiteGraphConstantsShape, "use_uuids" | "NODE_WIDTH" | "INPUT" | "OUTPUT"> {
     uuidv4: () => string;
-    NODE_WIDTH: number;
-    INPUT: number;
-    OUTPUT: number;
     createNode?: (type: string | null) => LGraphNode | null;
     cloneObject: <TSource extends object, TTarget extends object | undefined>(
         obj: TSource | null | undefined,

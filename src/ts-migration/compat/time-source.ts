@@ -1,10 +1,8 @@
-// TODO: Import LiteGraph runtime host from its future module
+import type { LiteGraphLifecycleHost } from "../models/LGraph.lifecycle";
 
 export type TimeSource = () => number;
 
-export interface TimeSourceHost {
-    getTime: TimeSource;
-}
+export interface TimeSourceHost extends Pick<LiteGraphLifecycleHost, "getTime"> {}
 
 /**
  * timer that works everywhere

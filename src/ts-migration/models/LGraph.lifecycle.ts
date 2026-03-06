@@ -1,9 +1,10 @@
-// TODO: Import LGraphNode from its future module
-// TODO: Import LGraphCanvas from its future module
-// TODO: Import full LiteGraph runtime host from its future module
+import type { LGraphCanvasMenuPanel as LGraphCanvas } from "../canvas/LGraphCanvas.menu-panel";
+import type { LiteGraphConstantsShape } from "../core/litegraph.constants";
+import type { LGraphNodeCanvasCollab as LGraphNode } from "./LGraphNode.canvas-collab";
 
-export interface LGraphNodeLifecycleLike {
-    id: number;
+type LGraphNodeLifecycleIdentity = Pick<LGraphNode, "id">;
+
+export interface LGraphNodeLifecycleLike extends LGraphNodeLifecycleIdentity {
     onRemoved?: () => void;
 }
 
@@ -12,10 +13,10 @@ export interface LGraphCanvasLifecycleLike {
     constructor: unknown;
 }
 
-export interface LiteGraphLifecycleHost {
-    debug: boolean;
+export interface LiteGraphLifecycleHost
+    extends Pick<LiteGraphConstantsShape, "debug"> {
     getTime: () => number;
-    LGraphCanvas?: unknown;
+    LGraphCanvas?: new (...args: any[]) => LGraphCanvas;
 }
 
 const defaultLiteGraphLifecycleHost: LiteGraphLifecycleHost = {

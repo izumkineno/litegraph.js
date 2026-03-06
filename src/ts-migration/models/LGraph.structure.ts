@@ -1,21 +1,19 @@
-// TODO: Import LGraphNode from its future module
-// TODO: Import LGraphGroup from its future module
-// TODO: Import full LiteGraph runtime host from its future module
-
+import type { LiteGraphConstantsShape } from "../core/litegraph.constants";
+import type { LGraphGroup } from "./LGraphGroup";
+import type { LGraphNodeCanvasCollab as LGraphNode } from "./LGraphNode.canvas-collab";
 import { type LiteGraphLifecycleHost } from "./LGraph.lifecycle";
 import { LGraphExecution } from "./LGraph.execution";
 import { invokeGraphOnNodeAddedCompatHook } from "./LGraph.hooks";
 
-interface LiteGraphStructureHost extends LiteGraphLifecycleHost {
-    use_uuids: boolean;
+interface LiteGraphStructureHost
+    extends LiteGraphLifecycleHost,
+        Pick<LiteGraphConstantsShape, "use_uuids" | "MAX_NUMBER_OF_NODES" | "registered_node_types"> {
     uuidv4: () => string;
-    MAX_NUMBER_OF_NODES: number;
-    LGraphGroup?: unknown;
-    registered_node_types?: Record<string, Function>;
+    LGraphGroup?: new (...args: any[]) => LGraphGroup;
     createNode?: (
         type: string,
         title?: string
-    ) => GraphNodeStructureLike | null;
+    ) => LGraphNode | null;
 }
 
 const defaultStructureHost: LiteGraphStructureHost = {
@@ -24,6 +22,7 @@ const defaultStructureHost: LiteGraphStructureHost = {
     use_uuids: false,
     uuidv4: () => "",
     MAX_NUMBER_OF_NODES: 1000,
+    registered_node_types: {},
 };
 
 interface GraphInputSlotStructureLike {
@@ -36,40 +35,34 @@ interface GraphOutputSlotStructureLike {
 
 type GraphNodeId = number | string;
 
-interface GraphNodeStructureLike {
-    id: GraphNodeId;
+type GraphNodeStructureBase = Pick<
+    LGraphNode,
+    | "id"
+    | "type"
+    | "title"
+    | "alignToGrid"
+    | "disconnectInput"
+    | "disconnectOutput"
+    | "serialize"
+    | "configure"
+    | "isPointInside"
+>;
+
+interface GraphNodeStructureLike extends GraphNodeStructureBase {
     constructor: Function;
     graph: LGraphStructure | null;
-    type: string;
-    title?: string;
     inputs?: Array<GraphInputSlotStructureLike | null>;
     outputs?: Array<GraphOutputSlotStructureLike | null>;
     ignore_remove?: boolean;
     onAdded?: (graph: LGraphStructure) => void;
     onRemoved?: () => void;
-    alignToGrid: () => void;
-    disconnectInput: (slot: number) => void;
-    disconnectOutput: (slot: number) => void;
-    serialize: () => unknown;
-    configure: (data: unknown) => void;
-    isPointInside: (
-        x: number,
-        y: number,
-        margin?: number,
-        skip_title?: boolean
-    ) => boolean;
 }
 
-interface GraphGroupStructureLike {
-    id: GraphNodeId;
+type GraphGroupStructureBase = Pick<LGraphGroup, "isPointInside">;
+
+interface GraphGroupStructureLike extends GraphGroupStructureBase {
     constructor: Function;
     graph: LGraphStructure | null;
-    isPointInside: (
-        x: number,
-        y: number,
-        margin?: number,
-        skip_title?: boolean
-    ) => boolean;
 }
 
 interface GraphCanvasStructureLike {
@@ -496,7 +489,7 @@ export class LGraphStructure extends LGraphExecution {
             }
             console.log("node being replaced by newer version: " + node.type);
             const newnode = (
-                host.createNode as (type: string) => GraphNodeStructureLike
+                host.createNode as unknown as (type: string) => GraphNodeStructureLike
             )(node.type);
             changes = true;
             nodes[i] = newnode;

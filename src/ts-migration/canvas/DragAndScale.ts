@@ -1,6 +1,5 @@
-// TODO: Import LiteGraph runtime host from its future module
-
 import type { Vector2, Vector4 } from "../types/core-types";
+import type { LiteGraphConstantsShape } from "../core/litegraph.constants";
 import {
     createPointerEventsHost,
     type PointerEventsHost,
@@ -28,7 +27,7 @@ interface DragAndScalePointerEvent {
 }
 
 interface DragAndScaleHost {
-    pointerevents_method: string;
+    pointerevents_method: LiteGraphConstantsShape["pointerevents_method"] | string;
     pointerListenerAdd: PointerEventsHost["pointerListenerAdd"];
     pointerListenerRemove: PointerEventsHost["pointerListenerRemove"];
 }

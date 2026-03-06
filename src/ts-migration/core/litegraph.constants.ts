@@ -1,6 +1,7 @@
-// TODO: Import LGraphNodeConstructor from its future module
-
 import type { Vector2 } from "../types/core-types";
+import type { LGraphNodeConstructorLike as RegistryLGraphNodeConstructorLike } from "./litegraph.registry";
+
+export type LGraphNodeConstructorLike = RegistryLGraphNodeConstructorLike;
 
 export type BreakLinkModifier = "shift" | "alt" | "ctrl" | "meta";
 export type BreakLinkModifierConfig =
@@ -22,8 +23,6 @@ export interface SearchboxExtraItem {
     desc: string;
     type: string;
 }
-
-export type LGraphNodeConstructorLike = new (...args: unknown[]) => unknown;
 
 /**
  * The Global Scope constants/config subset.

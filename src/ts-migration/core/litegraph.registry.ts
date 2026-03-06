@@ -1,21 +1,23 @@
-// TODO: Import LGraphNode from its future module
-// TODO: Import LiteGraph runtime host from its future module
+import type { Vector2 } from "../types/core-types";
+import type { LGraphNodeCanvasCollab as LGraphNode } from "../models/LGraphNode.canvas-collab";
+import type { LiteGraphConstantsShape } from "./litegraph.constants";
 
-import type { INodeInputSlot, INodeOutputSlot, Vector2 } from "../types/core-types";
-
-export interface LGraphNodeLike {
-    type: string | null;
-    title: string;
+export interface LGraphNodeLike
+    extends Pick<
+        LGraphNode,
+        | "type"
+        | "title"
+        | "properties"
+        | "properties_info"
+        | "flags"
+        | "size"
+        | "pos"
+        | "mode"
+        | "inputs"
+        | "outputs"
+        | "computeSize"
+    > {
     category?: string;
-    properties: Record<string, unknown>;
-    properties_info: unknown[];
-    flags: Record<string, unknown>;
-    size: Vector2;
-    pos: Vector2;
-    mode: number;
-    inputs?: INodeInputSlot[];
-    outputs?: INodeOutputSlot[];
-    computeSize?: () => Vector2;
     onNodeCreated?: () => void;
     [key: string]: unknown;
 }
@@ -32,23 +34,24 @@ export interface LGraphNodeConstructorLike<TNode extends LGraphNodeLike = LGraph
     readonly name: string;
 }
 
-export interface LiteGraphRegistryHost {
-    debug: boolean;
-    catch_exceptions: boolean;
-    auto_sort_node_types: boolean;
-    auto_load_slot_types: boolean;
-
-    BOX_SHAPE: number;
-    ROUND_SHAPE: number;
-    CIRCLE_SHAPE: number;
-    CARD_SHAPE: number;
-    DEFAULT_POSITION: Vector2;
-    ALWAYS: number;
-
-    registered_node_types: Record<string, LGraphNodeConstructorLike>;
-    node_types_by_file_extension: Record<string, LGraphNodeConstructorLike>;
-    Nodes: Record<string, LGraphNodeConstructorLike>;
-    searchbox_extras: Record<string, unknown>;
+export interface LiteGraphRegistryHost
+    extends Pick<
+        LiteGraphConstantsShape,
+        | "debug"
+        | "catch_exceptions"
+        | "auto_sort_node_types"
+        | "auto_load_slot_types"
+        | "BOX_SHAPE"
+        | "ROUND_SHAPE"
+        | "CIRCLE_SHAPE"
+        | "CARD_SHAPE"
+        | "DEFAULT_POSITION"
+        | "ALWAYS"
+        | "registered_node_types"
+        | "node_types_by_file_extension"
+        | "Nodes"
+        | "searchbox_extras"
+    > {
 
     onNodeTypeRegistered?: (
         type: string,

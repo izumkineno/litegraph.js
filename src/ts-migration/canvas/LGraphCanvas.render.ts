@@ -1,10 +1,9 @@
-// TODO: Import LGraph from its future module
-// TODO: Import LGraphNode from its future module
-// TODO: Import LGraphGroup from its future module
-// TODO: Import ContextMenu from its future module
-// TODO: Import full LiteGraph runtime host from its future module
-
 import type { Vector2, Vector4 } from "../types/core-types";
+import type { LiteGraphConstantsShape } from "../core/litegraph.constants";
+import type { LGraphPersistence as LGraph } from "../models/LGraph.persistence";
+import type { LGraphGroup } from "../models/LGraphGroup";
+import type { LGraphNodeCanvasCollab as LGraphNode } from "../models/LGraphNode.canvas-collab";
+import type { ContextMenu } from "../ui/ContextMenu";
 import { clamp } from "../utils/clamp";
 import { distance, isInsideRectangle, overlapBounding } from "../utils/math-geometry";
 import { LGraphCanvasInput } from "./LGraphCanvas.input";
@@ -17,6 +16,19 @@ const tempA = new Float32Array(2) as unknown as Vector2;
 const tempB = new Float32Array(2) as unknown as Vector2;
 const temp_point = new Float32Array(2) as unknown as Vector2;
 
+type RenderLiteGraphHost = Partial<LiteGraphConstantsShape> & {
+    ContextMenu?: new (...args: any[]) => ContextMenu;
+    isInsideRectangle?: (
+        x: number,
+        y: number,
+        left: number,
+        top: number,
+        width: number,
+        height: number
+    ) => boolean;
+    getTime?: () => number;
+};
+
 /**
  * LGraphCanvas render pipeline layer.
  * Source: `draw/drawFrontCanvas/drawBackCanvas/drawNode/drawConnections/renderLink/drawNodeWidgets/processNodeWidgets`.
@@ -25,7 +37,7 @@ export class LGraphCanvasRender extends LGraphCanvasInput {
     [key: string]: any;
 
     private constants(): any {
-        const host = this.getLiteGraphHost();
+        const host = this.getLiteGraphHost() as unknown as RenderLiteGraphHost;
         return {
             ...host,
             RIGHT: host.RIGHT ?? 2,
@@ -55,7 +67,7 @@ export class LGraphCanvasRender extends LGraphCanvasInput {
             DEFAULT_SHADOW_COLOR: host.DEFAULT_SHADOW_COLOR ?? "rgba(0,0,0,0.4)",
             NODE_SLOT_HEIGHT: host.NODE_SLOT_HEIGHT ?? 20,
             NODE_WIDGET_HEIGHT: host.NODE_WIDGET_HEIGHT ?? 20,
-            DEFAULT_GROUP_FONT_SIZE: host.DEFAULT_GROUP_FONT_SIZE ?? 24,
+            DEFAULT_GROUP_FONT_SIZE: host.DEFAULT_GROUP_FONT ?? 24,
             WIDGET_OUTLINE_COLOR: host.WIDGET_OUTLINE_COLOR ?? "#666",
             WIDGET_BGCOLOR: host.WIDGET_BGCOLOR ?? "#222",
             WIDGET_TEXT_COLOR: host.WIDGET_TEXT_COLOR ?? "#DDD",

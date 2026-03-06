@@ -1,9 +1,8 @@
-// TODO: Import LGraph from its future module
-// TODO: Import LGraphNode from its future module
-// TODO: Import LGraphGroup from its future module
-// TODO: Import ContextMenu from its future module
-// TODO: Import full LiteGraph runtime host from its future module
-
+import type { LiteGraphConstantsShape } from "../core/litegraph.constants";
+import type { LGraphPersistence as LGraph } from "../models/LGraph.persistence";
+import type { LGraphGroup } from "../models/LGraphGroup";
+import type { LGraphNodeCanvasCollab as LGraphNode } from "../models/LGraphNode.canvas-collab";
+import type { ContextMenu } from "../ui/ContextMenu";
 import { LGraphCanvas as LGraphCanvasStatic } from "./LGraphCanvas.static";
 import { LGraphCanvasRender } from "./LGraphCanvas.render";
 
@@ -43,6 +42,43 @@ interface PanelLike extends HTMLDivElement {
     graph?: any;
 }
 
+type LGraphCanvasMenuPanelHost = Partial<LiteGraphConstantsShape> & {
+    ContextMenu?: new (...args: any[]) => ContextMenu;
+    ACTION?: number | string;
+    EVENT?: number | string;
+    NODE_MODES?: string[] | Record<string, string>;
+    LINK_RENDER_MODES?: string[];
+    availableCanvasOptions?: unknown[];
+    slot_types_default_in?: Record<string, unknown>;
+    slot_types_default_out?: Record<string, unknown>;
+    slot_types_in?: string[];
+    slot_types_out?: string[];
+    registered_node_types?: Record<string, unknown>;
+    registered_slot_in_types?: Record<string, unknown>;
+    registered_slot_out_types?: Record<string, unknown>;
+    searchbox_extras?: Record<string, unknown>;
+    search_filter_enabled?: boolean;
+    search_hide_on_mouse_leave?: boolean;
+    search_show_all_on_open?: boolean;
+    dialog_close_on_mouse_leave?: boolean;
+    dialog_close_on_mouse_leave_delay?: number;
+    getTime?: () => number;
+    createNode?: (type: string) => LGraphNode | null;
+    LGraphGroup?: new (...args: any[]) => LGraphGroup;
+    pointerListenerAdd?: (
+        dom: EventTarget,
+        ev: string,
+        cb: EventListenerOrEventListenerObject,
+        capture?: boolean
+    ) => void;
+    pointerListenerRemove?: (
+        dom: EventTarget,
+        ev: string,
+        cb: EventListenerOrEventListenerObject,
+        capture?: boolean
+    ) => void;
+};
+
 /**
  * LGraphCanvas menu / panel / search layer.
  * Source: `showLinkMenu/showConnectionMenu/showSearchBox/createDialog/createPanel/processContextMenu`.
@@ -55,7 +91,7 @@ export class LGraphCanvasMenuPanel extends LGraphCanvasRender {
     }
 
     private menuHost(): any {
-        const litegraph = this.getLiteGraphHost() as any;
+        const litegraph = this.getLiteGraphHost() as unknown as LGraphCanvasMenuPanelHost;
         return {
             ...litegraph,
             ContextMenu:

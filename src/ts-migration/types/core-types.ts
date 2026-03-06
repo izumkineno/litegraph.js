@@ -1,6 +1,6 @@
-// TODO: Import LGraphNode from its future module
-// TODO: Import LGraphCanvas from its future module
-// TODO: Import ContextMenu from its future module
+import type { LGraphCanvasMenuPanel as LGraphCanvasLike } from "../canvas/LGraphCanvas.menu-panel";
+import type { LGraphNodeCanvasCollab as LGraphNodeLike } from "../models/LGraphNode.canvas-collab";
+import type { ContextMenu as ContextMenuLike } from "../ui/ContextMenu";
 
 export type Vector2 = [number, number];
 export type Vector4 = [number, number, number, number];
@@ -19,14 +19,6 @@ export type widgetTypes =
  * The source runtime also allows custom numeric values.
  */
 export type SlotShape = 1 | 3 | 5 | 6 | number;
-
-/**
- * Placeholder interfaces for yet-to-be-migrated classes.
- * They keep type signatures stable in early migration tasks.
- */
-export interface LGraphNodeLike {}
-export interface LGraphCanvasLike {}
-export interface ContextMenuLike {}
 
 export type NodeLinkId = number;
 

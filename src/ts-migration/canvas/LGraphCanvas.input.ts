@@ -1,15 +1,47 @@
-// TODO: Import LGraph from its future module
-// TODO: Import LGraphNode from its future module
-// TODO: Import LGraphGroup from its future module
-// TODO: Import full LiteGraph runtime host from its future module
-
 import type { Vector2, Vector4 } from "../types/core-types";
+import type { LiteGraphConstantsShape } from "../core/litegraph.constants";
+import type { LGraphPersistence as LGraph } from "../models/LGraph.persistence";
+import type { LGraphGroup } from "../models/LGraphGroup";
+import type { LGraphNodeCanvasCollab as LGraphNode } from "../models/LGraphNode.canvas-collab";
 import { distance, isInsideRectangle, overlapBounding } from "../utils/math-geometry";
 import { LGraphCanvasLifecycle } from "./LGraphCanvas.lifecycle";
 
 type CanvasMouseEventLike = any;
+type CanvasGraphRuntime = LGraph;
+type CanvasNodeRuntime = LGraphNode;
+type CanvasGroupRuntime = LGraphGroup;
 
-const defaultLiteGraphHost = {
+type LGraphCanvasInputHost = Pick<
+    LiteGraphConstantsShape,
+    | "NODE_TITLE_HEIGHT"
+    | "EVENT"
+    | "alt_drag_do_clone_nodes"
+    | "middle_click_slot_add_default_node"
+    | "release_link_on_empty_shows_menu"
+    | "click_do_break_link_to"
+    | "ctrl_shift_v_paste_connect_unselected_outputs"
+> & {
+    node_types_by_file_extension: Record<string, { type: string }>;
+    isBreakLinkModifierPressed: (e?: MouseEvent) => boolean;
+    isValidConnection: (...args: any[]) => boolean;
+    createNode: (type?: string) => LGraphNode | null;
+    getTime: () => number;
+    closeAllContextMenus: (...args: any[]) => void;
+    pointerListenerAdd: (
+        dom: EventTarget,
+        eventName: string,
+        callback: EventListenerOrEventListenerObject,
+        capture?: boolean
+    ) => void;
+    pointerListenerRemove: (
+        dom: EventTarget,
+        eventName: string,
+        callback: EventListenerOrEventListenerObject,
+        capture?: boolean
+    ) => void;
+};
+
+const defaultLiteGraphHost: LGraphCanvasInputHost = {
     NODE_TITLE_HEIGHT: 30,
     EVENT: -1,
     alt_drag_do_clone_nodes: false,
@@ -86,7 +118,7 @@ export class LGraphCanvasInput extends LGraphCanvasLifecycle {
     onShowNodePanel?: (node: any) => void;
     onNodeDblClicked?: (node: any) => void;
 
-    protected getLiteGraphHost(): typeof defaultLiteGraphHost & Record<string, any> {
+    protected getLiteGraphHost(): LGraphCanvasInputHost & Record<string, any> {
         const injected = (this.constructor as any).liteGraph || {};
         return { ...defaultLiteGraphHost, ...injected };
     }
@@ -1504,7 +1536,7 @@ export class LGraphCanvasInput extends LGraphCanvasLifecycle {
             const nodetype = LiteGraph.node_types_by_file_extension[ext];
             if (nodetype) {
                 this.graph.beforeChange();
-                const node = LiteGraph.createNode(nodetype.type);
+                const node = LiteGraph.createNode(nodetype.type) as any;
                 node.pos = [(e as any).canvasX, (e as any).canvasY];
                 this.graph.add(node);
                 if (node.onDropFile) {

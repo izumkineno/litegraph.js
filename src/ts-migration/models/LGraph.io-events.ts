@@ -1,11 +1,11 @@
-// TODO: Import LGraphNode from its future module
-// TODO: Import full LiteGraph runtime host from its future module
-
+import type { LiteGraphConstantsShape } from "../core/litegraph.constants";
+import type { LGraphNodeCanvasCollab as LGraphNode } from "./LGraphNode.canvas-collab";
 import { type LiteGraphLifecycleHost } from "./LGraph.lifecycle";
 import { LGraphStructure } from "./LGraph.structure";
 
-interface LiteGraphIOEventsHost extends LiteGraphLifecycleHost {
-    ALWAYS: number;
+interface LiteGraphIOEventsHost
+    extends LiteGraphLifecycleHost,
+        Pick<LiteGraphConstantsShape, "ALWAYS"> {
     Subgraph?: Function;
     GraphInput?: Function;
 }
@@ -16,9 +16,9 @@ const defaultIOEventsHost: LiteGraphIOEventsHost = {
     ALWAYS: 0,
 };
 
-interface GraphNodeEventLike {
-    id: number | string;
-    mode: number;
+type GraphNodeEventBase = Pick<LGraphNode, "id" | "mode">;
+
+interface GraphNodeEventLike extends GraphNodeEventBase {
     constructor: Function;
     properties: { name?: string };
     onTrigger: (value: unknown) => void;

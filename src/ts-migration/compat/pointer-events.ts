@@ -1,4 +1,4 @@
-// TODO: Import LiteGraph runtime host from its future module
+import type { LiteGraphConstantsShape } from "../core/litegraph.constants";
 
 export type PointerEventsMethod = "mouse" | "pointer" | "touch";
 export type SemanticPointerEvent =
@@ -54,7 +54,7 @@ export interface TouchNormalizedEvent {
 }
 
 export interface PointerEventsHost {
-    pointerevents_method: PointerEventsMethod | string;
+    pointerevents_method: LiteGraphConstantsShape["pointerevents_method"] | string;
     _pointer_listener_registry: WeakMap<EventTarget, ListenerRegistryBucket>;
     _normalizeTouchEvent: (e: TouchEvent) => TouchNormalizedEvent | null;
     _resolvePointerEventName: (

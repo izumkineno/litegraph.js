@@ -1,6 +1,5 @@
-// TODO: Import full LiteGraph runtime host from its future module
-
 import type { INodeInputSlot, INodeOutputSlot, Vector2, Vector4 } from "../types/core-types";
+import type { LiteGraphConstantsShape } from "../core/litegraph.constants";
 import { LLink } from "./LLink";
 import { LGraphNodePortsWidgets } from "./LGraphNode.ports-widgets";
 
@@ -96,24 +95,27 @@ type GraphLike = {
     getNodeById: (id: number | string) => NodeLike | null;
 };
 
-interface Host {
-    NODE_TITLE_HEIGHT: number;
-    NODE_COLLAPSED_WIDTH: number;
-    NODE_SLOT_HEIGHT: number;
-    INPUT: number;
-    OUTPUT: number;
-    EVENT: number | string;
-    ACTION: number | string;
-    ALWAYS: number;
-    ON_EVENT: number;
-    NEVER: number;
-    ON_TRIGGER: number;
+interface Host
+    extends Pick<
+        LiteGraphConstantsShape,
+        | "NODE_TITLE_HEIGHT"
+        | "NODE_COLLAPSED_WIDTH"
+        | "NODE_SLOT_HEIGHT"
+        | "INPUT"
+        | "OUTPUT"
+        | "EVENT"
+        | "ACTION"
+        | "ALWAYS"
+        | "ON_EVENT"
+        | "NEVER"
+        | "ON_TRIGGER"
+        | "do_add_triggers_slots"
+        | "allow_multi_output_for_events"
+        | "use_uuids"
+        | "debug"
+    > {
     ON_REQUEST?: number;
-    do_add_triggers_slots: boolean;
-    allow_multi_output_for_events: boolean;
-    use_uuids: boolean;
     uuidv4: () => string;
-    debug: boolean;
     isValidConnection: (a: unknown, b: unknown) => boolean;
     getTime: () => number;
 }

@@ -1,8 +1,7 @@
-// TODO: Import LGraph from its future module
-// TODO: Import LGraphCanvas from its future module
-
 import type { Vector2, Vector4 } from "../types/core-types";
+import type { LGraphCanvasMenuPanel as LGraphCanvas } from "../canvas/LGraphCanvas.menu-panel";
 import { overlapBounding } from "../utils/math-geometry";
+import type { LGraphPersistence as LGraph } from "./LGraph.persistence";
 import { LGraphNodeCanvasCollab } from "./LGraphNode.canvas-collab";
 import {
     parseSerializedLGraphGroupInput,
@@ -14,22 +13,20 @@ interface LGraphGroupNodeLike {
     getBounding: (out?: Vector4) => Vector4;
 }
 
-interface LGraphGroupGraphLike {
+interface LGraphGroupGraphLike extends Pick<LGraph, "sendActionToCanvas" | "isLive"> {
     _nodes: LGraphGroupNodeLike[];
-    sendActionToCanvas?: (
-        action: string,
-        params: [boolean | undefined, boolean | undefined]
-    ) => void;
-    isLive?: () => boolean;
 }
 
-interface LGraphGroupCanvasColorsLike {
+type LGraphCanvasConstructorLike = {
+    new (...args: any[]): LGraphCanvas;
     node_colors?: {
         pale_blue?: {
             groupcolor?: string;
         };
     };
-}
+};
+
+type LGraphGroupCanvasColorsLike = Pick<LGraphCanvasConstructorLike, "node_colors">;
 
 const defaultCanvasColors: LGraphGroupCanvasColorsLike = {
     node_colors: {

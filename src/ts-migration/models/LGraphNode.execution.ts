@@ -1,6 +1,5 @@
-// TODO: Import LGraph from its future module
-// TODO: Import full LiteGraph runtime host from its future module
-
+import type { LiteGraphConstantsShape } from "../core/litegraph.constants";
+import type { LGraphPersistence as LGraph } from "./LGraph.persistence";
 import { LGraphNode } from "./LGraphNode.state";
 
 interface TriggerOptions {
@@ -8,11 +7,11 @@ interface TriggerOptions {
     [key: string]: unknown;
 }
 
-interface LiteGraphNodeExecutionHost {
-    EVENT: number | string;
-    ACTION: number | string;
-    ON_TRIGGER: number;
-    use_deferred_actions: boolean;
+interface LiteGraphNodeExecutionHost
+    extends Pick<
+        LiteGraphConstantsShape,
+        "EVENT" | "ACTION" | "ON_TRIGGER" | "use_deferred_actions"
+    > {
     getTime: () => number;
 }
 
@@ -73,13 +72,12 @@ interface LGraphNodeExecutionLike {
     >;
 }
 
-interface LGraphExecutionStateLike {
+interface LGraphExecutionStateLike extends Pick<LGraph, "iteration"> {
     links: Record<string, GraphLinkExecutionLike>;
     getNodeById: (id: number | string) => LGraphNodeExecutionLike | null;
     nodes_executing: Record<string, unknown>;
     nodes_actioning: Record<string, unknown>;
     nodes_executedAction: Record<string, unknown>;
-    iteration: number;
     _last_trigger_time?: number;
 }
 

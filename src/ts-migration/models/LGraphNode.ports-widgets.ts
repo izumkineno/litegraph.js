@@ -1,5 +1,3 @@
-// TODO: Import full LiteGraph runtime host from its future module
-
 import type {
     INodeInputSlot,
     INodeOutputSlot,
@@ -7,14 +5,18 @@ import type {
     Vector2,
     WidgetCallback,
 } from "../types/core-types";
+import type { LiteGraphConstantsShape } from "../core/litegraph.constants";
 import { LGraphNodeExecution } from "./LGraphNode.execution";
 
-interface LiteGraphNodePortsWidgetsHost {
-    NODE_TEXT_SIZE: number;
-    NODE_WIDTH: number;
-    NODE_SLOT_HEIGHT: number;
-    NODE_WIDGET_HEIGHT: number;
-    auto_load_slot_types: boolean;
+interface LiteGraphNodePortsWidgetsHost
+    extends Pick<
+        LiteGraphConstantsShape,
+        | "NODE_TEXT_SIZE"
+        | "NODE_WIDTH"
+        | "NODE_SLOT_HEIGHT"
+        | "NODE_WIDGET_HEIGHT"
+        | "auto_load_slot_types"
+    > {
     registerNodeAndSlotType?: (
         node: LGraphNodePortsWidgets,
         type: string | number | -1,

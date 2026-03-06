@@ -1,13 +1,10 @@
-// TODO: Import LGraphNode from its future module
-// TODO: Import LGraphGroup from its future module
-// TODO: Import ContextMenu from its future module
-// TODO: Import LiteGraph runtime host from its future module
-
 import type { Vector2 } from "../types/core-types";
+import type { LiteGraphConstantsShape } from "../core/litegraph.constants";
+import type { LGraphGroup } from "../models/LGraphGroup";
+import type { LGraphNodeCanvasCollab as LGraphNode } from "../models/LGraphNode.canvas-collab";
+import type { ContextMenu } from "../ui/ContextMenu";
 
-interface ContextMenuLike {
-    getFirstEvent?: () => MouseEvent;
-}
+interface ContextMenuLike extends Pick<ContextMenu, "getFirstEvent"> {}
 
 interface ContextMenuConstructorLike {
     new (
@@ -17,12 +14,8 @@ interface ContextMenuConstructorLike {
     ): ContextMenuLike;
 }
 
-interface LGraphNodeLike {
-    id: number | string;
-    type?: string | null;
-    title?: string;
-    pos: Vector2;
-    size: Vector2;
+interface LGraphNodeLike
+    extends Pick<LGraphNode, "id" | "type" | "title" | "pos" | "size"> {
     graph?: LGraphLike | null;
     optional_inputs?: unknown[];
     optional_outputs?: unknown[];
@@ -88,16 +81,19 @@ interface NodeTypeLike {
     skip_list?: boolean;
 }
 
-interface LiteGraphCanvasStaticHost {
-    EVENT: number | string;
-    ACTION: number | string;
-    ALWAYS: number;
-    EVENT_LINK_COLOR: string;
-    NODE_MODES: string[] | Record<string, string>;
-    VALID_SHAPES: string[];
-    do_add_triggers_slots: boolean;
-    dialog_close_on_mouse_leave: boolean;
-    dialog_close_on_mouse_leave_delay: number;
+interface LiteGraphCanvasStaticHost
+    extends Pick<
+        LiteGraphConstantsShape,
+        | "EVENT"
+        | "ACTION"
+        | "ALWAYS"
+        | "EVENT_LINK_COLOR"
+        | "NODE_MODES"
+        | "VALID_SHAPES"
+        | "do_add_triggers_slots"
+        | "dialog_close_on_mouse_leave"
+        | "dialog_close_on_mouse_leave_delay"
+    > {
     LGraphGroup?: new () => unknown;
     ContextMenu: ContextMenuConstructorLike;
     createNode: (type: string) => LGraphNodeLike | null;
@@ -433,7 +429,7 @@ export class LGraphCanvas {
                     callback: (value: unknown, _event: unknown, _mouseEvent: unknown, contextMenu: unknown) => {
                         const selected = value as { value?: string };
                         const first_event =
-                            (contextMenu as ContextMenuLike).getFirstEvent!();
+                            (contextMenu as ContextMenuLike).getFirstEvent!() as MouseEvent;
                         canvasRef.graph.beforeChange!();
                         const newNode = host.createNode(selected.value || "");
                         if (newNode) {

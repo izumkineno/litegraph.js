@@ -1,16 +1,11 @@
-// TODO: Import LGraphCanvas from its future module
-
 import type { Vector2 } from "../types/core-types";
+import type { LGraphCanvasMenuPanel as LGraphCanvas } from "../canvas/LGraphCanvas.menu-panel";
 import { clamp } from "../utils/clamp";
 import { distance } from "../utils/math-geometry";
 
 export type CurvePoint = Vector2;
 
-interface CurveEditorGraphCanvasLike {
-    ds: {
-        scale: number;
-    };
-}
+type CurveEditorGraphCanvasLike = Pick<LGraphCanvas, "ds">;
 
 /**
  * Used by some widgets to render a curve editor.

@@ -1,5 +1,4 @@
-// TODO: Import full LiteGraph runtime host from its future module
-
+import type { LiteGraphConstantsShape } from "../core/litegraph.constants";
 import type { ContextMenuItem, IContextMenuOptions } from "../types/core-types";
 
 type MenuValueLike = any;
@@ -33,9 +32,8 @@ interface ContextMenuOptions
     node?: any;
 }
 
-interface ContextMenuHost {
-    pointerevents_method: "mouse" | "pointer" | "touch" | string;
-    isTouchDevice: () => boolean;
+interface ContextMenuHost
+    extends Pick<LiteGraphConstantsShape, "pointerevents_method" | "isTouchDevice"> {
     pointerListenerAdd: (
         dom: EventTarget,
         eventName: string,

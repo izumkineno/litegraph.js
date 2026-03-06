@@ -1,10 +1,8 @@
-// TODO: Import LGraphNode from its future module
-// TODO: Import LiteGraph runtime host from its future module
-
 import type {
     LGraphNodeConstructorLike,
-    LGraphNodeLike,
 } from "./litegraph.registry";
+import type { LiteGraphConstantsShape } from "./litegraph.constants";
+import type { LGraphNodeCanvasCollab as LGraphNode } from "../models/LGraphNode.canvas-collab";
 
 type SlotType = string | number;
 
@@ -27,28 +25,32 @@ interface GeneratedNodeClassLike extends LGraphNodeConstructorLike {
     desc?: string;
 }
 
-interface LGraphNodeRuntimeLike extends LGraphNodeLike {
-    addInput: (name: string, type: SlotType) => void;
-    addOutput: (name: string, type: SlotType) => void;
-    addProperty: (name: string, value: unknown) => void;
-    getInputData: (index: number) => unknown;
-    setOutputData: (index: number, value: unknown) => void;
+type LGraphNodeRuntimeLike = Pick<
+    LGraphNode,
+    | "addInput"
+    | "addOutput"
+    | "addProperty"
+    | "getInputData"
+    | "setOutputData"
+> & {
     onCreate?: () => void;
     onExecute?: () => void;
-}
+};
 
-export interface LiteGraphRuntimeHost {
-    EVENT: number;
-    ACTION: number;
-    proxy: string | null;
-    debug: boolean;
-    throw_errors: boolean;
-
-    registered_node_types: Record<string, LGraphNodeConstructorLike>;
+export interface LiteGraphRuntimeHost
+    extends Pick<
+        LiteGraphConstantsShape,
+        | "EVENT"
+        | "ACTION"
+        | "proxy"
+        | "debug"
+        | "throw_errors"
+        | "registered_node_types"
+        | "slot_types_in"
+        | "slot_types_out"
+    > {
     registered_slot_in_types: Record<string, SlotTypeBucket>;
     registered_slot_out_types: Record<string, SlotTypeBucket>;
-    slot_types_in: string[];
-    slot_types_out: string[];
     searchbox_extras: Record<
         string,
         {

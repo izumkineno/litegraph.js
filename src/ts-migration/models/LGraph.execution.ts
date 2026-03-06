@@ -1,5 +1,4 @@
-// TODO: Import LGraphNode from its future module
-
+import type { LGraphNodeCanvasCollab as LGraphNode } from "./LGraphNode.canvas-collab";
 import { LGraph, type LiteGraphLifecycleHost } from "./LGraph.lifecycle";
 
 interface LiteGraphExecutionHost extends LiteGraphLifecycleHost {
@@ -33,11 +32,12 @@ interface GraphLinkLike {
     target_id: number | string;
 }
 
-interface GraphNodeExecutionLike {
-    id: number;
-    mode: number;
-    onExecute?: () => void;
-    doExecute?: () => void;
+type GraphNodeExecutionBase = Pick<
+    LGraphNode,
+    "id" | "mode" | "onExecute" | "doExecute" | "getInputNode" | "pos" | "size"
+>;
+
+interface GraphNodeExecutionLike extends GraphNodeExecutionBase {
     _waiting_actions?: unknown[];
     executePendingActions?: () => void;
     inputs?: Array<GraphInputSlot | null>;
@@ -46,9 +46,6 @@ interface GraphNodeExecutionLike {
     order: number;
     constructor: { priority?: number };
     priority?: number;
-    getInputNode: (index: number) => GraphNodeExecutionLike | null;
-    pos: [number, number];
-    size: [number, number];
 }
 
 /**
@@ -375,7 +372,8 @@ export class LGraphExecution extends LGraph {
             }
 
             for (let i = 0; i < current.inputs.length; ++i) {
-                const input = current.getInputNode(i);
+                const input =
+                    current.getInputNode(i) as unknown as GraphNodeExecutionLike | null;
                 if (input && ancestors.indexOf(input) == -1) {
                     pending.push(input);
                 }
