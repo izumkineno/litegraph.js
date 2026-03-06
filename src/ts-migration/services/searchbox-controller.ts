@@ -4,6 +4,7 @@ import type {
     ResolvedMenuPanelCanvasClassPort,
     SearchBoxControllerPort,
 } from "./menu-panel-types";
+import { createFloatingUiService } from "./floating-ui-service";
 
 export interface SearchBoxControllerContext {
     host: MenuPanelHost;
@@ -46,7 +47,12 @@ export function showSearchBoxController(
         opts.do_type_filter = false;
     }
 
-    const root_document = canvas?.ownerDocument || document;
+    const floating = createFloatingUiService({
+        ownerDocument: canvas?.ownerDocument || null,
+        event: event || null,
+        preferFullscreen: true,
+    });
+    const root_document = floating.document;
     const dialog = root_document.createElement("div") as DialogLike;
     dialog.className = "litegraph litesearchbox graphdialog rounded";
     dialog.innerHTML =
@@ -58,12 +64,9 @@ export function showSearchBoxController(
             "<select class='slot_out_type_filter'><option value=''></option></select>";
     }
     dialog.innerHTML += "<div class='helper'></div>";
-
-    if (root_document.fullscreenElement) {
-        root_document.fullscreenElement.appendChild(dialog);
-    } else {
-        root_document.body.appendChild(dialog);
-        root_document.body.style.overflow = "hidden";
+    floating.mount(dialog);
+    if (floating.mountRoot === root_document.body) {
+        floating.lockBodyOverflow();
     }
 
     const selIn = opts.do_type_filter
@@ -77,68 +80,38 @@ export function showSearchBoxController(
         setSearchBox(null);
         dialog.blur();
         canvas?.focus();
-        root_document.body.style.overflow = "";
-        if (dialog._remove_outside_close) {
-            dialog._remove_outside_close();
-            dialog._remove_outside_close = null;
+        if (dialog._floating_cleanup) {
+            const cleanup = dialog._floating_cleanup;
+            dialog._floating_cleanup = null;
+            cleanup();
         }
 
         setTimeout(() => {
             graphcanvas.focusCanvas();
         }, 20);
-        if (dialog.parentNode) {
-            dialog.parentNode.removeChild(dialog);
-        }
+    };
+    dialog._floating_cleanup = () => {
+        floating.destroy(dialog);
     };
 
     if (graphcanvas.ds.scale > 1) {
         dialog.style.transform = "scale(" + graphcanvas.ds.scale + ")";
     }
 
-    const open_time = host.getTime ? host.getTime() : Date.now();
-    const bindOutsideClose = (): void => {
-        const onOutsideDown = (e: Event): void => {
-            if (!dialog || !getSearchBox()) {
-                return;
-            }
-            const now = host.getTime ? host.getTime() : Date.now();
-            if (now - open_time < 60) {
-                return;
-            }
-            if (dialog.contains(e.target as Node)) {
-                return;
-            }
-            dialog.close();
-        };
-
-        root_document.addEventListener("mousedown", onOutsideDown, true);
-        root_document.addEventListener("touchstart", onOutsideDown, {
-            capture: true,
-            passive: true,
-        });
-        dialog._remove_outside_close = () => {
-            root_document.removeEventListener("mousedown", onOutsideDown, true);
-            root_document.removeEventListener("touchstart", onOutsideDown, true);
-        };
-    };
-    bindOutsideClose();
+    floating.watchOutsideClose({
+        element: dialog,
+        onClose: dialog.close,
+        minOpenMs: 60,
+        active: () => !!getSearchBox(),
+    });
 
     if (opts.hide_on_mouse_leave) {
         let prevent_timeout: any = false;
-        let timeout_close: ReturnType<typeof setTimeout> | null = null;
-        host.pointerListenerAdd?.(dialog, "enter", () => {
-            if (timeout_close) {
-                clearTimeout(timeout_close);
-                timeout_close = null;
-            }
-        });
-        host.pointerListenerAdd?.(dialog, "leave", () => {
-            if (prevent_timeout) {
-                return;
-            }
-            timeout_close = setTimeout(() => {
-                dialog.close();
-            }, 500);
+        floating.watchCloseOnLeave({
+            element: dialog,
+            onClose: dialog.close,
+            delayMs: 500,
+            enabled: () => !prevent_timeout,
         });
         if (opts.do_type_filter && selIn && selOut) {
             selIn.addEventListener("click", () => {
@@ -263,8 +236,12 @@ export function showSearchBoxController(
     const rect = canvas?.getBoundingClientRect();
     const left = ((event ? event.clientX : (rect?.left || 0) + (rect?.width || 0) * 0.5) - 80);
     const top = ((event ? event.clientY : (rect?.top || 0) + (rect?.height || 0) * 0.5) - 20);
-    dialog.style.left = left + "px";
-    dialog.style.top = top + "px";
+    floating.place(dialog, {
+        left,
+        top,
+        scale: graphcanvas.ds.scale > 1 ? graphcanvas.ds.scale : undefined,
+        clampToBounds: true,
+    });
 
     if (event && rect && (event as any).layerY > rect.height - 200) {
         helper.style.maxHeight = rect.height - (event as any).layerY - 20 + "px";

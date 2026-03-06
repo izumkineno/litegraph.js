@@ -1,4 +1,5 @@
 import type { DialogLike, MenuPanelHost } from "./menu-panel-types";
+import { createFloatingUiService } from "./floating-ui-service";
 
 export interface DialogFactoryContext {
     canvas: HTMLCanvasElement | null;
@@ -11,6 +12,12 @@ export function createDialog(
     options?: any
 ): DialogLike {
     const host = context.host;
+    const canvas = context.canvas;
+    const floating = createFloatingUiService({
+        ownerDocument: canvas?.ownerDocument || null,
+        mount: (canvas?.parentNode as HTMLElement | null) || null,
+        canvas,
+    });
     const opts = Object.assign(
         {
             checkForInput: false,
@@ -29,14 +36,13 @@ export function createDialog(
         dialog.is_modified = true;
     };
     dialog.close = () => {
-        if (dialog._remove_outside_close) {
-            dialog._remove_outside_close();
-            dialog._remove_outside_close = null;
+        if (dialog._floating_cleanup) {
+            const cleanup = dialog._floating_cleanup;
+            dialog._floating_cleanup = null;
+            cleanup();
         }
-        dialog.parentNode?.removeChild(dialog);
     };
 
-    const canvas = context.canvas;
     if (!canvas) {
         return dialog;
     }
@@ -57,9 +63,11 @@ export function createDialog(
         x += canvas.width * 0.5;
         y += canvas.height * 0.5;
     }
-    dialog.style.left = x + "px";
-    dialog.style.top = y + "px";
-    canvas.parentNode?.appendChild(dialog);
+    floating.mount(dialog);
+    floating.place(dialog, { left: x, top: y });
+    dialog._floating_cleanup = () => {
+        floating.destroy(dialog);
+    };
 
     if (opts.checkForInput) {
         const inputs = dialog.querySelectorAll("input");
@@ -86,22 +94,22 @@ export function createDialog(
 
     let dialogCloseTimer: ReturnType<typeof setTimeout> | null = null;
     let prevent_timeout: any = false;
-    host.pointerListenerAdd?.(dialog, "leave", () => {
-        if (prevent_timeout) {
-            return;
-        }
-        if (!close_on_leave) {
-            return;
-        }
-        if (opts.closeOnLeave_checkModified && dialog.is_modified) {
-            return;
-        }
-        dialogCloseTimer = setTimeout(dialog.close, host.dialog_close_on_mouse_leave_delay);
-    });
-    host.pointerListenerAdd?.(dialog, "enter", () => {
-        if (dialogCloseTimer) {
-            clearTimeout(dialogCloseTimer);
-        }
+    floating.watchCloseOnLeave({
+        element: dialog,
+        onClose: dialog.close,
+        delayMs: host.dialog_close_on_mouse_leave_delay || 500,
+        enabled: () => {
+            if (prevent_timeout) {
+                return false;
+            }
+            if (!close_on_leave) {
+                return false;
+            }
+            if (opts.closeOnLeave_checkModified && dialog.is_modified) {
+                return false;
+            }
+            return true;
+        },
     });
     const selects = dialog.querySelectorAll("select");
     if (selects) {
@@ -119,25 +127,10 @@ export function createDialog(
     }
 
     if (opts.closeOnClickOutside) {
-        const root = canvas.ownerDocument || document;
-        const onOutsideDown = (e: Event): void => {
-            if (!dialog.parentNode) {
-                return;
-            }
-            if (dialog.contains(e.target as Node)) {
-                return;
-            }
-            dialog.close();
-        };
-        root.addEventListener("mousedown", onOutsideDown, true);
-        root.addEventListener("touchstart", onOutsideDown, {
-            capture: true,
-            passive: true,
+        floating.watchOutsideClose({
+            element: dialog,
+            onClose: dialog.close,
         });
-        dialog._remove_outside_close = () => {
-            root.removeEventListener("mousedown", onOutsideDown, true);
-            root.removeEventListener("touchstart", onOutsideDown, true);
-        };
     }
     dialog.addEventListener("keydown", (e: KeyboardEvent) => {
         if (e.key === "Escape") {

@@ -1,4 +1,5 @@
 import type { DialogLike, MenuPanelHost } from "./menu-panel-types";
+import { createFloatingUiService } from "./floating-ui-service";
 
 export interface PromptDialogCanvasPort {
     canvas: HTMLCanvasElement | null;
@@ -24,8 +25,12 @@ export function showPromptDialog(
 ): DialogLike {
     const host = context.host;
     const canvas = context.canvas;
-    const rootDocument = canvas?.ownerDocument || document;
-    const dialog = rootDocument.createElement("div") as DialogLike;
+    const floating = createFloatingUiService({
+        ownerDocument: canvas?.ownerDocument || null,
+        mount: (canvas?.parentNode as HTMLElement | null) || null,
+        canvas,
+    });
+    const dialog = floating.document.createElement("div") as DialogLike;
     dialog.is_modified = false;
     dialog.className = "graphdialog rounded";
     dialog.innerHTML = multiline
@@ -36,28 +41,30 @@ export function showPromptDialog(
     };
     dialog.close = () => {
         context.setPromptBox(null);
-        dialog.parentNode?.removeChild(dialog);
+        if (dialog._floating_cleanup) {
+            const cleanup = dialog._floating_cleanup;
+            dialog._floating_cleanup = null;
+            cleanup();
+        }
     };
 
-    canvas?.parentNode?.appendChild(dialog);
+    floating.mount(dialog);
+    dialog._floating_cleanup = () => {
+        floating.destroy(dialog);
+    };
     if (context.scale > 1) {
         dialog.style.transform = "scale(" + context.scale + ")";
     }
 
-    let closeTimer: ReturnType<typeof setTimeout> | null = null;
     let prevent_timeout: any = false;
-    host.pointerListenerAdd?.(dialog, "leave", () => {
-        if (prevent_timeout) {
-            return;
-        }
-        if (host.dialog_close_on_mouse_leave && !dialog.is_modified) {
-            closeTimer = setTimeout(dialog.close, host.dialog_close_on_mouse_leave_delay);
-        }
-    });
-    host.pointerListenerAdd?.(dialog, "enter", () => {
-        if (closeTimer) {
-            clearTimeout(closeTimer);
-        }
+    floating.watchCloseOnLeave({
+        element: dialog,
+        onClose: dialog.close,
+        delayMs: host.dialog_close_on_mouse_leave_delay || 500,
+        enabled: () =>
+            !prevent_timeout &&
+            !!host.dialog_close_on_mouse_leave &&
+            !dialog.is_modified,
     });
     const selects = dialog.querySelectorAll("select");
     if (selects) {
@@ -129,8 +136,7 @@ export function showPromptDialog(
             x += canvas.width * 0.5;
             y += canvas.height * 0.5;
         }
-        dialog.style.left = x + "px";
-        dialog.style.top = y + "px";
+        floating.place(dialog, { left: x, top: y, scale: context.scale });
     }
     setTimeout(() => inputElement?.focus(), 10);
     return dialog;

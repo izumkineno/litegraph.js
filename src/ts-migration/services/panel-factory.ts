@@ -3,11 +3,13 @@ import type {
     PanelLike,
     ResolvedMenuPanelCanvasClassPort,
 } from "./menu-panel-types";
+import { createFloatingUiService } from "./floating-ui-service";
 
 export interface PanelFactoryContext {
     host: MenuPanelHost;
     menuClass: ResolvedMenuPanelCanvasClassPort;
     window: Window;
+    mount?: HTMLElement | null;
 }
 
 export function createPanel(
@@ -15,11 +17,16 @@ export function createPanel(
     title: string,
     options?: any
 ): PanelLike {
-    const root = document.createElement("div") as PanelLike;
     const host = context.host;
     const menuClass = context.menuClass;
     const panelOptions = options || {};
     const ref_window = panelOptions.window || context.window;
+    const floating = createFloatingUiService({
+        ownerDocument: ref_window?.document || null,
+        ownerWindow: ref_window || null,
+        mount: panelOptions.mount || context.mount || null,
+    });
+    const root = floating.document.createElement("div") as PanelLike;
 
     root.className = "litegraph dialog";
     root.innerHTML =
@@ -52,7 +59,11 @@ export function createPanel(
 
     root.close = () => {
         (root as any).onClose?.();
-        root.parentNode?.removeChild(root);
+        if (root._floating_cleanup) {
+            const cleanup = root._floating_cleanup;
+            root._floating_cleanup = null;
+            cleanup();
+        }
     };
     root.toggleAltContent = (force?: boolean) => {
         const showAlt =
@@ -196,6 +207,10 @@ export function createPanel(
         return elem;
     };
 
+    floating.mount(root);
+    root._floating_cleanup = () => {
+        floating.destroy(root);
+    };
     (root as any).onOpen?.();
     return root;
 }

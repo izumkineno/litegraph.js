@@ -96,6 +96,5 @@ export function showSubgraphIoPanel(
         });
 
     refresh();
-    context.canvas?.parentNode?.appendChild(panel);
     return panel;
 }

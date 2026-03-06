@@ -5,7 +5,7 @@ export interface DialogLike extends HTMLDivElement {
     is_modified: boolean;
     close: () => void;
     modified: () => void;
-    _remove_outside_close?: (() => void) | null;
+    _floating_cleanup?: (() => void) | null;
 }
 
 export interface PanelLike extends HTMLDivElement {
@@ -35,6 +35,7 @@ export interface PanelLike extends HTMLDivElement {
     inner_showCodePad?: (propname: string) => void;
     node?: any;
     graph?: any;
+    _floating_cleanup?: (() => void) | null;
 }
 
 export type ContextMenuCtor = new (...args: any[]) => unknown;

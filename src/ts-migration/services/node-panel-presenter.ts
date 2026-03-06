@@ -172,5 +172,4 @@ export function showNodePanel(
     };
 
     refresh();
-    graphcanvas.canvas?.parentNode?.appendChild(panel);
 }

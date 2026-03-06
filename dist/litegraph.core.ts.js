@@ -771,9 +771,288 @@ var LiteGraphTSMigration = (function(exports) {
     });
     input == null ? void 0 : input.focus();
   }
+  const documentManagers = /* @__PURE__ */ new WeakMap();
+  function resolveOwnerDocument(context) {
+    var _a2, _b2, _c2, _d2;
+    const eventTarget = (_a2 = context.event) == null ? void 0 : _a2.target;
+    return context.ownerDocument || ((_b2 = context.mount) == null ? void 0 : _b2.ownerDocument) || ((_c2 = context.canvas) == null ? void 0 : _c2.ownerDocument) || (eventTarget == null ? void 0 : eventTarget.ownerDocument) || ((_d2 = context.ownerWindow) == null ? void 0 : _d2.document) || document;
+  }
+  function resolveOwnerWindow(documentRef, context) {
+    return documentRef.defaultView || context.ownerWindow || window;
+  }
+  function resolveMountRoot(documentRef, context) {
+    if (context.mount) {
+      return context.mount;
+    }
+    if (context.preferFullscreen && documentRef.fullscreenElement && documentRef.fullscreenElement instanceof HTMLElement) {
+      return documentRef.fullscreenElement;
+    }
+    return documentRef.body;
+  }
+  function createDocumentManager(documentRef) {
+    const outsideEntries = /* @__PURE__ */ new Set();
+    const leaveEntries = /* @__PURE__ */ new Set();
+    const clearDisconnectedEntries = () => {
+      for (const entry of [...outsideEntries]) {
+        if (!entry.element.isConnected) {
+          outsideEntries.delete(entry);
+        }
+      }
+      for (const entry of [...leaveEntries]) {
+        if (!entry.element.isConnected) {
+          if (entry.timer) {
+            clearTimeout(entry.timer);
+          }
+          leaveEntries.delete(entry);
+        }
+      }
+    };
+    const handleOutsidePointer = (event2) => {
+      var _a2;
+      clearDisconnectedEntries();
+      const target = event2.target;
+      for (const entry of [...outsideEntries]) {
+        if (entry.active && !entry.active()) {
+          continue;
+        }
+        if (entry.minOpenMs > 0 && Date.now() - entry.openedAt < entry.minOpenMs) {
+          continue;
+        }
+        if ((_a2 = entry.ignore) == null ? void 0 : _a2.call(entry, event2)) {
+          continue;
+        }
+        if (target && entry.element.contains(target)) {
+          continue;
+        }
+        entry.onClose(event2);
+      }
+    };
+    const handlePointerOver = (event2) => {
+      clearDisconnectedEntries();
+      const target = event2.target;
+      if (!target) {
+        return;
+      }
+      for (const entry of [...leaveEntries]) {
+        if (entry.element.contains(target) && entry.timer) {
+          clearTimeout(entry.timer);
+          entry.timer = null;
+        }
+      }
+    };
+    const handlePointerOut = (event2) => {
+      clearDisconnectedEntries();
+      const target = event2.target;
+      const relatedTarget = event2.relatedTarget;
+      if (!target) {
+        return;
+      }
+      for (const entry of [...leaveEntries]) {
+        if (!entry.element.contains(target)) {
+          continue;
+        }
+        if (relatedTarget && entry.element.contains(relatedTarget)) {
+          continue;
+        }
+        if (entry.enabled && !entry.enabled()) {
+          continue;
+        }
+        if (entry.timer) {
+          clearTimeout(entry.timer);
+        }
+        entry.timer = setTimeout(() => {
+          entry.timer = null;
+          if (!entry.enabled || entry.enabled()) {
+            entry.onClose();
+          }
+        }, entry.delayMs);
+      }
+    };
+    documentRef.addEventListener("mousedown", handleOutsidePointer, true);
+    documentRef.addEventListener("touchstart", handleOutsidePointer, {
+      capture: true,
+      passive: true
+    });
+    documentRef.addEventListener("mouseover", handlePointerOver, true);
+    documentRef.addEventListener("mouseout", handlePointerOut, true);
+    return {
+      outsideEntries,
+      leaveEntries,
+      overflowLockCount: 0,
+      originalBodyOverflow: null,
+      cleanupListeners: () => {
+        documentRef.removeEventListener("mousedown", handleOutsidePointer, true);
+        documentRef.removeEventListener("touchstart", handleOutsidePointer, true);
+        documentRef.removeEventListener("mouseover", handlePointerOver, true);
+        documentRef.removeEventListener("mouseout", handlePointerOut, true);
+      }
+    };
+  }
+  function getDocumentManager(documentRef) {
+    let manager = documentManagers.get(documentRef);
+    if (!manager) {
+      manager = createDocumentManager(documentRef);
+      documentManagers.set(documentRef, manager);
+    }
+    return manager;
+  }
+  function maybeDisposeDocumentManager(documentRef) {
+    const manager = documentManagers.get(documentRef);
+    if (!manager) {
+      return;
+    }
+    if (manager.outsideEntries.size === 0 && manager.leaveEntries.size === 0 && manager.overflowLockCount === 0) {
+      manager.cleanupListeners();
+      documentManagers.delete(documentRef);
+    }
+  }
+  function createFloatingUiService(context = {}) {
+    const documentRef = resolveOwnerDocument(context);
+    const windowRef = resolveOwnerWindow(documentRef, context);
+    const mountRoot = resolveMountRoot(documentRef, context);
+    const manager = getDocumentManager(documentRef);
+    const cleanups = /* @__PURE__ */ new Set();
+    let destroyed = false;
+    const registerCleanup = (cleanup) => {
+      cleanups.add(cleanup);
+      return () => {
+        cleanups.delete(cleanup);
+      };
+    };
+    const mount = (element) => {
+      if (element.parentNode !== mountRoot) {
+        mountRoot.appendChild(element);
+      }
+    };
+    const place = (element, options) => {
+      var _a2;
+      const margin = (_a2 = options.margin) != null ? _a2 : 10;
+      if (typeof options.scale === "number" && options.scale > 0 && options.scale !== 1) {
+        element.style.transform = "scale(" + options.scale + ")";
+      }
+      let left = options.left;
+      let top = options.top;
+      element.style.left = left + "px";
+      element.style.top = top + "px";
+      if (!options.clampToBounds) {
+        return;
+      }
+      const boundsElement = options.boundsElement || mountRoot;
+      const elementRect = element.getBoundingClientRect();
+      const isDocumentRoot = boundsElement === documentRef.body || boundsElement === documentRef.documentElement || boundsElement === documentRef.fullscreenElement;
+      const boundsWidth = isDocumentRoot ? Math.max(
+        documentRef.documentElement.clientWidth,
+        windowRef.innerWidth || 0
+      ) : boundsElement.clientWidth || boundsElement.getBoundingClientRect().width;
+      const boundsHeight = isDocumentRoot ? Math.max(
+        documentRef.documentElement.clientHeight,
+        windowRef.innerHeight || 0
+      ) : boundsElement.clientHeight || boundsElement.getBoundingClientRect().height;
+      if (boundsWidth) {
+        left = Math.min(left, boundsWidth - elementRect.width - margin);
+        left = Math.max(left, margin);
+      }
+      if (boundsHeight) {
+        top = Math.min(top, boundsHeight - elementRect.height - margin);
+        top = Math.max(top, margin);
+      }
+      element.style.left = left + "px";
+      element.style.top = top + "px";
+    };
+    const watchOutsideClose = (options) => {
+      var _a2;
+      const entry = {
+        element: options.element,
+        onClose: options.onClose,
+        ignore: options.ignore,
+        openedAt: Date.now(),
+        minOpenMs: (_a2 = options.minOpenMs) != null ? _a2 : 0,
+        active: options.active
+      };
+      manager.outsideEntries.add(entry);
+      const unregister = () => {
+        manager.outsideEntries.delete(entry);
+        maybeDisposeDocumentManager(documentRef);
+      };
+      registerCleanup(unregister);
+      return unregister;
+    };
+    const watchCloseOnLeave = (options) => {
+      const entry = {
+        element: options.element,
+        onClose: options.onClose,
+        delayMs: options.delayMs,
+        enabled: options.enabled,
+        timer: null
+      };
+      manager.leaveEntries.add(entry);
+      const unregister = () => {
+        if (entry.timer) {
+          clearTimeout(entry.timer);
+          entry.timer = null;
+        }
+        manager.leaveEntries.delete(entry);
+        maybeDisposeDocumentManager(documentRef);
+      };
+      registerCleanup(unregister);
+      return unregister;
+    };
+    const lockBodyOverflow = () => {
+      const body = documentRef.body;
+      if (manager.overflowLockCount === 0) {
+        manager.originalBodyOverflow = body.style.overflow;
+        body.style.overflow = "hidden";
+      }
+      manager.overflowLockCount += 1;
+      const unlock = () => {
+        if (manager.overflowLockCount > 0) {
+          manager.overflowLockCount -= 1;
+        }
+        if (manager.overflowLockCount === 0) {
+          body.style.overflow = manager.originalBodyOverflow || "";
+          manager.originalBodyOverflow = null;
+          maybeDisposeDocumentManager(documentRef);
+        }
+      };
+      registerCleanup(unlock);
+      return unlock;
+    };
+    const destroy = (element) => {
+      if (destroyed) {
+        return;
+      }
+      destroyed = true;
+      const cleanupList = [...cleanups];
+      cleanups.clear();
+      for (const cleanup of cleanupList.reverse()) {
+        cleanup();
+      }
+      if (element == null ? void 0 : element.parentNode) {
+        element.parentNode.removeChild(element);
+      }
+      maybeDisposeDocumentManager(documentRef);
+    };
+    return {
+      document: documentRef,
+      window: windowRef,
+      mountRoot,
+      mount,
+      place,
+      watchOutsideClose,
+      watchCloseOnLeave,
+      lockBodyOverflow,
+      registerCleanup,
+      destroy
+    };
+  }
   function createDialog(context, html, options) {
-    var _a2, _b2, _c2;
     const host = context.host;
+    const canvas = context.canvas;
+    const floating = createFloatingUiService({
+      ownerDocument: (canvas == null ? void 0 : canvas.ownerDocument) || null,
+      mount: (canvas == null ? void 0 : canvas.parentNode) || null,
+      canvas
+    });
     const opts = Object.assign(
       {
         checkForInput: false,
@@ -792,14 +1071,12 @@ var LiteGraphTSMigration = (function(exports) {
       dialog.is_modified = true;
     };
     dialog.close = () => {
-      var _a3;
-      if (dialog._remove_outside_close) {
-        dialog._remove_outside_close();
-        dialog._remove_outside_close = null;
+      if (dialog._floating_cleanup) {
+        const cleanup = dialog._floating_cleanup;
+        dialog._floating_cleanup = null;
+        cleanup();
       }
-      (_a3 = dialog.parentNode) == null ? void 0 : _a3.removeChild(dialog);
     };
-    const canvas = context.canvas;
     if (!canvas) {
       return dialog;
     }
@@ -820,9 +1097,11 @@ var LiteGraphTSMigration = (function(exports) {
       x2 += canvas.width * 0.5;
       y2 += canvas.height * 0.5;
     }
-    dialog.style.left = x2 + "px";
-    dialog.style.top = y2 + "px";
-    (_a2 = canvas.parentNode) == null ? void 0 : _a2.appendChild(dialog);
+    floating.mount(dialog);
+    floating.place(dialog, { left: x2, top: y2 });
+    dialog._floating_cleanup = () => {
+      floating.destroy(dialog);
+    };
     if (opts.checkForInput) {
       const inputs = dialog.querySelectorAll("input");
       let focused = false;
@@ -845,23 +1124,22 @@ var LiteGraphTSMigration = (function(exports) {
         });
       }
     }
-    let dialogCloseTimer = null;
     let prevent_timeout = false;
-    (_b2 = host.pointerListenerAdd) == null ? void 0 : _b2.call(host, dialog, "leave", () => {
-      if (prevent_timeout) {
-        return;
-      }
-      if (!close_on_leave) {
-        return;
-      }
-      if (opts.closeOnLeave_checkModified && dialog.is_modified) {
-        return;
-      }
-      dialogCloseTimer = setTimeout(dialog.close, host.dialog_close_on_mouse_leave_delay);
-    });
-    (_c2 = host.pointerListenerAdd) == null ? void 0 : _c2.call(host, dialog, "enter", () => {
-      if (dialogCloseTimer) {
-        clearTimeout(dialogCloseTimer);
+    floating.watchCloseOnLeave({
+      element: dialog,
+      onClose: dialog.close,
+      delayMs: host.dialog_close_on_mouse_leave_delay || 500,
+      enabled: () => {
+        if (prevent_timeout) {
+          return false;
+        }
+        if (!close_on_leave) {
+          return false;
+        }
+        if (opts.closeOnLeave_checkModified && dialog.is_modified) {
+          return false;
+        }
+        return true;
       }
     });
     const selects = dialog.querySelectorAll("select");
@@ -879,25 +1157,10 @@ var LiteGraphTSMigration = (function(exports) {
       });
     }
     if (opts.closeOnClickOutside) {
-      const root = canvas.ownerDocument || document;
-      const onOutsideDown = (e) => {
-        if (!dialog.parentNode) {
-          return;
-        }
-        if (dialog.contains(e.target)) {
-          return;
-        }
-        dialog.close();
-      };
-      root.addEventListener("mousedown", onOutsideDown, true);
-      root.addEventListener("touchstart", onOutsideDown, {
-        capture: true,
-        passive: true
+      floating.watchOutsideClose({
+        element: dialog,
+        onClose: dialog.close
       });
-      dialog._remove_outside_close = () => {
-        root.removeEventListener("mousedown", onOutsideDown, true);
-        root.removeEventListener("touchstart", onOutsideDown, true);
-      };
     }
     dialog.addEventListener("keydown", (e) => {
       if (e.key === "Escape") {
@@ -2081,7 +2344,6 @@ var LiteGraphTSMigration = (function(exports) {
     return resolved;
   }
   function showGraphOptionsPanel(context) {
-    var _a2, _b2;
     const { graphcanvas, host } = context;
     graphcanvas.closePanels();
     const ref_window2 = graphcanvas.getCanvasWindow();
@@ -2133,10 +2395,8 @@ var LiteGraphTSMigration = (function(exports) {
       panel.footer.innerHTML = "";
     };
     refresh();
-    (_b2 = (_a2 = graphcanvas.canvas) == null ? void 0 : _a2.parentNode) == null ? void 0 : _b2.appendChild(panel);
   }
   function showNodePanel(context, node2) {
-    var _a2, _b2;
     const { graphcanvas, host, menuClass, state } = context;
     state.setSelectedNode(node2);
     graphcanvas.closePanels();
@@ -2156,15 +2416,15 @@ var LiteGraphTSMigration = (function(exports) {
     panel.node = node2;
     panel.classList.add("settings");
     const refresh = () => {
-      var _a3, _b3, _c2, _d2;
+      var _a2, _b2, _c2, _d2;
       panel.content.innerHTML = "";
       panel.addHTML(
         "<span class='node_type'>" + node2.type + "</span><span class='node_desc'>" + (node2.constructor.desc || "") + "</span><span class='separator'></span>"
       );
       panel.addHTML("<h3>Properties</h3>");
       const update = (name, value) => {
-        var _a4, _b4, _c3, _d3, _e, _f, _g;
-        (_b4 = (_a4 = graphcanvas.graph).beforeChange) == null ? void 0 : _b4.call(_a4, node2);
+        var _a3, _b3, _c3, _d3, _e, _f, _g;
+        (_b3 = (_a3 = graphcanvas.graph).beforeChange) == null ? void 0 : _b3.call(_a3, node2);
         if (name === "Title") {
           node2.title = value;
         } else if (name === "Mode") {
@@ -2188,14 +2448,14 @@ var LiteGraphTSMigration = (function(exports) {
       panel.addWidget(
         "combo",
         "Mode",
-        (_a3 = host.NODE_MODES) == null ? void 0 : _a3[node2.mode],
+        (_a2 = host.NODE_MODES) == null ? void 0 : _a2[node2.mode],
         { values: host.NODE_MODES },
         update
       );
       const nodeColor = node2.color !== void 0 ? Object.keys(menuClass.node_colors || {}).filter(
         (key) => {
-          var _a4;
-          return ((_a4 = menuClass.node_colors) == null ? void 0 : _a4[key].color) == node2.color;
+          var _a3;
+          return ((_a3 = menuClass.node_colors) == null ? void 0 : _a3[key].color) == node2.color;
         }
       ) : "";
       panel.addWidget(
@@ -2207,7 +2467,7 @@ var LiteGraphTSMigration = (function(exports) {
       );
       for (const propertyName in node2.properties) {
         const value = node2.properties[propertyName];
-        const info = ((_b3 = node2.getPropertyInfo) == null ? void 0 : _b3.call(node2, propertyName)) || {};
+        const info = ((_b2 = node2.getPropertyInfo) == null ? void 0 : _b2.call(node2, propertyName)) || {};
         if ((_c2 = node2.onAddPropertyToPanel) == null ? void 0 : _c2.call(node2, propertyName, panel)) {
           continue;
         }
@@ -2223,11 +2483,11 @@ var LiteGraphTSMigration = (function(exports) {
       (_d2 = node2.onShowCustomPanelInfo) == null ? void 0 : _d2.call(node2, panel);
       panel.footer.innerHTML = "";
       panel.addButton("Delete", () => {
-        var _a4, _b4;
+        var _a3, _b3;
         if (node2.block_delete) {
           return;
         }
-        (_b4 = (_a4 = node2.graph).remove) == null ? void 0 : _b4.call(_a4, node2);
+        (_b3 = (_a3 = node2.graph).remove) == null ? void 0 : _b3.call(_a3, node2);
         panel.close();
       }).classList.add("delete");
     };
@@ -2237,19 +2497,19 @@ var LiteGraphTSMigration = (function(exports) {
       panel.alt_content.innerHTML = "<textarea class='code'></textarea>";
       const textarea = panel.alt_content.querySelector("textarea");
       const done = () => {
-        var _a3;
+        var _a2;
         panel.toggleAltContent(false);
         panel.toggleFooterVisibility(true);
-        (_a3 = textarea.parentNode) == null ? void 0 : _a3.removeChild(textarea);
+        (_a2 = textarea.parentNode) == null ? void 0 : _a2.removeChild(textarea);
         panel.classList.add("settings");
         panel.classList.remove("centered");
         refresh();
       };
       textarea.value = node2.properties[propertyName];
       textarea.addEventListener("keydown", (e) => {
-        var _a3;
+        var _a2;
         if (e.code === "Enter" && e.ctrlKey) {
-          (_a3 = node2.setProperty) == null ? void 0 : _a3.call(node2, propertyName, textarea.value);
+          (_a2 = node2.setProperty) == null ? void 0 : _a2.call(node2, propertyName, textarea.value);
           done();
         }
       });
@@ -2257,8 +2517,8 @@ var LiteGraphTSMigration = (function(exports) {
       panel.toggleFooterVisibility(false);
       textarea.style.height = "calc(100% - 40px)";
       const assign = panel.addButton("Assign", () => {
-        var _a3;
-        (_a3 = node2.setProperty) == null ? void 0 : _a3.call(node2, propertyName, textarea.value);
+        var _a2;
+        (_a2 = node2.setProperty) == null ? void 0 : _a2.call(node2, propertyName, textarea.value);
         done();
       });
       panel.alt_content.appendChild(assign);
@@ -2267,15 +2527,19 @@ var LiteGraphTSMigration = (function(exports) {
       panel.alt_content.appendChild(close);
     };
     refresh();
-    (_b2 = (_a2 = graphcanvas.canvas) == null ? void 0 : _a2.parentNode) == null ? void 0 : _b2.appendChild(panel);
   }
   function createPanel(context, title, options) {
     var _a2;
-    const root = document.createElement("div");
     const host = context.host;
     const menuClass = context.menuClass;
     const panelOptions = options || {};
     const ref_window2 = panelOptions.window || context.window;
+    const floating = createFloatingUiService({
+      ownerDocument: (ref_window2 == null ? void 0 : ref_window2.document) || null,
+      ownerWindow: ref_window2 || null,
+      mount: panelOptions.mount || context.mount || null
+    });
+    const root = floating.document.createElement("div");
     root.className = "litegraph dialog";
     root.innerHTML = "<div class='dialog-header'><span class='dialog-title'></span></div><div class='dialog-content'></div><div style='display:none;' class='dialog-alt-content'></div><div class='dialog-footer'></div>";
     root.header = root.querySelector(".dialog-header");
@@ -2300,9 +2564,13 @@ var LiteGraphTSMigration = (function(exports) {
     root.onOpen = panelOptions.onOpen;
     root.onClose = panelOptions.onClose;
     root.close = () => {
-      var _a3, _b2;
+      var _a3;
       (_a3 = root.onClose) == null ? void 0 : _a3.call(root);
-      (_b2 = root.parentNode) == null ? void 0 : _b2.removeChild(root);
+      if (root._floating_cleanup) {
+        const cleanup = root._floating_cleanup;
+        root._floating_cleanup = null;
+        cleanup();
+      }
     };
     root.toggleAltContent = (force) => {
       const showAlt = typeof force !== "undefined" ? !!force : root.alt_content.style.display !== "block";
@@ -2422,6 +2690,10 @@ var LiteGraphTSMigration = (function(exports) {
       root.content.appendChild(elem);
       return elem;
     };
+    floating.mount(root);
+    root._floating_cleanup = () => {
+      floating.destroy(root);
+    };
     (_a2 = root.onOpen) == null ? void 0 : _a2.call(root);
     return root;
   }
@@ -2527,11 +2799,15 @@ var LiteGraphTSMigration = (function(exports) {
     return dialog;
   }
   function showPromptDialog(context, title, value, callback, event2, multiline) {
-    var _a2, _b2, _c2, _d2;
+    var _a2;
     const host = context.host;
     const canvas = context.canvas;
-    const rootDocument = (canvas == null ? void 0 : canvas.ownerDocument) || document;
-    const dialog = rootDocument.createElement("div");
+    const floating = createFloatingUiService({
+      ownerDocument: (canvas == null ? void 0 : canvas.ownerDocument) || null,
+      mount: (canvas == null ? void 0 : canvas.parentNode) || null,
+      canvas
+    });
+    const dialog = floating.document.createElement("div");
     dialog.is_modified = false;
     dialog.className = "graphdialog rounded";
     dialog.innerHTML = multiline ? "<span class='name'></span> <textarea autofocus class='value'></textarea><button class='rounded'>OK</button>" : "<span class='name'></span> <input autofocus type='text' class='value'/><button class='rounded'>OK</button>";
@@ -2539,28 +2815,26 @@ var LiteGraphTSMigration = (function(exports) {
       dialog.is_modified = true;
     };
     dialog.close = () => {
-      var _a3;
       context.setPromptBox(null);
-      (_a3 = dialog.parentNode) == null ? void 0 : _a3.removeChild(dialog);
+      if (dialog._floating_cleanup) {
+        const cleanup = dialog._floating_cleanup;
+        dialog._floating_cleanup = null;
+        cleanup();
+      }
     };
-    (_a2 = canvas == null ? void 0 : canvas.parentNode) == null ? void 0 : _a2.appendChild(dialog);
+    floating.mount(dialog);
+    dialog._floating_cleanup = () => {
+      floating.destroy(dialog);
+    };
     if (context.scale > 1) {
       dialog.style.transform = "scale(" + context.scale + ")";
     }
-    let closeTimer = null;
     let prevent_timeout = false;
-    (_b2 = host.pointerListenerAdd) == null ? void 0 : _b2.call(host, dialog, "leave", () => {
-      if (prevent_timeout) {
-        return;
-      }
-      if (host.dialog_close_on_mouse_leave && !dialog.is_modified) {
-        closeTimer = setTimeout(dialog.close, host.dialog_close_on_mouse_leave_delay);
-      }
-    });
-    (_c2 = host.pointerListenerAdd) == null ? void 0 : _c2.call(host, dialog, "enter", () => {
-      if (closeTimer) {
-        clearTimeout(closeTimer);
-      }
+    floating.watchCloseOnLeave({
+      element: dialog,
+      onClose: dialog.close,
+      delayMs: host.dialog_close_on_mouse_leave_delay || 500,
+      enabled: () => !prevent_timeout && !!host.dialog_close_on_mouse_leave && !dialog.is_modified
     });
     const selects = dialog.querySelectorAll("select");
     if (selects) {
@@ -2603,7 +2877,7 @@ var LiteGraphTSMigration = (function(exports) {
         keyEvent.stopPropagation();
       });
     }
-    (_d2 = dialog.querySelector("button")) == null ? void 0 : _d2.addEventListener("click", () => {
+    (_a2 = dialog.querySelector("button")) == null ? void 0 : _a2.addEventListener("click", () => {
       callback == null ? void 0 : callback(inputElement == null ? void 0 : inputElement.value);
       context.graphcanvas.setDirty(true, false);
       dialog.close();
@@ -2623,14 +2897,13 @@ var LiteGraphTSMigration = (function(exports) {
         x2 += canvas.width * 0.5;
         y2 += canvas.height * 0.5;
       }
-      dialog.style.left = x2 + "px";
-      dialog.style.top = y2 + "px";
+      floating.place(dialog, { left: x2, top: y2, scale: context.scale });
     }
     setTimeout(() => inputElement == null ? void 0 : inputElement.focus(), 10);
     return dialog;
   }
   function showSearchBoxController(context, event2, options) {
-    var _a2, _b2, _c2;
+    var _a2;
     const host = context.host;
     const menuClass = context.menuClass;
     const graphcanvas = context.graphcanvas;
@@ -2657,7 +2930,12 @@ var LiteGraphTSMigration = (function(exports) {
     if (opts.do_type_filter && !has_slot_types) {
       opts.do_type_filter = false;
     }
-    const root_document = (canvas == null ? void 0 : canvas.ownerDocument) || document;
+    const floating = createFloatingUiService({
+      ownerDocument: (canvas == null ? void 0 : canvas.ownerDocument) || null,
+      event: event2 || null,
+      preferFullscreen: true
+    });
+    const root_document = floating.document;
     const dialog = root_document.createElement("div");
     dialog.className = "litegraph litesearchbox graphdialog rounded";
     dialog.innerHTML = "<span class='name'>Search</span> <input autofocus type='text' class='value rounded'/>";
@@ -2666,11 +2944,9 @@ var LiteGraphTSMigration = (function(exports) {
       dialog.innerHTML += "<select class='slot_out_type_filter'><option value=''></option></select>";
     }
     dialog.innerHTML += "<div class='helper'></div>";
-    if (root_document.fullscreenElement) {
-      root_document.fullscreenElement.appendChild(dialog);
-    } else {
-      root_document.body.appendChild(dialog);
-      root_document.body.style.overflow = "hidden";
+    floating.mount(dialog);
+    if (floating.mountRoot === root_document.body) {
+      floating.lockBodyOverflow();
     }
     const selIn = opts.do_type_filter ? dialog.querySelector(".slot_in_type_filter") : null;
     const selOut = opts.do_type_filter ? dialog.querySelector(".slot_out_type_filter") : null;
@@ -2678,63 +2954,34 @@ var LiteGraphTSMigration = (function(exports) {
       setSearchBox(null);
       dialog.blur();
       canvas == null ? void 0 : canvas.focus();
-      root_document.body.style.overflow = "";
-      if (dialog._remove_outside_close) {
-        dialog._remove_outside_close();
-        dialog._remove_outside_close = null;
+      if (dialog._floating_cleanup) {
+        const cleanup = dialog._floating_cleanup;
+        dialog._floating_cleanup = null;
+        cleanup();
       }
       setTimeout(() => {
         graphcanvas.focusCanvas();
       }, 20);
-      if (dialog.parentNode) {
-        dialog.parentNode.removeChild(dialog);
-      }
+    };
+    dialog._floating_cleanup = () => {
+      floating.destroy(dialog);
     };
     if (graphcanvas.ds.scale > 1) {
       dialog.style.transform = "scale(" + graphcanvas.ds.scale + ")";
     }
-    const open_time = host.getTime ? host.getTime() : Date.now();
-    const bindOutsideClose = () => {
-      const onOutsideDown = (e) => {
-        if (!dialog || !getSearchBox()) {
-          return;
-        }
-        const now = host.getTime ? host.getTime() : Date.now();
-        if (now - open_time < 60) {
-          return;
-        }
-        if (dialog.contains(e.target)) {
-          return;
-        }
-        dialog.close();
-      };
-      root_document.addEventListener("mousedown", onOutsideDown, true);
-      root_document.addEventListener("touchstart", onOutsideDown, {
-        capture: true,
-        passive: true
-      });
-      dialog._remove_outside_close = () => {
-        root_document.removeEventListener("mousedown", onOutsideDown, true);
-        root_document.removeEventListener("touchstart", onOutsideDown, true);
-      };
-    };
-    bindOutsideClose();
+    floating.watchOutsideClose({
+      element: dialog,
+      onClose: dialog.close,
+      minOpenMs: 60,
+      active: () => !!getSearchBox()
+    });
     if (opts.hide_on_mouse_leave) {
       let prevent_timeout = false;
-      let timeout_close = null;
-      (_a2 = host.pointerListenerAdd) == null ? void 0 : _a2.call(host, dialog, "enter", () => {
-        if (timeout_close) {
-          clearTimeout(timeout_close);
-          timeout_close = null;
-        }
-      });
-      (_b2 = host.pointerListenerAdd) == null ? void 0 : _b2.call(host, dialog, "leave", () => {
-        if (prevent_timeout) {
-          return;
-        }
-        timeout_close = setTimeout(() => {
-          dialog.close();
-        }, 500);
+      floating.watchCloseOnLeave({
+        element: dialog,
+        onClose: dialog.close,
+        delayMs: 500,
+        enabled: () => !prevent_timeout
       });
       if (opts.do_type_filter && selIn && selOut) {
         selIn.addEventListener("click", () => {
@@ -2758,7 +3005,7 @@ var LiteGraphTSMigration = (function(exports) {
       }
     }
     if (getSearchBox()) {
-      (_c2 = getSearchBox()) == null ? void 0 : _c2.close();
+      (_a2 = getSearchBox()) == null ? void 0 : _a2.close();
     }
     setSearchBox(dialog);
     const helper = dialog.querySelector(".helper");
@@ -2847,8 +3094,12 @@ var LiteGraphTSMigration = (function(exports) {
     const rect = canvas == null ? void 0 : canvas.getBoundingClientRect();
     const left = (event2 ? event2.clientX : ((rect == null ? void 0 : rect.left) || 0) + ((rect == null ? void 0 : rect.width) || 0) * 0.5) - 80;
     const top = (event2 ? event2.clientY : ((rect == null ? void 0 : rect.top) || 0) + ((rect == null ? void 0 : rect.height) || 0) * 0.5) - 20;
-    dialog.style.left = left + "px";
-    dialog.style.top = top + "px";
+    floating.place(dialog, {
+      left,
+      top,
+      scale: graphcanvas.ds.scale > 1 ? graphcanvas.ds.scale : void 0,
+      clampToBounds: true
+    });
     if (event2 && rect && event2.layerY > rect.height - 200) {
       helper.style.maxHeight = rect.height - event2.layerY - 20 + "px";
     }
@@ -2857,7 +3108,7 @@ var LiteGraphTSMigration = (function(exports) {
       refreshHelper();
     }
     function select(name) {
-      var _a3, _b3, _c3, _d2, _e, _f;
+      var _a3, _b2, _c2, _d2, _e, _f;
       if (name) {
         if (graphcanvas.onSearchBoxSelection) {
           graphcanvas.onSearchBoxSelection(name, event2, graphcanvas);
@@ -2866,7 +3117,7 @@ var LiteGraphTSMigration = (function(exports) {
           if (extra) {
             name = extra.type;
           }
-          (_c3 = (_b3 = graphcanvas.graph).beforeChange) == null ? void 0 : _c3.call(_b3);
+          (_c2 = (_b2 = graphcanvas.graph).beforeChange) == null ? void 0 : _c2.call(_b2);
           const node2 = (_d2 = host.createNode) == null ? void 0 : _d2.call(host, name);
           if (node2) {
             node2.pos = graphcanvas.convertEventToCanvasOffset(event2);
@@ -3015,7 +3266,7 @@ var LiteGraphTSMigration = (function(exports) {
         ) : null;
         const search_limit = menuClass.search_limit !== void 0 ? menuClass.search_limit : -1;
         const inner_test_filter = (type, optsIn) => {
-          var _a4, _b3, _c3;
+          var _a4, _b2, _c2;
           const optsDef = {
             skipFilter: false,
             inTypeOverride: false,
@@ -3033,7 +3284,7 @@ var LiteGraphTSMigration = (function(exports) {
             let sV = sIn == null ? void 0 : sIn.value;
             if (local.inTypeOverride !== false) sV = local.inTypeOverride;
             if (sIn && sV) {
-              if (((_b3 = host.registered_slot_in_types) == null ? void 0 : _b3[sV]) && host.registered_slot_in_types[sV].nodes) {
+              if (((_b2 = host.registered_slot_in_types) == null ? void 0 : _b2[sV]) && host.registered_slot_in_types[sV].nodes) {
                 const doesInc = host.registered_slot_in_types[sV].nodes.includes(type);
                 if (doesInc === false) {
                   return false;
@@ -3043,7 +3294,7 @@ var LiteGraphTSMigration = (function(exports) {
             sV = sOut == null ? void 0 : sOut.value;
             if (local.outTypeOverride !== false) sV = local.outTypeOverride;
             if (sOut && sV) {
-              if (((_c3 = host.registered_slot_out_types) == null ? void 0 : _c3[sV]) && host.registered_slot_out_types[sV].nodes) {
+              if (((_c2 = host.registered_slot_out_types) == null ? void 0 : _c2[sV]) && host.registered_slot_out_types[sV].nodes) {
                 const doesInc = host.registered_slot_out_types[sV].nodes.includes(type);
                 if (doesInc === false) {
                   return false;
@@ -3099,7 +3350,7 @@ var LiteGraphTSMigration = (function(exports) {
     return dialog;
   }
   function showSubgraphIoPanel(context, node2, side) {
-    var _a2, _b2, _c2, _d2, _e, _f, _g;
+    var _a2, _b2, _c2, _d2, _e;
     const oldPanel = (_b2 = (_a2 = context.canvas) == null ? void 0 : _a2.parentNode) == null ? void 0 : _b2.querySelector(".subgraph_dialog");
     (_c2 = oldPanel == null ? void 0 : oldPanel.close) == null ? void 0 : _c2.call(oldPanel);
     const isInputs = side === "inputs";
@@ -3171,7 +3422,6 @@ var LiteGraphTSMigration = (function(exports) {
       addSlot.apply(this);
     });
     refresh();
-    (_g = (_f = context.canvas) == null ? void 0 : _f.parentNode) == null ? void 0 : _g.appendChild(panel);
     return panel;
   }
   function compareObjects(a, b) {
@@ -7921,11 +8171,13 @@ var LiteGraphTSMigration = (function(exports) {
       );
     }
     createPanel(title, options) {
+      var _a2;
       return createPanel(
         {
           host: this.menuHost(),
           menuClass: this.menuClass(),
-          window: this.getCanvasWindow()
+          window: this.getCanvasWindow(),
+          mount: ((_a2 = this.canvas) == null ? void 0 : _a2.parentNode) || null
         },
         title,
         options
@@ -12738,10 +12990,16 @@ var LiteGraphTSMigration = (function(exports) {
      * @param options some options: `title/callback/ignore_item_callbacks/event`
      */
     constructor(values, options, ref_window2) {
-      var _a2;
+      var _a2, _b2, _c2;
       this.lock = false;
       this.options = options || {};
       const host = ContextMenu2.host();
+      const floating = createFloatingUiService({
+        ownerDocument: ((_b2 = (_a2 = this.options.event) == null ? void 0 : _a2.target) == null ? void 0 : _b2.ownerDocument) || (ref_window2 == null ? void 0 : ref_window2.document) || null,
+        ownerWindow: ref_window2 || null,
+        event: this.options.event || null,
+        preferFullscreen: true
+      });
       if (this.options.parentMenu) {
         if (this.options.parentMenu.constructor !== this.constructor) {
           console.error("parentMenu must be of class ContextMenu, ignoring it");
@@ -12754,7 +13012,7 @@ var LiteGraphTSMigration = (function(exports) {
       }
       let eventClass = null;
       if (this.options.event) {
-        eventClass = ((_a2 = this.options.event.constructor) == null ? void 0 : _a2.name) || null;
+        eventClass = ((_c2 = this.options.event.constructor) == null ? void 0 : _c2.name) || null;
       }
       if (eventClass !== "MouseEvent" && eventClass !== "CustomEvent" && eventClass !== "PointerEvent") {
         console.error(
@@ -12762,7 +13020,7 @@ var LiteGraphTSMigration = (function(exports) {
         );
         this.options.event = null;
       }
-      const root = document.createElement("div");
+      const root = floating.document.createElement("div");
       root.className = "litegraph litecontextmenu litemenubar-panel";
       if (this.options.className) {
         root.className += " " + this.options.className;
@@ -12831,8 +13089,14 @@ var LiteGraphTSMigration = (function(exports) {
         );
       }
       this.root = root;
+      root.close = () => {
+        this.close();
+      };
+      root._floating_cleanup = () => {
+        floating.destroy(root);
+      };
       if (this.options.title) {
-        const title = document.createElement("div");
+        const title = floating.document.createElement("div");
         title.className = "litemenu-title";
         title.innerHTML = this.options.title;
         root.appendChild(title);
@@ -12850,36 +13114,23 @@ var LiteGraphTSMigration = (function(exports) {
         close_on_leave = !host.isTouchDevice();
       }
       if (close_on_leave) {
-        host.pointerListenerAdd(root, "leave", (e) => {
-          if (this.lock) {
-            return;
-          }
-          if (root.closing_timer) {
-            clearTimeout(root.closing_timer);
-          }
-          root.closing_timer = setTimeout(
-            this.close.bind(this, e),
-            this.options.close_on_leave_delay || 500
-          );
+        floating.watchCloseOnLeave({
+          element: root,
+          onClose: () => {
+            this.close();
+          },
+          delayMs: this.options.close_on_leave_delay || 500,
+          enabled: () => !this.lock
         });
       }
-      host.pointerListenerAdd(root, "enter", () => {
-        if (root.closing_timer) {
-          clearTimeout(root.closing_timer);
-        }
+      floating.watchOutsideClose({
+        element: root,
+        onClose: () => {
+          this.getTopMenu().close();
+        },
+        ignore: (event2) => this.getTopMenu().containsTarget(event2.target)
       });
-      let root_document = document;
-      if (this.options.event) {
-        root_document = this.options.event.target.ownerDocument;
-      }
-      if (!root_document) {
-        root_document = ref_window2 && ref_window2.document || document;
-      }
-      if (root_document.fullscreenElement) {
-        root_document.fullscreenElement.appendChild(root);
-      } else {
-        root_document.body.appendChild(root);
-      }
+      floating.mount(root);
       let left = this.options.left || 0;
       let top = this.options.top || 0;
       if (this.options.event) {
@@ -12893,25 +13144,13 @@ var LiteGraphTSMigration = (function(exports) {
           const rect = this.options.parentMenu.root.getBoundingClientRect();
           left = rect.left + rect.width;
         }
-        const body_rect = document.body.getBoundingClientRect();
-        const root_rect = root.getBoundingClientRect();
-        if (body_rect.height == 0) {
-          console.error(
-            "document.body height is 0. That is dangerous, set html,body { height: 100%; }"
-          );
-        }
-        if (body_rect.width && left > body_rect.width - root_rect.width - 10) {
-          left = body_rect.width - root_rect.width - 10;
-        }
-        if (body_rect.height && top > body_rect.height - root_rect.height - 10) {
-          top = body_rect.height - root_rect.height - 10;
-        }
       }
-      root.style.left = left + "px";
-      root.style.top = top + "px";
-      if (this.options.scale) {
-        root.style.transform = "scale(" + this.options.scale + ")";
-      }
+      floating.place(root, {
+        left,
+        top,
+        scale: this.options.scale,
+        clampToBounds: true
+      });
     }
     static host() {
       return { ...defaultHost, ...this.liteGraph || {} };
@@ -13019,8 +13258,10 @@ var LiteGraphTSMigration = (function(exports) {
       return element;
     }
     close(e, ignore_parent_menu) {
-      if (this.root.parentNode) {
-        this.root.parentNode.removeChild(this.root);
+      if (this.root._floating_cleanup) {
+        const cleanup = this.root._floating_cleanup;
+        this.root._floating_cleanup = null;
+        cleanup();
       }
       if (this.parentMenu && !ignore_parent_menu) {
         this.parentMenu.lock = false;
@@ -13041,6 +13282,19 @@ var LiteGraphTSMigration = (function(exports) {
       if (this.root.closing_timer) {
         clearTimeout(this.root.closing_timer);
       }
+    }
+    containsTarget(target) {
+      var _a2;
+      if (!target) {
+        return false;
+      }
+      if (this.root.contains(target)) {
+        return true;
+      }
+      if ((_a2 = this.current_submenu) == null ? void 0 : _a2.containsTarget(target)) {
+        return true;
+      }
+      return false;
     }
     static trigger(element, event_name, params, origin) {
       const detail = origin === void 0 ? params : {

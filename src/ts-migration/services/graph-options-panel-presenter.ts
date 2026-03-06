@@ -72,5 +72,4 @@ export function showGraphOptionsPanel(context: GraphOptionsPanelContext): void {
     };
 
     refresh();
-    graphcanvas.canvas?.parentNode?.appendChild(panel);
 }

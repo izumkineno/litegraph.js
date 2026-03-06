@@ -1,5 +1,6 @@
 import type { ContextMenuPort } from "../contracts/ui";
 import type { LiteGraphConstantsShape } from "../core/litegraph.constants";
+import { createFloatingUiService } from "../services/floating-ui-service";
 import type { ContextMenuItem, IContextMenuOptions } from "../types/core-types";
 
 type MenuValueLike = any;
@@ -57,6 +58,7 @@ interface MenuElement extends HTMLDivElement {
 interface MenuRootElement extends HTMLDivElement {
     closing_timer?: ReturnType<typeof setTimeout> | null;
     close?: () => void;
+    _floating_cleanup?: (() => void) | null;
 }
 
 const defaultHost: ContextMenuHost = {
@@ -117,6 +119,15 @@ export class ContextMenu implements ContextMenuPort {
     ) {
         this.options = options || {};
         const host = ContextMenu.host();
+        const floating = createFloatingUiService({
+            ownerDocument:
+                (this.options.event as any)?.target?.ownerDocument ||
+                ref_window?.document ||
+                null,
+            ownerWindow: ref_window || null,
+            event: this.options.event || null,
+            preferFullscreen: true,
+        });
 
         if (this.options.parentMenu) {
             if (this.options.parentMenu.constructor !== this.constructor) {
@@ -146,7 +157,7 @@ export class ContextMenu implements ContextMenuPort {
             this.options.event = null;
         }
 
-        const root = document.createElement("div") as MenuRootElement;
+        const root = floating.document.createElement("div") as MenuRootElement;
         root.className = "litegraph litecontextmenu litemenubar-panel";
         if (this.options.className) {
             root.className += " " + this.options.className;
@@ -219,9 +230,15 @@ export class ContextMenu implements ContextMenuPort {
         }
 
         this.root = root;
+        root.close = () => {
+            this.close();
+        };
+        root._floating_cleanup = () => {
+            floating.destroy(root);
+        };
 
         if (this.options.title) {
-            const title = document.createElement("div");
+            const title = floating.document.createElement("div");
             title.className = "litemenu-title";
             title.innerHTML = this.options.title;
             root.appendChild(title);
@@ -241,37 +258,24 @@ export class ContextMenu implements ContextMenuPort {
             close_on_leave = !host.isTouchDevice();
         }
         if (close_on_leave) {
-            host.pointerListenerAdd(root, "leave", (e: Event) => {
-                if (this.lock) {
-                    return;
-                }
-                if (root.closing_timer) {
-                    clearTimeout(root.closing_timer);
-                }
-                root.closing_timer = setTimeout(
-                    this.close.bind(this, e as unknown as MouseEvent),
-                    this.options.close_on_leave_delay || 500
-                );
+            floating.watchCloseOnLeave({
+                element: root,
+                onClose: () => {
+                    this.close();
+                },
+                delayMs: this.options.close_on_leave_delay || 500,
+                enabled: () => !this.lock,
             });
         }
-        host.pointerListenerAdd(root, "enter", () => {
-            if (root.closing_timer) {
-                clearTimeout(root.closing_timer);
-            }
+        floating.watchOutsideClose({
+            element: root,
+            onClose: () => {
+                this.getTopMenu().close();
+            },
+            ignore: (event: Event) => this.getTopMenu().containsTarget(event.target as Node | null),
         });
 
-        let root_document = document;
-        if (this.options.event) {
-            root_document = (this.options.event as any).target.ownerDocument;
-        }
-        if (!root_document) {
-            root_document = (ref_window && ref_window.document) || document;
-        }
-        if (root_document.fullscreenElement) {
-            root_document.fullscreenElement.appendChild(root);
-        } else {
-            root_document.body.appendChild(root);
-        }
+        floating.mount(root);
 
         let left = this.options.left || 0;
         let top = this.options.top || 0;
@@ -286,25 +290,13 @@ export class ContextMenu implements ContextMenuPort {
                 const rect = this.options.parentMenu.root.getBoundingClientRect();
                 left = rect.left + rect.width;
             }
-            const body_rect = document.body.getBoundingClientRect();
-            const root_rect = root.getBoundingClientRect();
-            if (body_rect.height == 0) {
-                console.error(
-                    "document.body height is 0. That is dangerous, set html,body { height: 100%; }"
-                );
-            }
-            if (body_rect.width && left > body_rect.width - root_rect.width - 10) {
-                left = body_rect.width - root_rect.width - 10;
-            }
-            if (body_rect.height && top > body_rect.height - root_rect.height - 10) {
-                top = body_rect.height - root_rect.height - 10;
-            }
         }
-        root.style.left = left + "px";
-        root.style.top = top + "px";
-        if (this.options.scale) {
-            root.style.transform = "scale(" + this.options.scale + ")";
-        }
+        floating.place(root, {
+            left,
+            top,
+            scale: this.options.scale,
+            clampToBounds: true,
+        });
     }
 
     addItem(name: string, value: MenuValueLike, options?: ContextMenuOptions): MenuElement {
@@ -425,8 +417,10 @@ export class ContextMenu implements ContextMenuPort {
     }
 
     close(e?: MouseEvent, ignore_parent_menu?: boolean): void {
-        if (this.root.parentNode) {
-            this.root.parentNode.removeChild(this.root);
+        if (this.root._floating_cleanup) {
+            const cleanup = this.root._floating_cleanup;
+            this.root._floating_cleanup = null;
+            cleanup();
         }
         if (this.parentMenu && !ignore_parent_menu) {
             this.parentMenu.lock = false;
@@ -450,6 +444,19 @@ export class ContextMenu implements ContextMenuPort {
 
         // TODO implement : LiteGraph.contextMenuClosed(); :: keep track of opened / closed / current ContextMenu
         // on key press, allow filtering/selecting the context menu elements
+    }
+
+    private containsTarget(target: Node | null): boolean {
+        if (!target) {
+            return false;
+        }
+        if (this.root.contains(target)) {
+            return true;
+        }
+        if (this.current_submenu?.containsTarget(target)) {
+            return true;
+        }
+        return false;
     }
 
     static trigger(

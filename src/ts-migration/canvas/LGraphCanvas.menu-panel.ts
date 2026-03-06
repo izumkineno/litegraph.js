@@ -173,6 +173,7 @@ export class LGraphCanvasMenuPanel
                 host: this.menuHost(),
                 menuClass: this.menuClass(),
                 window: this.getCanvasWindow(),
+                mount: (this.canvas?.parentNode as HTMLElement | null) || null,
             },
             title,
             options
