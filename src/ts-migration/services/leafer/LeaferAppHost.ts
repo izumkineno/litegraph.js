@@ -24,6 +24,10 @@ export class LeaferAppHost {
     readonly treeZoomLayer: LeaferLayerRegistry["treeZoomLayer"];
     readonly groundRoot: LeaferLayerRegistry["groundRoot"];
     readonly treeRoot: LeaferLayerRegistry["treeRoot"];
+    readonly linkLayerBack: LeaferLayerRegistry["linkLayerBack"];
+    readonly legacyNodeLayer: LeaferLayerRegistry["legacyNodeLayer"];
+    readonly modernNodeLayer: LeaferLayerRegistry["modernNodeLayer"];
+    readonly linkLayerFront: LeaferLayerRegistry["linkLayerFront"];
     readonly skyRoot: LeaferLayerRegistry["skyRoot"];
     readonly overlayWorld: LeaferLayerRegistry["overlayWorld"];
     readonly overlayScreen: LeaferLayerRegistry["overlayScreen"];
@@ -52,6 +56,10 @@ export class LeaferAppHost {
         this.treeZoomLayer = this.layers.treeZoomLayer;
         this.groundRoot = this.layers.groundRoot;
         this.treeRoot = this.layers.treeRoot;
+        this.linkLayerBack = this.layers.linkLayerBack;
+        this.legacyNodeLayer = this.layers.legacyNodeLayer;
+        this.modernNodeLayer = this.layers.modernNodeLayer;
+        this.linkLayerFront = this.layers.linkLayerFront;
         this.skyRoot = this.layers.skyRoot;
         this.overlayWorld = this.layers.overlayWorld;
         this.overlayScreen = this.layers.overlayScreen;

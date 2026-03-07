@@ -1,7 +1,12 @@
 import type { Vector2, Vector4 } from "../types/core-types";
 import { createClassHostResolver } from "../core/host-resolver";
 import type { LiteGraphConstantsShape } from "../core/litegraph.constants";
+import {
+    GraphMutationBus,
+    type GraphMutationGraphLike,
+} from "../services/leafer/GraphMutationBus";
 import { LeaferAppHost } from "../services/leafer/LeaferAppHost";
+import { SceneSyncController } from "../services/leafer/SceneSyncController";
 import { DragAndScale } from "./DragAndScale";
 import { LGraphCanvas as LGraphCanvasStatic } from "./LGraphCanvas.static";
 
@@ -236,6 +241,8 @@ export class LGraphCanvasLifecycle extends LGraphCanvasStatic {
     ctx: CanvasRenderingContext2D | null;
     bgctx: CanvasRenderingContext2D | null;
     leaferAppHost: LeaferAppHost | null;
+    graphMutationBus: GraphMutationBus | null;
+    sceneSyncController: SceneSyncController | null;
 
     title_text_font: string;
     inner_text_font: string;
@@ -453,6 +460,8 @@ export class LGraphCanvasLifecycle extends LGraphCanvasStatic {
         this.ctx = null;
         this.bgctx = null;
         this.leaferAppHost = null;
+        this.graphMutationBus = null;
+        this.sceneSyncController = null;
 
         this.frame = 0;
         this.last_draw_time = 0;
@@ -545,14 +554,17 @@ export class LGraphCanvasLifecycle extends LGraphCanvasStatic {
 
         if (!graph && this.graph) {
             this.graph.detachCanvas(this);
+            this.destroySceneSyncBackbone();
             return;
         }
 
+        this.destroySceneSyncBackbone();
         (graph as GraphLike).attachCanvas(this);
         if (this._graph_stack) {
             this._graph_stack = null;
         }
 
+        this.attachSceneSyncBackbone();
         this.setDirty(true, true);
     }
 
@@ -579,7 +591,9 @@ export class LGraphCanvasLifecycle extends LGraphCanvasStatic {
             this._graph_stack.push(this.graph);
         }
 
+        this.destroySceneSyncBackbone();
         graph.attachCanvas(this);
+        this.attachSceneSyncBackbone();
         (this as unknown as { checkPanels: () => void }).checkPanels();
         this.setDirty(true, true);
     }
@@ -592,7 +606,9 @@ export class LGraphCanvasLifecycle extends LGraphCanvasStatic {
         const graph = this._graph_stack.pop() as GraphLike;
         this.selected_nodes = {};
         this.highlighted_links = {};
+        this.destroySceneSyncBackbone();
         graph.attachCanvas(this);
+        this.attachSceneSyncBackbone();
         this.setDirty(true, true);
         if (subgraph_node) {
             const self = this as unknown as {
@@ -710,6 +726,7 @@ export class LGraphCanvasLifecycle extends LGraphCanvasStatic {
     }
 
     private destroyLeaferAppShell(): void {
+        this.destroySceneSyncBackbone();
         if (!this.leaferAppHost) {
             return;
         }
@@ -736,8 +753,51 @@ export class LGraphCanvasLifecycle extends LGraphCanvasStatic {
 
         this.destroyLeaferAppShell();
         this.leaferAppHost = new LeaferAppHost(hostView);
+        this.attachSceneSyncBackbone();
 
         console.info("LGraphCanvas: Leafer App shell initialized.");
+    }
+
+    private destroySceneSyncBackbone(): void {
+        if (this.sceneSyncController) {
+            this.sceneSyncController.destroy();
+            this.sceneSyncController = null;
+        }
+
+        if (this.graphMutationBus) {
+            this.graphMutationBus.destroy();
+            this.graphMutationBus = null;
+        }
+    }
+
+    private attachSceneSyncBackbone(): void {
+        this.destroySceneSyncBackbone();
+
+        if (
+            this.renderRuntime !== "leafer" ||
+            !this.leaferAppHost ||
+            !this.graph
+        ) {
+            return;
+        }
+
+        const graph = this.graph as unknown as GraphMutationGraphLike;
+        this.graphMutationBus = new GraphMutationBus(graph);
+        this.sceneSyncController = new SceneSyncController(
+            graph,
+            this.graphMutationBus,
+            this.leaferAppHost,
+            this as unknown as {
+                drawNode: (
+                    node: {
+                        id: number | string;
+                        pos: [number, number];
+                        size: [number, number];
+                    },
+                    ctx: CanvasRenderingContext2D
+                ) => void;
+            }
+        );
     }
 
     setCanvas(
