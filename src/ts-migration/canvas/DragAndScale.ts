@@ -5,6 +5,7 @@ import {
     type PointerEventsHost,
     type TouchNormalizedEvent,
 } from "../compat/pointer-events";
+import type { DragAndScaleViewportPort } from "../services/leafer/ViewportController";
 
 type DragAndScaleCallback = (instance: DragAndScale) => void;
 
@@ -45,8 +46,6 @@ type CanvasElementLike = HTMLElement & {
 export class DragAndScale {
     static liteGraph?: Partial<DragAndScaleHost>;
 
-    offset: Vector2;
-    scale: number;
     max_scale: number;
     min_scale: number;
     onredraw: DragAndScaleCallback | null;
@@ -63,10 +62,14 @@ export class DragAndScale {
         | ((event: Event | TouchNormalizedEvent) => unknown)
         | null;
     private pointerHost: PointerEventsHost;
+    private _offset: Vector2;
+    private _scale: number;
+    private viewportPort: DragAndScaleViewportPort | null;
+    private readonly viewportOffsetProxy: Vector2;
 
     constructor(element?: HTMLElement, skipEvents?: boolean) {
-        this.offset = new Float32Array([0, 0]) as unknown as Vector2;
-        this.scale = 1;
+        this._offset = new Float32Array([0, 0]) as unknown as Vector2;
+        this._scale = 1;
         this.max_scale = 10;
         this.min_scale = 0.1;
         this.onredraw = null;
@@ -75,12 +78,51 @@ export class DragAndScale {
         this.element = null;
         this.visible_area = new Float32Array(4) as unknown as Vector4;
         this.pointerHost = createPointerEventsHost("mouse");
+        this.viewportPort = null;
+        this.viewportOffsetProxy = this.createViewportOffsetProxy();
 
         if (element) {
             this.element = element;
             if (!skipEvents) {
                 this.bindEvents(element);
             }
+        }
+    }
+
+    get offset(): Vector2 {
+        return this.viewportPort ? this.viewportOffsetProxy : this._offset;
+    }
+
+    set offset(value: Vector2) {
+        if (this.viewportPort) {
+            this.viewportPort.setOffset(value?.[0] || 0, value?.[1] || 0);
+            return;
+        }
+
+        this._offset[0] = value?.[0] || 0;
+        this._offset[1] = value?.[1] || 0;
+    }
+
+    get scale(): number {
+        return this.viewportPort ? this.viewportPort.getScale() : this._scale;
+    }
+
+    set scale(value: number) {
+        if (this.viewportPort) {
+            this.viewportPort.setScale(value);
+            return;
+        }
+
+        this._scale = value;
+    }
+
+    attachViewportPort(port: DragAndScaleViewportPort): void {
+        this.viewportPort = port;
+    }
+
+    detachViewportPort(port?: DragAndScaleViewportPort): void {
+        if (!port || this.viewportPort === port) {
+            this.viewportPort = null;
         }
     }
 
@@ -100,6 +142,9 @@ export class DragAndScale {
     }
 
     bindEvents(element: HTMLElement): void {
+        if (this.viewportPort) {
+            return;
+        }
         this.last_mouse = new Float32Array(2) as unknown as Vector2;
 
         this._binded_mouse_callback = this.onMouse.bind(this) as (
@@ -158,6 +203,9 @@ export class DragAndScale {
 
     onMouse(e: DragAndScalePointerEvent): false | void {
         if (!this.enabled) {
+            return;
+        }
+        if (this.viewportPort) {
             return;
         }
 
@@ -252,6 +300,14 @@ export class DragAndScale {
     }
 
     mouseDrag(x: number, y: number): void {
+        if (this.viewportPort) {
+            this.viewportPort.moveByScreenDelta(x, y);
+            if (this.onredraw) {
+                this.onredraw(this);
+            }
+            return;
+        }
+
         this.offset[0] += x / this.scale;
         this.offset[1] += y / this.scale;
 
@@ -268,6 +324,14 @@ export class DragAndScale {
         }
 
         if (value == this.scale) {
+            return;
+        }
+
+        if (this.viewportPort) {
+            this.viewportPort.setScale(value, zooming_center);
+            if (this.onredraw) {
+                this.onredraw(this);
+            }
             return;
         }
 
@@ -307,8 +371,64 @@ export class DragAndScale {
     }
 
     reset(): void {
+        if (this.viewportPort) {
+            this.viewportPort.reset();
+            return;
+        }
+
         this.scale = 1;
         this.offset[0] = 0;
         this.offset[1] = 0;
+    }
+
+    private createViewportOffsetProxy(): Vector2 {
+        const target = [0, 0];
+
+        return new Proxy(target, {
+            get: (source, property, receiver) => {
+                source[0] = this.viewportPort
+                    ? this.viewportPort.getOffsetX()
+                    : this._offset[0];
+                source[1] = this.viewportPort
+                    ? this.viewportPort.getOffsetY()
+                    : this._offset[1];
+                return Reflect.get(source, property, receiver);
+            },
+            set: (source, property, value, receiver) => {
+                if (property === "0") {
+                    const nextX = Number.isFinite(Number(value))
+                        ? Number(value)
+                        : 0;
+                    if (this.viewportPort) {
+                        this.viewportPort.setOffset(
+                            nextX,
+                            this.viewportPort.getOffsetY()
+                        );
+                    } else {
+                        this._offset[0] = nextX;
+                    }
+                    source[0] = nextX;
+                    return true;
+                }
+
+                if (property === "1") {
+                    const nextY = Number.isFinite(Number(value))
+                        ? Number(value)
+                        : 0;
+                    if (this.viewportPort) {
+                        this.viewportPort.setOffset(
+                            this.viewportPort.getOffsetX(),
+                            nextY
+                        );
+                    } else {
+                        this._offset[1] = nextY;
+                    }
+                    source[1] = nextY;
+                    return true;
+                }
+
+                return Reflect.set(source, property, value, receiver);
+            },
+        }) as unknown as Vector2;
     }
 }

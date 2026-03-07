@@ -56,6 +56,7 @@
         "typescript": "^5.9.3"
     },
     "dependencies": {
+        "@leafer-in/viewport": "2.0.2",
         "leafer-ui": "2.0.2"
     }
 }

@@ -66,9 +66,16 @@ export class InteractionController {
     }
 
     private readonly handleViewPointerDown = (event: PointerEvent): void => {
+        if (!this.shouldHandleLegacyPointerDown(event)) {
+            return;
+        }
         const source = this.createPointerSource(event);
         const pagePoint = source.getPagePoint();
-        const hit = this.hitTestService.hitLegacyNodeAt(pagePoint.x, pagePoint.y);
+        const worldPoint = source.getInnerPoint();
+        const hit = this.hitTestService.hitLegacyNodeAt(
+            worldPoint.x,
+            worldPoint.y
+        );
         const targets = this.collectTargets(hit?.host || null);
         if (!targets.length) {
             return;
@@ -109,9 +116,16 @@ export class InteractionController {
     };
 
     private dispatchPointerMove(event: PointerEvent): void {
+        if (!this.shouldHandleLegacyPointerMove(event)) {
+            return;
+        }
         const source = this.createPointerSource(event);
         const pagePoint = source.getPagePoint();
-        const hit = this.hitTestService.hitLegacyNodeAt(pagePoint.x, pagePoint.y);
+        const worldPoint = source.getInnerPoint();
+        const hit = this.hitTestService.hitLegacyNodeAt(
+            worldPoint.x,
+            worldPoint.y
+        );
         const targets = this.collectTargets(hit?.host || null);
         const shouldDispatch =
             targets.length > 0 ||
@@ -150,9 +164,19 @@ export class InteractionController {
     }
 
     private readonly handleDocumentPointerUp = (event: PointerEvent): void => {
+        if (!this.pointerIsDown && event.button !== 0) {
+            return;
+        }
+        if (!this.pointerIsDown && !this.shouldHandleLegacyPointerMove(event)) {
+            return;
+        }
         const source = this.createPointerSource(event);
         const pagePoint = source.getPagePoint();
-        const hit = this.hitTestService.hitLegacyNodeAt(pagePoint.x, pagePoint.y);
+        const worldPoint = source.getInnerPoint();
+        const hit = this.hitTestService.hitLegacyNodeAt(
+            worldPoint.x,
+            worldPoint.y
+        );
         const targets = this.collectTargets(hit?.host || null);
         const shouldDispatch =
             this.pointerIsDown ||
@@ -323,5 +347,21 @@ export class InteractionController {
     private stopEvent(event: PointerEvent): void {
         event.stopPropagation();
         event.preventDefault();
+    }
+
+    private shouldHandleLegacyPointerDown(event: PointerEvent): boolean {
+        return event.button === 0;
+    }
+
+    private shouldHandleLegacyPointerMove(event: PointerEvent): boolean {
+        if (this.pointerIsDown) {
+            return true;
+        }
+
+        if (!event.buttons) {
+            return true;
+        }
+
+        return Boolean(event.buttons & 1) && !(event.buttons & ~1);
     }
 }

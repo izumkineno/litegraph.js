@@ -534,7 +534,12 @@ export class LGraphCanvasInput extends LGraphCanvasLifecycle {
                 }
             }
 
-            if (!skip_action && clicking_canvas_bg && this.allow_dragcanvas) {
+            if (
+                !skip_action &&
+                clicking_canvas_bg &&
+                this.allow_dragcanvas &&
+                this.renderRuntime !== "leafer"
+            ) {
                 this.dragging_canvas = true;
             }
         } else if (e.which == 2) {
@@ -595,7 +600,11 @@ export class LGraphCanvasInput extends LGraphCanvasLifecycle {
                         }
                     }
                 }
-            } else if (!skip_action && this.allow_dragcanvas) {
+            } else if (
+                !skip_action &&
+                this.allow_dragcanvas &&
+                this.renderRuntime !== "leafer"
+            ) {
                 this.dragging_canvas = true;
             }
         } else if (e.which == 3 || this.pointer_is_double) {
@@ -706,6 +715,10 @@ export class LGraphCanvasInput extends LGraphCanvasLifecycle {
             }
             this.dirty_bgcanvas = true;
         } else if (this.dragging_canvas) {
+            if (this.renderRuntime === "leafer") {
+                this.dragging_canvas = false;
+                return;
+            }
             this.ds.offset[0] += delta[0] / this.ds.scale;
             this.ds.offset[1] += delta[1] / this.ds.scale;
             this.dirty_canvas = true;
@@ -1367,6 +1380,9 @@ export class LGraphCanvasInput extends LGraphCanvasLifecycle {
      * @method processMouseWheel
      **/
     processMouseWheel(e: CanvasMouseEventLike): boolean | undefined {
+        if (this.renderRuntime === "leafer") {
+            return;
+        }
         if (!this.graph || !this.allow_dragcanvas) {
             return;
         }
@@ -1501,8 +1517,10 @@ export class LGraphCanvasInput extends LGraphCanvasLifecycle {
         if (e.type == "keydown") {
             if (e.keyCode == 32) {
                 // space
-                this.dragging_canvas = true;
-                block_default = true;
+                if (this.renderRuntime !== "leafer") {
+                    this.dragging_canvas = true;
+                    block_default = true;
+                }
             }
 
             if (e.keyCode == 27) {
@@ -1548,7 +1566,9 @@ export class LGraphCanvasInput extends LGraphCanvasLifecycle {
         } else if (e.type == "keyup") {
             if (e.keyCode == 32) {
                 // space
-                this.dragging_canvas = false;
+                if (this.renderRuntime !== "leafer") {
+                    this.dragging_canvas = false;
+                }
             }
             node_consumed = this.dispatchNodeKeyHook(this.selectedNodesRef(), "onKeyUp", e);
         }

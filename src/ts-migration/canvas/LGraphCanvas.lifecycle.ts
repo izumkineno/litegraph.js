@@ -8,6 +8,7 @@ import {
 import { InteractionController } from "../services/leafer/InteractionController";
 import { LeaferAppHost } from "../services/leafer/LeaferAppHost";
 import { SceneSyncController } from "../services/leafer/SceneSyncController";
+import { ViewportController } from "../services/leafer/ViewportController";
 import { DragAndScale } from "./DragAndScale";
 import { LGraphCanvas as LGraphCanvasStatic } from "./LGraphCanvas.static";
 
@@ -242,6 +243,7 @@ export class LGraphCanvasLifecycle extends LGraphCanvasStatic {
     ctx: CanvasRenderingContext2D | null;
     bgctx: CanvasRenderingContext2D | null;
     leaferAppHost: LeaferAppHost | null;
+    viewportController: ViewportController | null;
     graphMutationBus: GraphMutationBus | null;
     sceneSyncController: SceneSyncController | null;
     interactionController: InteractionController | null;
@@ -462,6 +464,7 @@ export class LGraphCanvasLifecycle extends LGraphCanvasStatic {
         this.ctx = null;
         this.bgctx = null;
         this.leaferAppHost = null;
+        this.viewportController = null;
         this.graphMutationBus = null;
         this.sceneSyncController = null;
         this.interactionController = null;
@@ -730,6 +733,10 @@ export class LGraphCanvasLifecycle extends LGraphCanvasStatic {
 
     private destroyLeaferAppShell(): void {
         this.destroySceneSyncBackbone();
+        if (this.viewportController) {
+            this.viewportController.destroy();
+            this.viewportController = null;
+        }
         if (!this.leaferAppHost) {
             return;
         }
@@ -756,6 +763,10 @@ export class LGraphCanvasLifecycle extends LGraphCanvasStatic {
 
         this.destroyLeaferAppShell();
         this.leaferAppHost = new LeaferAppHost(hostView);
+        this.viewportController = new ViewportController(
+            this.leaferAppHost,
+            this.ds
+        );
         this.attachSceneSyncBackbone();
 
         console.info("LGraphCanvas: Leafer App shell initialized.");

@@ -3753,7 +3753,7 @@ var LiteGraphTSMigration = (function(exports) {
   function toMutationKey$1(nodeId) {
     return String(nodeId);
   }
-  function toFiniteNumber(value) {
+  function toFiniteNumber$1(value) {
     const numericValue = Number(value);
     return Number.isFinite(numericValue) ? numericValue : 0;
   }
@@ -3767,7 +3767,7 @@ var LiteGraphTSMigration = (function(exports) {
     return "mouseup";
   }
   function resolveButtons(event2) {
-    return toFiniteNumber(event2.buttons);
+    return toFiniteNumber$1(event2.buttons);
   }
   function resolveButton(event2) {
     const pointerEvent = event2;
@@ -3801,8 +3801,8 @@ var LiteGraphTSMigration = (function(exports) {
       const target = targets[i2];
       const localPoint = event2.getInnerPoint(target.nodeRoot);
       localPosByNodeId.set(toMutationKey$1(target.nodeId), [
-        toFiniteNumber(localPoint.x),
-        toFiniteNumber(localPoint.y)
+        toFiniteNumber$1(localPoint.x),
+        toFiniteNumber$1(localPoint.y)
       ]);
     }
     return localPosByNodeId;
@@ -3810,8 +3810,8 @@ var LiteGraphTSMigration = (function(exports) {
   function createLegacyPointerEvent(options) {
     const { event: event2, hostElement } = options;
     const pagePoint = event2.getPagePoint();
-    const canvasX = toFiniteNumber(pagePoint.x);
-    const canvasY = toFiniteNumber(pagePoint.y);
+    const canvasX = toFiniteNumber$1(pagePoint.x);
+    const canvasY = toFiniteNumber$1(pagePoint.y);
     const hostRect = hostElement.getBoundingClientRect();
     const clientX = hostRect.left + canvasX;
     const clientY = hostRect.top + canvasY;
@@ -3842,14 +3842,14 @@ var LiteGraphTSMigration = (function(exports) {
       screenY: clientY,
       offsetX: canvasX,
       offsetY: canvasY,
-      deltaX: toFiniteNumber(options.deltaX),
-      deltaY: toFiniteNumber(options.deltaY),
-      deltax: toFiniteNumber(options.deltaX),
-      deltay: toFiniteNumber(options.deltaY),
+      deltaX: toFiniteNumber$1(options.deltaX),
+      deltaY: toFiniteNumber$1(options.deltaY),
+      deltax: toFiniteNumber$1(options.deltaX),
+      deltay: toFiniteNumber$1(options.deltaY),
       which: resolveWhich(button),
       button,
       buttons,
-      click_time: Math.max(0, toFiniteNumber(options.clickTime)),
+      click_time: Math.max(0, toFiniteNumber$1(options.clickTime)),
       dragging: Boolean(options.dragging),
       shiftKey: Boolean(event2.shiftKey),
       ctrlKey: Boolean(event2.ctrlKey),
@@ -4170,9 +4170,16 @@ var LiteGraphTSMigration = (function(exports) {
       this.lastPagePoint = null;
       this.documentTrackingBound = false;
       this.handleViewPointerDown = (event2) => {
+        if (!this.shouldHandleLegacyPointerDown(event2)) {
+          return;
+        }
         const source = this.createPointerSource(event2);
         const pagePoint = source.getPagePoint();
-        const hit = this.hitTestService.hitLegacyNodeAt(pagePoint.x, pagePoint.y);
+        const worldPoint = source.getInnerPoint();
+        const hit = this.hitTestService.hitLegacyNodeAt(
+          worldPoint.x,
+          worldPoint.y
+        );
         const targets = this.collectTargets((hit == null ? void 0 : hit.host) || null);
         if (!targets.length) {
           return;
@@ -4207,9 +4214,19 @@ var LiteGraphTSMigration = (function(exports) {
         this.dispatchPointerMove(event2);
       };
       this.handleDocumentPointerUp = (event2) => {
+        if (!this.pointerIsDown && event2.button !== 0) {
+          return;
+        }
+        if (!this.pointerIsDown && !this.shouldHandleLegacyPointerMove(event2)) {
+          return;
+        }
         const source = this.createPointerSource(event2);
         const pagePoint = source.getPagePoint();
-        const hit = this.hitTestService.hitLegacyNodeAt(pagePoint.x, pagePoint.y);
+        const worldPoint = source.getInnerPoint();
+        const hit = this.hitTestService.hitLegacyNodeAt(
+          worldPoint.x,
+          worldPoint.y
+        );
         const targets = this.collectTargets((hit == null ? void 0 : hit.host) || null);
         const shouldDispatch = this.pointerIsDown || targets.length > 0 || Boolean(this.canvas.node_widget) || Boolean(this.canvas.node_over) || Boolean(this.canvas.node_capturing_input);
         const deltaX2 = this.lastPagePoint ? (Number(pagePoint.x) || 0) - this.lastPagePoint.x : 0;
@@ -4259,9 +4276,16 @@ var LiteGraphTSMigration = (function(exports) {
       this.lastPagePoint = null;
     }
     dispatchPointerMove(event2) {
+      if (!this.shouldHandleLegacyPointerMove(event2)) {
+        return;
+      }
       const source = this.createPointerSource(event2);
       const pagePoint = source.getPagePoint();
-      const hit = this.hitTestService.hitLegacyNodeAt(pagePoint.x, pagePoint.y);
+      const worldPoint = source.getInnerPoint();
+      const hit = this.hitTestService.hitLegacyNodeAt(
+        worldPoint.x,
+        worldPoint.y
+      );
       const targets = this.collectTargets((hit == null ? void 0 : hit.host) || null);
       const shouldDispatch = targets.length > 0 || Boolean(this.canvas.node_widget) || Boolean(this.canvas.node_over) || Boolean(this.canvas.node_capturing_input);
       const deltaX2 = this.lastPagePoint ? (Number(pagePoint.x) || 0) - this.lastPagePoint.x : 0;
@@ -4394,6 +4418,18 @@ var LiteGraphTSMigration = (function(exports) {
       event2.stopPropagation();
       event2.preventDefault();
     }
+    shouldHandleLegacyPointerDown(event2) {
+      return event2.button === 0;
+    }
+    shouldHandleLegacyPointerMove(event2) {
+      if (this.pointerIsDown) {
+        return true;
+      }
+      if (!event2.buttons) {
+        return true;
+      }
+      return Boolean(event2.buttons & 1) && !(event2.buttons & -2);
+    }
   }
   var t;
   !(function(t2) {
@@ -4420,7 +4456,7 @@ var LiteGraphTSMigration = (function(exports) {
   function u(t2) {
     return "{}" === JSON.stringify(t2);
   }
-  const _ = { default: (t2, e2) => (p(e2, t2), p(t2, e2), t2), assign(t2, e2, s2) {
+  const _$1 = { default: (t2, e2) => (p(e2, t2), p(t2, e2), t2), assign(t2, e2, s2) {
     let r2;
     Object.keys(e2).forEach((i2) => {
       var n2, o2;
@@ -4435,7 +4471,7 @@ var LiteGraphTSMigration = (function(exports) {
     return e2;
   }, stintSet(t2, e2, s2) {
     s2 || (s2 = void 0), t2[e2] !== s2 && (t2[e2] = s2);
-  } }, { assign: p } = _;
+  } }, { assign: p } = _$1;
   class f {
     get __useNaturalRatio() {
       return true;
@@ -4523,9 +4559,9 @@ var LiteGraphTSMigration = (function(exports) {
     const { types: e2 } = y;
     return e2[t2] ? e2[t2]++ : (e2[t2] = 1, 0);
   } }, y = g;
-  let m, x, w;
-  const { max: b } = Math, B = [0, 0, 0, 0], v = { zero: [...B], tempFour: B, set: (t2, e2, s2, r2, i2) => (void 0 === s2 && (s2 = r2 = i2 = e2), t2[0] = e2, t2[1] = s2, t2[2] = r2, t2[3] = i2, t2), setTemp: (t2, e2, s2, r2) => k(B, t2, e2, s2, r2), toTempAB(t2, e2, s2) {
-    w = s2 ? o(t2) ? e2 : t2 : [], o(t2) ? (m = O(t2), x = e2) : o(e2) ? (m = t2, x = O(e2)) : (m = t2, x = e2), 4 !== m.length && (m = C(m)), 4 !== x.length && (x = C(x));
+  let m, x$1, w$1;
+  const { max: b$1 } = Math, B$1 = [0, 0, 0, 0], v = { zero: [...B$1], tempFour: B$1, set: (t2, e2, s2, r2, i2) => (void 0 === s2 && (s2 = r2 = i2 = e2), t2[0] = e2, t2[1] = s2, t2[2] = r2, t2[3] = i2, t2), setTemp: (t2, e2, s2, r2) => k$1(B$1, t2, e2, s2, r2), toTempAB(t2, e2, s2) {
+    w$1 = s2 ? o(t2) ? e2 : t2 : [], o(t2) ? (m = O$1(t2), x$1 = e2) : o(e2) ? (m = t2, x$1 = O$1(e2)) : (m = t2, x$1 = e2), 4 !== m.length && (m = C$1(m)), 4 !== x$1.length && (x$1 = C$1(x$1));
   }, get(t2, e2) {
     let r2;
     if (!o(t2)) switch (t2.length) {
@@ -4546,11 +4582,11 @@ var LiteGraphTSMigration = (function(exports) {
     }
     if (r2 || (r2 = [t2, t2, t2, t2]), !s(e2)) for (let t3 = 0; t3 < 4; t3++) r2[t3] > e2 && (r2[t3] = e2);
     return r2;
-  }, max: (t2, e2, s2) => o(t2) && o(e2) ? b(t2, e2) : (T(t2, e2, s2), k(w, b(m[0], x[0]), b(m[1], x[1]), b(m[2], x[2]), b(m[3], x[3]))), add: (t2, e2, s2) => o(t2) && o(e2) ? t2 + e2 : (T(t2, e2, s2), k(w, m[0] + x[0], m[1] + x[1], m[2] + x[2], m[3] + x[3])), swapAndScale(t2, e2, s2, r2) {
+  }, max: (t2, e2, s2) => o(t2) && o(e2) ? b$1(t2, e2) : (T$1(t2, e2, s2), k$1(w$1, b$1(m[0], x$1[0]), b$1(m[1], x$1[1]), b$1(m[2], x$1[2]), b$1(m[3], x$1[3]))), add: (t2, e2, s2) => o(t2) && o(e2) ? t2 + e2 : (T$1(t2, e2, s2), k$1(w$1, m[0] + x$1[0], m[1] + x$1[1], m[2] + x$1[2], m[3] + x$1[3])), swapAndScale(t2, e2, s2, r2) {
     if (o(t2)) return e2 === s2 ? t2 * e2 : [t2 * s2, t2 * e2];
-    const i2 = r2 ? t2 : [], [n2, a, h, l2] = 4 === t2.length ? t2 : C(t2);
-    return k(i2, h * s2, l2 * e2, n2 * s2, a * e2);
-  } }, { set: k, get: C, setTemp: O, toTempAB: T } = v, { round: P, pow: S, max: L, floor: R, PI: E } = Math, I$1 = { within: (t2, e2, r2) => (d(e2) && (r2 = e2.max, e2 = e2.min), !s(e2) && t2 < e2 && (t2 = e2), !s(r2) && t2 > r2 && (t2 = r2), t2), fourNumber: v.get, formatRotation: (t2, e2) => (t2 %= 360, e2 ? t2 < 0 && (t2 += 360) : (t2 > 180 && (t2 -= 360), t2 < -180 && (t2 += 360)), I$1.float(t2)), getGapRotation(t2, e2, s2 = 0) {
+    const i2 = r2 ? t2 : [], [n2, a, h, l2] = 4 === t2.length ? t2 : C$1(t2);
+    return k$1(i2, h * s2, l2 * e2, n2 * s2, a * e2);
+  } }, { set: k$1, get: C$1, setTemp: O$1, toTempAB: T$1 } = v, { round: P$1, pow: S$1, max: L$1, floor: R$1, PI: E$1 } = Math, I$2 = { within: (t2, e2, r2) => (d(e2) && (r2 = e2.max, e2 = e2.min), !s(e2) && t2 < e2 && (t2 = e2), !s(r2) && t2 > r2 && (t2 = r2), t2), fourNumber: v.get, formatRotation: (t2, e2) => (t2 %= 360, e2 ? t2 < 0 && (t2 += 360) : (t2 > 180 && (t2 -= 360), t2 < -180 && (t2 += 360)), I$2.float(t2)), getGapRotation(t2, e2, s2 = 0) {
     let r2 = t2 + s2;
     if (e2 > 1) {
       const t3 = Math.abs(r2 % e2);
@@ -4558,37 +4594,37 @@ var LiteGraphTSMigration = (function(exports) {
     }
     return r2 - s2;
   }, float(t2, e2) {
-    const r2 = s(e2) ? 1e12 : S(10, e2);
-    return -0 === (t2 = P(t2 * r2) / r2) ? 0 : t2;
+    const r2 = s(e2) ? 1e12 : S$1(10, e2);
+    return -0 === (t2 = P$1(t2 * r2) / r2) ? 0 : t2;
   }, sign: (t2) => t2 < 0 ? -1 : 1, getScaleData(t2, e2, s2, r2) {
     if (r2 || (r2 = {}), e2) {
       const t3 = (o(e2) ? e2 : e2.width || 0) / s2.width, i2 = (o(e2) ? e2 : e2.height || 0) / s2.height;
       r2.scaleX = t3 || i2 || 1, r2.scaleY = i2 || t3 || 1;
-    } else t2 && I$1.assignScale(r2, t2);
+    } else t2 && I$2.assignScale(r2, t2);
     return r2;
   }, assignScale(t2, e2) {
     o(e2) ? t2.scaleX = t2.scaleY = e2 : (t2.scaleX = e2.x, t2.scaleY = e2.y);
-  }, getFloorScale: (t2, e2 = 1) => L(R(t2), e2) / t2, randInt: M, randColor: (t2) => `rgba(${M(255)},${M(255)},${M(255)},${t2 || 1})` };
-  function M(t2) {
+  }, getFloorScale: (t2, e2 = 1) => L$1(R$1(t2), e2) / t2, randInt: M$1, randColor: (t2) => `rgba(${M$1(255)},${M$1(255)},${M$1(255)},${t2 || 1})` };
+  function M$1(t2) {
     return Math.round(Math.random() * t2);
   }
-  const A = E / 180, W$1 = 2 * E, N$1 = E / 2;
-  function Y$1() {
+  const A$1 = E$1 / 180, W$2 = 2 * E$1, N$2 = E$1 / 2;
+  function Y$2() {
     return { x: 0, y: 0 };
   }
-  function D() {
+  function D$1() {
     return { x: 0, y: 0, width: 0, height: 0 };
   }
-  function X$1() {
+  function X$2() {
     return { a: 1, b: 0, c: 0, d: 1, e: 0, f: 0 };
   }
-  const { sin: z$1, cos: F$1, acos: U$1, sqrt: j$1 } = Math, { float: V$1 } = I$1, H = {};
-  function G$1() {
+  const { sin: z$2, cos: F$2, acos: U$1, sqrt: j$2 } = Math, { float: V$2 } = I$2, H$1 = {};
+  function G$2() {
     return Object.assign(Object.assign(Object.assign({}, { a: 1, b: 0, c: 0, d: 1, e: 0, f: 0 }), { x: 0, y: 0, width: 0, height: 0 }), { scaleX: 1, scaleY: 1, rotation: 0, skewX: 0, skewY: 0 });
   }
-  const q$1 = { defaultMatrix: { a: 1, b: 0, c: 0, d: 1, e: 0, f: 0 }, defaultWorld: G$1(), tempMatrix: {}, set(t2, e2 = 1, s2 = 0, r2 = 0, i2 = 1, n2 = 0, o2 = 0) {
+  const q$1 = { defaultMatrix: { a: 1, b: 0, c: 0, d: 1, e: 0, f: 0 }, defaultWorld: G$2(), tempMatrix: {}, set(t2, e2 = 1, s2 = 0, r2 = 0, i2 = 1, n2 = 0, o2 = 0) {
     t2.a = e2, t2.b = s2, t2.c = r2, t2.d = i2, t2.e = n2, t2.f = o2;
-  }, get: X$1, getWorld: G$1, copy(t2, e2) {
+  }, get: X$2, getWorld: G$2, copy(t2, e2) {
     t2.a = e2.a, t2.b = e2.b, t2.c = e2.c, t2.d = e2.d, t2.e = e2.e, t2.f = e2.f;
   }, translate(t2, e2, s2) {
     t2.e += e2, t2.f += s2;
@@ -4599,21 +4635,21 @@ var LiteGraphTSMigration = (function(exports) {
   }, pixelScale(t2, e2, s2) {
     s2 || (s2 = t2), s2.a = t2.a * e2, s2.b = t2.b * e2, s2.c = t2.c * e2, s2.d = t2.d * e2, s2.e = t2.e * e2, s2.f = t2.f * e2;
   }, scaleOfOuter(t2, e2, s2, r2) {
-    Q$1.toInnerPoint(t2, e2, H), Q$1.scaleOfInner(t2, H, s2, r2);
+    Q$1.toInnerPoint(t2, e2, H$1), Q$1.scaleOfInner(t2, H$1, s2, r2);
   }, scaleOfInner(t2, e2, s2, r2 = s2) {
     Q$1.translateInner(t2, e2.x, e2.y), Q$1.scale(t2, s2, r2), Q$1.translateInner(t2, -e2.x, -e2.y);
   }, rotate(t2, e2) {
-    const { a: s2, b: r2, c: i2, d: n2 } = t2, o2 = F$1(e2 *= A), a = z$1(e2);
+    const { a: s2, b: r2, c: i2, d: n2 } = t2, o2 = F$2(e2 *= A$1), a = z$2(e2);
     t2.a = s2 * o2 - r2 * a, t2.b = s2 * a + r2 * o2, t2.c = i2 * o2 - n2 * a, t2.d = i2 * a + n2 * o2;
   }, rotateOfOuter(t2, e2, s2) {
-    Q$1.toInnerPoint(t2, e2, H), Q$1.rotateOfInner(t2, H, s2);
+    Q$1.toInnerPoint(t2, e2, H$1), Q$1.rotateOfInner(t2, H$1, s2);
   }, rotateOfInner(t2, e2, s2) {
     Q$1.translateInner(t2, e2.x, e2.y), Q$1.rotate(t2, s2), Q$1.translateInner(t2, -e2.x, -e2.y);
   }, skew(t2, e2, s2) {
     const { a: r2, b: i2, c: n2, d: o2 } = t2;
-    s2 && (s2 *= A, t2.a = r2 + n2 * s2, t2.b = i2 + o2 * s2), e2 && (e2 *= A, t2.c = n2 + r2 * e2, t2.d = o2 + i2 * e2);
+    s2 && (s2 *= A$1, t2.a = r2 + n2 * s2, t2.b = i2 + o2 * s2), e2 && (e2 *= A$1, t2.c = n2 + r2 * e2, t2.d = o2 + i2 * e2);
   }, skewOfOuter(t2, e2, s2, r2) {
-    Q$1.toInnerPoint(t2, e2, H), Q$1.skewOfInner(t2, H, s2, r2);
+    Q$1.toInnerPoint(t2, e2, H$1), Q$1.skewOfInner(t2, H$1, s2, r2);
   }, skewOfInner(t2, e2, s2, r2 = 0) {
     Q$1.translateInner(t2, e2.x, e2.y), Q$1.skew(t2, s2, r2), Q$1.translateInner(t2, -e2.x, -e2.y);
   }, multiply(t2, e2) {
@@ -4655,9 +4691,9 @@ var LiteGraphTSMigration = (function(exports) {
   }, setLayout(t2, e2, r2, i2, n2) {
     const { x: o2, y: a, scaleX: h, scaleY: l2 } = e2;
     if (s(n2) && (n2 = e2.rotation || e2.skewX || e2.skewY), n2) {
-      const { rotation: s2, skewX: r3, skewY: i3 } = e2, n3 = s2 * A, o3 = F$1(n3), a2 = z$1(n3);
+      const { rotation: s2, skewX: r3, skewY: i3 } = e2, n3 = s2 * A$1, o3 = F$2(n3), a2 = z$2(n3);
       if (r3 || i3) {
-        const e3 = r3 * A, s3 = i3 * A;
+        const e3 = r3 * A$1, s3 = i3 * A$1;
         t2.a = (o3 + s3 * -a2) * h, t2.b = (a2 + s3 * o3) * h, t2.c = (e3 * o3 - a2) * l2, t2.d = (o3 + e3 * a2) * l2;
       } else t2.a = o3 * h, t2.b = a2 * h, t2.c = -a2 * l2, t2.d = o3 * l2;
     } else t2.a = h, t2.b = 0, t2.c = 0, t2.d = l2;
@@ -4668,28 +4704,28 @@ var LiteGraphTSMigration = (function(exports) {
     if (n2 || o2) {
       const t3 = i2 * a - n2 * o2;
       if (o2 && !r2) {
-        d2 = j$1(i2 * i2 + n2 * n2), c = t3 / d2;
+        d2 = j$2(i2 * i2 + n2 * n2), c = t3 / d2;
         const e4 = i2 / d2;
         u2 = n2 > 0 ? U$1(e4) : -U$1(e4);
       } else {
-        c = j$1(o2 * o2 + a * a), d2 = t3 / c;
+        c = j$2(o2 * o2 + a * a), d2 = t3 / c;
         const e4 = o2 / c;
-        u2 = N$1 - (a > 0 ? U$1(-e4) : -U$1(e4));
+        u2 = N$2 - (a > 0 ? U$1(-e4) : -U$1(e4));
       }
-      const e3 = V$1(F$1(u2)), s3 = z$1(u2);
-      d2 = V$1(d2), c = V$1(c), _2 = e3 ? V$1((o2 / c + s3) / e3 / A, 9) : 0, p2 = e3 ? V$1((n2 / d2 - s3) / e3 / A, 9) : 0, u2 = V$1(u2 / A);
+      const e3 = V$2(F$2(u2)), s3 = z$2(u2);
+      d2 = V$2(d2), c = V$2(c), _2 = e3 ? V$2((o2 / c + s3) / e3 / A$1, 9) : 0, p2 = e3 ? V$2((n2 / d2 - s3) / e3 / A$1, 9) : 0, u2 = V$2(u2 / A$1);
     } else d2 = i2, c = a, u2 = _2 = p2 = 0;
     return (e2 = s2 || e2) && (f2 += e2.x * i2 + e2.y * o2, g2 += e2.x * n2 + e2.y * a, s2 || (f2 -= e2.x, g2 -= e2.y)), { x: f2, y: g2, scaleX: d2, scaleY: c, rotation: u2, skewX: _2, skewY: p2 };
   }, withScale(t2, e2, s2 = e2) {
     const r2 = t2;
     if (!e2 || !s2) {
       const { a: r3, b: i2, c: n2, d: o2 } = t2;
-      i2 || n2 ? s2 = (r3 * o2 - i2 * n2) / (e2 = j$1(r3 * r3 + i2 * i2)) : (e2 = r3, s2 = o2);
+      i2 || n2 ? s2 = (r3 * o2 - i2 * n2) / (e2 = j$2(r3 * r3 + i2 * i2)) : (e2 = r3, s2 = o2);
     }
     return r2.scaleX = e2, r2.scaleY = s2, r2;
   }, reset(t2) {
     Q$1.set(t2);
-  } }, Q$1 = q$1, { float: J$2 } = I$1, { toInnerPoint: Z$2, toOuterPoint: $$1 } = q$1, { sin: K$1, cos: tt$2, abs: et$2, sqrt: st$1, atan2: rt$1, min: it$2, round: nt$2 } = Math, ot$2 = { defaultPoint: { x: 0, y: 0 }, tempPoint: {}, tempRadiusPoint: {}, set(t2, e2 = 0, s2 = 0) {
+  } }, Q$1 = q$1, { float: J$2 } = I$2, { toInnerPoint: Z$3, toOuterPoint: $$1 } = q$1, { sin: K$2, cos: tt$2, abs: et$2, sqrt: st$1, atan2: rt$1, min: it$2, round: nt$2 } = Math, ot$2 = { defaultPoint: { x: 0, y: 0 }, tempPoint: {}, tempRadiusPoint: {}, set(t2, e2 = 0, s2 = 0) {
     t2.x = e2, t2.y = s2;
   }, setRadius(t2, e2, r2) {
     t2.radiusX = e2, t2.radiusY = s(r2) ? e2 : r2;
@@ -4707,11 +4743,11 @@ var LiteGraphTSMigration = (function(exports) {
     t2.x += (t2.x - e2.x) * (s2 - 1), t2.y += (t2.y - e2.y) * (r2 - 1);
   }, rotate(t2, e2, s2) {
     s2 || (s2 = at$2.defaultPoint);
-    const r2 = tt$2(e2 *= A), i2 = K$1(e2), n2 = t2.x - s2.x, o2 = t2.y - s2.y;
+    const r2 = tt$2(e2 *= A$1), i2 = K$2(e2), n2 = t2.x - s2.x, o2 = t2.y - s2.y;
     t2.x = s2.x + n2 * r2 - o2 * i2, t2.y = s2.y + n2 * i2 + o2 * r2;
   }, tempToInnerOf(t2, e2) {
     const { tempPoint: s2 } = at$2;
-    return lt$2(s2, t2), Z$2(e2, s2, s2), s2;
+    return lt$2(s2, t2), Z$3(e2, s2, s2), s2;
   }, tempToOuterOf(t2, e2) {
     const { tempPoint: s2 } = at$2;
     return lt$2(s2, t2), $$1(e2, s2, s2), s2;
@@ -4719,21 +4755,21 @@ var LiteGraphTSMigration = (function(exports) {
     const { tempRadiusPoint: s2 } = at$2;
     return lt$2(s2, t2), at$2.toInnerRadiusPointOf(t2, e2, s2), s2;
   }, copyRadiusPoint: (t2, e2, s2, r2) => (lt$2(t2, e2), dt$2(t2, s2, r2), t2), toInnerRadiusPointOf(t2, e2, s2) {
-    s2 || (s2 = t2), Z$2(e2, t2, s2), s2.radiusX = Math.abs(t2.radiusX / e2.scaleX), s2.radiusY = Math.abs(t2.radiusY / e2.scaleY);
+    s2 || (s2 = t2), Z$3(e2, t2, s2), s2.radiusX = Math.abs(t2.radiusX / e2.scaleX), s2.radiusY = Math.abs(t2.radiusY / e2.scaleY);
   }, toInnerOf(t2, e2, s2) {
-    Z$2(e2, t2, s2);
+    Z$3(e2, t2, s2);
   }, toOuterOf(t2, e2, s2) {
     $$1(e2, t2, s2);
   }, getCenter: (t2, e2) => ({ x: t2.x + (e2.x - t2.x) / 2, y: t2.y + (e2.y - t2.y) / 2 }), getCenterX: (t2, e2) => t2 + (e2 - t2) / 2, getCenterY: (t2, e2) => t2 + (e2 - t2) / 2, getDistance: (t2, e2) => ht$2(t2.x, t2.y, e2.x, e2.y), getDistanceFrom(t2, e2, s2, r2) {
     const i2 = et$2(s2 - t2), n2 = et$2(r2 - e2);
     return st$1(i2 * i2 + n2 * n2);
-  }, getMinDistanceFrom: (t2, e2, s2, r2, i2, n2) => it$2(ht$2(t2, e2, s2, r2), ht$2(s2, r2, i2, n2)), getAngle: (t2, e2) => ct$2(t2, e2) / A, getRotation: (t2, e2, s2, r2) => (r2 || (r2 = e2), at$2.getRadianFrom(t2.x, t2.y, e2.x, e2.y, s2.x, s2.y, r2.x, r2.y) / A), getRadianFrom(t2, e2, r2, i2, n2, o2, a, h) {
+  }, getMinDistanceFrom: (t2, e2, s2, r2, i2, n2) => it$2(ht$2(t2, e2, s2, r2), ht$2(s2, r2, i2, n2)), getAngle: (t2, e2) => ct$2(t2, e2) / A$1, getRotation: (t2, e2, s2, r2) => (r2 || (r2 = e2), at$2.getRadianFrom(t2.x, t2.y, e2.x, e2.y, s2.x, s2.y, r2.x, r2.y) / A$1), getRadianFrom(t2, e2, r2, i2, n2, o2, a, h) {
     s(a) && (a = r2, h = i2);
     const l2 = t2 - r2, d2 = e2 - i2, c = n2 - a, u2 = o2 - h;
     return Math.atan2(l2 * u2 - d2 * c, l2 * c + d2 * u2);
   }, getAtan2: (t2, e2) => rt$1(e2.y - t2.y, e2.x - t2.x), getDistancePoint(t2, e2, s2, r2, i2) {
     const n2 = ct$2(t2, e2);
-    return i2 && (t2 = e2), r2 || (e2 = {}), e2.x = t2.x + tt$2(n2) * s2, e2.y = t2.y + K$1(n2) * s2, e2;
+    return i2 && (t2 = e2), r2 || (e2 = {}), e2.x = t2.x + tt$2(n2) * s2, e2.y = t2.y + K$2(n2) * s2, e2;
   }, toNumberPoints(t2) {
     let e2 = t2;
     return d(t2[0]) && (e2 = [], t2.forEach((t3) => e2.push(t3.x, t3.y))), e2;
@@ -4924,7 +4960,7 @@ var LiteGraphTSMigration = (function(exports) {
   }
   const { toPoint: vt$2 } = bt$3, kt$3 = { toPoint(t2, e2, s2, r2, i2, n2) {
     vt$2(t2, s2, r2, i2, e2, n2);
-  } }, { tempPointBounds: Ct$3, setPoint: Ot$3, addPoint: Tt$3, toBounds: Pt$3 } = gt$1, { toOuterPoint: St$3 } = q$1, { float: Lt$3, fourNumber: Rt$3 } = I$1, { floor: Et$3, ceil: It$3 } = Math;
+  } }, { tempPointBounds: Ct$3, setPoint: Ot$3, addPoint: Tt$3, toBounds: Pt$3 } = gt$1, { toOuterPoint: St$3 } = q$1, { float: Lt$3, fourNumber: Rt$3 } = I$2, { floor: Et$3, ceil: It$3 } = Math;
   let Mt$3, At$3, Wt$3, Nt$3;
   const Yt$3 = {}, Dt$3 = {}, Xt$3 = {}, zt$1 = { tempBounds: Xt$3, set(t2, e2 = 0, s2 = 0, r2 = 0, i2 = 0) {
     t2.x = e2, t2.y = s2, t2.width = r2, t2.height = i2;
@@ -5164,8 +5200,8 @@ var LiteGraphTSMigration = (function(exports) {
       e2 && t2.setTransform && (t2.setTransform(e2), e2 = void 0);
     } catch (t3) {
     }
-    s2 && _.stintSet(s2, "transform", e2);
-  } } }, { image: Kt$3 } = $t$2, { randColor: te$2 } = I$1;
+    s2 && _$1.stintSet(s2, "transform", e2);
+  } } }, { image: Kt$3 } = $t$2, { randColor: te$2 } = I$2;
   let ee$2 = class ee2 {
     constructor(t2) {
       this.repeatMap = {}, this.name = t2;
@@ -5499,7 +5535,7 @@ var LiteGraphTSMigration = (function(exports) {
       let s2;
       this.context && !this.unreal && e2 && this.width && (s2 = this.getSameCanvas(), s2.copyWorld(this));
       const r2 = this.size;
-      _.copyAttrs(r2, t2, Re$2), Re$2.forEach((t3) => r2[t3] || (r2[t3] = 1)), this.bounds = new Vt$3(0, 0, this.width, this.height), this.updateViewSize(), this.updateClientBounds(), this.context && (this.smooth = this.config.smooth, !this.unreal && s2 && (this.clearWorld(s2.bounds), this.copyWorld(s2), s2.recycle()));
+      _$1.copyAttrs(r2, t2, Re$2), Re$2.forEach((t3) => r2[t3] || (r2[t3] = 1)), this.bounds = new Vt$3(0, 0, this.width, this.height), this.updateViewSize(), this.updateClientBounds(), this.context && (this.smooth = this.config.smooth, !this.unreal && s2 && (this.clearWorld(s2.bounds), this.copyWorld(s2), s2.recycle()));
     }
     updateViewSize() {
     }
@@ -5628,7 +5664,7 @@ var LiteGraphTSMigration = (function(exports) {
   const ze$2 = {};
   for (let t2 in De$2) ze$2[De$2[t2]] = We$2[t2];
   const Fe$2 = { drawRoundRect(t2, e2, s2, r2, i2, n2) {
-    const o2 = I$1.fourNumber(n2, Math.min(r2 / 2, i2 / 2)), a = e2 + r2, h = s2 + i2;
+    const o2 = I$2.fourNumber(n2, Math.min(r2 / 2, i2 / 2)), a = e2 + r2, h = s2 + i2;
     o2[0] ? t2.moveTo(e2 + o2[0], s2) : t2.moveTo(e2, s2), o2[1] ? t2.arcTo(a, s2, a, h, o2[1]) : t2.lineTo(a, s2), o2[2] ? t2.arcTo(a, h, e2, h, o2[2]) : t2.lineTo(a, h), o2[3] ? t2.arcTo(e2, h, e2, s2, o2[3]) : t2.lineTo(e2, h), o2[0] ? t2.arcTo(e2, s2, a, s2, o2[0]) : t2.lineTo(e2, s2);
   } }, { sin: Ue$2, cos: je$2, hypot: Ve$2, atan2: He$2, ceil: Ge$2, abs: qe$2, PI: Qe$2, sqrt: Je$2, pow: Ze$2 } = Math, { setPoint: $e$2, addPoint: Ke$2 } = gt$1, { set: ts$1, toNumberPoints: es$1 } = ot$2, { M: ss$1, L: rs$1, C: is$1, Q: ns$1, Z: os$1 } = Ae$2, as$1 = {}, hs = { points(t2, e2, s2, r2) {
     let i2 = es$1(e2);
@@ -5649,16 +5685,16 @@ var LiteGraphTSMigration = (function(exports) {
     let f2 = He$2(u2, c), g2 = He$2(p2, _2);
     const y2 = Ve$2(c, u2), m2 = Ve$2(_2, p2);
     let x2 = g2 - f2;
-    if (x2 < 0 && (x2 += W$1), y2 < 1e-12 || m2 < 1e-12 || x2 < 1e-12 || qe$2(x2 - Qe$2) < 1e-12) return t2 && t2.push(rs$1, r2, i2), h && ($e$2(h, e2, s2), Ke$2(h, r2, i2)), d2 && ts$1(d2, e2, s2), void (l2 && ts$1(l2, r2, i2));
-    const w2 = c * p2 - _2 * u2 < 0, b2 = w2 ? -1 : 1, B2 = a / je$2(x2 / 2), v2 = r2 + B2 * je$2(f2 + x2 / 2 + N$1 * b2), k2 = i2 + B2 * Ue$2(f2 + x2 / 2 + N$1 * b2);
-    return f2 -= N$1 * b2, g2 -= N$1 * b2, cs(t2, v2, k2, a, a, 0, f2 / A, g2 / A, w2, h, l2, d2);
+    if (x2 < 0 && (x2 += W$2), y2 < 1e-12 || m2 < 1e-12 || x2 < 1e-12 || qe$2(x2 - Qe$2) < 1e-12) return t2 && t2.push(rs$1, r2, i2), h && ($e$2(h, e2, s2), Ke$2(h, r2, i2)), d2 && ts$1(d2, e2, s2), void (l2 && ts$1(l2, r2, i2));
+    const w2 = c * p2 - _2 * u2 < 0, b2 = w2 ? -1 : 1, B2 = a / je$2(x2 / 2), v2 = r2 + B2 * je$2(f2 + x2 / 2 + N$2 * b2), k2 = i2 + B2 * Ue$2(f2 + x2 / 2 + N$2 * b2);
+    return f2 -= N$2 * b2, g2 -= N$2 * b2, cs(t2, v2, k2, a, a, 0, f2 / A$1, g2 / A$1, w2, h, l2, d2);
   }, arc: (t2, e2, s2, r2, i2, n2, o2, a, h, l2) => cs(t2, e2, s2, r2, r2, 0, i2, n2, o2, a, h, l2), ellipse(t2, e2, s2, r2, i2, n2, o2, a, h, l2, d2, c) {
-    const u2 = n2 * A, _2 = Ue$2(u2), p2 = je$2(u2);
-    let f2 = o2 * A, g2 = a * A;
-    f2 > Qe$2 && (f2 -= W$1), g2 < 0 && (g2 += W$1);
+    const u2 = n2 * A$1, _2 = Ue$2(u2), p2 = je$2(u2);
+    let f2 = o2 * A$1, g2 = a * A$1;
+    f2 > Qe$2 && (f2 -= W$2), g2 < 0 && (g2 += W$2);
     let y2 = g2 - f2;
-    y2 < 0 ? y2 += W$1 : y2 > W$1 && (y2 -= W$1), h && (y2 -= W$1);
-    const m2 = Ge$2(qe$2(y2 / N$1)), x2 = y2 / m2, w2 = Ue$2(x2 / 4), b2 = 8 / 3 * w2 * w2 / Ue$2(x2 / 2);
+    y2 < 0 ? y2 += W$2 : y2 > W$2 && (y2 -= W$2), h && (y2 -= W$2);
+    const m2 = Ge$2(qe$2(y2 / N$2)), x2 = y2 / m2, w2 = Ue$2(x2 / 4), b2 = 8 / 3 * w2 * w2 / Ue$2(x2 / 2);
     g2 = f2 + x2;
     let B2, v2, k2, C2, O2, T2, P2, S2, L2 = je$2(f2), R2 = Ue$2(f2), E2 = k2 = p2 * r2 * L2 - _2 * i2 * R2, I2 = C2 = _2 * r2 * L2 + p2 * i2 * R2, M2 = e2 + k2, Y2 = s2 + C2;
     t2 && t2.push(t2.length ? rs$1 : ss$1, M2, Y2), l2 && $e$2(l2, M2, Y2), c && ts$1(c, M2, Y2);
@@ -5687,7 +5723,7 @@ var LiteGraphTSMigration = (function(exports) {
     const n2 = 1 - t2;
     return 3 * n2 * n2 * (s2 - e2) + 6 * n2 * t2 * (r2 - s2) + 3 * t2 * t2 * (i2 - r2);
   } }, { getPointAndSet: ls, toTwoPointBounds: ds, ellipse: cs } = hs, { sin: us, cos: _s, sqrt: ps, atan2: fs } = Math, { ellipse: gs } = hs, ys = { ellipticalArc(t2, e2, s2, r2, i2, n2, o2, a, h, l2, d2) {
-    const c = (h - e2) / 2, u2 = (l2 - s2) / 2, _2 = n2 * A, p2 = us(_2), f2 = _s(_2), g2 = -f2 * c - p2 * u2, y2 = -f2 * u2 + p2 * c, m2 = r2 * r2, x2 = i2 * i2, w2 = y2 * y2, b2 = g2 * g2, B2 = m2 * x2 - m2 * w2 - x2 * b2;
+    const c = (h - e2) / 2, u2 = (l2 - s2) / 2, _2 = n2 * A$1, p2 = us(_2), f2 = _s(_2), g2 = -f2 * c - p2 * u2, y2 = -f2 * u2 + p2 * c, m2 = r2 * r2, x2 = i2 * i2, w2 = y2 * y2, b2 = g2 * g2, B2 = m2 * x2 - m2 * w2 - x2 * b2;
     let v2 = 0;
     if (B2 < 0) {
       const t3 = ps(1 - B2 / (m2 * x2));
@@ -5695,14 +5731,14 @@ var LiteGraphTSMigration = (function(exports) {
     } else v2 = (o2 === a ? -1 : 1) * ps(B2 / (m2 * w2 + x2 * b2));
     const k2 = v2 * r2 * y2 / i2, C2 = -v2 * i2 * g2 / r2, O2 = fs((y2 - C2) / i2, (g2 - k2) / r2), T2 = fs((-y2 - C2) / i2, (-g2 - k2) / r2);
     let P2 = T2 - O2;
-    0 === a && P2 > 0 ? P2 -= W$1 : 1 === a && P2 < 0 && (P2 += W$1);
+    0 === a && P2 > 0 ? P2 -= W$2 : 1 === a && P2 < 0 && (P2 += W$2);
     const S2 = e2 + c + f2 * k2 - p2 * C2, L2 = s2 + u2 + p2 * k2 + f2 * C2, R2 = P2 < 0 ? 1 : 0;
-    d2 || $t$2.ellipseToCurve ? gs(t2, S2, L2, r2, i2, n2, O2 / A, T2 / A, R2) : r2 !== i2 || n2 ? t2.push(Ae$2.G, S2, L2, r2, i2, n2, O2 / A, T2 / A, R2) : t2.push(Ae$2.O, S2, L2, r2, O2 / A, T2 / A, R2);
+    d2 || $t$2.ellipseToCurve ? gs(t2, S2, L2, r2, i2, n2, O2 / A$1, T2 / A$1, R2) : r2 !== i2 || n2 ? t2.push(Ae$2.G, S2, L2, r2, i2, n2, O2 / A$1, T2 / A$1, R2) : t2.push(Ae$2.O, S2, L2, r2, O2 / A$1, T2 / A$1, R2);
   } }, ms = { toCommand: (t2) => [], toNode: (t2) => [] }, { M: xs, m: ws, L: bs, l: Bs, H: vs, h: ks, V: Cs, v: Os, C: Ts, c: Ps, S: Ss, s: Ls, Q: Rs, q: Es, T: Is, t: Ms, A: As, a: Ws, Z: Ns, z: Ys, N: Ds, D: Xs, X: zs, G: Fs, F: Us, O: js, P: Vs, U: Hs } = Ae$2, { rect: Gs, roundRect: qs, arcTo: Qs, arc: Js, ellipse: Zs, quadraticCurveTo: $s } = hs, { ellipticalArc: Ks } = ys, tr = ee$2.get("PathConvert"), er = {}, sr = { current: { dot: 0 }, stringify(t2, e2) {
     let s2, r2, i2, n2 = 0, o2 = t2.length, a = "";
     for (; n2 < o2; ) {
       r2 = t2[n2], s2 = ze$2[r2], a += r2 === i2 ? " " : Xe$2[r2];
-      for (let r3 = 1; r3 < s2; r3++) a += I$1.float(t2[n2 + r3], e2), r3 === s2 - 1 || (a += " ");
+      for (let r3 = 1; r3 < s2; r3++) a += I$2.float(t2[n2 + r3], e2), r3 === s2 - 1 || (a += " ");
       i2 = r2, n2 += s2;
     }
     return a;
@@ -5839,7 +5875,7 @@ var LiteGraphTSMigration = (function(exports) {
   }, roundRect(t2, e2, s2, r2, i2, n2) {
     if (o(n2)) t2.push(_r, e2, s2, r2, i2, n2);
     else {
-      const o2 = I$1.fourNumber(n2);
+      const o2 = I$2.fourNumber(n2);
       o2 ? t2.push(ur, e2, s2, r2, i2, ...o2) : t2.push(cr, e2, s2, r2, i2);
     }
   }, ellipse(t2, e2, s2, i2, n2, o2, a, h, l2) {
@@ -5950,16 +5986,16 @@ var LiteGraphTSMigration = (function(exports) {
         t2.roundRect(e2[r2 + 1], e2[r2 + 2], e2[r2 + 3], e2[r2 + 4], e2[r2 + 5]), r2 += 6;
         break;
       case Zr:
-        t2.ellipse(e2[r2 + 1], e2[r2 + 2], e2[r2 + 3], e2[r2 + 4], e2[r2 + 5] * A, e2[r2 + 6] * A, e2[r2 + 7] * A, e2[r2 + 8]), r2 += 9;
+        t2.ellipse(e2[r2 + 1], e2[r2 + 2], e2[r2 + 3], e2[r2 + 4], e2[r2 + 5] * A$1, e2[r2 + 6] * A$1, e2[r2 + 7] * A$1, e2[r2 + 8]), r2 += 9;
         break;
       case $r:
-        t2.ellipse(e2[r2 + 1], e2[r2 + 2], e2[r2 + 3], e2[r2 + 4], 0, 0, W$1, false), r2 += 5;
+        t2.ellipse(e2[r2 + 1], e2[r2 + 2], e2[r2 + 3], e2[r2 + 4], 0, 0, W$2, false), r2 += 5;
         break;
       case Kr:
-        t2.arc(e2[r2 + 1], e2[r2 + 2], e2[r2 + 3], e2[r2 + 4] * A, e2[r2 + 5] * A, e2[r2 + 6]), r2 += 7;
+        t2.arc(e2[r2 + 1], e2[r2 + 2], e2[r2 + 3], e2[r2 + 4] * A$1, e2[r2 + 5] * A$1, e2[r2 + 6]), r2 += 7;
         break;
       case ti$2:
-        t2.arc(e2[r2 + 1], e2[r2 + 2], e2[r2 + 3], 0, W$1, false), r2 += 4;
+        t2.arc(e2[r2 + 1], e2[r2 + 2], e2[r2 + 3], 0, W$2, false), r2 += 4;
         break;
       case ei$2:
         t2.arcTo(e2[r2 + 1], e2[r2 + 2], e2[r2 + 3], e2[r2 + 4], e2[r2 + 5]), r2 += 6;
@@ -6120,7 +6156,7 @@ var LiteGraphTSMigration = (function(exports) {
       return this.isComplete ? 1 : s2 / e2;
     }
     constructor(t2) {
-      this.config = { parallel: 6 }, this.list = [], this.running = false, this.isComplete = true, this.index = 0, this.delayNumber = 0, t2 && _.assign(this.config, t2), this.empty();
+      this.config = { parallel: 6 }, this.list = [], this.running = false, this.isComplete = true, this.index = 0, this.delayNumber = 0, t2 && _$1.assign(this.config, t2), this.empty();
     }
     add(t2, e2, r2) {
       let i2, n2, a, h;
@@ -6444,7 +6480,7 @@ var LiteGraphTSMigration = (function(exports) {
     return un(t2, (t3) => ({ set(e2) {
       if (this.__setAttr(t3, e2)) {
         const t4 = this.__;
-        _.stintSet(t4, "__useDim", t4.dim || t4.bright || t4.dimskip), this.__layout.surfaceChange();
+        _$1.stintSet(t4, "__useDim", t4.dim || t4.bright || t4.dimskip), this.__layout.surfaceChange();
       }
     } }));
   }
@@ -6523,7 +6559,7 @@ var LiteGraphTSMigration = (function(exports) {
       const t3 = u(r2);
       a.get = function() {
         const e3 = this[n2];
-        return null == e3 ? this[n2] = t3 ? {} : _.clone(r2) : e3;
+        return null == e3 ? this[n2] = t3 ? {} : _$1.clone(r2) : e3;
       };
     }
     const h = t2.isBranchLeaf;
@@ -6635,7 +6671,7 @@ var LiteGraphTSMigration = (function(exports) {
     uo.rotateOfLocal(t2, mo(t2, e2), s2, r2);
   }, rotateOfLocal(t2, e2, s2, r2) {
     const i2 = t2.__localMatrix;
-    Kn(ho, i2), ro(ho, e2, s2), uo.hasHighPosition(t2) ? uo.setTransform(t2, ho, false, r2) : t2.set({ x: t2.x + ho.e - i2.e, y: t2.y + ho.f - i2.f, rotation: I$1.formatRotation(t2.rotation + s2) }, r2);
+    Kn(ho, i2), ro(ho, e2, s2), uo.hasHighPosition(t2) ? uo.setTransform(t2, ho, false, r2) : t2.set({ x: t2.x + ho.e - i2.e, y: t2.y + ho.f - i2.f, rotation: I$2.formatRotation(t2.rotation + s2) }, r2);
   }, skewOfWorld(t2, e2, s2, r2, i2, n2) {
     uo.skewOfLocal(t2, mo(t2, e2), s2, r2, i2, n2);
   }, skewOfLocal(t2, e2, s2, r2 = 0, i2, n2) {
@@ -7255,7 +7291,7 @@ var LiteGraphTSMigration = (function(exports) {
       const { children: s2 } = this;
       for (let r2 = 0, i2 = s2.length; r2 < i2; r2++) Da(s2[r2], e2) || s2[r2].__clip(t2, e2);
     }
-  } }, Fa = {}, { LEAF: Ua, create: ja } = g, { stintSet: Va } = _, { toInnerPoint: Ha, toOuterPoint: Ga, multiplyParent: qa } = q$1, { toOuterOf: Qa } = zt$1, { copy: Ja, move: Za } = ot$2, { moveLocal: $a, zoomOfLocal: Ka, rotateOfLocal: th, skewOfLocal: eh, moveWorld: sh, zoomOfWorld: rh, rotateOfWorld: ih, skewOfWorld: nh, transform: oh, transformWorld: ah, setTransform: hh, getFlipTransform: lh, getLocalOrigin: dh, getRelativeWorld: ch, drop: uh } = co;
+  } }, Fa = {}, { LEAF: Ua, create: ja } = g, { stintSet: Va } = _$1, { toInnerPoint: Ha, toOuterPoint: Ga, multiplyParent: qa } = q$1, { toOuterOf: Qa } = zt$1, { copy: Ja, move: Za } = ot$2, { moveLocal: $a, zoomOfLocal: Ka, rotateOfLocal: th, skewOfLocal: eh, moveWorld: sh, zoomOfWorld: rh, rotateOfWorld: ih, skewOfWorld: nh, transform: oh, transformWorld: ah, setTransform: hh, getFlipTransform: lh, getLocalOrigin: dh, getRelativeWorld: ch, drop: uh } = co;
   let _h = class {
     get tag() {
       return this.__tag;
@@ -7930,7 +7966,7 @@ var LiteGraphTSMigration = (function(exports) {
     return false;
   } }, bt$2 = qt$2, Pt$2 = {}, Ft$2 = {}, Wt$2 = {}, Et$2 = {}, Tt$2 = {}, Dt$2 = { apply() {
     he$2.need("filter");
-  } }, It$2 = {}, Lt$2 = { setStyleName: () => he$2.need("state"), set: () => he$2.need("state") }, { parse: Mt$2, objectToCanvasData: Ot$2 } = sr, { stintSet: Nt$2 } = _, { hasTransparent: Vt$2 } = Ct$2, Ht$2 = { originPaint: {} }, Yt$2 = ee$2.get("UIData");
+  } }, It$2 = {}, Lt$2 = { setStyleName: () => he$2.need("state"), set: () => he$2.need("state") }, { parse: Mt$2, objectToCanvasData: Ot$2 } = sr, { stintSet: Nt$2 } = _$1, { hasTransparent: Vt$2 } = Ct$2, Ht$2 = { originPaint: {} }, Yt$2 = ee$2.get("UIData");
   let Ut$2 = class Ut extends f {
     get scale() {
       const { scaleX: t2, scaleY: e2 } = this;
@@ -8137,7 +8173,7 @@ var LiteGraphTSMigration = (function(exports) {
     e2 && (t2 = Tt$2.getShadowRenderSpread(this, e2)), s2 && (t2 = ne$1(t2, s2)), r2 && (t2 = _e$1(t2, Dt$2.getSpread(r2))), a && (t2 = _e$1(t2, a)), n2 && (t2 = _e$1(t2, n2));
     let h = t2;
     return i2 && (h = ne$1(h, Tt$2.getInnerShadowSpread(this, i2))), o2 && (h = ne$1(h, o2)), this.__layout.renderShapeSpread = h, _2 ? ne$1(_2.__updateRenderSpread(), t2) : t2;
-  } }, { stintSet: de$1 } = _, le$1 = { __updateChange() {
+  } }, { stintSet: de$1 } = _$1, le$1 = { __updateChange() {
     const t2 = this.__;
     if (t2.__useStroke) {
       const e2 = t2.__useStroke = !(!t2.stroke || !t2.strokeWidth);
@@ -8208,7 +8244,7 @@ var LiteGraphTSMigration = (function(exports) {
       return false;
     }
     set scale(t2) {
-      I$1.assignScale(this, t2);
+      I$2.assignScale(this, t2);
     }
     get scale() {
       return this.__.scale;
@@ -8300,7 +8336,7 @@ var LiteGraphTSMigration = (function(exports) {
       return he$2.need("export");
     }
     clone(t2) {
-      const e2 = _.clone(this.toJSON());
+      const e2 = _$1.clone(this.toJSON());
       return t2 && Object.assign(e2, t2), ce$1.one(e2);
     }
     static one(t2, e2, i2, s2, o2) {
@@ -8404,7 +8440,7 @@ var LiteGraphTSMigration = (function(exports) {
       return this.interaction && this.interaction.hoverData || { x: this.width / 2, y: this.height / 2 };
     }
     get clientBounds() {
-      return this.canvas && this.canvas.getClientBounds(true) || D();
+      return this.canvas && this.canvas.getClientBounds(true) || D$1();
     }
     constructor(t2, e2) {
       super(e2), this.config = { start: true, hittable: true, smooth: true, lazySpeard: 100 }, this.leafs = 0, this.__eventIds = [], this.__controllers = [], this.__readyWait = [], this.__viewReadyWait = [], this.__viewCompletedWait = [], this.__nextRenderWait = [], this.userConfig = t2, t2 && (t2.view || t2.width) && this.init(t2), ve$1.list.add(this);
@@ -8413,7 +8449,7 @@ var LiteGraphTSMigration = (function(exports) {
       if (this.canvas) return;
       let i2;
       const { config: s2 } = this;
-      this.__setLeafer(this), e2 && (this.parentApp = e2, this.__bindApp(e2), i2 = e2.running), t2 && (this.parent = e2, this.initType(t2.type), this.parent = void 0, _.assign(s2, t2));
+      this.__setLeafer(this), e2 && (this.parentApp = e2, this.__bindApp(e2), i2 = e2.running), t2 && (this.parent = e2, this.initType(t2.type), this.parent = void 0, _$1.assign(s2, t2));
       const o2 = this.canvas = le$2.canvas(s2);
       this.__controllers.push(this.renderer = le$2.renderer(this, o2, s2), this.watcher = le$2.watcher(this, s2), this.layouter = le$2.layouter(this, s2)), this.isApp && this.__setApp(), this.__checkAutoLayout(), e2 || (this.selector = le$2.selector(this), this.interaction = le$2.interaction(this, o2, this.selector, s2), this.interaction && (this.__controllers.unshift(this.interaction), this.hitCanvasManager = le$2.hitCanvasManager()), this.canvasManager = new ge$2(), i2 = s2.start), this.hittable = s2.hittable, this.fill = s2.fill, this.canvasManager.add(o2), this.__listenEvents(), i2 && (this.__startTimer = setTimeout(this.start.bind(this))), So.run(this.__initWait), this.onInit();
     }
@@ -8439,7 +8475,7 @@ var LiteGraphTSMigration = (function(exports) {
       t2 && this.updateLayout(), this.layouter.stop();
     }
     resize(t2) {
-      const e2 = _.copyAttrs({}, t2, Re$2);
+      const e2 = _$1.copyAttrs({}, t2, Re$2);
       Object.keys(e2).forEach((t3) => this[t3] = e2[t3]);
     }
     forceRender(t2, e2) {
@@ -8459,11 +8495,11 @@ var LiteGraphTSMigration = (function(exports) {
     __doResize(t2) {
       const { canvas: e2 } = this;
       if (!e2 || e2.isSameSize(t2)) return;
-      const i2 = _.copyAttrs({}, this.canvas, Re$2);
+      const i2 = _$1.copyAttrs({}, this.canvas, Re$2);
       e2.resize(t2), this.updateLazyBounds(), this.__onResize(new $o(t2, i2));
     }
     __onResize(t2) {
-      this.emitEvent(t2), _.copyAttrs(this.__, t2, Re$2), setTimeout(() => {
+      this.emitEvent(t2), _$1.copyAttrs(this.__, t2, Re$2), setTimeout(() => {
         this.canvasManager && this.canvasManager.clearRecycled();
       }, 0);
     }
@@ -8486,7 +8522,7 @@ var LiteGraphTSMigration = (function(exports) {
       return this.canvas && Re$2.includes(t2) ? this.canvas[t2] : super.__getAttr(t2);
     }
     __changeCanvasSize(t2, e2) {
-      const { config: i2, canvas: s2 } = this, o2 = _.copyAttrs({}, s2, Re$2);
+      const { config: i2, canvas: s2 } = this, o2 = _$1.copyAttrs({}, s2, Re$2);
       o2[t2] = i2[t2] = e2, i2.width && i2.height ? s2.stopAutoLayout() : this.__checkAutoLayout(), this.__doResize(o2);
     }
     __changeFill(t2) {
@@ -8642,10 +8678,10 @@ var LiteGraphTSMigration = (function(exports) {
     __updateRenderBounds() {
       let t2, e2;
       if (this.children.length) {
-        const i2 = this.__, s2 = this.__layout, { renderBounds: o2, boxBounds: r2 } = s2, { overflow: a } = i2, n2 = s2.childrenRenderBounds || (s2.childrenRenderBounds = D());
+        const i2 = this.__, s2 = this.__layout, { renderBounds: o2, boxBounds: r2 } = s2, { overflow: a } = i2, n2 = s2.childrenRenderBounds || (s2.childrenRenderBounds = D$1());
         super.__updateRenderBounds(n2), (e2 = a && a.includes("scroll")) && (Se$1(n2, r2), Re$1(n2, i2)), this.__updateRectRenderBounds(), t2 = !me$1(r2, n2), t2 && "show" === a && Se$1(o2, n2);
       } else this.__updateRectRenderBounds();
-      _.stintSet(this, "isOverflow", t2), this.__checkScroll(e2);
+      _$1.stintSet(this, "isOverflow", t2), this.__checkScroll(e2);
     }
     __updateRectRenderBounds() {
     }
@@ -8725,7 +8761,7 @@ var LiteGraphTSMigration = (function(exports) {
       return "Line";
     }
     get toPoint() {
-      const { width: t2, rotation: e2 } = this.__, i2 = Y$1();
+      const { width: t2, rotation: e2 } = this.__, i2 = Y$2();
       return t2 && (i2.x = t2), e2 && $e$1(i2, e2), i2;
     }
     set toPoint(t2) {
@@ -8792,7 +8828,7 @@ var LiteGraphTSMigration = (function(exports) {
     }
   };
   St$2([zn(ae$1)], si$1.prototype, "__", void 0), St$2([Rt$2(100)], si$1.prototype, "width", void 0), St$2([Rt$2(100)], si$1.prototype, "height", void 0), St$2([Rt$2(1)], si$1.prototype, "pixelRatio", void 0), St$2([Rt$2(true)], si$1.prototype, "smooth", void 0), St$2([fn(false)], si$1.prototype, "safeResize", void 0), St$2([Rt$2()], si$1.prototype, "contextSettings", void 0), si$1 = St$2([Zn()], si$1);
-  const { copyAndSpread: oi$1, includes: ri$1, spread: ai$1, setList: ni$1 } = zt$1, { stintSet: _i$1 } = _;
+  const { copyAndSpread: oi$1, includes: ri$1, spread: ai$1, setList: ni$1 } = zt$1, { stintSet: _i$1 } = _$1;
   let hi$1 = class hi extends ge$1 {
     get __tag() {
       return "Text";
@@ -8802,20 +8838,20 @@ var LiteGraphTSMigration = (function(exports) {
     }
     __updateTextDrawData() {
       const t2 = this.__, { lineHeight: e2, letterSpacing: i2, fontFamily: s2, fontSize: o2, fontWeight: r2, italic: a, textCase: n2, textOverflow: _2, padding: h, width: d2, height: l2 } = t2;
-      t2.__lineHeight = bt$2.number(e2, o2), t2.__letterSpacing = bt$2.number(i2, o2), t2.__baseLine = t2.__lineHeight - (t2.__lineHeight - 0.7 * o2) / 2, t2.__font = `${a ? "italic " : ""}${"small-caps" === n2 ? "small-caps " : ""}${"normal" !== r2 ? r2 + " " : ""}${o2 || 12}px ${s2 || "caption"}`, _i$1(t2, "__padding", h && I$1.fourNumber(h)), _i$1(t2, "__clipText", "show" !== _2 && !t2.__autoSize), _i$1(t2, "__isCharMode", d2 || l2 || t2.__letterSpacing || "none" !== n2), t2.__textDrawData = At$2.getDrawData((t2.__isPlacehold = t2.placeholder && "" === t2.text) ? t2.placeholder : t2.text, this.__);
+      t2.__lineHeight = bt$2.number(e2, o2), t2.__letterSpacing = bt$2.number(i2, o2), t2.__baseLine = t2.__lineHeight - (t2.__lineHeight - 0.7 * o2) / 2, t2.__font = `${a ? "italic " : ""}${"small-caps" === n2 ? "small-caps " : ""}${"normal" !== r2 ? r2 + " " : ""}${o2 || 12}px ${s2 || "caption"}`, _i$1(t2, "__padding", h && I$2.fourNumber(h)), _i$1(t2, "__clipText", "show" !== _2 && !t2.__autoSize), _i$1(t2, "__isCharMode", d2 || l2 || t2.__letterSpacing || "none" !== n2), t2.__textDrawData = At$2.getDrawData((t2.__isPlacehold = t2.placeholder && "" === t2.text) ? t2.placeholder : t2.text, this.__);
     }
     __updateBoxBounds() {
       const t2 = this.__, e2 = this.__layout, { fontSize: i2, italic: s2, padding: o2, __autoWidth: r2, __autoHeight: a } = t2;
       this.__updateTextDrawData();
-      const { bounds: _$1 } = t2.__textDrawData, h = e2.boxBounds;
-      if (e2.contentBounds = _$1, t2.__lineHeight < i2 && ai$1(_$1, i2 / 2), r2 || a) {
-        if (h.x = r2 ? _$1.x : 0, h.y = a ? _$1.y : 0, h.width = r2 ? _$1.width : t2.width, h.height = a ? _$1.height : t2.height, o2) {
+      const { bounds: _2 } = t2.__textDrawData, h = e2.boxBounds;
+      if (e2.contentBounds = _2, t2.__lineHeight < i2 && ai$1(_2, i2 / 2), r2 || a) {
+        if (h.x = r2 ? _2.x : 0, h.y = a ? _2.y : 0, h.width = r2 ? _2.width : t2.width, h.height = a ? _2.height : t2.height, o2) {
           const [e3, i3, s3, o3] = t2.__padding;
           r2 && (h.x -= o3, h.width += i3 + o3), a && (h.y -= e3, h.height += s3 + e3);
         }
         this.__updateNaturalSize();
       } else super.__updateBoxBounds();
-      s2 && (h.width += 0.16 * i2), _.stintSet(this, "isOverflow", !ri$1(h, _$1)), this.isOverflow ? (ni$1(t2.__textBoxBounds = {}, [h, _$1]), e2.renderChanged = true) : t2.__textBoxBounds = h;
+      s2 && (h.width += 0.16 * i2), _$1.stintSet(this, "isOverflow", !ri$1(h, _2)), this.isOverflow ? (ni$1(t2.__textBoxBounds = {}, [h, _2]), e2.renderChanged = true) : t2.__textBoxBounds = h;
     }
     __updateRenderSpread() {
       let t2 = super.__updateRenderSpread();
@@ -8913,14 +8949,14 @@ var LiteGraphTSMigration = (function(exports) {
       return this.__path;
     } });
   }], li$1.prototype, "path", void 0), li$1 = St$2([Jn(Fr, ["set", "path", "paint"]), Zn()], li$1);
-  function I(t2, e2, i2, s2) {
+  function I$1(t2, e2, i2, s2) {
     var a, n2 = arguments.length, r2 = n2 < 3 ? e2 : null === s2 ? s2 = Object.getOwnPropertyDescriptor(e2, i2) : s2;
     if ("object" == typeof Reflect && "function" == typeof Reflect.decorate) r2 = Reflect.decorate(t2, e2, i2, s2);
     else for (var h = t2.length - 1; h >= 0; h--) (a = t2[h]) && (r2 = (n2 < 3 ? a(r2) : n2 > 3 ? a(e2, i2, r2) : a(e2, i2)) || r2);
     return n2 > 3 && r2 && Object.defineProperty(e2, i2, r2), r2;
   }
   "function" == typeof SuppressedError && SuppressedError;
-  let N = class extends we$1 {
+  let N$1 = class N extends we$1 {
     get __tag() {
       return "App";
     }
@@ -8995,38 +9031,38 @@ var LiteGraphTSMigration = (function(exports) {
     }
     __getChildConfig(t2) {
       const e2 = Object.assign({}, this.config);
-      return e2.hittable = e2.realCanvas = void 0, t2 && _.assign(e2, t2), this.autoLayout && _.copyAttrs(e2, this, Re$2), e2.view = this.realCanvas ? void 0 : this.view, e2.fill = void 0, e2;
+      return e2.hittable = e2.realCanvas = void 0, t2 && _$1.assign(e2, t2), this.autoLayout && _$1.copyAttrs(e2, this, Re$2), e2.view = this.realCanvas ? void 0 : this.view, e2.fill = void 0, e2;
     }
     __listenChildEvents(t2) {
       t2.once([[ta.END, this.__onReady, this], [ea.START, this.__onCreated, this], [ea.END, this.__onViewReady, this]]), this.realCanvas && this.__eventIds.push(t2.on_(ea.END, this.__onChildRenderEnd, this));
     }
   };
-  N = I([Zn()], N);
-  const F = {}, W = { isHoldSpaceKey: () => W.isHold("Space"), isHold: (t2) => F[t2], isHoldKeys: (t2, e2) => e2 ? t2(e2) : void 0, setDownCode(t2) {
-    F[t2] || (F[t2] = true);
+  N$1 = I$1([Zn()], N$1);
+  const F$1 = {}, W$1 = { isHoldSpaceKey: () => W$1.isHold("Space"), isHold: (t2) => F$1[t2], isHoldKeys: (t2, e2) => e2 ? t2(e2) : void 0, setDownCode(t2) {
+    F$1[t2] || (F$1[t2] = true);
   }, setUpCode(t2) {
-    F[t2] = false;
-  } }, K = { LEFT: 1, RIGHT: 2, MIDDLE: 4, defaultLeft(t2) {
+    F$1[t2] = false;
+  } }, K$1 = { LEFT: 1, RIGHT: 2, MIDDLE: 4, defaultLeft(t2) {
     t2.buttons || (t2.buttons = 1);
   }, left: (t2) => 1 === t2.buttons, right: (t2) => 2 === t2.buttons, middle: (t2) => 4 === t2.buttons };
-  class V extends Xo {
+  let V$1 = class V extends Xo {
     get spaceKey() {
-      return W.isHoldSpaceKey();
+      return W$1.isHoldSpaceKey();
     }
     get left() {
-      return K.left(this);
+      return K$1.left(this);
     }
     get right() {
-      return K.right(this);
+      return K$1.right(this);
     }
     get middle() {
-      return K.middle(this);
+      return K$1.middle(this);
     }
     constructor(t2) {
       super(t2.type), this.bubbles = true, Object.assign(this, t2);
     }
     isHoldKeys(t2) {
-      return W.isHoldKeys(t2, this);
+      return W$1.isHoldKeys(t2, this);
     }
     getBoxPoint(t2) {
       return (t2 || this.current).getBoxPoint(this);
@@ -9052,8 +9088,8 @@ var LiteGraphTSMigration = (function(exports) {
     static changeName(t2, e2) {
       pe$2.changeName(t2, e2);
     }
-  }
-  const { min: U, max: j, abs: X } = Math, { float: Y, sign: z } = I$1, { minX: G, maxX: Z$1, minY: q, maxY: J$1 } = zt$1, Q = new Vt$3(), $ = new Vt$3(), tt$1 = { limitMove(t2, e2) {
+  };
+  const { min: U, max: j$1, abs: X$1 } = Math, { float: Y$1, sign: z$1 } = I$2, { minX: G$1, maxX: Z$2, minY: q, maxY: J$1 } = zt$1, Q = new Vt$3(), $ = new Vt$3(), tt$1 = { limitMove(t2, e2) {
     const { dragBounds: i2, dragBoundsType: s2 } = t2;
     i2 && et$1.getValidMove(t2.__localBoxBounds, et$1.getDragBounds(t2), s2, e2, true), et$1.axisMove(t2, e2);
   }, limitScaleOf(t2, e2, i2, s2) {
@@ -9067,16 +9103,16 @@ var LiteGraphTSMigration = (function(exports) {
     return "parent" === e2 ? t2.parent.boxBounds : e2;
   }, isInnerMode: (t2, e2, i2, s2) => "inner" === i2 || "auto" === i2 && t2[s2] > e2[s2], getValidMove(t2, e2, i2, s2, a) {
     const n2 = t2.x + s2.x, r2 = t2.y + s2.y, h = n2 + t2.width, o2 = r2 + t2.height, d2 = e2.x + e2.width, g2 = e2.y + e2.height;
-    return a || (s2 = Object.assign({}, s2)), et$1.isInnerMode(t2, e2, i2, "width") ? n2 > e2.x ? s2.x += e2.x - n2 : h < d2 && (s2.x += d2 - h) : n2 < e2.x ? s2.x += e2.x - n2 : h > d2 && (s2.x += d2 - h), et$1.isInnerMode(t2, e2, i2, "height") ? r2 > e2.y ? s2.y += e2.y - r2 : o2 < g2 && (s2.y += g2 - o2) : r2 < e2.y ? s2.y += e2.y - r2 : o2 > g2 && (s2.y += g2 - o2), s2.x = Y(s2.x), s2.y = Y(s2.y), s2;
+    return a || (s2 = Object.assign({}, s2)), et$1.isInnerMode(t2, e2, i2, "width") ? n2 > e2.x ? s2.x += e2.x - n2 : h < d2 && (s2.x += d2 - h) : n2 < e2.x ? s2.x += e2.x - n2 : h > d2 && (s2.x += d2 - h), et$1.isInnerMode(t2, e2, i2, "height") ? r2 > e2.y ? s2.y += e2.y - r2 : o2 < g2 && (s2.y += g2 - o2) : r2 < e2.y ? s2.y += e2.y - r2 : o2 > g2 && (s2.y += g2 - o2), s2.x = Y$1(s2.x), s2.y = Y$1(s2.y), s2;
   }, getValidScaleOf(t2, e2, i2, s2, a, n$1, r2) {
     r2 || (a = Object.assign({}, a)), $.set(e2), Q.set(t2).scaleOf(s2, a.x, a.y);
     const h = (s2.x - t2.x) / t2.width, o2 = 1 - h, d2 = (s2.y - t2.y) / t2.height, g2 = 1 - d2;
     let l2, c, u2, p2, _2 = 1, m2 = 1;
-    return et$1.isInnerMode(t2, e2, i2, "width") ? (a.x < 0 && Q.scaleOf(s2, _2 = 1 / a.x, 1), u2 = Y(Q.minX - $.minX), p2 = Y($.maxX - Q.maxX), l2 = h && u2 > 0 ? 1 + u2 / (h * Q.width) : 1, c = o2 && p2 > 0 ? 1 + p2 / (o2 * Q.width) : 1, _2 *= j(l2, c)) : (a.x < 0 && ((Y(G(t2) - G(e2)) <= 0 || Y(Z$1(e2) - Z$1(t2)) <= 0) && Q.scaleOf(s2, _2 = 1 / a.x, 1), Q.unsign()), u2 = Y($.minX - Q.minX), p2 = Y(Q.maxX - $.maxX), l2 = h && u2 > 0 ? 1 - u2 / (h * Q.width) : 1, c = o2 && p2 > 0 ? 1 - p2 / (o2 * Q.width) : 1, _2 *= U(l2, c)), et$1.isInnerMode(t2, e2, i2, "height") ? (a.y < 0 && Q.scaleOf(s2, 1, m2 = 1 / a.y), u2 = Y(Q.minY - $.minY), p2 = Y($.maxY - Q.maxY), l2 = d2 && u2 > 0 ? 1 + u2 / (d2 * Q.height) : 1, c = g2 && p2 > 0 ? 1 + p2 / (g2 * Q.height) : 1, m2 *= j(l2, c), n$1 && (l2 = j(X(_2), X(m2)), _2 = z(_2) * l2, m2 = z(m2) * l2)) : (a.y < 0 && ((Y(q(t2) - q(e2)) <= 0 || Y(J$1(e2) - J$1(t2)) <= 0) && Q.scaleOf(s2, 1, m2 = 1 / a.y), Q.unsign()), u2 = Y($.minY - Q.minY), p2 = Y(Q.maxY - $.maxY), l2 = d2 && u2 > 0 ? 1 - u2 / (d2 * Q.height) : 1, c = g2 && p2 > 0 ? 1 - p2 / (g2 * Q.height) : 1, m2 *= U(l2, c)), a.x *= n(_2) ? _2 : 1, a.y *= n(m2) ? m2 : 1, a;
+    return et$1.isInnerMode(t2, e2, i2, "width") ? (a.x < 0 && Q.scaleOf(s2, _2 = 1 / a.x, 1), u2 = Y$1(Q.minX - $.minX), p2 = Y$1($.maxX - Q.maxX), l2 = h && u2 > 0 ? 1 + u2 / (h * Q.width) : 1, c = o2 && p2 > 0 ? 1 + p2 / (o2 * Q.width) : 1, _2 *= j$1(l2, c)) : (a.x < 0 && ((Y$1(G$1(t2) - G$1(e2)) <= 0 || Y$1(Z$2(e2) - Z$2(t2)) <= 0) && Q.scaleOf(s2, _2 = 1 / a.x, 1), Q.unsign()), u2 = Y$1($.minX - Q.minX), p2 = Y$1(Q.maxX - $.maxX), l2 = h && u2 > 0 ? 1 - u2 / (h * Q.width) : 1, c = o2 && p2 > 0 ? 1 - p2 / (o2 * Q.width) : 1, _2 *= U(l2, c)), et$1.isInnerMode(t2, e2, i2, "height") ? (a.y < 0 && Q.scaleOf(s2, 1, m2 = 1 / a.y), u2 = Y$1(Q.minY - $.minY), p2 = Y$1($.maxY - Q.maxY), l2 = d2 && u2 > 0 ? 1 + u2 / (d2 * Q.height) : 1, c = g2 && p2 > 0 ? 1 + p2 / (g2 * Q.height) : 1, m2 *= j$1(l2, c), n$1 && (l2 = j$1(X$1(_2), X$1(m2)), _2 = z$1(_2) * l2, m2 = z$1(m2) * l2)) : (a.y < 0 && ((Y$1(q(t2) - q(e2)) <= 0 || Y$1(J$1(e2) - J$1(t2)) <= 0) && Q.scaleOf(s2, 1, m2 = 1 / a.y), Q.unsign()), u2 = Y$1($.minY - Q.minY), p2 = Y$1(Q.maxY - $.maxY), l2 = d2 && u2 > 0 ? 1 - u2 / (d2 * Q.height) : 1, c = g2 && p2 > 0 ? 1 - p2 / (g2 * Q.height) : 1, m2 *= U(l2, c)), a.x *= n(_2) ? _2 : 1, a.y *= n(m2) ? m2 : 1, a;
   } }, et$1 = tt$1;
-  let it$1 = class it extends V {
+  let it$1 = class it extends V$1 {
   };
-  it$1.POINTER = "pointer", it$1.BEFORE_DOWN = "pointer.before_down", it$1.BEFORE_MOVE = "pointer.before_move", it$1.BEFORE_UP = "pointer.before_up", it$1.DOWN = "pointer.down", it$1.MOVE = "pointer.move", it$1.UP = "pointer.up", it$1.OVER = "pointer.over", it$1.OUT = "pointer.out", it$1.ENTER = "pointer.enter", it$1.LEAVE = "pointer.leave", it$1.TAP = "tap", it$1.DOUBLE_TAP = "double_tap", it$1.CLICK = "click", it$1.DOUBLE_CLICK = "double_click", it$1.LONG_PRESS = "long_press", it$1.LONG_TAP = "long_tap", it$1.MENU = "pointer.menu", it$1.MENU_TAP = "pointer.menu_tap", it$1 = I([$n()], it$1);
+  it$1.POINTER = "pointer", it$1.BEFORE_DOWN = "pointer.before_down", it$1.BEFORE_MOVE = "pointer.before_move", it$1.BEFORE_UP = "pointer.before_up", it$1.DOWN = "pointer.down", it$1.MOVE = "pointer.move", it$1.UP = "pointer.up", it$1.OVER = "pointer.over", it$1.OUT = "pointer.out", it$1.ENTER = "pointer.enter", it$1.LEAVE = "pointer.leave", it$1.TAP = "tap", it$1.DOUBLE_TAP = "double_tap", it$1.CLICK = "click", it$1.DOUBLE_CLICK = "double_click", it$1.LONG_PRESS = "long_press", it$1.LONG_TAP = "long_tap", it$1.MENU = "pointer.menu", it$1.MENU_TAP = "pointer.menu_tap", it$1 = I$1([$n()], it$1);
   const at$1 = {};
   let nt$1 = class nt extends it$1 {
     static setList(t2) {
@@ -9118,7 +9154,7 @@ var LiteGraphTSMigration = (function(exports) {
       at$1.x = t2 ? this.totalX : this.moveX, at$1.y = t2 ? this.totalY : this.moveY;
     }
   };
-  nt$1.BEFORE_DRAG = "drag.before_drag", nt$1.START = "drag.start", nt$1.DRAG = "drag", nt$1.END = "drag.end", nt$1.OVER = "drag.over", nt$1.OUT = "drag.out", nt$1.ENTER = "drag.enter", nt$1.LEAVE = "drag.leave", nt$1 = I([$n()], nt$1);
+  nt$1.BEFORE_DRAG = "drag.before_drag", nt$1.START = "drag.start", nt$1.DRAG = "drag", nt$1.END = "drag.end", nt$1.OVER = "drag.over", nt$1.OUT = "drag.out", nt$1.ENTER = "drag.enter", nt$1.LEAVE = "drag.leave", nt$1 = I$1([$n()], nt$1);
   let ht$1 = class ht extends it$1 {
     static setList(t2) {
       nt$1.setList(t2);
@@ -9127,25 +9163,25 @@ var LiteGraphTSMigration = (function(exports) {
       nt$1.setData(t2);
     }
   };
-  ht$1.DROP = "drop", ht$1 = I([$n()], ht$1);
+  ht$1.DROP = "drop", ht$1 = I$1([$n()], ht$1);
   let ot$1 = class ot extends nt$1 {
   };
-  ot$1.BEFORE_MOVE = "move.before_move", ot$1.START = "move.start", ot$1.MOVE = "move", ot$1.DRAG_ANIMATE = "move.drag_animate", ot$1.END = "move.end", ot$1.PULL_DOWN = "move.pull_down", ot$1.REACH_BOTTOM = "move.reach_bottom", ot$1 = I([$n()], ot$1);
-  let dt$1 = class dt extends V {
+  ot$1.BEFORE_MOVE = "move.before_move", ot$1.START = "move.start", ot$1.MOVE = "move", ot$1.DRAG_ANIMATE = "move.drag_animate", ot$1.END = "move.end", ot$1.PULL_DOWN = "move.pull_down", ot$1.REACH_BOTTOM = "move.reach_bottom", ot$1 = I$1([$n()], ot$1);
+  let dt$1 = class dt extends V$1 {
   };
-  dt$1 = I([$n()], dt$1);
+  dt$1 = I$1([$n()], dt$1);
   let lt$1 = class lt extends it$1 {
   };
-  lt$1.BEFORE_ROTATE = "rotate.before_rotate", lt$1.START = "rotate.start", lt$1.ROTATE = "rotate", lt$1.END = "rotate.end", lt$1 = I([$n()], lt$1);
+  lt$1.BEFORE_ROTATE = "rotate.before_rotate", lt$1.START = "rotate.start", lt$1.ROTATE = "rotate", lt$1.END = "rotate.end", lt$1 = I$1([$n()], lt$1);
   let ct$1 = class ct extends nt$1 {
   };
-  ct$1.SWIPE = "swipe", ct$1.LEFT = "swipe.left", ct$1.RIGHT = "swipe.right", ct$1.UP = "swipe.up", ct$1.DOWN = "swipe.down", ct$1 = I([$n()], ct$1);
+  ct$1.SWIPE = "swipe", ct$1.LEFT = "swipe.left", ct$1.RIGHT = "swipe.right", ct$1.UP = "swipe.up", ct$1.DOWN = "swipe.down", ct$1 = I$1([$n()], ct$1);
   let ut$1 = class ut extends it$1 {
   };
-  ut$1.BEFORE_ZOOM = "zoom.before_zoom", ut$1.START = "zoom.start", ut$1.ZOOM = "zoom", ut$1.END = "zoom.end", ut$1 = I([$n()], ut$1);
-  let pt$1 = class pt extends V {
+  ut$1.BEFORE_ZOOM = "zoom.before_zoom", ut$1.START = "zoom.start", ut$1.ZOOM = "zoom", ut$1.END = "zoom.end", ut$1 = I$1([$n()], ut$1);
+  let pt$1 = class pt extends V$1 {
   };
-  pt$1.BEFORE_DOWN = "key.before_down", pt$1.BEFORE_UP = "key.before_up", pt$1.DOWN = "key.down", pt$1.HOLD = "key.hold", pt$1.UP = "key.up", pt$1 = I([$n()], pt$1);
+  pt$1.BEFORE_DOWN = "key.before_down", pt$1.BEFORE_UP = "key.before_up", pt$1.DOWN = "key.down", pt$1.HOLD = "key.hold", pt$1.UP = "key.up", pt$1 = I$1([$n()], pt$1);
   const _t$1 = { getDragEventData: (t2, e2, i2) => Object.assign(Object.assign({}, i2), { x: i2.x, y: i2.y, moveX: i2.x - e2.x, moveY: i2.y - e2.y, totalX: i2.x - t2.x, totalY: i2.y - t2.y }), getDropEventData: (t2, e2, i2) => Object.assign(Object.assign({}, t2), { list: e2, data: i2 }), getSwipeDirection: (t2) => t2 < -45 && t2 > -135 ? ct$1.UP : t2 > 45 && t2 < 135 ? ct$1.DOWN : t2 <= 45 && t2 >= -45 ? ct$1.RIGHT : ct$1.LEFT, getSwipeEventData: (t2, e2, i2) => Object.assign(Object.assign({}, i2), { moveX: e2.moveX, moveY: e2.moveY, totalX: i2.x - t2.x, totalY: i2.y - t2.y, type: mt$1.getSwipeDirection(ot$2.getAngle(t2, i2)) }), getBase(t2) {
     const e2 = 1 === t2.button ? 4 : t2.button;
     return { altKey: t2.altKey, ctrlKey: t2.ctrlKey, shiftKey: t2.shiftKey, metaKey: t2.metaKey, time: Date.now(), buttons: s(t2.buttons) ? 1 : 0 === t2.buttons ? e2 : t2.buttons, origin: t2 };
@@ -9175,7 +9211,7 @@ var LiteGraphTSMigration = (function(exports) {
       !this.moving && e2 && (this.moving = i2.canMove(this.downData) || i2.isHoldRightKey || i2.isMobileDragEmpty) && (this.dragData.moveType = "drag", i2.emit(ot$1.START, this.dragData)), this.moving || this.dragStart(t2, e2), this.drag(t2);
     }
     dragStart(t2, e2) {
-      this.dragging || (this.dragging = e2 && K.left(t2), this.dragging && (this.interaction.emit(nt$1.START, this.dragData), this.getDraggableList(this.dragData.path), this.setDragStartPoints(this.realDraggableList = this.getList(true))));
+      this.dragging || (this.dragging = e2 && K$1.left(t2), this.dragging && (this.interaction.emit(nt$1.START, this.dragData), this.getDraggableList(this.dragData.path), this.setDragStartPoints(this.realDraggableList = this.getList(true))));
     }
     setDragStartPoints(t2) {
       this.dragStartPoints = {}, t2.forEach((t3) => this.dragStartPoints[t3.innerId] = { x: t3.x, y: t3.y });
@@ -9296,13 +9332,13 @@ var LiteGraphTSMigration = (function(exports) {
       return this.m.dragEmpty && !this.canHover && this.downData && this.isTreePath(this.downData);
     }
     get isHoldMiddleKey() {
-      return this.m.holdMiddleKey && this.downData && K.middle(this.downData);
+      return this.m.holdMiddleKey && this.downData && K$1.middle(this.downData);
     }
     get isHoldRightKey() {
-      return this.m.holdRightKey && this.downData && K.right(this.downData);
+      return this.m.holdRightKey && this.downData && K$1.right(this.downData);
     }
     get isHoldSpaceKey() {
-      return this.m.holdSpaceKey && W.isHoldSpaceKey();
+      return this.m.holdSpaceKey && W$1.isHoldSpaceKey();
     }
     get m() {
       return this.config.move;
@@ -9314,7 +9350,7 @@ var LiteGraphTSMigration = (function(exports) {
       return this.p.hitRadius;
     }
     constructor(t2, e2, i2, s2) {
-      this.config = _.clone(Lt$1), this.tapCount = 0, this.downKeyMap = {}, this.target = t2, this.canvas = e2, this.selector = i2, this.defaultPath = new kh(t2), this.createTransformer(), this.dragger = new Dt$1(this), s2 && (this.config = _.default(s2, this.config)), this.__listenEvents();
+      this.config = _$1.clone(Lt$1), this.tapCount = 0, this.downKeyMap = {}, this.target = t2, this.canvas = e2, this.selector = i2, this.defaultPath = new kh(t2), this.createTransformer(), this.dragger = new Dt$1(this), s2 && (this.config = _$1.default(s2, this.config)), this.__listenEvents();
     }
     start() {
       this.running = true;
@@ -9325,12 +9361,12 @@ var LiteGraphTSMigration = (function(exports) {
     receive(t2) {
     }
     pointerDown(t2, e2) {
-      t2 || (t2 = this.hoverData), t2 && (K.defaultLeft(t2), this.updateDownData(t2), this.checkPath(t2, e2), this.downTime = Date.now(), this.emit(it$1.BEFORE_DOWN, t2), t2.path.needUpdate && this.updateDownData(t2), this.emit(it$1.DOWN, t2), K.left(t2) && (this.tapWait(), this.longPressWait(t2)), this.waitRightTap = K.right(t2), this.dragger.setDragData(t2), this.isHoldRightKey || this.updateCursor(t2));
+      t2 || (t2 = this.hoverData), t2 && (K$1.defaultLeft(t2), this.updateDownData(t2), this.checkPath(t2, e2), this.downTime = Date.now(), this.emit(it$1.BEFORE_DOWN, t2), t2.path.needUpdate && this.updateDownData(t2), this.emit(it$1.DOWN, t2), K$1.left(t2) && (this.tapWait(), this.longPressWait(t2)), this.waitRightTap = K$1.right(t2), this.dragger.setDragData(t2), this.isHoldRightKey || this.updateCursor(t2));
     }
     pointerMove(t2) {
       if (t2 || (t2 = this.hoverData), !t2) return;
       const { downData: e2 } = this;
-      e2 && K.defaultLeft(t2);
+      e2 && K$1.defaultLeft(t2);
       (this.canvas.bounds.hitPoint(t2) || e2) && (this.pointerMoveReal(t2), e2 && this.dragger.checkDragOut(t2));
     }
     pointerMoveReal(t2) {
@@ -9343,7 +9379,7 @@ var LiteGraphTSMigration = (function(exports) {
     pointerUp(t2) {
       const { downData: e2 } = this;
       if (t2 || (t2 = e2), !e2) return;
-      K.defaultLeft(t2), t2.multiTouch = e2.multiTouch, this.findPath(t2);
+      K$1.defaultLeft(t2), t2.multiTouch = e2.multiTouch, this.findPath(t2);
       const i2 = Object.assign(Object.assign({}, t2), { path: t2.path.clone() });
       t2.path.addList(e2.path.list), this.checkPath(t2), this.downData = null, this.emit(it$1.BEFORE_UP, t2), this.emit(it$1.UP, t2), this.touchLeave(t2), t2.isCancel || (this.tap(t2), this.menuTap(t2)), this.dragger.dragEnd(t2), this.updateCursor(i2);
     }
@@ -9375,13 +9411,13 @@ var LiteGraphTSMigration = (function(exports) {
       if (!this.config.keyEvent) return;
       this.emit(pt$1.BEFORE_DOWN, t2, this.defaultPath);
       const { code: e2 } = t2;
-      this.downKeyMap[e2] || (this.downKeyMap[e2] = true, W.setDownCode(e2), this.emit(pt$1.HOLD, t2, this.defaultPath), this.moveMode && (this.cancelHover(), this.updateCursor())), this.emit(pt$1.DOWN, t2, this.defaultPath);
+      this.downKeyMap[e2] || (this.downKeyMap[e2] = true, W$1.setDownCode(e2), this.emit(pt$1.HOLD, t2, this.defaultPath), this.moveMode && (this.cancelHover(), this.updateCursor())), this.emit(pt$1.DOWN, t2, this.defaultPath);
     }
     keyUp(t2) {
       if (!this.config.keyEvent) return;
       this.emit(pt$1.BEFORE_UP, t2, this.defaultPath);
       const { code: e2 } = t2;
-      this.downKeyMap[e2] = false, W.setUpCode(e2), this.emit(pt$1.UP, t2, this.defaultPath), "grab" === this.cursor && this.updateCursor();
+      this.downKeyMap[e2] = false, W$1.setUpCode(e2), this.emit(pt$1.UP, t2, this.defaultPath), "grab" === this.cursor && this.updateCursor();
     }
     pointerHover(t2) {
       !this.canHover || this.dragging && !this.p.dragHover || (t2.path || (t2.path = new kh()), this.pointerOverOrOut(t2), this.pointerEnterOrLeave(t2));
@@ -9657,7 +9693,7 @@ var LiteGraphTSMigration = (function(exports) {
     for (let t3 = 0, e3 = h.length; t3 < e3; t3 += 4) if (h[t3 + 3] > 0) return true;
     return h[3] > 0;
   };
-  var Z;
+  var Z$1;
   function J(t2, e2, i2, s2) {
     return new (i2 || (i2 = Promise))(function(n2, o2) {
       function r2(t3) {
@@ -9685,7 +9721,7 @@ var LiteGraphTSMigration = (function(exports) {
   }
   !(function(t2) {
     t2[t2.none = 1] = "none", t2[t2.free = 2] = "free", t2[t2.mirrorAngle = 3] = "mirrorAngle", t2[t2.mirror = 4] = "mirror";
-  })(Z || (Z = {})), "function" == typeof SuppressedError && SuppressedError;
+  })(Z$1 || (Z$1 = {})), "function" == typeof SuppressedError && SuppressedError;
   const tt = ee$2.get("LeaferCanvas");
   class et extends Ee$2 {
     set zIndex(t2) {
@@ -9793,7 +9829,7 @@ var LiteGraphTSMigration = (function(exports) {
     }
     emitResize(t2) {
       const e2 = {};
-      _.copyAttrs(e2, this, Re$2), this.resize(t2), this.resizeListener && !s(this.width) && this.resizeListener(new $o(t2, e2));
+      _$1.copyAttrs(e2, this, Re$2), this.resize(t2), this.resizeListener && !s(this.width) && this.resizeListener(new $o(t2, e2));
     }
     unrealCanvas() {
       if (!this.unreal && this.parentView) {
@@ -9861,7 +9897,7 @@ var LiteGraphTSMigration = (function(exports) {
       return this.__updatedList;
     }
     constructor(t2, e2) {
-      this.totalTimes = 0, this.config = {}, this.__updatedList = new kh(), this.target = t2, e2 && (this.config = _.default(e2, this.config)), this.__listenEvents();
+      this.totalTimes = 0, this.config = {}, this.__updatedList = new kh(), this.target = t2, e2 && (this.config = _$1.default(e2, this.config)), this.__listenEvents();
     }
     start() {
       this.disabled || (this.running = true);
@@ -9923,7 +9959,7 @@ var LiteGraphTSMigration = (function(exports) {
   const { updateAllMatrix: ut, updateAllChange: ft } = co, pt = ee$2.get("Layouter");
   class gt {
     constructor(t2, e2) {
-      this.totalTimes = 0, this.config = { usePartLayout: true }, this.__levelList = new Ch(), this.target = t2, e2 && (this.config = _.default(e2, this.config)), this.__listenEvents();
+      this.totalTimes = 0, this.config = { usePartLayout: true }, this.__levelList = new Ch(), this.target = t2, e2 && (this.config = _$1.default(e2, this.config)), this.__listenEvents();
     }
     start() {
       this.disabled || (this.running = true);
@@ -10019,7 +10055,7 @@ var LiteGraphTSMigration = (function(exports) {
       return !(this.canvas.allowBackgroundColor || !this.config.fill);
     }
     constructor(t2, e2, i2) {
-      this.FPS = 60, this.totalTimes = 0, this.times = 0, this.config = { usePartRender: true, ceilPartPixel: true, maxFPS: 120 }, this.frames = [], this.target = t2, this.canvas = e2, i2 && (this.config = _.default(i2, this.config)), this.__listenEvents();
+      this.FPS = 60, this.totalTimes = 0, this.times = 0, this.config = { usePartRender: true, ceilPartPixel: true, maxFPS: 120 }, this.frames = [], this.target = t2, this.canvas = e2, i2 && (this.config = _$1.default(i2, this.config)), this.__listenEvents();
     }
     start() {
       this.running = true, this.update(false);
@@ -10232,7 +10268,7 @@ var LiteGraphTSMigration = (function(exports) {
   }
   class bt {
     constructor(t2, e2) {
-      this.config = {}, e2 && (this.config = _.default(e2, this.config)), this.picker = new xt(this.target = t2, this), this.finder = le$2.finder && le$2.finder();
+      this.config = {}, e2 && (this.config = _$1.default(e2, this.config)), this.picker = new xt(this.target = t2, this), this.finder = le$2.finder && le$2.finder();
     }
     getByPoint(t2, e2, s2) {
       const { target: n2, picker: o2 } = this;
@@ -10402,7 +10438,7 @@ var LiteGraphTSMigration = (function(exports) {
       this.preventDefaultWheel(t2);
       const e2 = _t$1.getBase(t2);
       Object.assign(e2, this.getLocal(t2));
-      const i2 = t2.scale / this.lastGestureScale, s2 = (t2.rotation - this.lastGestureRotation) / Math.PI * 180 * (I$1.within(this.config.wheel.rotateSpeed, 0, 1) / 4 + 0.1);
+      const i2 = t2.scale / this.lastGestureScale, s2 = (t2.rotation - this.lastGestureRotation) / Math.PI * 180 * (I$2.within(this.config.wheel.rotateSpeed, 0, 1) / 4 + 0.1);
       this.zoom(Object.assign(Object.assign({}, e2), { scale: i2 * i2 })), this.rotate(Object.assign(Object.assign({}, e2), { rotation: s2 })), this.lastGestureScale = t2.scale, this.lastGestureRotation = t2.rotation;
     }
     onGestureend(t2) {
@@ -10441,7 +10477,7 @@ var LiteGraphTSMigration = (function(exports) {
   }
   const { getSpread: Mt, copyAndSpread: Ct, toOuterOf: At, getOuterOf: Ot, getByMove: Dt, move: Wt, getIntersectData: It } = zt$1, Ft = {};
   let zt;
-  const { stintSet: jt } = _, { hasTransparent: Ut } = Ct$2;
+  const { stintSet: jt } = _$1, { hasTransparent: Ut } = Ct$2;
   function Gt(t2, e2, i$1) {
     if (!d(e2) || false === e2.visible || 0 === e2.opacity) return;
     let n2;
@@ -10622,12 +10658,12 @@ var LiteGraphTSMigration = (function(exports) {
     const o2 = i(t2) || n2 ? (n2 ? i$1 - n2 * e2 : i$1 % e2) / ((n2 || Math.floor(i$1 / e2)) - 1) : t2;
     return "auto" === t2 && o2 < 0 ? 0 : o2;
   }
-  let oe = {}, re = X$1();
+  let oe = {}, re = X$2();
   const { get: ae, set: he, rotateOfOuter: le, translate: ce, scaleOfOuter: de, multiplyParent: ue, scale: fe, rotate: pe, skew: ge } = q$1;
   function we(t2, e2, i2, s2, n2, o2, r2, a) {
     r2 && pe(t2, r2), a && ge(t2, a.x, a.y), n2 && fe(t2, n2, o2), ce(t2, e2.x + i2, e2.y + s2);
   }
-  const { get: _e, scale: me, copy: ve } = q$1, { getFloorScale: ye } = I$1, { abs: xe } = Math;
+  const { get: _e, scale: me, copy: ve } = q$1, { getFloorScale: ye } = I$2, { abs: xe } = Math;
   const be = { image: function(t2, e2, i2, s2, n2) {
     let o2, r2;
     const a = en.get(i2, i2.type);
@@ -10686,7 +10722,7 @@ var LiteGraphTSMigration = (function(exports) {
     t2.padding && (e2 = ee.set(e2).shrink(t2.padding)), "strench" === t2.mode && (t2.mode = "stretch");
     const { width: n2, height: o$1 } = i$1, { mode: r2, align: a, offset: h, scale: l2, size: c, rotation: d$1, skew: u2, clipSize: f2, repeat: p2, gap: g2, interlace: w2 } = t2, _2 = e2.width === n2 && e2.height === o$1, m2 = { mode: r2 }, v2 = "center" !== a && (d$1 || 0) % 180 == 90;
     let y2, x2;
-    switch (zt$1.set(se, 0, 0, v2 ? o$1 : n2, v2 ? n2 : o$1), r2 && "cover" !== r2 && "fit" !== r2 ? ((l2 || c) && (I$1.getScaleData(l2, c, i$1, ie), y2 = ie.scaleX, x2 = ie.scaleY), (a || g2 || p2) && (y2 && zt$1.scale(se, y2, x2, true), a && kt$3.toPoint(a, se, e2, se, true, true))) : _2 && !d$1 || (y2 = x2 = zt$1.getFitScale(e2, se, "fit" !== r2), zt$1.put(e2, i$1, a, y2, false, se), zt$1.scale(se, y2, x2, true)), h && ot$2.move(se, h), r2) {
+    switch (zt$1.set(se, 0, 0, v2 ? o$1 : n2, v2 ? n2 : o$1), r2 && "cover" !== r2 && "fit" !== r2 ? ((l2 || c) && (I$2.getScaleData(l2, c, i$1, ie), y2 = ie.scaleX, x2 = ie.scaleY), (a || g2 || p2) && (y2 && zt$1.scale(se, y2, x2, true), a && kt$3.toPoint(a, se, e2, se, true, true))) : _2 && !d$1 || (y2 = x2 = zt$1.getFitScale(e2, se, "fit" !== r2), zt$1.put(e2, i$1, a, y2, false, se), zt$1.scale(se, y2, x2, true)), h && ot$2.move(se, h), r2) {
       case "stretch":
         _2 ? y2 && (y2 = x2 = void 0) : (y2 = e2.width / n2, x2 = e2.height / o$1, Wt$2.stretchMode(m2, e2, y2, x2));
         break;
@@ -11094,7 +11130,7 @@ var LiteGraphTSMigration = (function(exports) {
       var _a3;
       this.view = view;
       this.prepareView();
-      this.app = new N({
+      this.app = new N$1({
         view: this.view,
         fill: (_a3 = options.fill) != null ? _a3 : "transparent",
         pixelSnap: true,
@@ -11524,6 +11560,338 @@ var LiteGraphTSMigration = (function(exports) {
       this.linksByNodeId.set(nodeId, links);
     }
   }
+  function D(t2) {
+    const { scroll: e2, disabled: a } = t2.app.config.move;
+    return !e2 || a ? "" : true === e2 ? "free" : e2;
+  }
+  function O(o2, n2, i2) {
+    M(o2.parentApp ? o2.parentApp : o2, n2), o2.isApp || i2 || o2.__eventIds.push(o2.on_(ot$1.BEFORE_MOVE, (t2) => {
+      const e2 = o2.getValidMove(t2.moveX, t2.moveY, false);
+      if (D(o2).includes("limit")) {
+        const a = o2.getValidMove(0, 0);
+        if (a.x || a.y) {
+          const o3 = 100, n3 = 200, i3 = "drag" === t2.moveType ? 0.3 : 0.05;
+          Math.abs(a.x) > o3 ? e2.x = 0 : e2.x *= i3, Math.abs(a.y) > n3 ? e2.y = 0 : e2.y *= i3;
+        }
+      }
+      o2.zoomLayer.move(e2);
+    }), o2.on_(ot$1.DRAG_ANIMATE, () => {
+      const t2 = o2.getValidMove(0, 0);
+      (t2.x || t2.y) && o2.interaction.stopDragAnimate();
+    }), o2.on_(ot$1.END, (t2) => {
+      co.animateMove(o2.zoomLayer, o2.getValidMove(t2.moveX, t2.moveY));
+    }), o2.on_(ut$1.BEFORE_ZOOM, (t2) => {
+      const { zoomLayer: a, layouter: n3 } = o2, i3 = o2.getValidScale(t2.scale);
+      1 !== i3 && (n3.stop(), co.updateMatrix(o2), a.scaleOfWorld(t2, i3), n3.start());
+    }));
+  }
+  function M(t2, e2) {
+    const a = { wheel: { preventDefault: true }, touch: { preventDefault: true }, pointer: { preventDefaultMenu: true } };
+    e2 && _$1.assign(a, e2), _$1.assign(t2.config, a, t2.userConfig);
+  }
+  const b = ee$2.get("LeaferTypeCreator"), T = { list: {}, register(t2, e2) {
+    x[t2] && b.repeat(t2), x[t2] = e2;
+  }, run(t2, e2) {
+    const a = x[t2];
+    a && a(e2);
+  } }, { list: x, register: E } = T;
+  E("viewport", O), E("custom", function(t2) {
+    O(t2, null, true);
+  }), E("design", function(t2) {
+    O(t2, { zoom: { min: 0.01, max: 256 }, move: { holdSpaceKey: true, holdMiddleKey: true } });
+  }), E("document", function(t2) {
+    O(t2, { zoom: { min: 1 }, move: { scroll: "limit" } });
+  });
+  const z = { state: { type: "none", typeCount: 0, startTime: 0, totalData: null, center: {} }, getData(t2) {
+    const e2 = t2[0], a = t2[1], o2 = ot$2.getCenter(e2.from, a.from), n2 = ot$2.getCenter(e2.to, a.to), s2 = { x: n2.x - o2.x, y: n2.y - o2.y }, r2 = ot$2.getDistance(e2.from, a.from);
+    return { move: s2, scale: ot$2.getDistance(e2.to, a.to) / r2, rotation: ot$2.getRotation(e2.from, a.from, e2.to, a.to), center: n2 };
+  }, getType(t2, e2) {
+    const a = Math.hypot(t2.move.x, t2.move.y) / (e2.move || 5), o2 = Math.abs(t2.scale - 1) / (e2.scale || 0.03), n2 = Math.abs(t2.rotation) / (e2.rotation || 2);
+    return a < 1 && o2 < 1 && n2 < 1 ? "none" : a >= o2 && a >= n2 ? "move" : o2 >= n2 ? "zoom" : "rotate";
+  }, detect(t2, e2) {
+    const { state: a } = j, o2 = j.getType(t2, e2);
+    if (a.totalData || (a.startTime = Date.now(), a.center = t2.center), j.add(t2, a.totalData), a.totalData = t2, o2 === a.type) {
+      if (a.typeCount++, a.typeCount >= (e2.count || 3) && "none" !== o2) return o2;
+    } else a.type = o2, a.typeCount = 1;
+    return Date.now() - a.startTime >= (e2.time || 160) ? j.getType(a.totalData, e2) : "none";
+  }, add(t2, e2) {
+    e2 && (ot$2.move(t2.move, e2.move), t2.scale *= e2.scale, t2.rotation += e2.rotation, t2.center = e2.center);
+  }, reset() {
+    const { state: t2 } = j;
+    t2.type = "none", t2.typeCount = 0, t2.startTime = 0, t2.totalData = null;
+  } }, j = z, { abs: R, max: X } = Math, { sign: Y, within: A } = I$2, S = { getMove(t2, e2) {
+    let { moveSpeed: a } = e2, { deltaX: o2, deltaY: n2 } = t2;
+    t2.shiftKey && !o2 && (o2 = n2, n2 = 0);
+    const i2 = R(o2), s2 = R(n2);
+    return i2 > 50 && (o2 = X(50, i2 / 3) * Y(o2)), s2 > 50 && (n2 = X(50, s2 / 3) * Y(n2)), { x: -o2 * a * 2, y: -n2 * a * 2 };
+  }, getScale(t2, e2) {
+    let a, o2 = 1, { zoomMode: n2, zoomSpeed: i2 } = e2;
+    const s2 = t2.deltaY || t2.deltaX;
+    if (n2 ? (a = "mouse" === n2 || !t2.deltaX && ($t$2.intWheelDeltaY ? Math.abs(s2) > 17 : Math.ceil(s2) !== s2), (t2.shiftKey || t2.metaKey || t2.ctrlKey) && (a = true)) : a = !t2.shiftKey && (t2.metaKey || t2.ctrlKey), a) {
+      i2 = A(i2, 0, 1);
+      const a2 = t2.deltaY ? e2.delta.y : e2.delta.x, n3 = A(1 - R(s2) / (4 * a2) * i2, 0.5, 2);
+      o2 = s2 > 0 ? n3 : 1 / n3;
+    }
+    return o2;
+  } };
+  let _, w, C, V;
+  class K {
+    get transforming() {
+      return this.moving || this.zooming || this.rotating;
+    }
+    get moving() {
+      return !!this.moveData;
+    }
+    get zooming() {
+      return !!this.zoomData;
+    }
+    get rotating() {
+      return !!this.rotateData;
+    }
+    constructor(t2) {
+      this.interaction = t2;
+    }
+    move(e2) {
+      const { interaction: a } = this;
+      e2.moveType || (e2.moveType = "move"), this.moveData || (this.setPath(e2), _ = 0, w = 0, this.moveData = Object.assign(Object.assign({}, e2), { moveX: 0, moveY: 0, totalX: _, totalY: w }), a.emit(ot$1.START, this.moveData)), e2.path = this.moveData.path, e2.totalX = _ += e2.moveX, e2.totalY = w += e2.moveY, a.emit(ot$1.BEFORE_MOVE, e2), a.emit(ot$1.MOVE, e2), this.transformEndWait();
+    }
+    zoom(t2) {
+      const { interaction: e2 } = this;
+      this.zoomData || (this.setPath(t2), C = 1, this.zoomData = Object.assign(Object.assign({}, t2), { scale: 1, totalScale: C }), e2.emit(ut$1.START, this.zoomData)), t2.path = this.zoomData.path, t2.totalScale = C *= t2.scale, e2.emit(ut$1.BEFORE_ZOOM, t2), e2.emit(ut$1.ZOOM, t2), this.transformEndWait();
+    }
+    rotate(t2) {
+      const { interaction: e2 } = this;
+      this.rotateData || (this.setPath(t2), V = 0, this.rotateData = Object.assign(Object.assign({}, t2), { rotation: 0, totalRotation: V }), e2.emit(lt$1.START, this.rotateData)), t2.path = this.rotateData.path, t2.totalRotation = V += t2.rotation, e2.emit(lt$1.BEFORE_ROTATE, t2), e2.emit(lt$1.ROTATE, t2), this.transformEndWait();
+    }
+    setPath(t2) {
+      const { interaction: e2 } = this, { path: a } = e2.selector.getByPoint(t2, e2.hitRadius);
+      t2.path = a, e2.cancelHover();
+    }
+    transformEndWait() {
+      clearTimeout(this.transformTimer), this.transformTimer = setTimeout(() => {
+        this.transformEnd();
+      }, this.interaction.p.transformTime);
+    }
+    transformEnd() {
+      const { interaction: e2, moveData: o2, zoomData: n2, rotateData: i2 } = this;
+      o2 && e2.emit(ot$1.END, Object.assign(Object.assign({}, o2), { totalX: _, totalY: w })), n2 && e2.emit(ut$1.END, Object.assign(Object.assign({}, n2), { totalScale: C })), i2 && e2.emit(lt$1.END, Object.assign(Object.assign({}, i2), { totalRotation: V })), this.reset();
+    }
+    reset() {
+      this.zoomData = this.moveData = this.rotateData = null;
+    }
+    destroy() {
+      this.reset();
+    }
+  }
+  const W = we$1.prototype, B = new Vt$3(), k = new ut$2();
+  function L(t2, e2) {
+    return Object.assign(Object.assign({}, e2), { moveX: t2.x, moveY: t2.y });
+  }
+  function P(t2, e2) {
+    return Object.assign(Object.assign({}, e2), { scale: t2 });
+  }
+  W.initType = function(t2) {
+    T.run(t2, this);
+  }, W.getValidMove = function(t2, e2, a = true) {
+    const { disabled: o2, scrollSpread: n2 } = this.app.config.move;
+    k.set(t2, e2);
+    const i2 = D(this);
+    return i2 && (i2.includes("x") ? k.y = 0 : i2.includes("y") ? k.x = 0 : Math.abs(k.x) > Math.abs(k.y) ? k.y = 0 : k.x = 0, a && i2.includes("limit") && (B.set(this.__world).addPoint(this.zoomLayer), n2 && B.spread(n2), tt$1.getValidMove(B, this.canvas.bounds, "auto", k, true), i2.includes("x") ? k.y = 0 : i2.includes("y") && (k.x = 0))), { x: o2 ? 0 : k.x, y: o2 ? 0 : k.y };
+  }, W.getValidScale = function(t2) {
+    const { scaleX: e2 } = this.zoomLayer.__, { min: a, max: o2, disabled: n2 } = this.app.config.zoom, i2 = Math.abs(e2 * t2);
+    return a && i2 < a ? t2 = a / e2 : o2 && i2 > o2 && (t2 = o2 / e2), n2 ? 1 : t2;
+  };
+  const N = Mt$1.prototype;
+  N.createTransformer = function() {
+    this.transformer = new K(this);
+  }, N.move = function(t2) {
+    this.transformer.move(t2);
+  }, N.zoom = function(t2) {
+    this.transformer.zoom(t2);
+  }, N.rotate = function(t2) {
+    this.transformer.rotate(t2);
+  }, N.transformEnd = function() {
+    this.transformer.transformEnd();
+  }, N.wheel = function(t2) {
+    const { wheel: e2, pointer: a } = this.config, { posDeltaSpeed: o2, negDeltaSpeed: n2 } = e2;
+    if (e2.disabled) return;
+    t2.deltaX > 0 ? o2 && (t2.deltaX *= o2) : n2 && (t2.deltaX *= n2), t2.deltaY > 0 ? o2 && (t2.deltaY *= o2) : n2 && (t2.deltaY *= n2);
+    const s2 = e2.getScale ? e2.getScale(t2, e2) : S.getScale(t2, e2);
+    if (1 !== s2) this.zoom(P(s2, t2));
+    else {
+      const o3 = e2.getMove ? e2.getMove(t2, e2) : S.getMove(t2, e2);
+      a.snap && ot$2.round(o3), this.move(L(o3, t2));
+    }
+  }, N.multiTouch = function(t2, e2) {
+    const { disabled: a, singleGesture: o2 } = this.config.multiTouch;
+    if (a) return;
+    this.pointerWaitCancel();
+    let n2 = z.getData(e2), { moving: i2, zooming: s2, rotating: r2 } = this.transformer;
+    if (o2) {
+      if (!this.transformer.transforming) {
+        switch (z.detect(n2, d(o2) ? o2 : {})) {
+          case "move":
+            i2 = true;
+            break;
+          case "zoom":
+            s2 = true;
+            break;
+          case "rotate":
+            r2 = true;
+            break;
+          default:
+            return;
+        }
+        z.reset();
+      }
+      i2 || (n2.center = z.state.center);
+    } else i2 = s2 = r2 = true;
+    var c, m2;
+    Object.assign(t2, n2.center), t2.multiTouch = true, r2 && this.rotate((c = n2.rotation, m2 = t2, Object.assign(Object.assign({}, m2), { rotation: c }))), s2 && this.zoom(P(n2.scale, t2)), i2 && this.move(L(n2.move, t2));
+  };
+  const F = Dt$1.prototype, { abs: I, min: G, max: Z, hypot: H } = Math;
+  F.checkDragEndAnimate = function(e2) {
+    const { interaction: a } = this, o$1 = this.canAnimate && this.moving && a.m.dragAnimate;
+    if (o$1) {
+      const n2 = o(o$1) ? o$1 : 0.95, s2 = 0.15, r2 = 150;
+      let c, m2, l2, h = 0, u2 = 0, g2 = 0, d2 = 0, v2 = 3;
+      const { dragDataList: p2 } = this, y2 = p2.length;
+      for (let t2 = y2 - 1; t2 >= Z(y2 - 3, 0) && (l2 = p2[t2], !(l2.time && Date.now() - l2.time > 100)); t2--) c = v2--, h += l2.moveX * c, u2 += l2.moveY * c, d2 += c, m2 = H(l2.moveX, l2.moveY), m2 > g2 && (g2 = m2);
+      if (d2 && (h /= d2, u2 /= d2), g2 > 8) {
+        const t2 = 1.15 + G((g2 - 8) / 17, 1) * (1.6 - 1.15);
+        h *= t2, u2 *= t2;
+      }
+      const D2 = Z(I(h), I(u2));
+      D2 > r2 && (m2 = r2 / D2, h *= m2, u2 *= m2);
+      const O2 = () => {
+        if (h *= n2, u2 *= n2, e2 = Object.assign({}, e2), I(h) < s2 && I(u2) < s2) return this.dragEndReal(e2);
+        ot$2.move(e2, h, u2), this.drag(e2), this.animate(O2), a.emit(ot$1.DRAG_ANIMATE, e2);
+      };
+      this.animate(O2);
+    }
+    return o$1;
+  }, F.animate = function(t2, e2) {
+    const a = t2 || this.animateWait;
+    a && this.interaction.target.nextRender(a, null, e2), this.animateWait = t2;
+  }, F.stopAnimate = function() {
+    this.animate(null, "off"), this.interaction.target.nextRender(() => {
+      this.dragData && this.dragEndReal(this.dragData);
+    });
+  }, F.checkDragOut = function(t2) {
+    const { interaction: e2 } = this;
+    this.autoMoveCancel(), this.dragging && !e2.shrinkCanvasBounds.hitPoint(t2) && this.autoMoveOnDragOut(t2);
+  }, F.autoMoveOnDragOut = function(t2) {
+    const { interaction: e2, downData: a, canDragOut: o2 } = this, { autoDistance: n2, dragOut: s2 } = e2.m;
+    if (!s2 || !o2 || !n2) return;
+    const r2 = e2.shrinkCanvasBounds, { x: c, y: m2 } = r2, l2 = zt$1.maxX(r2), h = zt$1.maxY(r2), u2 = t2.x < c ? n2 : l2 < t2.x ? -n2 : 0, g2 = t2.y < m2 ? n2 : h < t2.y ? -n2 : 0;
+    let d2 = 0, v2 = 0;
+    this.autoMoveTimer = setInterval(() => {
+      d2 += u2, v2 += g2, ot$2.move(a, u2, g2), ot$2.move(this.dragData, u2, g2), e2.move(Object.assign(Object.assign({}, t2), { moveX: u2, moveY: g2, totalX: d2, totalY: v2, moveType: "drag" })), e2.pointerMoveReal(t2);
+    }, 10);
+  }, F.autoMoveCancel = function() {
+    this.autoMoveTimer && (clearInterval(this.autoMoveTimer), this.autoMoveTimer = 0);
+  }, he$2.add("viewport");
+  function toFiniteNumber(value, fallback = 0) {
+    const numericValue = Number(value);
+    return Number.isFinite(numericValue) ? numericValue : fallback;
+  }
+  class ViewportController {
+    constructor(appHost, dragAndScale) {
+      this.appHost = appHost;
+      this.dragAndScale = dragAndScale;
+      O(this.appHost.tree, {
+        wheel: {
+          zoomMode: true,
+          preventDefault: true
+        },
+        touch: {
+          preventDefault: true
+        },
+        pointer: {
+          preventDefaultMenu: true
+        },
+        zoom: {
+          min: this.dragAndScale.min_scale,
+          max: this.dragAndScale.max_scale
+        },
+        move: {
+          drag: false,
+          dragEmpty: false,
+          dragAnimate: false,
+          holdSpaceKey: true,
+          holdMiddleKey: true
+        }
+      });
+      this.dragAndScale.attachViewportPort(this);
+    }
+    destroy() {
+      this.dragAndScale.detachViewportPort(this);
+    }
+    getScale() {
+      const scale = toFiniteNumber(
+        this.appHost.treeZoomLayer.scaleX,
+        1
+      );
+      return scale || 1;
+    }
+    getOffsetX() {
+      return toFiniteNumber(
+        this.appHost.treeZoomLayer.x
+      ) / this.getScale();
+    }
+    getOffsetY() {
+      return toFiniteNumber(
+        this.appHost.treeZoomLayer.y
+      ) / this.getScale();
+    }
+    setScale(value, zoomingCenter) {
+      const nextScale = this.clampScale(value);
+      const currentScale = this.getScale();
+      if (Math.abs(nextScale - currentScale) < 1e-4) {
+        return;
+      }
+      const worldOrigin = this.resolveWorldOrigin(zoomingCenter);
+      this.appHost.treeZoomLayer.scaleOfWorld(
+        worldOrigin,
+        nextScale / currentScale
+      );
+    }
+    setOffset(x2, y2) {
+      const scale = this.getScale();
+      this.appHost.treeZoomLayer.x = toFiniteNumber(x2) * scale;
+      this.appHost.treeZoomLayer.y = toFiniteNumber(y2) * scale;
+    }
+    moveByScreenDelta(deltaX2, deltaY) {
+      if (!deltaX2 && !deltaY) {
+        return;
+      }
+      this.appHost.treeZoomLayer.move(deltaX2, deltaY);
+    }
+    reset() {
+      this.appHost.treeZoomLayer.x = 0;
+      this.appHost.treeZoomLayer.y = 0;
+      this.appHost.treeZoomLayer.scale = 1;
+    }
+    clampScale(value) {
+      const numericValue = toFiniteNumber(value, 1);
+      return Math.min(
+        this.dragAndScale.max_scale,
+        Math.max(this.dragAndScale.min_scale, numericValue)
+      );
+    }
+    resolveWorldOrigin(zoomingCenter) {
+      const rect = this.appHost.view.getBoundingClientRect();
+      const centerX = zoomingCenter && Number.isFinite(zoomingCenter[0]) ? zoomingCenter[0] : rect.width * 0.5;
+      const centerY = zoomingCenter && Number.isFinite(zoomingCenter[1]) ? zoomingCenter[1] : rect.height * 0.5;
+      return this.appHost.app.getWorldPointByClient(
+        {
+          clientX: rect.left + centerX,
+          clientY: rect.top + centerY
+        },
+        true
+      );
+    }
+  }
   function isTouchEvent(event2) {
     if (typeof TouchEvent !== "undefined" && event2 instanceof TouchEvent) {
       return true;
@@ -11752,8 +12120,8 @@ var LiteGraphTSMigration = (function(exports) {
   }
   let DragAndScale$1 = class DragAndScale {
     constructor(element, skipEvents) {
-      this.offset = new Float32Array([0, 0]);
-      this.scale = 1;
+      this._offset = new Float32Array([0, 0]);
+      this._scale = 1;
       this.max_scale = 10;
       this.min_scale = 0.1;
       this.onredraw = null;
@@ -11762,11 +12130,42 @@ var LiteGraphTSMigration = (function(exports) {
       this.element = null;
       this.visible_area = new Float32Array(4);
       this.pointerHost = createPointerEventsHost("mouse");
+      this.viewportPort = null;
+      this.viewportOffsetProxy = this.createViewportOffsetProxy();
       if (element) {
         this.element = element;
         if (!skipEvents) {
           this.bindEvents(element);
         }
+      }
+    }
+    get offset() {
+      return this.viewportPort ? this.viewportOffsetProxy : this._offset;
+    }
+    set offset(value) {
+      if (this.viewportPort) {
+        this.viewportPort.setOffset((value == null ? void 0 : value[0]) || 0, (value == null ? void 0 : value[1]) || 0);
+        return;
+      }
+      this._offset[0] = (value == null ? void 0 : value[0]) || 0;
+      this._offset[1] = (value == null ? void 0 : value[1]) || 0;
+    }
+    get scale() {
+      return this.viewportPort ? this.viewportPort.getScale() : this._scale;
+    }
+    set scale(value) {
+      if (this.viewportPort) {
+        this.viewportPort.setScale(value);
+        return;
+      }
+      this._scale = value;
+    }
+    attachViewportPort(port) {
+      this.viewportPort = port;
+    }
+    detachViewportPort(port) {
+      if (!port || this.viewportPort === port) {
+        this.viewportPort = null;
       }
     }
     getHost() {
@@ -11781,6 +12180,9 @@ var LiteGraphTSMigration = (function(exports) {
       };
     }
     bindEvents(element) {
+      if (this.viewportPort) {
+        return;
+      }
       this.last_mouse = new Float32Array(2);
       this._binded_mouse_callback = this.onMouse.bind(this);
       const host = this.getHost();
@@ -11827,6 +12229,9 @@ var LiteGraphTSMigration = (function(exports) {
     }
     onMouse(e2) {
       if (!this.enabled) {
+        return;
+      }
+      if (this.viewportPort) {
         return;
       }
       const canvas = this.element;
@@ -11895,6 +12300,13 @@ var LiteGraphTSMigration = (function(exports) {
       return target;
     }
     mouseDrag(x2, y2) {
+      if (this.viewportPort) {
+        this.viewportPort.moveByScreenDelta(x2, y2);
+        if (this.onredraw) {
+          this.onredraw(this);
+        }
+        return;
+      }
       this.offset[0] += x2 / this.scale;
       this.offset[1] += y2 / this.scale;
       if (this.onredraw) {
@@ -11908,6 +12320,13 @@ var LiteGraphTSMigration = (function(exports) {
         value = this.max_scale;
       }
       if (value == this.scale) {
+        return;
+      }
+      if (this.viewportPort) {
+        this.viewportPort.setScale(value, zooming_center);
+        if (this.onredraw) {
+          this.onredraw(this);
+        }
         return;
       }
       const element = this.element;
@@ -11939,9 +12358,52 @@ var LiteGraphTSMigration = (function(exports) {
       this.changeScale(this.scale * value, zooming_center);
     }
     reset() {
+      if (this.viewportPort) {
+        this.viewportPort.reset();
+        return;
+      }
       this.scale = 1;
       this.offset[0] = 0;
       this.offset[1] = 0;
+    }
+    createViewportOffsetProxy() {
+      const target = [0, 0];
+      return new Proxy(target, {
+        get: (source, property, receiver) => {
+          source[0] = this.viewportPort ? this.viewportPort.getOffsetX() : this._offset[0];
+          source[1] = this.viewportPort ? this.viewportPort.getOffsetY() : this._offset[1];
+          return Reflect.get(source, property, receiver);
+        },
+        set: (source, property, value, receiver) => {
+          if (property === "0") {
+            const nextX = Number.isFinite(Number(value)) ? Number(value) : 0;
+            if (this.viewportPort) {
+              this.viewportPort.setOffset(
+                nextX,
+                this.viewportPort.getOffsetY()
+              );
+            } else {
+              this._offset[0] = nextX;
+            }
+            source[0] = nextX;
+            return true;
+          }
+          if (property === "1") {
+            const nextY = Number.isFinite(Number(value)) ? Number(value) : 0;
+            if (this.viewportPort) {
+              this.viewportPort.setOffset(
+                this.viewportPort.getOffsetX(),
+                nextY
+              );
+            } else {
+              this._offset[1] = nextY;
+            }
+            source[1] = nextY;
+            return true;
+          }
+          return Reflect.set(source, property, value, receiver);
+        }
+      });
     }
   };
   const pointerEventNameMaps = {
@@ -12153,6 +12615,7 @@ var LiteGraphTSMigration = (function(exports) {
       this.ctx = null;
       this.bgctx = null;
       this.leaferAppHost = null;
+      this.viewportController = null;
       this.graphMutationBus = null;
       this.sceneSyncController = null;
       this.interactionController = null;
@@ -12377,6 +12840,10 @@ var LiteGraphTSMigration = (function(exports) {
     }
     destroyLeaferAppShell() {
       this.destroySceneSyncBackbone();
+      if (this.viewportController) {
+        this.viewportController.destroy();
+        this.viewportController = null;
+      }
       if (!this.leaferAppHost) {
         return;
       }
@@ -12398,6 +12865,10 @@ var LiteGraphTSMigration = (function(exports) {
       this.ctx = null;
       this.destroyLeaferAppShell();
       this.leaferAppHost = new LeaferAppHost(hostView);
+      this.viewportController = new ViewportController(
+        this.leaferAppHost,
+        this.ds
+      );
       this.attachSceneSyncBackbone();
       console.info("LGraphCanvas: Leafer App shell initialized.");
     }
@@ -13240,7 +13711,7 @@ var LiteGraphTSMigration = (function(exports) {
             clicking_canvas_bg = true;
           }
         }
-        if (!skip_action && clicking_canvas_bg && this.allow_dragcanvas) {
+        if (!skip_action && clicking_canvas_bg && this.allow_dragcanvas && this.renderRuntime !== "leafer") {
           this.dragging_canvas = true;
         }
       } else if (e2.which == 2) {
@@ -13295,7 +13766,7 @@ var LiteGraphTSMigration = (function(exports) {
               }
             }
           }
-        } else if (!skip_action && this.allow_dragcanvas) {
+        } else if (!skip_action && this.allow_dragcanvas && this.renderRuntime !== "leafer") {
           this.dragging_canvas = true;
         }
       } else if (e2.which == 3 || this.pointer_is_double) {
@@ -13388,6 +13859,10 @@ var LiteGraphTSMigration = (function(exports) {
         }
         this.dirty_bgcanvas = true;
       } else if (this.dragging_canvas) {
+        if (this.renderRuntime === "leafer") {
+          this.dragging_canvas = false;
+          return;
+        }
         this.ds.offset[0] += delta2[0] / this.ds.scale;
         this.ds.offset[1] += delta2[1] / this.ds.scale;
         this.dirty_canvas = true;
@@ -13937,6 +14412,9 @@ var LiteGraphTSMigration = (function(exports) {
      * @method processMouseWheel
      **/
     processMouseWheel(e2) {
+      if (this.renderRuntime === "leafer") {
+        return;
+      }
       if (!this.graph || !this.allow_dragcanvas) {
         return;
       }
@@ -14043,8 +14521,10 @@ var LiteGraphTSMigration = (function(exports) {
       }
       if (e2.type == "keydown") {
         if (e2.keyCode == 32) {
-          this.dragging_canvas = true;
-          block_default = true;
+          if (this.renderRuntime !== "leafer") {
+            this.dragging_canvas = true;
+            block_default = true;
+          }
         }
         if (e2.keyCode == 27) {
           if (this.node_panel) {
@@ -14078,7 +14558,9 @@ var LiteGraphTSMigration = (function(exports) {
         node_consumed = this.dispatchNodeKeyHook(this.selectedNodesRef(), "onKeyDown", e2);
       } else if (e2.type == "keyup") {
         if (e2.keyCode == 32) {
-          this.dragging_canvas = false;
+          if (this.renderRuntime !== "leafer") {
+            this.dragging_canvas = false;
+          }
         }
         node_consumed = this.dispatchNodeKeyHook(this.selectedNodesRef(), "onKeyUp", e2);
       }
