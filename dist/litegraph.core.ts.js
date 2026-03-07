@@ -3753,7 +3753,7 @@ var LiteGraphTSMigration = (function(exports) {
   function toMutationKey$1(nodeId) {
     return String(nodeId);
   }
-  function toFiniteNumber$5(value, fallback = 0) {
+  function toFiniteNumber$7(value, fallback = 0) {
     const numericValue = Number(value);
     return Number.isFinite(numericValue) ? numericValue : fallback;
   }
@@ -3767,7 +3767,7 @@ var LiteGraphTSMigration = (function(exports) {
     return "mouseup";
   }
   function resolveButtons(event2) {
-    return toFiniteNumber$5(event2.buttons);
+    return toFiniteNumber$7(event2.buttons);
   }
   function resolveButton(event2) {
     const pointerEvent = event2;
@@ -3798,21 +3798,21 @@ var LiteGraphTSMigration = (function(exports) {
   function buildLocalPosMap(event2, targets) {
     const localPosByNodeId = /* @__PURE__ */ new Map();
     const pagePoint = event2.getPagePoint();
-    const pageX = toFiniteNumber$5(pagePoint.x);
-    const pageY = toFiniteNumber$5(pagePoint.y);
+    const pageX = toFiniteNumber$7(pagePoint.x);
+    const pageY = toFiniteNumber$7(pagePoint.y);
     for (let i2 = 0; i2 < targets.length; ++i2) {
       const target = targets[i2];
       if (target.nodePosition) {
         localPosByNodeId.set(toMutationKey$1(target.nodeId), [
-          pageX - toFiniteNumber$5(target.nodePosition[0]),
-          pageY - toFiniteNumber$5(target.nodePosition[1])
+          pageX - toFiniteNumber$7(target.nodePosition[0]),
+          pageY - toFiniteNumber$7(target.nodePosition[1])
         ]);
         continue;
       }
       const localPoint = event2.getInnerPoint(target.nodeRoot);
       localPosByNodeId.set(toMutationKey$1(target.nodeId), [
-        toFiniteNumber$5(localPoint.x),
-        toFiniteNumber$5(localPoint.y)
+        toFiniteNumber$7(localPoint.x),
+        toFiniteNumber$7(localPoint.y)
       ]);
     }
     return localPosByNodeId;
@@ -3820,11 +3820,11 @@ var LiteGraphTSMigration = (function(exports) {
   function createLegacyPointerEvent(options) {
     const { event: event2, hostElement } = options;
     const pagePoint = event2.getPagePoint();
-    const canvasX = toFiniteNumber$5(pagePoint.x);
-    const canvasY = toFiniteNumber$5(pagePoint.y);
+    const canvasX = toFiniteNumber$7(pagePoint.x);
+    const canvasY = toFiniteNumber$7(pagePoint.y);
     const hostRect = hostElement.getBoundingClientRect();
-    const clientX = toFiniteNumber$5(event2.clientX, hostRect.left + canvasX);
-    const clientY = toFiniteNumber$5(event2.clientY, hostRect.top + canvasY);
+    const clientX = toFiniteNumber$7(event2.clientX, hostRect.left + canvasX);
+    const clientY = toFiniteNumber$7(event2.clientY, hostRect.top + canvasY);
     const button = resolveButton(event2);
     const buttons = resolveButtons(event2);
     const localPosByNodeId = buildLocalPosMap(event2, options.targets || []);
@@ -3844,22 +3844,22 @@ var LiteGraphTSMigration = (function(exports) {
       type: resolveMouseType(options.type),
       canvasX,
       canvasY,
-      pageX: toFiniteNumber$5(event2.pageX, clientX),
-      pageY: toFiniteNumber$5(event2.pageY, clientY),
+      pageX: toFiniteNumber$7(event2.pageX, clientX),
+      pageY: toFiniteNumber$7(event2.pageY, clientY),
       clientX,
       clientY,
-      screenX: toFiniteNumber$5(event2.screenX, clientX),
-      screenY: toFiniteNumber$5(event2.screenY, clientY),
+      screenX: toFiniteNumber$7(event2.screenX, clientX),
+      screenY: toFiniteNumber$7(event2.screenY, clientY),
       offsetX: canvasX,
       offsetY: canvasY,
-      deltaX: toFiniteNumber$5(options.deltaX),
-      deltaY: toFiniteNumber$5(options.deltaY),
-      deltax: toFiniteNumber$5(options.deltaX),
-      deltay: toFiniteNumber$5(options.deltaY),
+      deltaX: toFiniteNumber$7(options.deltaX),
+      deltaY: toFiniteNumber$7(options.deltaY),
+      deltax: toFiniteNumber$7(options.deltaX),
+      deltay: toFiniteNumber$7(options.deltaY),
       which: resolveWhich(button),
       button,
       buttons,
-      click_time: Math.max(0, toFiniteNumber$5(options.clickTime)),
+      click_time: Math.max(0, toFiniteNumber$7(options.clickTime)),
       dragging: Boolean(options.dragging),
       shiftKey: Boolean(event2.shiftKey),
       ctrlKey: Boolean(event2.ctrlKey),
@@ -4149,17 +4149,17 @@ var LiteGraphTSMigration = (function(exports) {
   const PORT_DIRECTION_RIGHT = 2;
   const PORT_DIRECTION_DOWN = 3;
   const PORT_DIRECTION_LEFT = 4;
-  function toFiniteNumber$4(value, fallback = 0) {
+  function toFiniteNumber$6(value, fallback = 0) {
     const numericValue = Number(value);
     return Number.isFinite(numericValue) ? numericValue : fallback;
   }
   function toPoint$1(value) {
     if (Array.isArray(value) || ArrayBuffer.isView(value) || typeof value === "object" && value !== null && "0" in value && "1" in value) {
       const indexedValue = value;
-      return [toFiniteNumber$4(indexedValue[0]), toFiniteNumber$4(indexedValue[1])];
+      return [toFiniteNumber$6(indexedValue[0]), toFiniteNumber$6(indexedValue[1])];
     }
     const point = value;
-    return [toFiniteNumber$4(point.x), toFiniteNumber$4(point.y)];
+    return [toFiniteNumber$6(point.x), toFiniteNumber$6(point.y)];
   }
   function distance(a2, b2) {
     const dx = b2[0] - a2[0];
@@ -4208,10 +4208,10 @@ var LiteGraphTSMigration = (function(exports) {
         if (!bounds) {
           continue;
         }
-        const left = toFiniteNumber$4(bounds[0]);
-        const top = toFiniteNumber$4(bounds[1]);
-        const width2 = toFiniteNumber$4(bounds[2]);
-        const height = toFiniteNumber$4(bounds[3]);
+        const left = toFiniteNumber$6(bounds[0]);
+        const top = toFiniteNumber$6(bounds[1]);
+        const width2 = toFiniteNumber$6(bounds[2]);
+        const height = toFiniteNumber$6(bounds[3]);
         if (x2 >= left && x2 <= left + width2 && y2 >= top && y2 <= top + height) {
           return node2;
         }
@@ -4271,7 +4271,7 @@ var LiteGraphTSMigration = (function(exports) {
         slotIndex
       );
       if (hostAnchor) {
-        return [toFiniteNumber$4(hostAnchor[0]), toFiniteNumber$4(hostAnchor[1])];
+        return [toFiniteNumber$6(hostAnchor[0]), toFiniteNumber$6(hostAnchor[1])];
       }
       const node2 = this.getNodeById(nodeId);
       if (!node2 || typeof node2.getConnectionPos !== "function") {
@@ -4284,8 +4284,8 @@ var LiteGraphTSMigration = (function(exports) {
       if (typeof rawPoint === "object" && rawPoint !== null && "0" in rawPoint) {
         const indexedPoint = rawPoint;
         return [
-          toFiniteNumber$4(indexedPoint[0]),
-          toFiniteNumber$4(indexedPoint[1])
+          toFiniteNumber$6(indexedPoint[0]),
+          toFiniteNumber$6(indexedPoint[1])
         ];
       }
       return toPoint$1(rawPoint);
@@ -4298,14 +4298,14 @@ var LiteGraphTSMigration = (function(exports) {
         slotIndex
       );
       if (hostDirection != null) {
-        const normalizedDirection = toFiniteNumber$4(hostDirection, 0);
+        const normalizedDirection = toFiniteNumber$6(hostDirection, 0);
         if (normalizedDirection) {
           return normalizedDirection;
         }
       }
       const slotList = kind === "input" ? node2.inputs : node2.outputs;
       const resolvedSlot = slot || (slotList == null ? void 0 : slotList[slotIndex]) || null;
-      const explicitDir = toFiniteNumber$4(resolvedSlot == null ? void 0 : resolvedSlot.dir, 0);
+      const explicitDir = toFiniteNumber$6(resolvedSlot == null ? void 0 : resolvedSlot.dir, 0);
       if (explicitDir) {
         return explicitDir;
       }
@@ -4338,7 +4338,19 @@ var LiteGraphTSMigration = (function(exports) {
         )
       };
     }
-    buildLinkPath(start, end, startDir, endDir) {
+    getLinkCurve(link) {
+      const layout = this.getLinkLayout(link);
+      if (!layout) {
+        return null;
+      }
+      return this.buildLinkCurve(
+        layout.start,
+        layout.end,
+        layout.startDir,
+        layout.endDir
+      );
+    }
+    buildLinkCurve(start, end, startDir, endDir) {
       const safeStart = toPoint$1(start);
       const safeEnd = toPoint$1(end);
       const dist = Math.max(distance(safeStart, safeEnd), 16);
@@ -4362,7 +4374,30 @@ var LiteGraphTSMigration = (function(exports) {
       } else if (endDir === PORT_DIRECTION_DOWN) {
         c2[1] += dist * 0.25;
       }
-      return `M ${safeStart[0]} ${safeStart[1]} C ${c1[0]} ${c1[1]} ${c2[0]} ${c2[1]} ${safeEnd[0]} ${safeEnd[1]}`;
+      return {
+        start: safeStart,
+        end: safeEnd,
+        startDir,
+        endDir,
+        c1,
+        c2,
+        path: `M ${safeStart[0]} ${safeStart[1]} C ${c1[0]} ${c1[1]} ${c2[0]} ${c2[1]} ${safeEnd[0]} ${safeEnd[1]}`
+      };
+    }
+    buildLinkPath(start, end, startDir, endDir) {
+      return this.buildLinkCurve(start, end, startDir, endDir).path;
+    }
+    getPointOnLinkCurve(curve, t2) {
+      const clampedT = Math.max(0, Math.min(1, toFiniteNumber$6(t2, 0)));
+      const oneMinusT = 1 - clampedT;
+      const c1 = oneMinusT * oneMinusT * oneMinusT;
+      const c2 = 3 * oneMinusT * oneMinusT * clampedT;
+      const c3 = 3 * oneMinusT * clampedT * clampedT;
+      const c4 = clampedT * clampedT * clampedT;
+      return [
+        c1 * curve.start[0] + c2 * curve.c1[0] + c3 * curve.c2[0] + c4 * curve.end[0],
+        c1 * curve.start[1] + c2 * curve.c1[1] + c3 * curve.c2[1] + c4 * curve.end[1]
+      ];
     }
   }
   class ConnectionController {
@@ -4393,13 +4428,13 @@ var LiteGraphTSMigration = (function(exports) {
       const target = this.getCompatibleTarget(worldX, worldY);
       const endPoint = target ? target.anchor : [worldX, worldY];
       const endDir = target ? target.dir : getOppositePortDirection(source.dir);
-      const path = this.nodePortAdapter.buildLinkPath(
+      const curve = this.nodePortAdapter.buildLinkCurve(
         source.anchor,
         endPoint,
         source.dir,
         endDir
       );
-      this.overlayPrimitives.setConnectionPreview(path);
+      this.overlayPrimitives.setConnectionPreview(curve);
     }
     finish(worldX, worldY) {
       if (!this.activeConnection) {
@@ -11466,19 +11501,21 @@ var LiteGraphTSMigration = (function(exports) {
     visibleType: In,
     zoomLayerType: kt$2
   }, Symbol.toStringTag, { value: "Module" }));
-  function toFiniteNumber$3(value, fallback = 0) {
+  function toFiniteNumber$5(value, fallback = 0) {
     const numericValue = Number(value);
     return Number.isFinite(numericValue) ? numericValue : fallback;
+  }
+  function toLocalPoint$1(point, bounds) {
+    return [point[0] - bounds.x, point[1] - bounds.y];
   }
   class OverlayPrimitives {
     constructor(appHost) {
       this.appHost = appHost;
-      this.connectionPreview = new di$1({
+      this.connectionPreview = new si$1({
         name: "litegraph-connection-preview",
-        path: "M 0 0 L 0 0",
-        stroke: "#7F7",
-        strokeWidth: 3,
-        fill: "none",
+        width: 1,
+        height: 1,
+        pixelRatio: 1,
         visible: false,
         hittable: false
       });
@@ -11494,6 +11531,16 @@ var LiteGraphTSMigration = (function(exports) {
         visible: false,
         hittable: false
       });
+      this.offscreenCanvas = document.createElement("canvas");
+      this.offscreenCanvas.width = 1;
+      this.offscreenCanvas.height = 1;
+      const context = this.offscreenCanvas.getContext("2d");
+      if (!context) {
+        throw new Error(
+          "OverlayPrimitives: failed to create 2D offscreen context."
+        );
+      }
+      this.offscreenContext = context;
       this.appHost.overlayWorld.add([
         this.connectionPreview,
         this.selectionBox
@@ -11503,15 +11550,32 @@ var LiteGraphTSMigration = (function(exports) {
       this.connectionPreview.destroy();
       this.selectionBox.destroy();
     }
-    setConnectionPreview(path, color = "#7F7") {
+    setConnectionPreview(curve, color = "#7F7") {
       this.syncWorldTransform();
-      this.connectionPreview.path = path;
-      this.connectionPreview.stroke = color;
+      const bounds = this.measureCurveBounds(curve, 3);
+      this.ensurePreviewCanvasSize(bounds.width, bounds.height);
+      this.paintConnectionPreview(curve, bounds, color);
+      this.connectionPreview.x = bounds.x;
+      this.connectionPreview.y = bounds.y;
+      this.connectionPreview.width = bounds.width;
+      this.connectionPreview.height = bounds.height;
       this.connectionPreview.visible = true;
+      const surfaceContext = this.connectionPreview.context;
+      surfaceContext.setTransform(1, 0, 0, 1, 0, 0);
+      surfaceContext.clearRect(0, 0, bounds.width, bounds.height);
+      surfaceContext.drawImage(
+        this.offscreenCanvas,
+        0,
+        0,
+        bounds.width,
+        bounds.height
+      );
+      this.connectionPreview.paint();
     }
     hideConnectionPreview() {
       this.connectionPreview.visible = false;
-      this.connectionPreview.path = "M 0 0 L 0 0";
+      this.connectionPreview.width = 1;
+      this.connectionPreview.height = 1;
     }
     setSelectionBounds(bounds) {
       this.syncWorldTransform();
@@ -11528,10 +11592,74 @@ var LiteGraphTSMigration = (function(exports) {
     }
     syncWorldTransform() {
       const zoomLayer = this.appHost.treeZoomLayer;
-      this.appHost.overlayWorld.x = toFiniteNumber$3(zoomLayer.x);
-      this.appHost.overlayWorld.y = toFiniteNumber$3(zoomLayer.y);
-      this.appHost.overlayWorld.scaleX = toFiniteNumber$3(zoomLayer.scaleX, 1);
-      this.appHost.overlayWorld.scaleY = toFiniteNumber$3(zoomLayer.scaleY, 1);
+      this.appHost.overlayWorld.x = toFiniteNumber$5(zoomLayer.x);
+      this.appHost.overlayWorld.y = toFiniteNumber$5(zoomLayer.y);
+      this.appHost.overlayWorld.scaleX = toFiniteNumber$5(zoomLayer.scaleX, 1);
+      this.appHost.overlayWorld.scaleY = toFiniteNumber$5(zoomLayer.scaleY, 1);
+    }
+    measureCurveBounds(curve, strokeWidth) {
+      const padding = Math.ceil(strokeWidth + 8);
+      const minX = Math.min(
+        curve.start[0],
+        curve.c1[0],
+        curve.c2[0],
+        curve.end[0]
+      );
+      const minY = Math.min(
+        curve.start[1],
+        curve.c1[1],
+        curve.c2[1],
+        curve.end[1]
+      );
+      const maxX = Math.max(
+        curve.start[0],
+        curve.c1[0],
+        curve.c2[0],
+        curve.end[0]
+      );
+      const maxY = Math.max(
+        curve.start[1],
+        curve.c1[1],
+        curve.c2[1],
+        curve.end[1]
+      );
+      return {
+        x: Math.floor(minX) - padding,
+        y: Math.floor(minY) - padding,
+        width: Math.max(1, Math.ceil(maxX - minX) + padding * 2),
+        height: Math.max(1, Math.ceil(maxY - minY) + padding * 2)
+      };
+    }
+    ensurePreviewCanvasSize(width2, height) {
+      if (this.offscreenCanvas.width !== width2 || this.offscreenCanvas.height !== height) {
+        this.offscreenCanvas.width = width2;
+        this.offscreenCanvas.height = height;
+      }
+      if (this.connectionPreview.width !== width2) {
+        this.connectionPreview.width = width2;
+      }
+      if (this.connectionPreview.height !== height) {
+        this.connectionPreview.height = height;
+      }
+    }
+    paintConnectionPreview(curve, bounds, color) {
+      const ctx = this.offscreenContext;
+      const start = toLocalPoint$1(curve.start, bounds);
+      const c1 = toLocalPoint$1(curve.c1, bounds);
+      const c2 = toLocalPoint$1(curve.c2, bounds);
+      const end = toLocalPoint$1(curve.end, bounds);
+      ctx.save();
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.clearRect(0, 0, bounds.width, bounds.height);
+      ctx.beginPath();
+      ctx.moveTo(start[0], start[1]);
+      ctx.bezierCurveTo(c1[0], c1[1], c2[0], c2[1], end[0], end[1]);
+      ctx.lineWidth = 3;
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+      ctx.strokeStyle = color;
+      ctx.stroke();
+      ctx.restore();
     }
   }
   function normalizeBounds(startX, startY, endX, endY) {
@@ -11624,7 +11752,7 @@ var LiteGraphTSMigration = (function(exports) {
       return Boolean(this.activeSelection);
     }
   }
-  function toFiniteNumber$2(value) {
+  function toFiniteNumber$4(value) {
     const numericValue = Number(value);
     return Number.isFinite(numericValue) ? numericValue : 0;
   }
@@ -11662,12 +11790,12 @@ var LiteGraphTSMigration = (function(exports) {
         const pagePoint = source.getPagePoint();
         const graphPoint = source.getInnerPoint();
         const normalizedPagePoint = {
-          x: toFiniteNumber$2(pagePoint.x),
-          y: toFiniteNumber$2(pagePoint.y)
+          x: toFiniteNumber$4(pagePoint.x),
+          y: toFiniteNumber$4(pagePoint.y)
         };
         const normalizedGraphPoint = {
-          x: toFiniteNumber$2(graphPoint.x),
-          y: toFiniteNumber$2(graphPoint.y)
+          x: toFiniteNumber$4(graphPoint.x),
+          y: toFiniteNumber$4(graphPoint.y)
         };
         this.pointerIsDown = true;
         this.pointerDownAt = Date.now();
@@ -11762,12 +11890,12 @@ var LiteGraphTSMigration = (function(exports) {
         const pagePoint = source.getPagePoint();
         const graphPoint = source.getInnerPoint();
         const normalizedPagePoint = {
-          x: toFiniteNumber$2(pagePoint.x),
-          y: toFiniteNumber$2(pagePoint.y)
+          x: toFiniteNumber$4(pagePoint.x),
+          y: toFiniteNumber$4(pagePoint.y)
         };
         const normalizedGraphPoint = {
-          x: toFiniteNumber$2(graphPoint.x),
-          y: toFiniteNumber$2(graphPoint.y)
+          x: toFiniteNumber$4(graphPoint.x),
+          y: toFiniteNumber$4(graphPoint.y)
         };
         if (((_a3 = this.session) == null ? void 0 : _a3.kind) === "connection") {
           this.connectionController.finish(
@@ -11866,8 +11994,8 @@ var LiteGraphTSMigration = (function(exports) {
       const targets = this.collectTargets(this.toLegacyHost((hit == null ? void 0 : hit.host) || null));
       const shouldDispatch = targets.length > 0 || Boolean(this.canvas.node_widget) || Boolean(this.canvas.node_over) || Boolean(this.canvas.node_capturing_input);
       const normalizedPagePoint = {
-        x: toFiniteNumber$2(pagePoint.x),
-        y: toFiniteNumber$2(pagePoint.y)
+        x: toFiniteNumber$4(pagePoint.x),
+        y: toFiniteNumber$4(pagePoint.y)
       };
       const deltaX2 = this.lastPagePoint ? normalizedPagePoint.x - this.lastPagePoint.x : 0;
       const deltaY = this.lastPagePoint ? normalizedPagePoint.y - this.lastPagePoint.y : 0;
@@ -11897,12 +12025,12 @@ var LiteGraphTSMigration = (function(exports) {
       const pagePoint = source.getPagePoint();
       const graphPoint = source.getInnerPoint();
       const normalizedPagePoint = {
-        x: toFiniteNumber$2(pagePoint.x),
-        y: toFiniteNumber$2(pagePoint.y)
+        x: toFiniteNumber$4(pagePoint.x),
+        y: toFiniteNumber$4(pagePoint.y)
       };
       const normalizedGraphPoint = {
-        x: toFiniteNumber$2(graphPoint.x),
-        y: toFiniteNumber$2(graphPoint.y)
+        x: toFiniteNumber$4(graphPoint.x),
+        y: toFiniteNumber$4(graphPoint.y)
       };
       if (this.session.kind === "connection") {
         this.connectionController.update(
@@ -12180,7 +12308,7 @@ var LiteGraphTSMigration = (function(exports) {
         return void 0;
       }
       const pos2 = rawPos;
-      return [toFiniteNumber$2(pos2[0]), toFiniteNumber$2(pos2[1])];
+      return [toFiniteNumber$4(pos2[0]), toFiniteNumber$4(pos2[1])];
     }
     attachDocumentTracking() {
       if (this.documentTrackingBound) {
@@ -12546,52 +12674,206 @@ var LiteGraphTSMigration = (function(exports) {
       }
     }
   }
+  function toFiniteNumber$3(value, fallback = 0) {
+    const numericValue = Number(value);
+    return Number.isFinite(numericValue) ? numericValue : fallback;
+  }
+  function toLocalPoint(point, bounds) {
+    return [point[0] - bounds.x, point[1] - bounds.y];
+  }
   class LinkViewHost {
     constructor(name) {
-      this.view = new di$1({
+      this.view = new ye$1({
         name,
         hittable: false,
         visible: true,
-        stroke: "#9A9",
-        strokeWidth: 3,
-        fill: "none",
         data: {
           litegraphPlaceholderKind: "link-view"
         }
       });
+      this.surface = new si$1({
+        name: `${name}:surface`,
+        width: 1,
+        height: 1,
+        pixelRatio: 1,
+        hittable: false,
+        visible: true
+      });
+      this.view.add(this.surface);
+      this.offscreenCanvas = document.createElement("canvas");
+      this.offscreenCanvas.width = 1;
+      this.offscreenCanvas.height = 1;
+      const context = this.offscreenCanvas.getContext("2d");
+      if (!context) {
+        throw new Error("LinkViewHost: failed to create 2D offscreen context.");
+      }
+      this.offscreenContext = context;
     }
     update(presentation) {
-      this.view.path = presentation.path;
-      if (presentation.stroke != null) {
-        this.view.stroke = presentation.stroke;
+      const { curve } = presentation;
+      const visible = presentation.visible !== false && Boolean(curve);
+      this.view.visible = visible;
+      if (!visible || !curve) {
+        return;
       }
-      if (presentation.visible != null) {
-        this.view.visible = presentation.visible;
-      }
+      const bounds = this.measureBounds(curve, presentation);
+      this.ensureCanvasSize(bounds.width, bounds.height);
+      this.paintToOffscreen(bounds, presentation);
+      this.view.x = bounds.x;
+      this.view.y = bounds.y;
+      this.surface.width = bounds.width;
+      this.surface.height = bounds.height;
+      const surfaceContext = this.surface.context;
+      surfaceContext.setTransform(1, 0, 0, 1, 0, 0);
+      surfaceContext.clearRect(0, 0, bounds.width, bounds.height);
+      surfaceContext.drawImage(
+        this.offscreenCanvas,
+        0,
+        0,
+        bounds.width,
+        bounds.height
+      );
+      this.surface.paint();
     }
     destroy() {
       this.view.destroy();
     }
+    measureBounds(curve, presentation) {
+      var _a3, _b2;
+      const strokeWidth = Math.max(
+        1,
+        toFiniteNumber$3(presentation.strokeWidth, 3)
+      );
+      const dotRadius = Math.max(
+        strokeWidth,
+        toFiniteNumber$3((_a3 = presentation.flow) == null ? void 0 : _a3.dotRadius, 5)
+      );
+      const padding = Math.ceil(Math.max(strokeWidth, dotRadius) + 8);
+      let minX = Math.min(
+        curve.start[0],
+        curve.c1[0],
+        curve.c2[0],
+        curve.end[0]
+      );
+      let minY = Math.min(
+        curve.start[1],
+        curve.c1[1],
+        curve.c2[1],
+        curve.end[1]
+      );
+      let maxX = Math.max(
+        curve.start[0],
+        curve.c1[0],
+        curve.c2[0],
+        curve.end[0]
+      );
+      let maxY = Math.max(
+        curve.start[1],
+        curve.c1[1],
+        curve.c2[1],
+        curve.end[1]
+      );
+      const dots = ((_b2 = presentation.flow) == null ? void 0 : _b2.dots) || [];
+      for (let i2 = 0; i2 < dots.length; ++i2) {
+        const point = dots[i2];
+        minX = Math.min(minX, point[0] - dotRadius);
+        minY = Math.min(minY, point[1] - dotRadius);
+        maxX = Math.max(maxX, point[0] + dotRadius);
+        maxY = Math.max(maxY, point[1] + dotRadius);
+      }
+      return {
+        x: Math.floor(minX) - padding,
+        y: Math.floor(minY) - padding,
+        width: Math.max(1, Math.ceil(maxX - minX) + padding * 2),
+        height: Math.max(1, Math.ceil(maxY - minY) + padding * 2)
+      };
+    }
+    ensureCanvasSize(width2, height) {
+      if (this.offscreenCanvas.width !== width2 || this.offscreenCanvas.height !== height) {
+        this.offscreenCanvas.width = width2;
+        this.offscreenCanvas.height = height;
+      }
+      if (this.surface.width !== width2) {
+        this.surface.width = width2;
+      }
+      if (this.surface.height !== height) {
+        this.surface.height = height;
+      }
+    }
+    paintToOffscreen(bounds, presentation) {
+      const { curve } = presentation;
+      if (!curve) {
+        return;
+      }
+      const ctx = this.offscreenContext;
+      const strokeWidth = Math.max(
+        1,
+        toFiniteNumber$3(presentation.strokeWidth, 3)
+      );
+      const baseColor = presentation.stroke || "#9A9";
+      const flow = presentation.flow;
+      const dotRadius = Math.max(
+        1,
+        toFiniteNumber$3(flow == null ? void 0 : flow.dotRadius, 5)
+      );
+      const opacity = Math.max(
+        0,
+        Math.min(1, toFiniteNumber$3(flow == null ? void 0 : flow.opacity, 1))
+      );
+      ctx.save();
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.clearRect(0, 0, bounds.width, bounds.height);
+      ctx.lineWidth = strokeWidth;
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+      ctx.strokeStyle = baseColor;
+      this.traceCurve(ctx, curve, bounds);
+      ctx.stroke();
+      if (flow == null ? void 0 : flow.active) {
+        ctx.globalAlpha = opacity;
+        ctx.strokeStyle = flow.color || "#FFF";
+        this.traceCurve(ctx, curve, bounds);
+        ctx.stroke();
+        ctx.fillStyle = flow.color || "#FFF";
+        const dots = flow.dots || [];
+        for (let i2 = 0; i2 < dots.length; ++i2) {
+          const point = toLocalPoint(dots[i2], bounds);
+          ctx.beginPath();
+          ctx.arc(point[0], point[1], dotRadius, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+      ctx.restore();
+    }
+    traceCurve(context, curve, bounds) {
+      const start = toLocalPoint(curve.start, bounds);
+      const c1 = toLocalPoint(curve.c1, bounds);
+      const c2 = toLocalPoint(curve.c2, bounds);
+      const end = toLocalPoint(curve.end, bounds);
+      context.beginPath();
+      context.moveTo(start[0], start[1]);
+      context.bezierCurveTo(c1[0], c1[1], c2[0], c2[1], end[0], end[1]);
+    }
   }
-  function toFiniteNumber$1(value, fallback = 0) {
+  function toFiniteNumber$2(value, fallback = 0) {
     const numericValue = Number(value);
     return Number.isFinite(numericValue) ? numericValue : fallback;
   }
   function toPoint(value) {
     if (value && typeof value === "object" && ("0" in value || ArrayBuffer.isView(value))) {
       const indexed = value;
-      return [toFiniteNumber$1(indexed[0]), toFiniteNumber$1(indexed[1])];
+      return [toFiniteNumber$2(indexed[0]), toFiniteNumber$2(indexed[1])];
     }
     if (value && typeof value === "object" && "x" in value && "y" in value) {
       const point = value;
-      return [toFiniteNumber$1(point.x), toFiniteNumber$1(point.y)];
+      return [toFiniteNumber$2(point.x), toFiniteNumber$2(point.y)];
     }
     return null;
   }
   function createFallbackContent(node2) {
     var _a3, _b2;
-    const width2 = Math.max(toFiniteNumber$1((_a3 = node2.size) == null ? void 0 : _a3[0], 160), 120);
-    const height = Math.max(toFiniteNumber$1((_b2 = node2.size) == null ? void 0 : _b2[1], 80), 60);
+    const width2 = Math.max(toFiniteNumber$2((_a3 = node2.size) == null ? void 0 : _a3[0], 160), 120);
+    const height = Math.max(toFiniteNumber$2((_b2 = node2.size) == null ? void 0 : _b2[1], 80), 60);
     const group = new ye$1({
       name: `litegraph-modern-node-fallback:${String(node2.id)}`,
       hittable: false
@@ -12656,8 +12938,8 @@ var LiteGraphTSMigration = (function(exports) {
     }
     syncPosition() {
       var _a3, _b2;
-      this.root.x = toFiniteNumber$1((_a3 = this.node.pos) == null ? void 0 : _a3[0]);
-      this.root.y = toFiniteNumber$1((_b2 = this.node.pos) == null ? void 0 : _b2[1]);
+      this.root.x = toFiniteNumber$2((_a3 = this.node.pos) == null ? void 0 : _a3[0]);
+      this.root.y = toFiniteNumber$2((_b2 = this.node.pos) == null ? void 0 : _b2[1]);
     }
     destroy() {
       this.root.destroy();
@@ -12670,8 +12952,8 @@ var LiteGraphTSMigration = (function(exports) {
           return [layout.x, layout.y];
         }
         return [
-          toFiniteNumber$1((_a3 = this.node.pos) == null ? void 0 : _a3[0]) + layout.x,
-          toFiniteNumber$1((_b2 = this.node.pos) == null ? void 0 : _b2[1]) + layout.y
+          toFiniteNumber$2((_a3 = this.node.pos) == null ? void 0 : _a3[0]) + layout.x,
+          toFiniteNumber$2((_b2 = this.node.pos) == null ? void 0 : _b2[1]) + layout.y
         ];
       }
       const fallbackPoint = toPoint(
@@ -12682,7 +12964,7 @@ var LiteGraphTSMigration = (function(exports) {
     getPortDirection(kind, slotIndex) {
       const layout = this.resolvePortLayout(kind, slotIndex);
       if ((layout == null ? void 0 : layout.dir) != null) {
-        return toFiniteNumber$1(layout.dir);
+        return toFiniteNumber$2(layout.dir);
       }
       return kind === "input" ? PORT_DIRECTION_LEFT : PORT_DIRECTION_RIGHT;
     }
@@ -12756,6 +13038,10 @@ var LiteGraphTSMigration = (function(exports) {
   function toMutationKey(id) {
     return String(id);
   }
+  function toFiniteNumber$1(value, fallback = 0) {
+    const numericValue = Number(value);
+    return Number.isFinite(numericValue) ? numericValue : fallback;
+  }
   class SceneSyncController {
     constructor(graph, bus, appHost, renderHost) {
       this.graph = graph;
@@ -12769,6 +13055,20 @@ var LiteGraphTSMigration = (function(exports) {
       this.nodesById = /* @__PURE__ */ new Map();
       this.linksById = /* @__PURE__ */ new Map();
       this.dirtyBridgeUninstallers = /* @__PURE__ */ new Map();
+      this.activeLinkIds = /* @__PURE__ */ new Set();
+      this.pendingSettledNodeRepaints = /* @__PURE__ */ new Set();
+      this.runtimeAnimationFrame = null;
+      this.handleRuntimeAnimationFrame = () => {
+        this.runtimeAnimationFrame = null;
+        const nodeFrame = this.repaintAnimatedNodes();
+        const linkFrame = this.refreshActiveLinkAnimations();
+        if (nodeFrame.didUpdate || linkFrame.didUpdate) {
+          this.requestSceneRender();
+        }
+        if (nodeFrame.hasMore || linkFrame.hasMore) {
+          this.ensureRuntimeAnimationFrame();
+        }
+      };
       this.nodePortAdapter = new NodePortAdapter(
         graph,
         {
@@ -12806,6 +13106,20 @@ var LiteGraphTSMigration = (function(exports) {
       }
       this.unsubscribers.length = 0;
       this.clearScene();
+    }
+    requestRuntimeAnimation(forceNodeRepaint = false) {
+      let hasPendingNodeFrames = this.pendingSettledNodeRepaints.size > 0 || this.hasAnyTransientNodeAnimation();
+      if (forceNodeRepaint) {
+        const activeNodeIds = this.captureActiveTransientNodeIds();
+        this.repaintAllNodeHosts();
+        hasPendingNodeFrames = this.syncPendingSettledNodeRepaints(activeNodeIds) || this.pendingSettledNodeRepaints.size > 0;
+      }
+      this.collectActiveLinks();
+      const linkRefresh = this.refreshActiveLinkAnimations();
+      this.requestSceneRender();
+      if (linkRefresh.hasMore || hasPendingNodeFrames) {
+        this.ensureRuntimeAnimationFrame();
+      }
     }
     repaintNodeHost(nodeId) {
       var _a3;
@@ -12850,6 +13164,7 @@ var LiteGraphTSMigration = (function(exports) {
       }
     }
     clearScene() {
+      this.cancelRuntimeAnimationFrame();
       for (const host of this.nodeHosts.values()) {
         host.destroy();
       }
@@ -12865,6 +13180,8 @@ var LiteGraphTSMigration = (function(exports) {
       this.nodesById.clear();
       this.linksById.clear();
       this.dirtyBridgeUninstallers.clear();
+      this.activeLinkIds.clear();
+      this.pendingSettledNodeRepaints.clear();
     }
     ensureNodeHost(node2) {
       const nodeId = node2.id;
@@ -12917,6 +13234,7 @@ var LiteGraphTSMigration = (function(exports) {
       this.dirtyBridgeUninstallers.delete(nodeId);
       this.nodesById.delete(nodeId);
       this.linksByNodeId.delete(nodeId);
+      this.pendingSettledNodeRepaints.delete(nodeId);
     }
     ensureLinkView(linkId, link) {
       const existingView = this.linkViews.get(linkId);
@@ -12957,6 +13275,7 @@ var LiteGraphTSMigration = (function(exports) {
         this.linkViews.delete(linkId);
       }
       this.linksById.delete(linkId);
+      this.activeLinkIds.delete(linkId);
       if (!resolvedLink) {
         return;
       }
@@ -13032,30 +13351,188 @@ var LiteGraphTSMigration = (function(exports) {
         this.syncLinkView(linkId);
       }
     }
-    syncLinkView(linkId, providedLink, providedView) {
+    syncLinkView(linkId, providedLink, providedView, now = this.getRuntimeNow()) {
       const link = providedLink || this.linksById.get(linkId);
       const view = providedView || this.linkViews.get(linkId);
       if (!link || !view) {
-        return;
+        this.activeLinkIds.delete(linkId);
+        return false;
       }
-      const layout = this.nodePortAdapter.getLinkLayout(link);
-      if (!layout) {
+      const curve = this.nodePortAdapter.getLinkCurve(link);
+      if (!curve) {
         view.update({
-          path: "M 0 0 L 0 0",
-          visible: false
+          curve: null,
+          visible: false,
+          flow: {
+            active: false
+          }
         });
+        this.activeLinkIds.delete(linkId);
+        return false;
+      }
+      const flow = this.buildLinkFlowPresentation(
+        link,
+        curve,
+        now
+      );
+      view.update({
+        curve,
+        stroke: link.color || "#9A9",
+        strokeWidth: 3,
+        visible: true,
+        flow
+      });
+      if (flow.active) {
+        this.activeLinkIds.add(linkId);
+        return true;
+      }
+      this.activeLinkIds.delete(linkId);
+      return false;
+    }
+    getRuntimeWindow() {
+      var _a3;
+      return ((_a3 = this.appHost.view.ownerDocument) == null ? void 0 : _a3.defaultView) || window;
+    }
+    getRuntimeNow() {
+      var _a3, _b2, _c2;
+      const runtimeWindow = this.getRuntimeWindow();
+      return (_c2 = (_b2 = (_a3 = runtimeWindow.performance) == null ? void 0 : _a3.now) == null ? void 0 : _b2.call(_a3)) != null ? _c2 : Date.now();
+    }
+    requestSceneRender() {
+      if (typeof this.appHost.app.requestRender === "function") {
+        this.appHost.app.requestRender();
         return;
       }
-      view.update({
-        path: this.nodePortAdapter.buildLinkPath(
-          layout.start,
-          layout.end,
-          layout.startDir,
-          layout.endDir
-        ),
-        stroke: link.color || "#9A9",
-        visible: true
-      });
+      this.appHost.app.forceRender();
+    }
+    ensureRuntimeAnimationFrame() {
+      if (this.runtimeAnimationFrame !== null) {
+        return;
+      }
+      this.runtimeAnimationFrame = this.getRuntimeWindow().requestAnimationFrame(
+        this.handleRuntimeAnimationFrame
+      );
+    }
+    cancelRuntimeAnimationFrame() {
+      if (this.runtimeAnimationFrame === null) {
+        return;
+      }
+      this.getRuntimeWindow().cancelAnimationFrame(this.runtimeAnimationFrame);
+      this.runtimeAnimationFrame = null;
+    }
+    repaintAnimatedNodes() {
+      let didUpdate = false;
+      if (this.pendingSettledNodeRepaints.size) {
+        const settledIds = Array.from(this.pendingSettledNodeRepaints);
+        this.pendingSettledNodeRepaints.clear();
+        for (let i2 = 0; i2 < settledIds.length; ++i2) {
+          this.repaintNodeHost(settledIds[i2]);
+          didUpdate = true;
+        }
+      }
+      const activeNodeIds = this.captureActiveTransientNodeIds();
+      if (activeNodeIds.length) {
+        this.repaintNodeHosts(activeNodeIds);
+        didUpdate = true;
+      }
+      return {
+        didUpdate,
+        hasMore: this.syncPendingSettledNodeRepaints(activeNodeIds) || this.pendingSettledNodeRepaints.size > 0
+      };
+    }
+    hasTransientNodeAnimation(node2) {
+      const animatedNode = node2;
+      return toFiniteNumber$1(animatedNode.execute_triggered) > 0 || toFiniteNumber$1(animatedNode.action_triggered) > 0;
+    }
+    hasAnyTransientNodeAnimation() {
+      for (const node2 of this.nodesById.values()) {
+        if (this.hasTransientNodeAnimation(node2)) {
+          return true;
+        }
+      }
+      return false;
+    }
+    captureActiveTransientNodeIds() {
+      const activeNodeIds = [];
+      for (const [nodeId, node2] of this.nodesById.entries()) {
+        if (this.hasTransientNodeAnimation(node2)) {
+          activeNodeIds.push(nodeId);
+        }
+      }
+      return activeNodeIds;
+    }
+    syncPendingSettledNodeRepaints(activeNodeIds) {
+      let hasMore = false;
+      for (let i2 = 0; i2 < activeNodeIds.length; ++i2) {
+        const nodeId = activeNodeIds[i2];
+        const node2 = this.nodesById.get(nodeId);
+        if (!node2) {
+          continue;
+        }
+        if (this.hasTransientNodeAnimation(node2)) {
+          hasMore = true;
+          continue;
+        }
+        this.pendingSettledNodeRepaints.add(nodeId);
+        hasMore = true;
+      }
+      return hasMore;
+    }
+    collectActiveLinks() {
+      const now = this.getRuntimeNow();
+      for (const [linkId, link] of this.linksById.entries()) {
+        if (this.isLinkFlowActive(link, now)) {
+          this.activeLinkIds.add(linkId);
+        }
+      }
+    }
+    refreshActiveLinkAnimations() {
+      if (!this.activeLinkIds.size) {
+        return { didUpdate: false, hasMore: false };
+      }
+      const now = this.getRuntimeNow();
+      let didUpdate = false;
+      let hasActiveLinks = false;
+      for (const linkId of Array.from(this.activeLinkIds)) {
+        const wasTracked = this.activeLinkIds.has(linkId);
+        const isActive = this.syncLinkView(linkId, void 0, void 0, now);
+        if (wasTracked || isActive) {
+          didUpdate = true;
+        }
+        if (isActive) {
+          hasActiveLinks = true;
+        }
+      }
+      return { didUpdate, hasMore: hasActiveLinks };
+    }
+    isLinkFlowActive(link, now) {
+      const lastTime = toFiniteNumber$1(link._last_time);
+      return Boolean(lastTime) && now - lastTime < 1e3;
+    }
+    buildLinkFlowPresentation(link, curve, now) {
+      const lastTime = toFiniteNumber$1(link._last_time);
+      if (!lastTime) {
+        return { active: false };
+      }
+      const elapsed = now - lastTime;
+      if (elapsed < 0 || elapsed >= 1e3) {
+        return { active: false };
+      }
+      const opacity = Math.max(0, Math.min(1, 2 - elapsed * 2e-3));
+      const dots = Array.from(
+        { length: 5 },
+        (_2, index) => this.nodePortAdapter.getPointOnLinkCurve(
+          curve,
+          (now * 1e-3 + index * 0.2) % 1
+        )
+      );
+      return {
+        active: true,
+        color: "#FFF",
+        opacity,
+        dotRadius: 5,
+        dots
+      };
     }
   }
   function D(t2) {
@@ -14824,15 +15301,16 @@ var LiteGraphTSMigration = (function(exports) {
       }
     }
     requestRuntimeRender(forceNodeRepaint = false) {
-      var _a3, _b2, _c2;
+      var _a3, _b2;
       if (this.renderRuntime === "leafer") {
-        if (forceNodeRepaint) {
-          (_a3 = this.sceneSyncController) == null ? void 0 : _a3.repaintAllNodeHosts();
+        if (this.sceneSyncController) {
+          this.sceneSyncController.requestRuntimeAnimation(forceNodeRepaint);
+          return;
         }
-        if (typeof ((_b2 = this.leaferAppHost) == null ? void 0 : _b2.app.requestRender) === "function") {
+        if (typeof ((_a3 = this.leaferAppHost) == null ? void 0 : _a3.app.requestRender) === "function") {
           this.leaferAppHost.app.requestRender();
         } else {
-          (_c2 = this.leaferAppHost) == null ? void 0 : _c2.app.forceRender();
+          (_b2 = this.leaferAppHost) == null ? void 0 : _b2.app.forceRender();
         }
         return;
       }

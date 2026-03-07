@@ -83,6 +83,12 @@ export interface LinkEndpointLayout {
     readonly endDir: number;
 }
 
+export interface LinkCurveGeometry extends LinkEndpointLayout {
+    readonly c1: readonly [number, number];
+    readonly c2: readonly [number, number];
+    readonly path: string;
+}
+
 export interface NodePortAdapterOptions {
     resolveNodeHost?: (nodeId: GraphMutationNodeId) => NodeViewHost | null;
 }
@@ -332,12 +338,26 @@ export class NodePortAdapter {
         };
     }
 
-    buildLinkPath(
+    getLinkCurve(link: GraphMutationLinkLike): LinkCurveGeometry | null {
+        const layout = this.getLinkLayout(link);
+        if (!layout) {
+            return null;
+        }
+
+        return this.buildLinkCurve(
+            layout.start,
+            layout.end,
+            layout.startDir,
+            layout.endDir
+        );
+    }
+
+    buildLinkCurve(
         start: readonly [number, number],
         end: readonly [number, number],
         startDir: number,
         endDir: number
-    ): string {
+    ): LinkCurveGeometry {
         const safeStart = toPoint(start);
         const safeEnd = toPoint(end);
         const dist = Math.max(distance(safeStart, safeEnd), 16);
@@ -364,6 +384,46 @@ export class NodePortAdapter {
             c2[1] += dist * 0.25;
         }
 
-        return `M ${safeStart[0]} ${safeStart[1]} C ${c1[0]} ${c1[1]} ${c2[0]} ${c2[1]} ${safeEnd[0]} ${safeEnd[1]}`;
+        return {
+            start: safeStart,
+            end: safeEnd,
+            startDir,
+            endDir,
+            c1,
+            c2,
+            path: `M ${safeStart[0]} ${safeStart[1]} C ${c1[0]} ${c1[1]} ${c2[0]} ${c2[1]} ${safeEnd[0]} ${safeEnd[1]}`,
+        };
+    }
+
+    buildLinkPath(
+        start: readonly [number, number],
+        end: readonly [number, number],
+        startDir: number,
+        endDir: number
+    ): string {
+        return this.buildLinkCurve(start, end, startDir, endDir).path;
+    }
+
+    getPointOnLinkCurve(
+        curve: LinkCurveGeometry,
+        t: number
+    ): readonly [number, number] {
+        const clampedT = Math.max(0, Math.min(1, toFiniteNumber(t, 0)));
+        const oneMinusT = 1 - clampedT;
+        const c1 = oneMinusT * oneMinusT * oneMinusT;
+        const c2 = 3 * oneMinusT * oneMinusT * clampedT;
+        const c3 = 3 * oneMinusT * clampedT * clampedT;
+        const c4 = clampedT * clampedT * clampedT;
+
+        return [
+            c1 * curve.start[0] +
+                c2 * curve.c1[0] +
+                c3 * curve.c2[0] +
+                c4 * curve.end[0],
+            c1 * curve.start[1] +
+                c2 * curve.c1[1] +
+                c3 * curve.c2[1] +
+                c4 * curve.end[1],
+        ];
     }
 }

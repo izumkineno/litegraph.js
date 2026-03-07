@@ -1283,9 +1283,11 @@ export class LGraphCanvasLifecycle extends LGraphCanvasStatic {
 
     requestRuntimeRender(forceNodeRepaint = false): void {
         if (this.renderRuntime === "leafer") {
-            if (forceNodeRepaint) {
-                this.sceneSyncController?.repaintAllNodeHosts();
+            if (this.sceneSyncController) {
+                this.sceneSyncController.requestRuntimeAnimation(forceNodeRepaint);
+                return;
             }
+
             if (typeof this.leaferAppHost?.app.requestRender === "function") {
                 this.leaferAppHost.app.requestRender();
             } else {

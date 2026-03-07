@@ -62,14 +62,14 @@ export class ConnectionController {
         const endDir = target
             ? target.dir
             : getOppositePortDirection(source.dir);
-        const path = this.nodePortAdapter.buildLinkPath(
+        const curve = this.nodePortAdapter.buildLinkCurve(
             source.anchor,
             endPoint,
             source.dir,
             endDir
         );
 
-        this.overlayPrimitives.setConnectionPreview(path);
+        this.overlayPrimitives.setConnectionPreview(curve);
     }
 
     finish(worldX: number, worldY: number): boolean {

@@ -29,8 +29,23 @@ interface DirtyCapableNode extends GraphMutationNodeLike {
     ) => void;
 }
 
+interface RuntimeAnimatedNode extends GraphMutationNodeLike {
+    execute_triggered?: number;
+    action_triggered?: number;
+}
+
+interface RuntimeAnimatedLink extends GraphMutationLinkLike {
+    _last_time?: number;
+    color?: unknown;
+}
+
 function toMutationKey(id: GraphMutationNodeId | GraphMutationLinkId): string {
     return String(id);
+}
+
+function toFiniteNumber(value: unknown, fallback = 0): number {
+    const numericValue = Number(value);
+    return Number.isFinite(numericValue) ? numericValue : fallback;
 }
 
 export class SceneSyncController {
@@ -46,6 +61,9 @@ export class SceneSyncController {
         GraphMutationNodeId,
         () => void
     >();
+    private readonly activeLinkIds = new Set<GraphMutationLinkId>();
+    private readonly pendingSettledNodeRepaints = new Set<GraphMutationNodeId>();
+    private runtimeAnimationFrame: number | null = null;
 
     constructor(
         private readonly graph: GraphMutationGraphLike,
@@ -96,6 +114,27 @@ export class SceneSyncController {
         }
         this.unsubscribers.length = 0;
         this.clearScene();
+    }
+
+    requestRuntimeAnimation(forceNodeRepaint = false): void {
+        let hasPendingNodeFrames =
+            this.pendingSettledNodeRepaints.size > 0 ||
+            this.hasAnyTransientNodeAnimation();
+        if (forceNodeRepaint) {
+            const activeNodeIds = this.captureActiveTransientNodeIds();
+            this.repaintAllNodeHosts();
+            hasPendingNodeFrames =
+                this.syncPendingSettledNodeRepaints(activeNodeIds) ||
+                this.pendingSettledNodeRepaints.size > 0;
+        }
+
+        this.collectActiveLinks();
+        const linkRefresh = this.refreshActiveLinkAnimations();
+
+        this.requestSceneRender();
+        if (linkRefresh.hasMore || hasPendingNodeFrames) {
+            this.ensureRuntimeAnimationFrame();
+        }
     }
 
     repaintNodeHost(nodeId: GraphMutationNodeId): void {
@@ -152,6 +191,7 @@ export class SceneSyncController {
     }
 
     private clearScene(): void {
+        this.cancelRuntimeAnimationFrame();
         for (const host of this.nodeHosts.values()) {
             host.destroy();
         }
@@ -168,6 +208,8 @@ export class SceneSyncController {
         this.nodesById.clear();
         this.linksById.clear();
         this.dirtyBridgeUninstallers.clear();
+        this.activeLinkIds.clear();
+        this.pendingSettledNodeRepaints.clear();
     }
 
     private ensureNodeHost(node: GraphMutationNodeLike): NodeHost {
@@ -236,6 +278,7 @@ export class SceneSyncController {
         this.dirtyBridgeUninstallers.delete(nodeId);
         this.nodesById.delete(nodeId);
         this.linksByNodeId.delete(nodeId);
+        this.pendingSettledNodeRepaints.delete(nodeId);
     }
 
     private ensureLinkView(
@@ -287,6 +330,7 @@ export class SceneSyncController {
         }
 
         this.linksById.delete(linkId);
+        this.activeLinkIds.delete(linkId);
         if (!resolvedLink) {
             return;
         }
@@ -393,32 +437,252 @@ export class SceneSyncController {
     private syncLinkView(
         linkId: GraphMutationLinkId,
         providedLink?: GraphMutationLinkLike,
-        providedView?: LinkView
-    ): void {
+        providedView?: LinkView,
+        now = this.getRuntimeNow()
+    ): boolean {
         const link = providedLink || this.linksById.get(linkId);
         const view = providedView || this.linkViews.get(linkId);
         if (!link || !view) {
-            return;
+            this.activeLinkIds.delete(linkId);
+            return false;
         }
 
-        const layout = this.nodePortAdapter.getLinkLayout(link);
-        if (!layout) {
+        const curve = this.nodePortAdapter.getLinkCurve(link);
+        if (!curve) {
             view.update({
-                path: "M 0 0 L 0 0",
+                curve: null,
                 visible: false,
+                flow: {
+                    active: false,
+                },
             });
+            this.activeLinkIds.delete(linkId);
+            return false;
+        }
+
+        const flow = this.buildLinkFlowPresentation(
+            link as RuntimeAnimatedLink,
+            curve,
+            now
+        );
+        view.update({
+            curve,
+            stroke: (link.color as string) || "#9A9",
+            strokeWidth: 3,
+            visible: true,
+            flow,
+        });
+
+        if (flow.active) {
+            this.activeLinkIds.add(linkId);
+            return true;
+        }
+
+        this.activeLinkIds.delete(linkId);
+        return false;
+    }
+
+    private getRuntimeWindow(): Window {
+        return this.appHost.view.ownerDocument?.defaultView || window;
+    }
+
+    private getRuntimeNow(): number {
+        const runtimeWindow = this.getRuntimeWindow() as Window & {
+            performance?: { now?: () => number };
+        };
+        return runtimeWindow.performance?.now?.() ?? Date.now();
+    }
+
+    private requestSceneRender(): void {
+        if (typeof this.appHost.app.requestRender === "function") {
+            this.appHost.app.requestRender();
             return;
         }
 
-        view.update({
-            path: this.nodePortAdapter.buildLinkPath(
-                layout.start,
-                layout.end,
-                layout.startDir,
-                layout.endDir
-            ),
-            stroke: (link.color as string) || "#9A9",
-            visible: true,
-        });
+        this.appHost.app.forceRender();
+    }
+
+    private ensureRuntimeAnimationFrame(): void {
+        if (this.runtimeAnimationFrame !== null) {
+            return;
+        }
+
+        this.runtimeAnimationFrame = this.getRuntimeWindow().requestAnimationFrame(
+            this.handleRuntimeAnimationFrame
+        );
+    }
+
+    private cancelRuntimeAnimationFrame(): void {
+        if (this.runtimeAnimationFrame === null) {
+            return;
+        }
+
+        this.getRuntimeWindow().cancelAnimationFrame(this.runtimeAnimationFrame);
+        this.runtimeAnimationFrame = null;
+    }
+
+    private readonly handleRuntimeAnimationFrame = (): void => {
+        this.runtimeAnimationFrame = null;
+
+        const nodeFrame = this.repaintAnimatedNodes();
+        const linkFrame = this.refreshActiveLinkAnimations();
+        if (nodeFrame.didUpdate || linkFrame.didUpdate) {
+            this.requestSceneRender();
+        }
+        if (nodeFrame.hasMore || linkFrame.hasMore) {
+            this.ensureRuntimeAnimationFrame();
+        }
+    };
+
+    private repaintAnimatedNodes(): { didUpdate: boolean; hasMore: boolean } {
+        let didUpdate = false;
+
+        if (this.pendingSettledNodeRepaints.size) {
+            const settledIds = Array.from(this.pendingSettledNodeRepaints);
+            this.pendingSettledNodeRepaints.clear();
+            for (let i = 0; i < settledIds.length; ++i) {
+                this.repaintNodeHost(settledIds[i]);
+                didUpdate = true;
+            }
+        }
+
+        const activeNodeIds = this.captureActiveTransientNodeIds();
+        if (activeNodeIds.length) {
+            this.repaintNodeHosts(activeNodeIds);
+            didUpdate = true;
+        }
+
+        return {
+            didUpdate,
+            hasMore:
+                this.syncPendingSettledNodeRepaints(activeNodeIds) ||
+                this.pendingSettledNodeRepaints.size > 0,
+        };
+    }
+
+    private hasTransientNodeAnimation(node: GraphMutationNodeLike): boolean {
+        const animatedNode = node as RuntimeAnimatedNode;
+        return (
+            toFiniteNumber(animatedNode.execute_triggered) > 0 ||
+            toFiniteNumber(animatedNode.action_triggered) > 0
+        );
+    }
+
+    private hasAnyTransientNodeAnimation(): boolean {
+        for (const node of this.nodesById.values()) {
+            if (this.hasTransientNodeAnimation(node)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private captureActiveTransientNodeIds(): GraphMutationNodeId[] {
+        const activeNodeIds: GraphMutationNodeId[] = [];
+        for (const [nodeId, node] of this.nodesById.entries()) {
+            if (this.hasTransientNodeAnimation(node)) {
+                activeNodeIds.push(nodeId);
+            }
+        }
+
+        return activeNodeIds;
+    }
+
+    private syncPendingSettledNodeRepaints(
+        activeNodeIds: readonly GraphMutationNodeId[]
+    ): boolean {
+        let hasMore = false;
+
+        for (let i = 0; i < activeNodeIds.length; ++i) {
+            const nodeId = activeNodeIds[i];
+            const node = this.nodesById.get(nodeId);
+            if (!node) {
+                continue;
+            }
+
+            if (this.hasTransientNodeAnimation(node)) {
+                hasMore = true;
+                continue;
+            }
+
+            this.pendingSettledNodeRepaints.add(nodeId);
+            hasMore = true;
+        }
+
+        return hasMore;
+    }
+
+    private collectActiveLinks(): void {
+        const now = this.getRuntimeNow();
+        for (const [linkId, link] of this.linksById.entries()) {
+            if (this.isLinkFlowActive(link as RuntimeAnimatedLink, now)) {
+                this.activeLinkIds.add(linkId);
+            }
+        }
+    }
+
+    private refreshActiveLinkAnimations(): {
+        didUpdate: boolean;
+        hasMore: boolean;
+    } {
+        if (!this.activeLinkIds.size) {
+            return { didUpdate: false, hasMore: false };
+        }
+
+        const now = this.getRuntimeNow();
+        let didUpdate = false;
+        let hasActiveLinks = false;
+        for (const linkId of Array.from(this.activeLinkIds)) {
+            const wasTracked = this.activeLinkIds.has(linkId);
+            const isActive = this.syncLinkView(linkId, undefined, undefined, now);
+            if (wasTracked || isActive) {
+                didUpdate = true;
+            }
+            if (isActive) {
+                hasActiveLinks = true;
+            }
+        }
+
+        return { didUpdate, hasMore: hasActiveLinks };
+    }
+
+    private isLinkFlowActive(link: RuntimeAnimatedLink, now: number): boolean {
+        const lastTime = toFiniteNumber(link._last_time);
+        return Boolean(lastTime) && now - lastTime < 1000;
+    }
+
+    private buildLinkFlowPresentation(
+        link: RuntimeAnimatedLink,
+        curve: ReturnType<NodePortAdapter["getLinkCurve"]> extends infer TResult
+            ? Exclude<TResult, null>
+            : never,
+        now: number
+    ): NonNullable<Parameters<LinkView["update"]>[0]["flow"]> {
+        const lastTime = toFiniteNumber(link._last_time);
+        if (!lastTime) {
+            return { active: false };
+        }
+
+        const elapsed = now - lastTime;
+        if (elapsed < 0 || elapsed >= 1000) {
+            return { active: false };
+        }
+
+        const opacity = Math.max(0, Math.min(1, 2 - elapsed * 0.002));
+        const dots = Array.from({ length: 5 }, (_, index) =>
+            this.nodePortAdapter.getPointOnLinkCurve(
+                curve,
+                (now * 0.001 + index * 0.2) % 1
+            )
+        );
+
+        return {
+            active: true,
+            color: "#FFF",
+            opacity,
+            dotRadius: 5,
+            dots,
+        };
     }
 }
