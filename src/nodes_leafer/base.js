@@ -110,6 +110,31 @@
         danger: "#F87171"
     };
 
+    var FONT_FAMILY_SANS = "\"Noto Sans SC\", \"Microsoft YaHei\", \"PingFang SC\", \"Helvetica Neue\", Arial, sans-serif";
+    var FONT_FAMILY_META = "\"Noto Sans SC\", \"Microsoft YaHei\", \"PingFang SC\", Arial, sans-serif";
+    var FONT_FAMILY_MONO = "\"JetBrains Mono\", \"Cascadia Mono\", \"SFMono-Regular\", \"Microsoft YaHei UI\", monospace";
+
+    var FLOW_LAYOUT = {
+        minWidth: 256,
+        maxWidth: 376,
+        headerHeight: 58,
+        collapsedHeight: 42,
+        bodyPaddingX: 16,
+        bodyPaddingY: 12,
+        sectionGap: 10,
+        summaryHeight: 52,
+        sectionInsetX: 12,
+        sectionInsetY: 10,
+        collapsedPaddingX: 14,
+        collapsedContentGap: 8,
+        collapsedPreviewPaddingX: 8,
+        portHeaderHeight: 18,
+        widgetHeaderHeight: 18,
+        portRowHeight: 22,
+        widgetGap: 8,
+        footerHeight: 16
+    };
+
     function toFiniteNumber(value, fallback) {
         var numericValue = Number(value);
         return Number.isFinite(numericValue) ? numericValue : (fallback == null ? 0 : fallback);
@@ -374,6 +399,9 @@
         var inputs = node && Array.isArray(node.inputs) ? node.inputs.length : 0;
         var outputs = node && Array.isArray(node.outputs) ? node.outputs.length : 0;
         var widgets = node && Array.isArray(node.widgets) ? node.widgets.length : 0;
+        if (inputs <= 1 && outputs <= 1 && widgets <= 1) {
+            return "";
+        }
         var footer = [inputs + " in", outputs + " out"];
         if (widgets) {
             footer.push(widgets + " widgets");
@@ -440,6 +468,60 @@
         }
     }
 
+    function getNodeTitle(node, sourceType) {
+        return typeof node.getTitle === "function" ? node.getTitle() : (node.title || sourceType);
+    }
+
+    function getStableNodeTitle(node, sourceType) {
+        return (
+            (node && node.title) ||
+            (node && node.constructor && node.constructor.title) ||
+            sourceType
+        );
+    }
+
+    function getCollapsedPreview(node, sourceType) {
+        var preview = truncateText(describeNode(node, sourceType), 28);
+        var stableTitle = String(getStableNodeTitle(node, sourceType) || "");
+        var liveTitle = String(getNodeTitle(node, sourceType) || "");
+        var sourceLabel = String(sourceType || "").split("/")[1] || sourceType;
+
+        if (!preview || preview === stableTitle || preview === liveTitle) {
+            if (liveTitle && liveTitle !== stableTitle) {
+                preview = liveTitle;
+            } else if (sourceLabel && sourceLabel !== stableTitle) {
+                preview = sourceLabel;
+            }
+        }
+
+        return truncateText(preview, 24);
+    }
+
+    function estimateTextWidth(text, fontSize, factor) {
+        return Math.ceil(String(text || "").length * fontSize * (factor || 0.58));
+    }
+
+    function measureCollapsedWidth(node, sourceType, expandedWidth) {
+        var title = getStableNodeTitle(node, sourceType);
+        var preview = getCollapsedPreview(node, sourceType);
+        var titleWidth = estimateTextWidth(title || sourceType, 13, 0.68) + 12;
+        var previewWidth = preview
+            ? estimateTextWidth(preview, 10, 0.56) + FLOW_LAYOUT.collapsedPreviewPaddingX * 2 + 6
+            : 0;
+        var measured = titleWidth + previewWidth + 76;
+        var fallbackWidth = Math.max(
+            FLOW_LAYOUT.minWidth,
+            toFiniteNumber(node && node.size && node.size[0], FLOW_LAYOUT.minWidth),
+            toFiniteNumber(expandedWidth, FLOW_LAYOUT.minWidth)
+        );
+        var collapsedWidth = Math.max(
+            124,
+            Math.min(Math.min(fallbackWidth, 280), measured)
+        );
+        node._collapsed_width = collapsedWidth;
+        return collapsedWidth;
+    }
+
     function setNodeSize(node, width, height) {
         if (!node.size || (!Array.isArray(node.size) && !ArrayBuffer.isView(node.size))) {
             node.size = [width, height];
@@ -449,7 +531,7 @@
         node.size[1] = height;
     }
 
-    function computeNodeVisualSize(node) {
+    function computeNodeVisualSize(node, sourceType) {
         var computed = null;
         if (node && typeof node.computeSize === "function" && !(node.flags && node.flags.collapsed)) {
             try {
@@ -463,26 +545,55 @@
         var currentHeight = toFiniteNumber(node && node.size && node.size[1], 0);
         var computedWidth = toFiniteNumber(computed && computed[0], 0);
         var computedHeight = toFiniteNumber(computed && computed[1], 0);
-        var slotCount = Math.max(
+        var portCount = Math.max(
             node && Array.isArray(node.inputs) ? node.inputs.length : 0,
             node && Array.isArray(node.outputs) ? node.outputs.length : 0,
-            1
+            0
         );
         var widgetList = Array.isArray(node && node.widgets) ? node.widgets : [];
         var widgetHeight = widgetList.reduce(function(total, widget, index) {
-            return total + getWidgetRowHeight(widget) + (index ? 8 : 0);
+            return total + getWidgetRowHeight(widget) + (index ? FLOW_LAYOUT.widgetGap : 0);
         }, 0);
+        var portHeight = portCount
+            ? FLOW_LAYOUT.sectionInsetY * 2 + FLOW_LAYOUT.portHeaderHeight + 6 + portCount * FLOW_LAYOUT.portRowHeight
+            : 0;
+        var widgetSectionHeight = widgetList.length
+            ? FLOW_LAYOUT.sectionInsetY * 2 + FLOW_LAYOUT.widgetHeaderHeight + 6 + widgetHeight
+            : 0;
         var collapsed = !!(node && node.flags && node.flags.collapsed);
-        var minWidth = Math.max(210, computedWidth, currentWidth);
-        var minHeight = collapsed
-            ? Math.max(46, currentHeight, computedHeight)
-            : Math.max(
-                122 + slotCount * 22 + widgetHeight,
-                currentHeight,
-                computedHeight,
-                136
-            );
+        var minWidth = Math.max(
+            FLOW_LAYOUT.minWidth,
+            currentWidth,
+            Math.min(
+                FLOW_LAYOUT.maxWidth,
+                Math.max(FLOW_LAYOUT.minWidth, computedWidth)
+            )
+        );
+        var minHeight = Math.max(
+            FLOW_LAYOUT.headerHeight +
+                FLOW_LAYOUT.bodyPaddingY * 2 +
+                FLOW_LAYOUT.summaryHeight +
+                portHeight +
+                widgetSectionHeight +
+                FLOW_LAYOUT.footerHeight +
+                FLOW_LAYOUT.sectionGap * 3 +
+                12,
+            currentHeight,
+            computedHeight,
+            128
+        );
 
+        if (collapsed) {
+            return {
+                width: measureCollapsedWidth(node, sourceType, minWidth),
+                height: FLOW_LAYOUT.collapsedHeight
+            };
+        }
+
+        node._collapsed_width = Math.min(
+            minWidth,
+            measureCollapsedWidth(node, sourceType, minWidth)
+        );
         setNodeSize(node, minWidth, minHeight);
         return {
             width: minWidth,
@@ -499,13 +610,31 @@
             return result;
         }
 
-        var labelWidth = Math.max(64, Math.floor(layout.width * 0.36));
-        var y = layout.header.height + 18;
-        var step = 22;
+        if (layout.collapsed) {
+            result.push({
+                index: isInput ? 0 : Math.max(0, count - 1),
+                x: isInput ? -10 : layout.width - 10,
+                y: layout.height * 0.5 - 10,
+                width: 20,
+                height: 20,
+                radius: 12,
+                dir: isInput ? 4 : 2,
+                labelX: 0,
+                labelY: 0,
+                labelWidth: 0,
+                labelAlign: isInput ? "left" : "right"
+            });
+            return result;
+        }
+
+        var section = layout.portSection;
+        var labelWidth = Math.max(64, Math.floor(section.width * 0.34));
+        var y = section.y + FLOW_LAYOUT.sectionInsetY + FLOW_LAYOUT.portHeaderHeight + 10;
+        var step = FLOW_LAYOUT.portRowHeight;
 
         for (var i = 0; i < count; ++i) {
             var centerY = y + i * step;
-            var centerX = isInput ? 12 : layout.width - 12;
+            var centerX = isInput ? section.x + 10 : section.x + section.width - 10;
             result.push({
                 index: i,
                 x: centerX - 10,
@@ -514,7 +643,7 @@
                 height: 20,
                 radius: 12,
                 dir: isInput ? 4 : 2,
-                labelX: isInput ? 28 : layout.width - labelWidth - 28,
+                labelX: isInput ? section.x + 22 : section.x + section.width - labelWidth - 22,
                 labelY: centerY - 7,
                 labelWidth: labelWidth,
                 labelAlign: isInput ? "left" : "right"
@@ -527,13 +656,13 @@
     function buildWidgetLayouts(node, layout) {
         var widgets = Array.isArray(node && node.widgets) ? node.widgets : [];
         var result = [];
-        if (!widgets.length || (node.flags && node.flags.collapsed)) {
+        if (!widgets.length || (node.flags && node.flags.collapsed) || !layout.widgetSection) {
             return result;
         }
 
-        var width = layout.width - 28;
-        var x = 14;
-        var top = layout.header.height + 22 + Math.max(layout.inputPorts.length, layout.outputPorts.length) * 22 + 18;
+        var width = layout.widgetSection.width;
+        var x = layout.widgetSection.x;
+        var top = layout.widgetSection.y + FLOW_LAYOUT.sectionInsetY + FLOW_LAYOUT.widgetHeaderHeight + 6;
 
         for (var i = 0; i < widgets.length; ++i) {
             var widget = widgets[i] || {};
@@ -613,20 +742,22 @@
             }
 
             result.push(row);
-            top += rowHeight + 8;
+            top += rowHeight + FLOW_LAYOUT.widgetGap;
         }
 
         return result;
     }
 
     function buildShellLayout(node, sourceType) {
-        var size = computeNodeVisualSize(node);
+        var size = computeNodeVisualSize(node, sourceType);
         var collapsed = !!(node && node.flags && node.flags.collapsed);
-        var headerHeight = collapsed ? 46 : 54;
-        var footerHeight = collapsed ? 0 : 24;
+        var headerHeight = collapsed ? FLOW_LAYOUT.collapsedHeight : FLOW_LAYOUT.headerHeight;
+        var innerX = FLOW_LAYOUT.bodyPaddingX;
+        var innerWidth = Math.max(80, size.width - innerX * 2);
         var layout = {
             width: size.width,
             height: size.height,
+            collapsed: collapsed,
             header: {
                 x: 0,
                 y: 0,
@@ -637,13 +768,13 @@
                 x: 0,
                 y: headerHeight,
                 width: size.width,
-                height: Math.max(0, size.height - headerHeight - footerHeight)
+                height: Math.max(0, size.height - headerHeight)
             },
             collapse: {
-                x: size.width - 32,
-                y: 12,
-                width: 20,
-                height: 20
+                x: size.width - (collapsed ? 28 : 30),
+                y: collapsed ? 11 : 12,
+                width: collapsed ? 18 : 20,
+                height: collapsed ? 18 : 20
             },
             resize: {
                 x: size.width - 18,
@@ -654,9 +785,90 @@
             sourceType: sourceType
         };
 
+        if (collapsed) {
+            layout.metaRow = null;
+            layout.summaryPanel = null;
+            layout.portSection = {
+                x: 0,
+                y: 0,
+                width: size.width,
+                height: size.height
+            };
+            layout.widgetSection = null;
+            layout.footer = null;
+            layout.inputPorts = buildPortLayouts(node, "input", layout);
+            layout.outputPorts = buildPortLayouts(node, "output", layout);
+            layout.widgets = [];
+            return layout;
+        }
+
+        var footerText = describeFooter(node, sourceType);
+        var cursorY = headerHeight + FLOW_LAYOUT.bodyPaddingY;
+        layout.metaRow = null;
+
+        layout.summaryPanel = {
+            x: innerX,
+            y: cursorY,
+            width: innerWidth,
+            height: FLOW_LAYOUT.summaryHeight
+        };
+        cursorY += layout.summaryPanel.height + FLOW_LAYOUT.sectionGap;
+
+        var portRows = Math.max(
+            Array.isArray(node && node.inputs) ? node.inputs.length : 0,
+            Array.isArray(node && node.outputs) ? node.outputs.length : 0
+        );
+        layout.portSection = {
+            x: innerX,
+            y: cursorY,
+            width: innerWidth,
+            height: portRows
+                ? FLOW_LAYOUT.sectionInsetY * 2 + FLOW_LAYOUT.portHeaderHeight + 6 + portRows * FLOW_LAYOUT.portRowHeight
+                : 0
+        };
+        cursorY += layout.portSection.height;
+
+        var widgets = Array.isArray(node && node.widgets) ? node.widgets : [];
+        if (widgets.length) {
+            cursorY += FLOW_LAYOUT.sectionGap;
+            layout.widgetSection = {
+                x: innerX,
+                y: cursorY,
+                width: innerWidth,
+                height: 0
+            };
+        } else {
+            layout.widgetSection = null;
+        }
+
         layout.inputPorts = buildPortLayouts(node, "input", layout);
         layout.outputPorts = buildPortLayouts(node, "output", layout);
         layout.widgets = buildWidgetLayouts(node, layout);
+
+        if (layout.widgetSection) {
+            var lastWidget = layout.widgets[layout.widgets.length - 1];
+            layout.widgetSection.height = lastWidget
+                ? lastWidget.y + lastWidget.height - layout.widgetSection.y + FLOW_LAYOUT.sectionInsetY
+                : FLOW_LAYOUT.sectionInsetY * 2 + FLOW_LAYOUT.widgetHeaderHeight;
+            cursorY += layout.widgetSection.height;
+        }
+
+        if (footerText) {
+            cursorY += FLOW_LAYOUT.sectionGap;
+            layout.footer = {
+                x: innerX,
+                y: cursorY,
+                width: innerWidth,
+                height: FLOW_LAYOUT.footerHeight
+            };
+            cursorY += FLOW_LAYOUT.footerHeight + FLOW_LAYOUT.bodyPaddingY;
+        } else {
+            layout.footer = null;
+            cursorY += FLOW_LAYOUT.bodyPaddingY;
+        }
+        layout.height = Math.max(size.height, cursorY);
+        layout.body.height = Math.max(0, layout.height - headerHeight);
+        layout.resize.y = layout.height - 18;
 
         return layout;
     }
@@ -671,6 +883,28 @@
         return new leafer.Rect(Object.assign({
             hittable: false
         }, config));
+    }
+
+    function getFlowCtor(leafer) {
+        return (global.LeaferIN && global.LeaferIN.flow && global.LeaferIN.flow.Flow)
+            || leafer.Box
+            || leafer.Frame
+            || null;
+    }
+
+    function createFlowContainer(leafer, config) {
+        var FlowCtor = getFlowCtor(leafer) || leafer.Group;
+        return new FlowCtor(Object.assign({
+            hittable: false
+        }, config));
+    }
+
+    function setFlowVisible(view, visible) {
+        if (!view) {
+            return;
+        }
+        view.visible = !!visible;
+        view.inFlow = !!visible;
     }
 
     function createPortView(leafer) {
@@ -698,16 +932,16 @@
             x: 0,
             y: 0,
             width: 80,
-            fontSize: 11,
-            fontFamily: "IBM Plex Sans, Arial",
+            fontSize: 12,
+            fontFamily: FONT_FAMILY_SANS,
             fill: UI_THEME.textMuted
         });
         var badge = createText(leafer, {
             x: 0,
             y: 0,
             width: 54,
-            fontSize: 9,
-            fontFamily: "JetBrains Mono, monospace",
+            fontSize: 8,
+            fontFamily: FONT_FAMILY_META,
             fill: UI_THEME.textDim
         });
         group.add([glow, pin, label, badge]);
@@ -745,17 +979,17 @@
             x: 12,
             y: 8,
             width: 112,
-            fontSize: 11,
+            fontSize: 12,
             fontWeight: "600",
-            fontFamily: "IBM Plex Sans, Arial",
+            fontFamily: FONT_FAMILY_SANS,
             fill: UI_THEME.text
         });
         var meta = createText(leafer, {
             x: 12,
             y: 18,
             width: 120,
-            fontSize: 9,
-            fontFamily: "JetBrains Mono, monospace",
+            fontSize: 8,
+            fontFamily: FONT_FAMILY_META,
             fill: UI_THEME.textDim
         });
         var valueBox = createRect(leafer, {
@@ -774,7 +1008,7 @@
             width: 76,
             fontSize: 11,
             textAlign: "center",
-            fontFamily: "JetBrains Mono, monospace",
+            fontFamily: FONT_FAMILY_MONO,
             fill: UI_THEME.textMuted
         });
         var leftBox = createRect(leafer, {
@@ -794,7 +1028,7 @@
             width: 10,
             fontSize: 12,
             textAlign: "center",
-            fontFamily: "JetBrains Mono, monospace",
+            fontFamily: FONT_FAMILY_MONO,
             fill: UI_THEME.textMuted,
             visible: false
         });
@@ -815,7 +1049,7 @@
             width: 10,
             fontSize: 12,
             textAlign: "center",
-            fontFamily: "JetBrains Mono, monospace",
+            fontFamily: FONT_FAMILY_MONO,
             fill: UI_THEME.textMuted,
             visible: false
         });
@@ -888,7 +1122,7 @@
                 y: 0,
                 width: 220,
                 height: 140,
-                cornerRadius: 16,
+                cornerRadius: 18,
                 fill: UI_THEME.surface,
                 stroke: UI_THEME.border,
                 strokeWidth: 1.5
@@ -898,7 +1132,7 @@
                 y: 1,
                 width: 218,
                 height: 138,
-                cornerRadius: 15,
+                cornerRadius: 17,
                 fill: "transparent",
                 stroke: rgba("#FFFFFF", 0.02),
                 strokeWidth: 1
@@ -907,13 +1141,13 @@
                 x: 0,
                 y: 0,
                 width: 220,
-                height: 54,
-                cornerRadius: 16,
+                height: 58,
+                cornerRadius: 18,
                 fill: UI_THEME.surfaceRaised
             }),
             headerDivider: createRect(leafer, {
                 x: 0,
-                y: 53,
+                y: 57,
                 width: 220,
                 height: 1,
                 fill: UI_THEME.borderSoft
@@ -926,55 +1160,178 @@
                 cornerRadius: 16,
                 fill: "#37A8FF"
             }),
-            title: createText(leafer, {
+            headerFlow: createFlowContainer(leafer, {
                 x: 18,
                 y: 10,
-                width: 160,
-                fontSize: 16,
+                width: 152,
+                flow: "y",
+                gap: 4
+            }),
+            collapsedFlow: createFlowContainer(leafer, {
+                x: FLOW_LAYOUT.collapsedPaddingX,
+                y: 9,
+                width: 140,
+                flow: "x",
+                gap: FLOW_LAYOUT.collapsedContentGap,
+                flowAlign: { y: "center" },
+                visible: false
+            }),
+            collapsedTitle: createText(leafer, {
+                width: 76,
+                fontSize: 13,
                 fontWeight: "700",
-                fontFamily: "IBM Plex Sans, Arial",
+                fontFamily: FONT_FAMILY_SANS,
                 fill: UI_THEME.text
             }),
-            subtitle: createText(leafer, {
-                x: 18,
-                y: 30,
-                width: 156,
+            collapsedPreviewBox: createFlowContainer(leafer, {
+                flow: "x",
+                padding: [4, FLOW_LAYOUT.collapsedPreviewPaddingX],
+                cornerRadius: 10,
+                fill: rgba("#37A8FF", 0.12),
+                stroke: rgba("#37A8FF", 0.2),
+                strokeWidth: 1,
+                visible: false
+            }),
+            collapsedPreview: createText(leafer, {
+                width: 44,
                 fontSize: 10,
-                fontFamily: "JetBrains Mono, monospace",
+                fontWeight: "600",
+                fontFamily: FONT_FAMILY_META,
+                fill: UI_THEME.textMuted
+            }),
+            title: createText(leafer, {
+                width: 152,
+                fontSize: 16,
+                fontWeight: "700",
+                fontFamily: FONT_FAMILY_SANS,
+                fill: UI_THEME.text
+            }),
+            metaRow: createFlowContainer(leafer, {
+                width: 152,
+                flow: "x",
+                gap: 8,
+                flowAlign: { y: "center" }
+            }),
+            subtitle: createText(leafer, {
+                width: 92,
+                autoWidth: 1,
+                fontSize: 10,
+                fontFamily: FONT_FAMILY_META,
                 fill: UI_THEME.textSoft
             }),
-            categoryChip: createRect(leafer, {
-                x: 18,
-                y: 58,
-                width: 96,
-                height: 18,
-                cornerRadius: 9,
-                fill: rgba("#37A8FF", 0.12),
-                stroke: rgba("#37A8FF", 0.22),
+            categoryText: createText(leafer, {
+                width: 56,
+                fontSize: 10,
+                fontWeight: "700",
+                fontFamily: FONT_FAMILY_META,
+                fill: lighten("#37A8FF", 0.2)
+            }),
+            bodyFlow: createFlowContainer(leafer, {
+                x: FLOW_LAYOUT.bodyPaddingX,
+                y: FLOW_LAYOUT.headerHeight + FLOW_LAYOUT.bodyPaddingY,
+                width: 192,
+                flow: "y",
+                gap: FLOW_LAYOUT.sectionGap
+            }),
+            summarySurface: createFlowContainer(leafer, {
+                width: 192,
+                height: FLOW_LAYOUT.summaryHeight,
+                flow: "y",
+                gap: 3,
+                padding: [10, 12, 10, 12],
+                cornerRadius: 16,
+                fill: UI_THEME.surfacePanel,
+                stroke: UI_THEME.borderSoft,
                 strokeWidth: 1
             }),
-            categoryText: createText(leafer, {
-                x: 26,
-                y: 63,
-                width: 84,
+            summaryLabel: createText(leafer, {
+                width: 168,
                 fontSize: 9,
-                fontFamily: "JetBrains Mono, monospace",
-                fill: UI_THEME.textMuted
+                fontWeight: "700",
+                fontFamily: FONT_FAMILY_META,
+                fill: UI_THEME.textSoft
             }),
             summary: createText(leafer, {
-                x: 18,
-                y: 86,
-                width: 184,
-                fontSize: 12,
-                fontFamily: "IBM Plex Sans, Arial",
+                width: 168,
+                fontSize: 13,
+                fontWeight: "600",
+                fontFamily: FONT_FAMILY_SANS,
                 fill: UI_THEME.textMuted
             }),
-            footer: createText(leafer, {
-                x: 18,
-                y: 0,
-                width: 184,
+            portSurface: createFlowContainer(leafer, {
+                width: 192,
+                height: 48,
+                flow: "x",
+                gap: 8,
+                padding: [10, 12, 0, 12],
+                flowAlign: { y: "center" },
+                cornerRadius: 16,
+                fill: UI_THEME.surfaceMuted,
+                stroke: UI_THEME.borderSoft,
+                strokeWidth: 1
+            }),
+            portTitle: createText(leafer, {
+                width: 58,
+                fontSize: 9,
+                fontWeight: "700",
+                fontFamily: FONT_FAMILY_META,
+                fill: UI_THEME.textSoft
+            }),
+            portStats: createText(leafer, {
+                width: 110,
+                autoWidth: 1,
+                textAlign: "right",
                 fontSize: 10,
-                fontFamily: "JetBrains Mono, monospace",
+                fontFamily: FONT_FAMILY_META,
+                fill: UI_THEME.textDim
+            }),
+            widgetSurface: createFlowContainer(leafer, {
+                width: 192,
+                height: 36,
+                flow: "x",
+                gap: 8,
+                padding: [10, 12, 0, 12],
+                flowAlign: { y: "center" },
+                cornerRadius: 16,
+                fill: darken(UI_THEME.surfacePanel, 0.08),
+                stroke: UI_THEME.borderSoft,
+                strokeWidth: 1,
+                visible: false,
+                inFlow: false
+            }),
+            widgetTitle: createText(leafer, {
+                width: 72,
+                fontSize: 9,
+                fontWeight: "700",
+                fontFamily: FONT_FAMILY_META,
+                fill: UI_THEME.textSoft
+            }),
+            widgetStats: createText(leafer, {
+                width: 96,
+                autoWidth: 1,
+                textAlign: "right",
+                fontSize: 10,
+                fontFamily: FONT_FAMILY_META,
+                fill: UI_THEME.textDim
+            }),
+            footerFlow: createFlowContainer(leafer, {
+                width: 192,
+                height: FLOW_LAYOUT.footerHeight,
+                flow: "x",
+                gap: 6,
+                flowAlign: { y: "center" }
+            }),
+            footerDot: createRect(leafer, {
+                width: 6,
+                height: 6,
+                cornerRadius: 3,
+                fill: "#37A8FF"
+            }),
+            footer: createText(leafer, {
+                width: 176,
+                autoWidth: 1,
+                fontSize: 10,
+                fontFamily: FONT_FAMILY_META,
                 fill: UI_THEME.textDim
             }),
             collapseBg: createRect(leafer, {
@@ -993,7 +1350,7 @@
                 width: 10,
                 fontSize: 12,
                 textAlign: "center",
-                fontFamily: "JetBrains Mono, monospace",
+                fontFamily: FONT_FAMILY_MONO,
                 fill: UI_THEME.textMuted
             }),
             resizeLineA: createRect(leafer, {
@@ -1023,18 +1380,30 @@
             }
         };
 
+        state.collapsedPreviewBox.add(state.collapsedPreview);
+        state.collapsedFlow.add([state.collapsedTitle, state.collapsedPreviewBox]);
+        state.metaRow.add([state.subtitle, state.categoryText]);
+        state.headerFlow.add([state.title, state.metaRow]);
+        state.summarySurface.add([state.summaryLabel, state.summary]);
+        state.portSurface.add([state.portTitle, state.portStats]);
+        state.widgetSurface.add([state.widgetTitle, state.widgetStats]);
+        state.footerFlow.add([state.footerDot, state.footer]);
+        state.bodyFlow.add([
+            state.summarySurface,
+            state.portSurface,
+            state.widgetSurface,
+            state.footerFlow
+        ]);
+
         shell.add([
             state.frame,
             state.frameOutline,
             state.header,
             state.headerDivider,
             state.accentRail,
-            state.title,
-            state.subtitle,
-            state.categoryChip,
-            state.categoryText,
-            state.summary,
-            state.footer,
+            state.headerFlow,
+            state.collapsedFlow,
+            state.bodyFlow,
             state.portLayer,
             state.widgetLayer,
             state.collapseBg,
@@ -1075,6 +1444,10 @@
             var layout = layouts[i];
             var slot = slots[i] || {};
             var view = views[i];
+            var hasLabel = layout.labelWidth > 0;
+            var slotTypeText = truncateText(slot.type == null ? "*" : slot.type, 10).toUpperCase();
+            var showBadge = hasLabel && layouts.length > 1 && slotTypeText && slotTypeText !== "*";
+            var badgeWidth = showBadge ? Math.min(52, Math.max(32, Math.floor(layout.labelWidth * 0.34))) : 0;
             view.root.x = layout.x;
             view.root.y = layout.y;
             view.glow.width = layout.width;
@@ -1088,11 +1461,29 @@
             view.label.width = layout.labelWidth;
             view.label.textAlign = layout.labelAlign;
             view.label.text = truncateText(slot.label || slot.name || ((isInput ? "input " : "output ") + i), 24);
-            view.badge.x = layout.labelX - layout.x;
-            view.badge.y = layout.labelY - layout.y + 11;
-            view.badge.width = layout.labelWidth;
-            view.badge.textAlign = layout.labelAlign;
-            view.badge.text = truncateText(slot.type == null ? "*" : slot.type, 10).toUpperCase();
+            view.label.visible = hasLabel;
+            if (showBadge) {
+                if (isInput) {
+                    view.badge.x = layout.labelX - layout.x + layout.labelWidth - badgeWidth;
+                    view.label.width = Math.max(0, layout.labelWidth - badgeWidth - 8);
+                    view.label.textAlign = "left";
+                } else {
+                    view.badge.x = layout.labelX - layout.x;
+                    view.label.x = view.badge.x + badgeWidth + 8;
+                    view.label.width = Math.max(0, layout.labelWidth - badgeWidth - 8);
+                    view.label.textAlign = "right";
+                }
+                view.badge.y = layout.labelY - layout.y + 1;
+                view.badge.width = badgeWidth;
+                view.badge.textAlign = isInput ? "right" : "left";
+            } else {
+                view.badge.x = layout.labelX - layout.x;
+                view.badge.y = layout.labelY - layout.y;
+                view.badge.width = 0;
+                view.badge.textAlign = layout.labelAlign;
+            }
+            view.badge.text = slotTypeText;
+            view.badge.visible = showBadge;
         }
     }
 
@@ -1219,40 +1610,110 @@
         var accent = resolveAccentColor(node, sourceType);
         var layout = buildShellLayout(node, sourceType);
         var collapsed = !!(node && node.flags && node.flags.collapsed);
+        var frameRadius = collapsed ? 15 : 18;
+        var outlineRadius = collapsed ? 14 : 17;
         var inputs = Array.isArray(node && node.inputs) ? node.inputs : [];
         var outputs = Array.isArray(node && node.outputs) ? node.outputs : [];
         var widgets = Array.isArray(node && node.widgets) ? node.widgets : [];
         var title = typeof node.getTitle === "function" ? node.getTitle() : (node.title || sourceType);
+        var collapsedTitle = String(getStableNodeTitle(node, sourceType) || title || sourceType);
+        var collapsedPreview = getCollapsedPreview(node, sourceType);
+        var sourceParts = String(sourceType || "").split("/");
+        var subtitleText = sourceParts[1] || sourceType;
+        var categoryLabel = (sourceParts[0] || "node").toUpperCase();
+        var footerText = describeFooter(node, sourceType);
 
         state.accent = accent;
         state.layout = layout;
 
         state.frame.width = layout.width;
         state.frame.height = layout.height;
+        state.frame.cornerRadius = frameRadius;
         state.frameOutline.width = Math.max(1, layout.width - 2);
         state.frameOutline.height = Math.max(1, layout.height - 2);
+        state.frameOutline.cornerRadius = outlineRadius;
+        state.header.x = layout.header.x;
+        state.header.y = layout.header.y;
         state.header.width = layout.header.width;
         state.header.height = layout.header.height;
+        state.header.cornerRadius = frameRadius;
+        state.headerDivider.visible = !collapsed;
         state.headerDivider.y = layout.header.height - 1;
         state.headerDivider.width = layout.width;
         state.accentRail.height = layout.height;
         state.accentRail.fill = accent;
-        state.title.text = truncateText(title || sourceType, 28);
-        state.subtitle.text = truncateText(sourceType, 28).toUpperCase();
-        state.categoryChip.width = Math.max(72, Math.min(118, getNodeCategoryLabel(sourceType).length * 7 + 16));
-        state.categoryChip.fill = rgba(accent, 0.12);
-        state.categoryChip.stroke = rgba(accent, 0.26);
-        state.categoryText.width = state.categoryChip.width - 10;
-        state.categoryText.text = getNodeCategoryLabel(sourceType);
-        state.summary.text = truncateText(describeNode(node, sourceType), collapsed ? 36 : 84);
-        state.summary.visible = !collapsed;
-        state.footer.text = describeFooter(node, sourceType);
-        state.footer.y = layout.height - 16;
-        state.footer.visible = !collapsed;
+        state.headerFlow.visible = !collapsed;
+        state.headerFlow.x = 18;
+        state.headerFlow.y = collapsed ? 8 : 10;
+        state.headerFlow.width = Math.max(78, layout.width - 70);
+        state.title.width = state.headerFlow.width;
+        state.title.text = truncateText(title || sourceType, collapsed ? 20 : 28);
+        state.metaRow.width = state.headerFlow.width;
+        state.subtitle.width = Math.max(72, state.headerFlow.width - 68);
+        state.subtitle.text = truncateText(subtitleText, 24).toUpperCase();
+        state.categoryText.width = Math.max(44, estimateTextWidth(categoryLabel, 10, 0.58) + 2);
+        state.categoryText.text = categoryLabel;
+        setFlowVisible(state.metaRow, !collapsed);
+
+        state.collapsedFlow.x = FLOW_LAYOUT.collapsedPaddingX;
+        state.collapsedFlow.y = 9;
+        state.collapsedFlow.width = Math.max(72, layout.width - 58);
+        state.collapsedTitle.text = truncateText(collapsedTitle, 22);
+        state.collapsedPreview.text = collapsedPreview;
+        state.collapsedPreview.width = Math.min(
+            126,
+            Math.max(36, estimateTextWidth(collapsedPreview, 10, 0.56) + 2)
+        );
+        setFlowVisible(state.collapsedPreviewBox, collapsed && !!collapsedPreview);
+        state.collapsedTitle.width = Math.max(
+            48,
+            state.collapsedFlow.width -
+                (collapsed && collapsedPreview
+                    ? state.collapsedPreview.width + FLOW_LAYOUT.collapsedPreviewPaddingX * 2 + FLOW_LAYOUT.collapsedContentGap + 6
+                    : 0)
+        );
+        state.collapsedFlow.visible = collapsed;
+
+        state.bodyFlow.x = FLOW_LAYOUT.bodyPaddingX;
+        state.bodyFlow.y = layout.header.height + FLOW_LAYOUT.bodyPaddingY;
+        state.bodyFlow.width = Math.max(80, layout.width - FLOW_LAYOUT.bodyPaddingX * 2);
+        state.bodyFlow.height = Math.max(0, layout.height - layout.header.height - FLOW_LAYOUT.bodyPaddingY * 2);
+        state.bodyFlow.visible = !collapsed;
+
+        state.summarySurface.width = layout.summaryPanel ? layout.summaryPanel.width : 0;
+        state.summarySurface.height = layout.summaryPanel ? layout.summaryPanel.height : 0;
+        state.summaryLabel.width = layout.summaryPanel ? Math.max(0, layout.summaryPanel.width - 24) : 0;
+        state.summary.width = state.summaryLabel.width;
+        state.summaryLabel.text = "SNAPSHOT";
+        state.summary.text = truncateText(describeNode(node, sourceType), collapsed ? 36 : 96);
+        setFlowVisible(state.summarySurface, !collapsed && !!layout.summaryPanel);
+
+        state.portSurface.width = layout.portSection ? layout.portSection.width : 0;
+        state.portSurface.height = layout.portSection ? layout.portSection.height : 0;
+        state.portTitle.text = "PORT MAP";
+        state.portStats.width = Math.max(72, state.portSurface.width - 76);
+        state.portStats.text = inputs.length + " in | " + outputs.length + " out";
+        setFlowVisible(state.portSurface, !collapsed && !!layout.portSection && layout.portSection.height > 0);
+
+        state.widgetSurface.width = layout.widgetSection ? layout.widgetSection.width : 0;
+        state.widgetSurface.height = layout.widgetSection ? layout.widgetSection.height : 0;
+        state.widgetTitle.text = "CONTROLS";
+        state.widgetStats.width = Math.max(72, state.widgetSurface.width - 88);
+        state.widgetStats.text = widgets.length + " widgets";
+        setFlowVisible(state.widgetSurface, !collapsed && !!layout.widgetSection && layout.widgetSection.height > 0);
+
+        state.footerFlow.width = layout.footer ? layout.footer.width : Math.max(0, layout.width - 36);
+        state.footer.text = footerText;
+        state.footer.width = Math.max(0, state.footerFlow.width - 14);
+        setFlowVisible(state.footerFlow, !collapsed && !!layout.footer);
+
         state.collapseBg.x = layout.collapse.x;
         state.collapseBg.y = layout.collapse.y;
-        state.collapseGlyph.x = layout.collapse.x + 5;
-        state.collapseGlyph.y = layout.collapse.y + 4;
+        state.collapseBg.width = layout.collapse.width;
+        state.collapseBg.height = layout.collapse.height;
+        state.collapseGlyph.x = layout.collapse.x;
+        state.collapseGlyph.y = layout.collapse.y + (collapsed ? 2 : 4);
+        state.collapseGlyph.width = layout.collapse.width;
         state.collapseGlyph.text = collapsed ? "+" : "-";
         state.resizeLineA.x = layout.resize.x + 2;
         state.resizeLineA.y = layout.resize.y + 9;
@@ -1263,6 +1724,7 @@
 
         syncPortLayer(leafer, state.portLayer, state.inputPortViews, layout.inputPorts, inputs, true);
         syncPortLayer(leafer, state.portLayer, state.outputPortViews, layout.outputPorts, outputs, false);
+        state.portLayer.visible = !!layout.portSection && layout.portSection.height > 0;
         syncWidgetLayer(leafer, state.widgetLayer, state.widgetViews, layout.widgets, widgets, accent);
         state.widgetLayer.visible = !collapsed && layout.widgets.length > 0;
 
@@ -1294,8 +1756,29 @@
         state.headerDivider.fill = hovered ? rgba(accent, 0.24) : UI_THEME.borderSoft;
         state.title.fill = isSelected ? "#FFFFFF" : UI_THEME.text;
         state.subtitle.fill = hovered ? lighten(accent, 0.36) : UI_THEME.textSoft;
+        state.categoryText.fill = hovered ? lighten(accent, 0.22) : lighten(accent, 0.14);
+        state.collapsedTitle.fill = isSelected ? "#FFFFFF" : UI_THEME.text;
+        state.collapsedPreview.fill = hovered ? "#E6F0FF" : UI_THEME.textMuted;
+        state.collapsedPreviewBox.fill = hovered ? rgba(accent, 0.18) : rgba(accent, 0.1);
+        state.collapsedPreviewBox.stroke = hovered ? rgba(accent, 0.34) : rgba(accent, 0.22);
+        state.summaryLabel.fill = hovered ? lighten(accent, 0.18) : UI_THEME.textSoft;
         state.summary.fill = hovered ? "#D8E4F5" : UI_THEME.textMuted;
+        state.portTitle.fill = hovered ? lighten(accent, 0.18) : UI_THEME.textSoft;
+        state.portStats.fill = hovered ? "#C8D7EA" : UI_THEME.textDim;
+        state.widgetTitle.fill = hovered ? lighten(accent, 0.16) : UI_THEME.textSoft;
+        state.widgetStats.fill = hovered ? "#C8D7EA" : UI_THEME.textDim;
         state.footer.fill = isSelected ? "#B7CAE4" : UI_THEME.textDim;
+        state.footerDot.fill = isSelected
+            ? lighten(accent, 0.18)
+            : hovered
+                ? lighten(accent, 0.08)
+                : accent;
+        state.summarySurface.fill = hovered ? rgba(accent, 0.09) : UI_THEME.surfacePanel;
+        state.summarySurface.stroke = hovered ? rgba(accent, 0.22) : UI_THEME.borderSoft;
+        state.portSurface.fill = hovered ? rgba(accent, 0.06) : UI_THEME.surfaceMuted;
+        state.portSurface.stroke = hovered ? rgba(accent, 0.2) : UI_THEME.borderSoft;
+        state.widgetSurface.fill = hovered ? rgba(accent, 0.04) : darken(UI_THEME.surfacePanel, 0.08);
+        state.widgetSurface.stroke = hovered ? rgba(accent, 0.18) : UI_THEME.borderSoft;
 
         setControlState(
             state.collapseBg,

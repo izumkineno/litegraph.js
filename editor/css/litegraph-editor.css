@@ -6,7 +6,7 @@
 
     background-color: #333;
     color: #eee;
-    font: 14px Tahoma;
+    font: 14px/1.4 "Noto Sans SC", "Microsoft YaHei", "PingFang SC", "Helvetica Neue", Arial, sans-serif;
 
     position: relative;
 }
@@ -85,7 +85,7 @@
     position: absolute;
     top: 2px;
     right: 2px;
-    font-family: "Tahoma";
+    font-family: "Noto Sans SC", "Microsoft YaHei", "PingFang SC", Arial, sans-serif;
     font-size: 14px;
     color: #aaa;
     cursor: pointer;
@@ -96,7 +96,8 @@
 .litegraph-editor .btn {
     /*font-family: "Metro Light";*/
     color: #ccc;
-    font-size: 20px;
+    font-family: "Noto Sans SC", "Microsoft YaHei", "PingFang SC", "Helvetica Neue", Arial, sans-serif;
+    font-size: 18px;
     min-width: 30px;
     /*border-radius: 0.3em;*/
     border: 0 solid #666;
@@ -172,7 +173,7 @@
 /* METER *********************/
 
 .litegraph-editor .loadmeter {
-    font-family: "Tahoma";
+    font-family: "Noto Sans SC", "Microsoft YaHei", "PingFang SC", Arial, sans-serif;
     color: #aaa;
     font-size: 12px;
     border-radius: 2px;

@@ -1,3 +1,5 @@
+import "@leafer-in/resize";
+import { Flow } from "@leafer-in/flow";
 import {
     applyLGraphCanvasStaticCompat as applyLGraphCanvasStaticCompatLayer,
     applyLGraphCanvasStaticCompatAliases as applyLGraphCanvasStaticCompatAliasesLayer,
@@ -246,3 +248,15 @@ export const LiteGraph = defaultAssembly.LiteGraph;
 export const registry = defaultAssembly.registry;
 export const runtime = defaultAssembly.runtime;
 export const liteGraphMigrationBundle = defaultAssembly;
+
+const leaferInGlobal = globalThis as typeof globalThis & {
+    LeaferIN?: {
+        flow?: Record<string, unknown>;
+    };
+};
+
+leaferInGlobal.LeaferIN = leaferInGlobal.LeaferIN || {};
+leaferInGlobal.LeaferIN.flow = {
+    ...(leaferInGlobal.LeaferIN.flow || {}),
+    Flow,
+};

@@ -46,16 +46,18 @@
         "src/litegraph.d.ts"
     ],
     "devDependencies": {
-        "vite": "^7.3.1",
-        "eslint": "^10.0.2",
         "@eslint/js": "^10.0.1",
-        "eslint-plugin-jest": "^29.15.0",
         "@playwright/test": "^1.55.0",
-        "jest": "^30.2.0",
         "@types/jest": "^30.0.0",
-        "typescript": "^5.9.3"
+        "eslint": "^10.0.2",
+        "eslint-plugin-jest": "^29.15.0",
+        "jest": "^30.2.0",
+        "typescript": "^5.9.3",
+        "vite": "^7.3.1"
     },
     "dependencies": {
+        "@leafer-in/flow": "^2.0.2",
+        "@leafer-in/resize": "^2.0.2",
         "@leafer-in/state": "2.0.2",
         "@leafer-in/viewport": "2.0.2",
         "leafer-ui": "2.0.2"

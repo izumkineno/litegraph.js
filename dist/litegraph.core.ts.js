@@ -1,6 +1,4851 @@
 var LiteGraphTSMigration = (function(exports) {
   "use strict";
   var _a2, _b, _c, _d;
+  var t;
+  !(function(t2) {
+    t2[t2.No = 0] = "No", t2[t2.Yes = 1] = "Yes", t2[t2.NoAndSkip = 2] = "NoAndSkip", t2[t2.YesAndSkip = 3] = "YesAndSkip";
+  })(t || (t = {}));
+  const e = {};
+  function s(t2) {
+    return void 0 === t2;
+  }
+  function r(t2) {
+    return null == t2;
+  }
+  function i(t2) {
+    return "string" == typeof t2;
+  }
+  const { isFinite: n } = Number;
+  function o(t2) {
+    return "number" == typeof t2;
+  }
+  const a = /^-?\d+(?:\.\d+)?$/;
+  function h$1(t2) {
+    return "string" == typeof t2 && a.test(t2) ? +t2 : t2;
+  }
+  const { isArray: l } = Array;
+  function d$1(t2) {
+    return t2 && "object" == typeof t2;
+  }
+  function c(t2) {
+    return d$1(t2) && !l(t2);
+  }
+  function u$1(t2) {
+    return "{}" === JSON.stringify(t2);
+  }
+  const _$2 = { default: (t2, e2) => (p$1(e2, t2), p$1(t2, e2), t2), assign(t2, e2, s2) {
+    let r2;
+    Object.keys(e2).forEach((i2) => {
+      var n2, o2;
+      if (r2 = e2[i2], (null == r2 ? void 0 : r2.constructor) === Object && (null === (n2 = t2[i2]) || void 0 === n2 ? void 0 : n2.constructor) === Object) return p$1(t2[i2], e2[i2], s2 && s2[i2]);
+      s2 && i2 in s2 ? (null === (o2 = s2[i2]) || void 0 === o2 ? void 0 : o2.constructor) === Object && p$1(t2[i2] = {}, e2[i2], s2[i2]) : t2[i2] = e2[i2];
+    });
+  }, copyAttrs: (t2, e2, r2) => (r2.forEach((r3) => {
+    s(e2[r3]) || (t2[r3] = e2[r3]);
+  }), t2), clone: (t2) => JSON.parse(JSON.stringify(t2)), toMap(t2) {
+    const e2 = {};
+    for (let s2 = 0, r2 = t2.length; s2 < r2; s2++) e2[t2[s2]] = true;
+    return e2;
+  }, stintSet(t2, e2, s2) {
+    s2 || (s2 = void 0), t2[e2] !== s2 && (t2[e2] = s2);
+  } }, { assign: p$1 } = _$2;
+  class f {
+    get __useNaturalRatio() {
+      return true;
+    }
+    get __isLinePath() {
+      const { path: t2 } = this;
+      return t2 && 6 === t2.length && 1 === t2[0];
+    }
+    get __usePathBox() {
+      return this.__pathInputed;
+    }
+    get __blendMode() {
+      if (this.eraser && "path" !== this.eraser) return "destination-out";
+      const { blendMode: t2 } = this;
+      return "pass-through" === t2 ? null : t2;
+    }
+    constructor(t2) {
+      this.__leaf = t2;
+    }
+    __get(t2) {
+      if (this.__input) {
+        const e2 = this.__input[t2];
+        if (!s(e2)) return e2;
+      }
+      return this[t2];
+    }
+    __getData() {
+      const t2 = { tag: this.__leaf.tag }, { __input: e2 } = this;
+      let r2;
+      for (let i2 in this) "_" !== i2[0] && (r2 = e2 ? e2[i2] : void 0, t2[i2] = s(r2) ? this[i2] : r2);
+      return t2;
+    }
+    __setInput(t2, e2) {
+      this.__input || (this.__input = {}), this.__input[t2] = e2;
+    }
+    __getInput(t2) {
+      if (this.__input) {
+        const e2 = this.__input[t2];
+        if (!s(e2)) return e2;
+      }
+      if ("path" !== t2 || this.__pathInputed) return this["_" + t2];
+    }
+    __removeInput(t2) {
+      this.__input && !s(this.__input[t2]) && (this.__input[t2] = void 0);
+    }
+    __getInputData(t2, e2) {
+      const r2 = {};
+      if (t2) if (l(t2)) for (let e3 of t2) r2[e3] = this.__getInput(e3);
+      else for (let e3 in t2) r2[e3] = this.__getInput(e3);
+      else {
+        let t3, e3, { __input: i2 } = this;
+        r2.tag = this.__leaf.tag;
+        for (let n2 in this) if ("_" !== n2[0] && (t3 = this["_" + n2], !s(t3))) {
+          if ("path" === n2 && !this.__pathInputed) continue;
+          e3 = i2 ? i2[n2] : void 0, r2[n2] = s(e3) ? t3 : e3;
+        }
+      }
+      if (e2 && e2.matrix) {
+        const { a: t3, b: e3, c: s2, d: i2, e: n2, f: o2 } = this.__leaf.__localMatrix;
+        r2.matrix = { a: t3, b: e3, c: s2, d: i2, e: n2, f: o2 };
+      }
+      return r2;
+    }
+    __setMiddle(t2, e2) {
+      this.__middle || (this.__middle = {}), this.__middle[t2] = e2;
+    }
+    __getMiddle(t2) {
+      return this.__middle && this.__middle[t2];
+    }
+    __checkSingle() {
+      const t2 = this;
+      if ("pass-through" === t2.blendMode) {
+        const e2 = this.__leaf;
+        t2.opacity < 1 && (e2.isBranch || t2.__hasMultiPaint) || e2.__hasEraser || t2.eraser || t2.filter ? t2.__single = true : t2.__single && (t2.__single = false);
+      } else t2.__single = true;
+    }
+    __removeNaturalSize() {
+      this.__naturalWidth = this.__naturalHeight = void 0;
+    }
+    destroy() {
+      this.__input = this.__middle = null;
+    }
+  }
+  const g$2 = { RUNTIME: "runtime", LEAF: "leaf", TASK: "task", CNAVAS: "canvas", IMAGE: "image", types: {}, create(t2) {
+    const { types: e2 } = y$1;
+    return e2[t2] ? e2[t2]++ : (e2[t2] = 1, 0);
+  } }, y$1 = g$2;
+  let m$3, x$3, w$3;
+  const { max: b$4 } = Math, B$4 = [0, 0, 0, 0], v$3 = { zero: [...B$4], tempFour: B$4, set: (t2, e2, s2, r2, i2) => (void 0 === s2 && (s2 = r2 = i2 = e2), t2[0] = e2, t2[1] = s2, t2[2] = r2, t2[3] = i2, t2), setTemp: (t2, e2, s2, r2) => k$4(B$4, t2, e2, s2, r2), toTempAB(t2, e2, s2) {
+    w$3 = s2 ? o(t2) ? e2 : t2 : [], o(t2) ? (m$3 = O$4(t2), x$3 = e2) : o(e2) ? (m$3 = t2, x$3 = O$4(e2)) : (m$3 = t2, x$3 = e2), 4 !== m$3.length && (m$3 = C$4(m$3)), 4 !== x$3.length && (x$3 = C$4(x$3));
+  }, get(t2, e2) {
+    let r2;
+    if (!o(t2)) switch (t2.length) {
+      case 4:
+        r2 = s(e2) ? t2 : [...t2];
+        break;
+      case 2:
+        r2 = [t2[0], t2[1], t2[0], t2[1]];
+        break;
+      case 3:
+        r2 = [t2[0], t2[1], t2[2], t2[1]];
+        break;
+      case 1:
+        t2 = t2[0];
+        break;
+      default:
+        t2 = 0;
+    }
+    if (r2 || (r2 = [t2, t2, t2, t2]), !s(e2)) for (let t3 = 0; t3 < 4; t3++) r2[t3] > e2 && (r2[t3] = e2);
+    return r2;
+  }, max: (t2, e2, s2) => o(t2) && o(e2) ? b$4(t2, e2) : (T$1(t2, e2, s2), k$4(w$3, b$4(m$3[0], x$3[0]), b$4(m$3[1], x$3[1]), b$4(m$3[2], x$3[2]), b$4(m$3[3], x$3[3]))), add: (t2, e2, s2) => o(t2) && o(e2) ? t2 + e2 : (T$1(t2, e2, s2), k$4(w$3, m$3[0] + x$3[0], m$3[1] + x$3[1], m$3[2] + x$3[2], m$3[3] + x$3[3])), swapAndScale(t2, e2, s2, r2) {
+    if (o(t2)) return e2 === s2 ? t2 * e2 : [t2 * s2, t2 * e2];
+    const i2 = r2 ? t2 : [], [n2, a2, h2, l2] = 4 === t2.length ? t2 : C$4(t2);
+    return k$4(i2, h2 * s2, l2 * e2, n2 * s2, a2 * e2);
+  } }, { set: k$4, get: C$4, setTemp: O$4, toTempAB: T$1 } = v$3, { round: P$4, pow: S$3, max: L$4, floor: R$3, PI: E$4 } = Math, I$4 = { within: (t2, e2, r2) => (d$1(e2) && (r2 = e2.max, e2 = e2.min), !s(e2) && t2 < e2 && (t2 = e2), !s(r2) && t2 > r2 && (t2 = r2), t2), fourNumber: v$3.get, formatRotation: (t2, e2) => (t2 %= 360, e2 ? t2 < 0 && (t2 += 360) : (t2 > 180 && (t2 -= 360), t2 < -180 && (t2 += 360)), I$4.float(t2)), getGapRotation(t2, e2, s2 = 0) {
+    let r2 = t2 + s2;
+    if (e2 > 1) {
+      const t3 = Math.abs(r2 % e2);
+      (t3 < 1 || t3 > e2 - 1) && (r2 = Math.round(r2 / e2) * e2);
+    }
+    return r2 - s2;
+  }, float(t2, e2) {
+    const r2 = s(e2) ? 1e12 : S$3(10, e2);
+    return -0 === (t2 = P$4(t2 * r2) / r2) ? 0 : t2;
+  }, sign: (t2) => t2 < 0 ? -1 : 1, getScaleData(t2, e2, s2, r2) {
+    if (r2 || (r2 = {}), e2) {
+      const t3 = (o(e2) ? e2 : e2.width || 0) / s2.width, i2 = (o(e2) ? e2 : e2.height || 0) / s2.height;
+      r2.scaleX = t3 || i2 || 1, r2.scaleY = i2 || t3 || 1;
+    } else t2 && I$4.assignScale(r2, t2);
+    return r2;
+  }, assignScale(t2, e2) {
+    o(e2) ? t2.scaleX = t2.scaleY = e2 : (t2.scaleX = e2.x, t2.scaleY = e2.y);
+  }, getFloorScale: (t2, e2 = 1) => L$4(R$3(t2), e2) / t2, randInt: M$2, randColor: (t2) => `rgba(${M$2(255)},${M$2(255)},${M$2(255)},${t2 || 1})` };
+  function M$2(t2) {
+    return Math.round(Math.random() * t2);
+  }
+  const A$4 = E$4 / 180, W$4 = 2 * E$4, N$4 = E$4 / 2;
+  function Y$4() {
+    return { x: 0, y: 0 };
+  }
+  function D$4() {
+    return { x: 0, y: 0, width: 0, height: 0 };
+  }
+  function X$4() {
+    return { a: 1, b: 0, c: 0, d: 1, e: 0, f: 0 };
+  }
+  const { sin: z$4, cos: F$5, acos: U$2, sqrt: j$4 } = Math, { float: V$2 } = I$4, H$4 = {};
+  function G$4() {
+    return Object.assign(Object.assign(Object.assign({}, { a: 1, b: 0, c: 0, d: 1, e: 0, f: 0 }), { x: 0, y: 0, width: 0, height: 0 }), { scaleX: 1, scaleY: 1, rotation: 0, skewX: 0, skewY: 0 });
+  }
+  const q$2 = { defaultMatrix: { a: 1, b: 0, c: 0, d: 1, e: 0, f: 0 }, defaultWorld: G$4(), tempMatrix: {}, set(t2, e2 = 1, s2 = 0, r2 = 0, i2 = 1, n2 = 0, o2 = 0) {
+    t2.a = e2, t2.b = s2, t2.c = r2, t2.d = i2, t2.e = n2, t2.f = o2;
+  }, get: X$4, getWorld: G$4, copy(t2, e2) {
+    t2.a = e2.a, t2.b = e2.b, t2.c = e2.c, t2.d = e2.d, t2.e = e2.e, t2.f = e2.f;
+  }, translate(t2, e2, s2) {
+    t2.e += e2, t2.f += s2;
+  }, translateInner(t2, e2, s2, r2) {
+    t2.e += t2.a * e2 + t2.c * s2, t2.f += t2.b * e2 + t2.d * s2, r2 && (t2.e -= e2, t2.f -= s2);
+  }, scale(t2, e2, s2 = e2) {
+    t2.a *= e2, t2.b *= e2, t2.c *= s2, t2.d *= s2;
+  }, pixelScale(t2, e2, s2) {
+    s2 || (s2 = t2), s2.a = t2.a * e2, s2.b = t2.b * e2, s2.c = t2.c * e2, s2.d = t2.d * e2, s2.e = t2.e * e2, s2.f = t2.f * e2;
+  }, scaleOfOuter(t2, e2, s2, r2) {
+    Q$2.toInnerPoint(t2, e2, H$4), Q$2.scaleOfInner(t2, H$4, s2, r2);
+  }, scaleOfInner(t2, e2, s2, r2 = s2) {
+    Q$2.translateInner(t2, e2.x, e2.y), Q$2.scale(t2, s2, r2), Q$2.translateInner(t2, -e2.x, -e2.y);
+  }, rotate(t2, e2) {
+    const { a: s2, b: r2, c: i2, d: n2 } = t2, o2 = F$5(e2 *= A$4), a2 = z$4(e2);
+    t2.a = s2 * o2 - r2 * a2, t2.b = s2 * a2 + r2 * o2, t2.c = i2 * o2 - n2 * a2, t2.d = i2 * a2 + n2 * o2;
+  }, rotateOfOuter(t2, e2, s2) {
+    Q$2.toInnerPoint(t2, e2, H$4), Q$2.rotateOfInner(t2, H$4, s2);
+  }, rotateOfInner(t2, e2, s2) {
+    Q$2.translateInner(t2, e2.x, e2.y), Q$2.rotate(t2, s2), Q$2.translateInner(t2, -e2.x, -e2.y);
+  }, skew(t2, e2, s2) {
+    const { a: r2, b: i2, c: n2, d: o2 } = t2;
+    s2 && (s2 *= A$4, t2.a = r2 + n2 * s2, t2.b = i2 + o2 * s2), e2 && (e2 *= A$4, t2.c = n2 + r2 * e2, t2.d = o2 + i2 * e2);
+  }, skewOfOuter(t2, e2, s2, r2) {
+    Q$2.toInnerPoint(t2, e2, H$4), Q$2.skewOfInner(t2, H$4, s2, r2);
+  }, skewOfInner(t2, e2, s2, r2 = 0) {
+    Q$2.translateInner(t2, e2.x, e2.y), Q$2.skew(t2, s2, r2), Q$2.translateInner(t2, -e2.x, -e2.y);
+  }, multiply(t2, e2) {
+    const { a: s2, b: r2, c: i2, d: n2, e: o2, f: a2 } = t2;
+    t2.a = e2.a * s2 + e2.b * i2, t2.b = e2.a * r2 + e2.b * n2, t2.c = e2.c * s2 + e2.d * i2, t2.d = e2.c * r2 + e2.d * n2, t2.e = e2.e * s2 + e2.f * i2 + o2, t2.f = e2.e * r2 + e2.f * n2 + a2;
+  }, multiplyParent(t2, e2, r2, i2, n2) {
+    const { e: o2, f: a2 } = t2;
+    if (r2 || (r2 = t2), s(i2) && (i2 = 1 !== t2.a || t2.b || t2.c || 1 !== t2.d), i2) {
+      const { a: s2, b: i3, c: o3, d: a3 } = t2;
+      r2.a = s2 * e2.a + i3 * e2.c, r2.b = s2 * e2.b + i3 * e2.d, r2.c = o3 * e2.a + a3 * e2.c, r2.d = o3 * e2.b + a3 * e2.d, n2 && (r2.scaleX = e2.scaleX * n2.scaleX, r2.scaleY = e2.scaleY * n2.scaleY);
+    } else r2.a = e2.a, r2.b = e2.b, r2.c = e2.c, r2.d = e2.d, n2 && (r2.scaleX = e2.scaleX, r2.scaleY = e2.scaleY);
+    r2.e = o2 * e2.a + a2 * e2.c + e2.e, r2.f = o2 * e2.b + a2 * e2.d + e2.f;
+  }, divide(t2, e2) {
+    Q$2.multiply(t2, Q$2.tempInvert(e2));
+  }, divideParent(t2, e2) {
+    Q$2.multiplyParent(t2, Q$2.tempInvert(e2));
+  }, tempInvert(t2) {
+    const { tempMatrix: e2 } = Q$2;
+    return Q$2.copy(e2, t2), Q$2.invert(e2), e2;
+  }, invert(t2) {
+    const { a: e2, b: s2, c: r2, d: i2, e: n2, f: o2 } = t2;
+    if (s2 || r2) {
+      const a2 = 1 / (e2 * i2 - s2 * r2);
+      t2.a = i2 * a2, t2.b = -s2 * a2, t2.c = -r2 * a2, t2.d = e2 * a2, t2.e = -(n2 * i2 - o2 * r2) * a2, t2.f = -(o2 * e2 - n2 * s2) * a2;
+    } else if (1 === e2 && 1 === i2) t2.e = -n2, t2.f = -o2;
+    else {
+      const s3 = 1 / (e2 * i2);
+      t2.a = i2 * s3, t2.d = e2 * s3, t2.e = -n2 * i2 * s3, t2.f = -o2 * e2 * s3;
+    }
+  }, toOuterPoint(t2, e2, s2, r2) {
+    const { x: i2, y: n2 } = e2;
+    s2 || (s2 = e2), s2.x = i2 * t2.a + n2 * t2.c, s2.y = i2 * t2.b + n2 * t2.d, r2 || (s2.x += t2.e, s2.y += t2.f);
+  }, toInnerPoint(t2, e2, s2, r2) {
+    const { a: i2, b: n2, c: o2, d: a2 } = t2, h2 = 1 / (i2 * a2 - n2 * o2), { x: l2, y: d2 } = e2;
+    if (s2 || (s2 = e2), s2.x = (l2 * a2 - d2 * o2) * h2, s2.y = (d2 * i2 - l2 * n2) * h2, !r2) {
+      const { e: e3, f: r3 } = t2;
+      s2.x -= (e3 * a2 - r3 * o2) * h2, s2.y -= (r3 * i2 - e3 * n2) * h2;
+    }
+  }, setLayout(t2, e2, r2, i2, n2) {
+    const { x: o2, y: a2, scaleX: h2, scaleY: l2 } = e2;
+    if (s(n2) && (n2 = e2.rotation || e2.skewX || e2.skewY), n2) {
+      const { rotation: s2, skewX: r3, skewY: i3 } = e2, n3 = s2 * A$4, o3 = F$5(n3), a3 = z$4(n3);
+      if (r3 || i3) {
+        const e3 = r3 * A$4, s3 = i3 * A$4;
+        t2.a = (o3 + s3 * -a3) * h2, t2.b = (a3 + s3 * o3) * h2, t2.c = (e3 * o3 - a3) * l2, t2.d = (o3 + e3 * a3) * l2;
+      } else t2.a = o3 * h2, t2.b = a3 * h2, t2.c = -a3 * l2, t2.d = o3 * l2;
+    } else t2.a = h2, t2.b = 0, t2.c = 0, t2.d = l2;
+    t2.e = o2, t2.f = a2, (r2 = r2 || i2) && Q$2.translateInner(t2, -r2.x, -r2.y, !i2);
+  }, getLayout(t2, e2, s2, r2) {
+    const { a: i2, b: n2, c: o2, d: a2, e: h2, f: l2 } = t2;
+    let d2, c2, u2, _2, p2, f2 = h2, g2 = l2;
+    if (n2 || o2) {
+      const t3 = i2 * a2 - n2 * o2;
+      if (o2 && !r2) {
+        d2 = j$4(i2 * i2 + n2 * n2), c2 = t3 / d2;
+        const e4 = i2 / d2;
+        u2 = n2 > 0 ? U$2(e4) : -U$2(e4);
+      } else {
+        c2 = j$4(o2 * o2 + a2 * a2), d2 = t3 / c2;
+        const e4 = o2 / c2;
+        u2 = N$4 - (a2 > 0 ? U$2(-e4) : -U$2(e4));
+      }
+      const e3 = V$2(F$5(u2)), s3 = z$4(u2);
+      d2 = V$2(d2), c2 = V$2(c2), _2 = e3 ? V$2((o2 / c2 + s3) / e3 / A$4, 9) : 0, p2 = e3 ? V$2((n2 / d2 - s3) / e3 / A$4, 9) : 0, u2 = V$2(u2 / A$4);
+    } else d2 = i2, c2 = a2, u2 = _2 = p2 = 0;
+    return (e2 = s2 || e2) && (f2 += e2.x * i2 + e2.y * o2, g2 += e2.x * n2 + e2.y * a2, s2 || (f2 -= e2.x, g2 -= e2.y)), { x: f2, y: g2, scaleX: d2, scaleY: c2, rotation: u2, skewX: _2, skewY: p2 };
+  }, withScale(t2, e2, s2 = e2) {
+    const r2 = t2;
+    if (!e2 || !s2) {
+      const { a: r3, b: i2, c: n2, d: o2 } = t2;
+      i2 || n2 ? s2 = (r3 * o2 - i2 * n2) / (e2 = j$4(r3 * r3 + i2 * i2)) : (e2 = r3, s2 = o2);
+    }
+    return r2.scaleX = e2, r2.scaleY = s2, r2;
+  }, reset(t2) {
+    Q$2.set(t2);
+  } }, Q$2 = q$2, { float: J$3 } = I$4, { toInnerPoint: Z$3, toOuterPoint: $$1 } = q$2, { sin: K$3, cos: tt$2, abs: et$2, sqrt: st$2, atan2: rt$2, min: it$2, round: nt$2 } = Math, ot$2 = { defaultPoint: { x: 0, y: 0 }, tempPoint: {}, tempRadiusPoint: {}, set(t2, e2 = 0, s2 = 0) {
+    t2.x = e2, t2.y = s2;
+  }, setRadius(t2, e2, r2) {
+    t2.radiusX = e2, t2.radiusY = s(r2) ? e2 : r2;
+  }, copy(t2, e2) {
+    t2.x = e2.x, t2.y = e2.y;
+  }, copyFrom(t2, e2, s2) {
+    t2.x = e2, t2.y = s2;
+  }, round(t2, e2) {
+    t2.x = e2 ? nt$2(t2.x - 0.5) + 0.5 : nt$2(t2.x), t2.y = e2 ? nt$2(t2.y - 0.5) + 0.5 : nt$2(t2.y);
+  }, move(t2, e2, s2) {
+    d$1(e2) ? (t2.x += e2.x, t2.y += e2.y) : (t2.x += e2, t2.y += s2);
+  }, scale(t2, e2, s2 = e2) {
+    t2.x && (t2.x *= e2), t2.y && (t2.y *= s2);
+  }, scaleOf(t2, e2, s2, r2 = s2) {
+    t2.x += (t2.x - e2.x) * (s2 - 1), t2.y += (t2.y - e2.y) * (r2 - 1);
+  }, rotate(t2, e2, s2) {
+    s2 || (s2 = at$2.defaultPoint);
+    const r2 = tt$2(e2 *= A$4), i2 = K$3(e2), n2 = t2.x - s2.x, o2 = t2.y - s2.y;
+    t2.x = s2.x + n2 * r2 - o2 * i2, t2.y = s2.y + n2 * i2 + o2 * r2;
+  }, tempToInnerOf(t2, e2) {
+    const { tempPoint: s2 } = at$2;
+    return lt$2(s2, t2), Z$3(e2, s2, s2), s2;
+  }, tempToOuterOf(t2, e2) {
+    const { tempPoint: s2 } = at$2;
+    return lt$2(s2, t2), $$1(e2, s2, s2), s2;
+  }, tempToInnerRadiusPointOf(t2, e2) {
+    const { tempRadiusPoint: s2 } = at$2;
+    return lt$2(s2, t2), at$2.toInnerRadiusPointOf(t2, e2, s2), s2;
+  }, copyRadiusPoint: (t2, e2, s2, r2) => (lt$2(t2, e2), dt$2(t2, s2, r2), t2), toInnerRadiusPointOf(t2, e2, s2) {
+    s2 || (s2 = t2), Z$3(e2, t2, s2), s2.radiusX = Math.abs(t2.radiusX / e2.scaleX), s2.radiusY = Math.abs(t2.radiusY / e2.scaleY);
+  }, toInnerOf(t2, e2, s2) {
+    Z$3(e2, t2, s2);
+  }, toOuterOf(t2, e2, s2) {
+    $$1(e2, t2, s2);
+  }, getCenter: (t2, e2) => ({ x: t2.x + (e2.x - t2.x) / 2, y: t2.y + (e2.y - t2.y) / 2 }), getCenterX: (t2, e2) => t2 + (e2 - t2) / 2, getCenterY: (t2, e2) => t2 + (e2 - t2) / 2, getDistance: (t2, e2) => ht$2(t2.x, t2.y, e2.x, e2.y), getDistanceFrom(t2, e2, s2, r2) {
+    const i2 = et$2(s2 - t2), n2 = et$2(r2 - e2);
+    return st$2(i2 * i2 + n2 * n2);
+  }, getMinDistanceFrom: (t2, e2, s2, r2, i2, n2) => it$2(ht$2(t2, e2, s2, r2), ht$2(s2, r2, i2, n2)), getAngle: (t2, e2) => ct$2(t2, e2) / A$4, getRotation: (t2, e2, s2, r2) => (r2 || (r2 = e2), at$2.getRadianFrom(t2.x, t2.y, e2.x, e2.y, s2.x, s2.y, r2.x, r2.y) / A$4), getRadianFrom(t2, e2, r2, i2, n2, o2, a2, h2) {
+    s(a2) && (a2 = r2, h2 = i2);
+    const l2 = t2 - r2, d2 = e2 - i2, c2 = n2 - a2, u2 = o2 - h2;
+    return Math.atan2(l2 * u2 - d2 * c2, l2 * c2 + d2 * u2);
+  }, getAtan2: (t2, e2) => rt$2(e2.y - t2.y, e2.x - t2.x), getDistancePoint(t2, e2, s2, r2, i2) {
+    const n2 = ct$2(t2, e2);
+    return i2 && (t2 = e2), r2 || (e2 = {}), e2.x = t2.x + tt$2(n2) * s2, e2.y = t2.y + K$3(n2) * s2, e2;
+  }, toNumberPoints(t2) {
+    let e2 = t2;
+    return d$1(t2[0]) && (e2 = [], t2.forEach((t3) => e2.push(t3.x, t3.y))), e2;
+  }, isSame: (t2, e2) => J$3(t2.x) === J$3(e2.x) && J$3(t2.y) === J$3(e2.y), reset(t2) {
+    at$2.reset(t2);
+  } }, at$2 = ot$2, { getDistanceFrom: ht$2, copy: lt$2, setRadius: dt$2, getAtan2: ct$2 } = at$2;
+  let ut$2 = class ut2 {
+    constructor(t2, e2) {
+      this.set(t2, e2);
+    }
+    set(t2, e2) {
+      return d$1(t2) ? ot$2.copy(this, t2) : ot$2.set(this, t2, e2), this;
+    }
+    get() {
+      const { x: t2, y: e2 } = this;
+      return { x: t2, y: e2 };
+    }
+    clone() {
+      return new ut2(this);
+    }
+    move(t2, e2) {
+      return ot$2.move(this, t2, e2), this;
+    }
+    scale(t2, e2) {
+      return ot$2.scale(this, t2, e2), this;
+    }
+    scaleOf(t2, e2, s2) {
+      return ot$2.scaleOf(this, t2, e2, s2), this;
+    }
+    rotate(t2, e2) {
+      return ot$2.rotate(this, t2, e2), this;
+    }
+    rotateOf(t2, e2) {
+      return ot$2.rotate(this, e2, t2), this;
+    }
+    getRotation(t2, e2, s2) {
+      return ot$2.getRotation(this, t2, e2, s2);
+    }
+    toInnerOf(t2, e2) {
+      return ot$2.toInnerOf(this, t2, e2), this;
+    }
+    toOuterOf(t2, e2) {
+      return ot$2.toOuterOf(this, t2, e2), this;
+    }
+    getCenter(t2) {
+      return new ut2(ot$2.getCenter(this, t2));
+    }
+    getDistance(t2) {
+      return ot$2.getDistance(this, t2);
+    }
+    getDistancePoint(t2, e2, s2, r2) {
+      return new ut2(ot$2.getDistancePoint(this, t2, e2, s2, r2));
+    }
+    getAngle(t2) {
+      return ot$2.getAngle(this, t2);
+    }
+    getAtan2(t2) {
+      return ot$2.getAtan2(this, t2);
+    }
+    isSame(t2) {
+      return ot$2.isSame(this, t2);
+    }
+    reset() {
+      return ot$2.reset(this), this;
+    }
+  };
+  const _t$2 = new ut$2();
+  let pt$2 = class pt2 {
+    constructor(t2, e2, s2, r2, i2, n2) {
+      this.set(t2, e2, s2, r2, i2, n2);
+    }
+    set(t2, e2, s2, r2, i2, n2) {
+      return d$1(t2) ? q$2.copy(this, t2) : q$2.set(this, t2, e2, s2, r2, i2, n2), this;
+    }
+    setWith(t2) {
+      return q$2.copy(this, t2), this.scaleX = t2.scaleX, this.scaleY = t2.scaleY, this;
+    }
+    get() {
+      const { a: t2, b: e2, c: s2, d: r2, e: i2, f: n2 } = this;
+      return { a: t2, b: e2, c: s2, d: r2, e: i2, f: n2 };
+    }
+    clone() {
+      return new pt2(this);
+    }
+    translate(t2, e2) {
+      return q$2.translate(this, t2, e2), this;
+    }
+    translateInner(t2, e2) {
+      return q$2.translateInner(this, t2, e2), this;
+    }
+    scale(t2, e2) {
+      return q$2.scale(this, t2, e2), this;
+    }
+    scaleWith(t2, e2) {
+      return q$2.scale(this, t2, e2), this.scaleX *= t2, this.scaleY *= e2 || t2, this;
+    }
+    pixelScale(t2) {
+      return q$2.pixelScale(this, t2), this;
+    }
+    scaleOfOuter(t2, e2, s2) {
+      return q$2.scaleOfOuter(this, t2, e2, s2), this;
+    }
+    scaleOfInner(t2, e2, s2) {
+      return q$2.scaleOfInner(this, t2, e2, s2), this;
+    }
+    rotate(t2) {
+      return q$2.rotate(this, t2), this;
+    }
+    rotateOfOuter(t2, e2) {
+      return q$2.rotateOfOuter(this, t2, e2), this;
+    }
+    rotateOfInner(t2, e2) {
+      return q$2.rotateOfInner(this, t2, e2), this;
+    }
+    skew(t2, e2) {
+      return q$2.skew(this, t2, e2), this;
+    }
+    skewOfOuter(t2, e2, s2) {
+      return q$2.skewOfOuter(this, t2, e2, s2), this;
+    }
+    skewOfInner(t2, e2, s2) {
+      return q$2.skewOfInner(this, t2, e2, s2), this;
+    }
+    multiply(t2) {
+      return q$2.multiply(this, t2), this;
+    }
+    multiplyParent(t2) {
+      return q$2.multiplyParent(this, t2), this;
+    }
+    divide(t2) {
+      return q$2.divide(this, t2), this;
+    }
+    divideParent(t2) {
+      return q$2.divideParent(this, t2), this;
+    }
+    invert() {
+      return q$2.invert(this), this;
+    }
+    invertWith() {
+      return q$2.invert(this), this.scaleX = 1 / this.scaleX, this.scaleY = 1 / this.scaleY, this;
+    }
+    toOuterPoint(t2, e2, s2) {
+      q$2.toOuterPoint(this, t2, e2, s2);
+    }
+    toInnerPoint(t2, e2, s2) {
+      q$2.toInnerPoint(this, t2, e2, s2);
+    }
+    setLayout(t2, e2, s2) {
+      return q$2.setLayout(this, t2, e2, s2), this;
+    }
+    getLayout(t2, e2, s2) {
+      return q$2.getLayout(this, t2, e2, s2);
+    }
+    withScale(t2, e2) {
+      return q$2.withScale(this, t2, e2);
+    }
+    reset() {
+      q$2.reset(this);
+    }
+  };
+  const ft$2 = new pt$2(), gt$2 = { tempPointBounds: {}, setPoint(t2, e2, s2) {
+    t2.minX = t2.maxX = e2, t2.minY = t2.maxY = s2;
+  }, addPoint(t2, e2, s2) {
+    t2.minX = e2 < t2.minX ? e2 : t2.minX, t2.minY = s2 < t2.minY ? s2 : t2.minY, t2.maxX = e2 > t2.maxX ? e2 : t2.maxX, t2.maxY = s2 > t2.maxY ? s2 : t2.maxY;
+  }, addBounds(t2, e2, s2, r2, i2) {
+    yt$2(t2, e2, s2), yt$2(t2, e2 + r2, s2 + i2);
+  }, copy(t2, e2) {
+    t2.minX = e2.minX, t2.minY = e2.minY, t2.maxX = e2.maxX, t2.maxY = e2.maxY;
+  }, addPointBounds(t2, e2) {
+    t2.minX = e2.minX < t2.minX ? e2.minX : t2.minX, t2.minY = e2.minY < t2.minY ? e2.minY : t2.minY, t2.maxX = e2.maxX > t2.maxX ? e2.maxX : t2.maxX, t2.maxY = e2.maxY > t2.maxY ? e2.maxY : t2.maxY;
+  }, toBounds(t2, e2) {
+    e2.x = t2.minX, e2.y = t2.minY, e2.width = t2.maxX - t2.minX, e2.height = t2.maxY - t2.minY;
+  } }, { addPoint: yt$2 } = gt$2;
+  var mt$3, xt$2;
+  !(function(t2) {
+    t2[t2.top = 0] = "top", t2[t2.right = 1] = "right", t2[t2.bottom = 2] = "bottom", t2[t2.left = 3] = "left";
+  })(mt$3 || (mt$3 = {})), (function(t2) {
+    t2[t2.topLeft = 0] = "topLeft", t2[t2.top = 1] = "top", t2[t2.topRight = 2] = "topRight", t2[t2.right = 3] = "right", t2[t2.bottomRight = 4] = "bottomRight", t2[t2.bottom = 5] = "bottom", t2[t2.bottomLeft = 6] = "bottomLeft", t2[t2.left = 7] = "left", t2[t2.center = 8] = "center", t2[t2["top-left"] = 0] = "top-left", t2[t2["top-right"] = 2] = "top-right", t2[t2["bottom-right"] = 4] = "bottom-right", t2[t2["bottom-left"] = 6] = "bottom-left";
+  })(xt$2 || (xt$2 = {}));
+  const wt$2 = [{ x: 0, y: 0 }, { x: 0.5, y: 0 }, { x: 1, y: 0 }, { x: 1, y: 0.5 }, { x: 1, y: 1 }, { x: 0.5, y: 1 }, { x: 0, y: 1 }, { x: 0, y: 0.5 }, { x: 0.5, y: 0.5 }];
+  wt$2.forEach((t2) => t2.type = "percent");
+  const bt$3 = { directionData: wt$2, tempPoint: {}, get: Bt$3, toPoint(t2, e2, s2, r2, i2, n2) {
+    const o2 = Bt$3(t2);
+    s2.x = o2.x, s2.y = o2.y, "percent" === o2.type && (s2.x *= e2.width, s2.y *= e2.height, i2 && (n2 || (s2.x -= i2.x, s2.y -= i2.y), o2.x && (s2.x -= 1 === o2.x ? i2.width : 0.5 === o2.x ? o2.x * i2.width : 0), o2.y && (s2.y -= 1 === o2.y ? i2.height : 0.5 === o2.y ? o2.y * i2.height : 0))), r2 || (s2.x += e2.x, s2.y += e2.y);
+  }, getPoint: (t2, e2, s2) => (s2 || (s2 = {}), bt$3.toPoint(t2, e2, s2, true), s2) };
+  function Bt$3(t2) {
+    return i(t2) ? wt$2[xt$2[t2]] : t2;
+  }
+  const { toPoint: vt$2 } = bt$3, kt$3 = { toPoint(t2, e2, s2, r2, i2, n2) {
+    vt$2(t2, s2, r2, i2, e2, n2);
+  } }, { tempPointBounds: Ct$3, setPoint: Ot$3, addPoint: Tt$3, toBounds: Pt$3 } = gt$2, { toOuterPoint: St$3 } = q$2, { float: Lt$3, fourNumber: Rt$3 } = I$4, { floor: Et$3, ceil: It$3 } = Math;
+  let Mt$3, At$3, Wt$3, Nt$3;
+  const Yt$3 = {}, Dt$3 = {}, Xt$3 = {}, zt$2 = { tempBounds: Xt$3, set(t2, e2 = 0, s2 = 0, r2 = 0, i2 = 0) {
+    t2.x = e2, t2.y = s2, t2.width = r2, t2.height = i2;
+  }, copy(t2, e2) {
+    t2.x = e2.x, t2.y = e2.y, t2.width = e2.width, t2.height = e2.height;
+  }, copyAndSpread(t2, e2, s2, r2, i2) {
+    const { x: n2, y: o2, width: a2, height: h2 } = e2;
+    if (l(s2)) {
+      const e3 = Rt$3(s2);
+      r2 ? Ft$3.set(t2, n2 + e3[3], o2 + e3[0], a2 - e3[1] - e3[3], h2 - e3[2] - e3[0]) : Ft$3.set(t2, n2 - e3[3], o2 - e3[0], a2 + e3[1] + e3[3], h2 + e3[2] + e3[0]);
+    } else r2 && (s2 = -s2), Ft$3.set(t2, n2 - s2, o2 - s2, a2 + 2 * s2, h2 + 2 * s2);
+    i2 && ("width" === i2 ? (t2.y = o2, t2.height = h2) : (t2.x = n2, t2.width = a2));
+  }, minX: (t2) => t2.width > 0 ? t2.x : t2.x + t2.width, minY: (t2) => t2.height > 0 ? t2.y : t2.y + t2.height, maxX: (t2) => t2.width > 0 ? t2.x + t2.width : t2.x, maxY: (t2) => t2.height > 0 ? t2.y + t2.height : t2.y, move(t2, e2, s2) {
+    t2.x += e2, t2.y += s2;
+  }, scroll(t2, e2) {
+    t2.x += e2.scrollX, t2.y += e2.scrollY;
+  }, getByMove: (t2, e2, s2) => (t2 = Object.assign({}, t2), Ft$3.move(t2, e2, s2), t2), toOffsetOutBounds(t2, e2, s2) {
+    e2 ? jt$3(e2, t2) : e2 = t2, s2 || (s2 = t2), e2.offsetX = Ft$3.maxX(s2), e2.offsetY = Ft$3.maxY(s2), Ft$3.move(e2, -e2.offsetX, -e2.offsetY);
+  }, scale(t2, e2, s2 = e2, r2) {
+    r2 || ot$2.scale(t2, e2, s2), t2.width *= e2, t2.height *= s2;
+  }, scaleOf(t2, e2, s2, r2 = s2) {
+    ot$2.scaleOf(t2, e2, s2, r2), t2.width *= s2, t2.height *= r2;
+  }, tempToOuterOf: (t2, e2) => (Ft$3.copy(Xt$3, t2), Ft$3.toOuterOf(Xt$3, e2), Xt$3), getOuterOf: (t2, e2) => (t2 = Object.assign({}, t2), Ft$3.toOuterOf(t2, e2), t2), toOuterOf(t2, e2, s2) {
+    if (s2 || (s2 = t2), 0 === e2.b && 0 === e2.c) {
+      const { a: r2, d: i2, e: n2, f: o2 } = e2;
+      r2 > 0 ? (s2.width = t2.width * r2, s2.x = n2 + t2.x * r2) : (s2.width = t2.width * -r2, s2.x = n2 + t2.x * r2 - s2.width), i2 > 0 ? (s2.height = t2.height * i2, s2.y = o2 + t2.y * i2) : (s2.height = t2.height * -i2, s2.y = o2 + t2.y * i2 - s2.height);
+    } else Yt$3.x = t2.x, Yt$3.y = t2.y, St$3(e2, Yt$3, Dt$3), Ot$3(Ct$3, Dt$3.x, Dt$3.y), Yt$3.x = t2.x + t2.width, St$3(e2, Yt$3, Dt$3), Tt$3(Ct$3, Dt$3.x, Dt$3.y), Yt$3.y = t2.y + t2.height, St$3(e2, Yt$3, Dt$3), Tt$3(Ct$3, Dt$3.x, Dt$3.y), Yt$3.x = t2.x, St$3(e2, Yt$3, Dt$3), Tt$3(Ct$3, Dt$3.x, Dt$3.y), Pt$3(Ct$3, s2);
+  }, toInnerOf(t2, e2, s2) {
+    s2 || (s2 = t2), Ft$3.move(s2, -e2.e, -e2.f), Ft$3.scale(s2, 1 / e2.a, 1 / e2.d);
+  }, getFitMatrix(t2, e2, s2 = 1) {
+    const r2 = Math.min(s2, Ft$3.getFitScale(t2, e2));
+    return new pt$2(r2, 0, 0, r2, -e2.x * r2, -e2.y * r2);
+  }, getFitScale(t2, e2, s2) {
+    const r2 = t2.width / e2.width, i2 = t2.height / e2.height;
+    return s2 ? Math.max(r2, i2) : Math.min(r2, i2);
+  }, put(t2, e2, s2 = "center", r2 = 1, n2 = true, o2) {
+    o2 || (o2 = e2), i(r2) && (r2 = Ft$3.getFitScale(t2, e2, "cover" === r2)), Xt$3.width = n2 ? e2.width *= r2 : e2.width * r2, Xt$3.height = n2 ? e2.height *= r2 : e2.height * r2, kt$3.toPoint(s2, Xt$3, t2, o2, true, true);
+  }, getSpread(t2, e2, s2) {
+    const r2 = {};
+    return Ft$3.copyAndSpread(r2, t2, e2, false, s2), r2;
+  }, spread(t2, e2, s2) {
+    Ft$3.copyAndSpread(t2, t2, e2, false, s2);
+  }, shrink(t2, e2, s2) {
+    Ft$3.copyAndSpread(t2, t2, e2, true, s2);
+  }, ceil(t2) {
+    const { x: e2, y: s2 } = t2;
+    t2.x = Et$3(t2.x), t2.y = Et$3(t2.y), t2.width = e2 > t2.x ? It$3(t2.width + e2 - t2.x) : It$3(t2.width), t2.height = s2 > t2.y ? It$3(t2.height + s2 - t2.y) : It$3(t2.height);
+  }, unsign(t2) {
+    t2.width < 0 && (t2.x += t2.width, t2.width = -t2.width), t2.height < 0 && (t2.y += t2.height, t2.height = -t2.height);
+  }, float(t2, e2) {
+    t2.x = Lt$3(t2.x, e2), t2.y = Lt$3(t2.y, e2), t2.width = Lt$3(t2.width, e2), t2.height = Lt$3(t2.height, e2);
+  }, add(t2, e2, s2) {
+    Mt$3 = t2.x + t2.width, At$3 = t2.y + t2.height, Wt$3 = e2.x, Nt$3 = e2.y, s2 || (Wt$3 += e2.width, Nt$3 += e2.height), Mt$3 = Mt$3 > Wt$3 ? Mt$3 : Wt$3, At$3 = At$3 > Nt$3 ? At$3 : Nt$3, t2.x = t2.x < e2.x ? t2.x : e2.x, t2.y = t2.y < e2.y ? t2.y : e2.y, t2.width = Mt$3 - t2.x, t2.height = At$3 - t2.y;
+  }, addList(t2, e2) {
+    Ft$3.setListWithFn(t2, e2, void 0, true);
+  }, setList(t2, e2, s2 = false) {
+    Ft$3.setListWithFn(t2, e2, void 0, s2);
+  }, addListWithFn(t2, e2, s2) {
+    Ft$3.setListWithFn(t2, e2, s2, true);
+  }, setListWithFn(t2, e2, s2, r2 = false) {
+    let i2, n2 = true;
+    for (let o2 = 0, a2 = e2.length; o2 < a2; o2++) i2 = s2 ? s2(e2[o2], o2) : e2[o2], i2 && (i2.width || i2.height) && (n2 ? (n2 = false, r2 || jt$3(t2, i2)) : Ut$3(t2, i2));
+    n2 && Ft$3.reset(t2);
+  }, setPoints(t2, e2) {
+    e2.forEach((t3, e3) => 0 === e3 ? Ot$3(Ct$3, t3.x, t3.y) : Tt$3(Ct$3, t3.x, t3.y)), Pt$3(Ct$3, t2);
+  }, setPoint(t2, e2) {
+    Ft$3.set(t2, e2.x, e2.y);
+  }, addPoint(t2, e2) {
+    Ut$3(t2, e2, true);
+  }, getPoints(t2) {
+    const { x: e2, y: s2, width: r2, height: i2 } = t2;
+    return [{ x: e2, y: s2 }, { x: e2 + r2, y: s2 }, { x: e2 + r2, y: s2 + i2 }, { x: e2, y: s2 + i2 }];
+  }, hitRadiusPoint: (t2, e2, s2) => (s2 && (e2 = ot$2.tempToInnerRadiusPointOf(e2, s2)), e2.x >= t2.x - e2.radiusX && e2.x <= t2.x + t2.width + e2.radiusX && e2.y >= t2.y - e2.radiusY && e2.y <= t2.y + t2.height + e2.radiusY), hitPoint: (t2, e2, s2) => (s2 && (e2 = ot$2.tempToInnerOf(e2, s2)), e2.x >= t2.x && e2.x <= t2.x + t2.width && e2.y >= t2.y && e2.y <= t2.y + t2.height), hit: (t2, e2, s2) => (s2 && (e2 = Ft$3.tempToOuterOf(e2, s2)), !(t2.y + t2.height < e2.y || e2.y + e2.height < t2.y || t2.x + t2.width < e2.x || e2.x + e2.width < t2.x)), includes: (t2, e2, s2) => (s2 && (e2 = Ft$3.tempToOuterOf(e2, s2)), t2.x <= e2.x && t2.y <= e2.y && t2.x + t2.width >= e2.x + e2.width && t2.y + t2.height >= e2.y + e2.height), getIntersectData(t2, e2, s2) {
+    if (s2 && (e2 = Ft$3.tempToOuterOf(e2, s2)), !Ft$3.hit(t2, e2)) return { x: 0, y: 0, width: 0, height: 0 };
+    let { x: r2, y: i2, width: n2, height: o2 } = e2;
+    return Mt$3 = r2 + n2, At$3 = i2 + o2, Wt$3 = t2.x + t2.width, Nt$3 = t2.y + t2.height, r2 = r2 > t2.x ? r2 : t2.x, i2 = i2 > t2.y ? i2 : t2.y, Mt$3 = Mt$3 < Wt$3 ? Mt$3 : Wt$3, At$3 = At$3 < Nt$3 ? At$3 : Nt$3, n2 = Mt$3 - r2, o2 = At$3 - i2, { x: r2, y: i2, width: n2, height: o2 };
+  }, intersect(t2, e2, s2) {
+    Ft$3.copy(t2, Ft$3.getIntersectData(t2, e2, s2));
+  }, isSame: (t2, e2) => t2.x === e2.x && t2.y === e2.y && t2.width === e2.width && t2.height === e2.height, isEmpty: (t2) => 0 === t2.x && 0 === t2.y && 0 === t2.width && 0 === t2.height, hasSize: (t2) => t2.width && t2.height, reset(t2) {
+    Ft$3.set(t2);
+  } }, Ft$3 = zt$2, { add: Ut$3, copy: jt$3 } = Ft$3;
+  let Vt$3 = class Vt2 {
+    get minX() {
+      return zt$2.minX(this);
+    }
+    get minY() {
+      return zt$2.minY(this);
+    }
+    get maxX() {
+      return zt$2.maxX(this);
+    }
+    get maxY() {
+      return zt$2.maxY(this);
+    }
+    constructor(t2, e2, s2, r2) {
+      this.set(t2, e2, s2, r2);
+    }
+    set(t2, e2, s2, r2) {
+      return d$1(t2) ? zt$2.copy(this, t2) : zt$2.set(this, t2, e2, s2, r2), this;
+    }
+    get() {
+      const { x: t2, y: e2, width: s2, height: r2 } = this;
+      return { x: t2, y: e2, width: s2, height: r2 };
+    }
+    clone() {
+      return new Vt2(this);
+    }
+    move(t2, e2) {
+      return zt$2.move(this, t2, e2), this;
+    }
+    scale(t2, e2, s2) {
+      return zt$2.scale(this, t2, e2, s2), this;
+    }
+    scaleOf(t2, e2, s2) {
+      return zt$2.scaleOf(this, t2, e2, s2), this;
+    }
+    toOuterOf(t2, e2) {
+      return zt$2.toOuterOf(this, t2, e2), this;
+    }
+    toInnerOf(t2, e2) {
+      return zt$2.toInnerOf(this, t2, e2), this;
+    }
+    getFitMatrix(t2, e2) {
+      return zt$2.getFitMatrix(this, t2, e2);
+    }
+    put(t2, e2, s2) {
+      zt$2.put(this, t2, e2, s2);
+    }
+    spread(t2, e2) {
+      return zt$2.spread(this, t2, e2), this;
+    }
+    shrink(t2, e2) {
+      return zt$2.shrink(this, t2, e2), this;
+    }
+    ceil() {
+      return zt$2.ceil(this), this;
+    }
+    unsign() {
+      return zt$2.unsign(this), this;
+    }
+    float(t2) {
+      return zt$2.float(this, t2), this;
+    }
+    add(t2) {
+      return zt$2.add(this, t2), this;
+    }
+    addList(t2) {
+      return zt$2.setList(this, t2, true), this;
+    }
+    setList(t2) {
+      return zt$2.setList(this, t2), this;
+    }
+    addListWithFn(t2, e2) {
+      return zt$2.setListWithFn(this, t2, e2, true), this;
+    }
+    setListWithFn(t2, e2) {
+      return zt$2.setListWithFn(this, t2, e2), this;
+    }
+    setPoint(t2) {
+      return zt$2.setPoint(this, t2), this;
+    }
+    setPoints(t2) {
+      return zt$2.setPoints(this, t2), this;
+    }
+    addPoint(t2) {
+      return zt$2.addPoint(this, t2), this;
+    }
+    getPoints() {
+      return zt$2.getPoints(this);
+    }
+    hitPoint(t2, e2) {
+      return zt$2.hitPoint(this, t2, e2);
+    }
+    hitRadiusPoint(t2, e2) {
+      return zt$2.hitRadiusPoint(this, t2, e2);
+    }
+    hit(t2, e2) {
+      return zt$2.hit(this, t2, e2);
+    }
+    includes(t2, e2) {
+      return zt$2.includes(this, t2, e2);
+    }
+    intersect(t2, e2) {
+      return zt$2.intersect(this, t2, e2), this;
+    }
+    getIntersect(t2, e2) {
+      return new Vt2(zt$2.getIntersectData(this, t2, e2));
+    }
+    isSame(t2) {
+      return zt$2.isSame(this, t2);
+    }
+    isEmpty() {
+      return zt$2.isEmpty(this);
+    }
+    reset() {
+      zt$2.reset(this);
+    }
+  };
+  const Ht$3 = new Vt$3();
+  let Gt$2 = class Gt {
+    constructor(t2, e2, s2, r2, i2, n2) {
+      d$1(t2) ? this.copy(t2) : this.set(t2, e2, s2, r2, i2, n2);
+    }
+    set(t2 = 0, e2 = 0, s2 = 0, r2 = 0, i2 = 0, n2 = 0) {
+      this.top = t2, this.right = e2, this.bottom = s2, this.left = r2, this.width = i2, this.height = n2;
+    }
+    copy(t2) {
+      const { top: e2, right: s2, bottom: r2, left: i2, width: n2, height: o2 } = t2;
+      this.set(e2, s2, r2, i2, n2, o2);
+    }
+    getBoundsFrom(t2) {
+      const { top: e2, right: s2, bottom: r2, left: i2, width: n2, height: o2 } = this;
+      return new Vt$3(i2, e2, n2 || t2.width - i2 - s2, o2 || t2.height - e2 - r2);
+    }
+  };
+  const qt$2 = { number: (t2, e2) => d$1(t2) ? "percent" === t2.type ? t2.value * e2 : t2.value : t2 }, Qt$2 = { 0: 1, 1: 1, 2: 1, 3: 1, 4: 1, 5: 1, 6: 1, 7: 1, 8: 1, 9: 1, ".": 1, e: 1, E: 1 }, { floor: Jt$2, max: Zt$2 } = Math, $t$2 = { toURL(t2, e2) {
+    let s2 = encodeURIComponent(t2);
+    return "text" === e2 ? s2 = "data:text/plain;charset=utf-8," + s2 : "svg" === e2 && (s2 = "data:image/svg+xml," + s2), s2;
+  }, image: { hitCanvasSize: 100, maxCacheSize: 4096e3, maxPatternSize: 8847360, crossOrigin: "anonymous", isLarge: (t2, e2, s2, r2) => t2.width * t2.height * (e2 ? e2 * s2 : 1) > (r2 || Kt$3.maxCacheSize), isSuperLarge: (t2, e2, s2) => Kt$3.isLarge(t2, e2, s2, Kt$3.maxPatternSize), getRealURL(t2) {
+    const { prefix: e2, suffix: s2 } = Kt$3;
+    return !s2 || t2.startsWith("data:") || t2.startsWith("blob:") || (t2 += (t2.includes("?") ? "&" : "?") + s2), e2 && "/" === t2[0] && (t2 = e2 + t2), t2;
+  }, resize(t2, e2, s2, r2, i2, n2, o2, a2, h2, l2) {
+    const d2 = Zt$2(Jt$2(e2 + (r2 || 0)), 1), c2 = Zt$2(Jt$2(s2 + (i2 || 0)), 1);
+    let u2, _2, p2;
+    l2 && (p2 = qt$2.number(l2.offset, "x" === l2.type ? e2 : s2)) && ("x" === l2.type ? u2 = true : _2 = true);
+    const f2 = $t$2.origin.createCanvas(_2 ? 2 * d2 : d2, u2 ? 2 * c2 : c2), g2 = f2.getContext("2d");
+    if (a2 && (g2.globalAlpha = a2), g2.imageSmoothingEnabled = false !== o2, Kt$3.canUse(t2)) {
+      if (n2) {
+        const r3 = e2 / n2.width, i3 = s2 / n2.height;
+        g2.setTransform(r3, 0, 0, i3, -n2.x * r3, -n2.y * i3), g2.drawImage(t2, 0, 0, t2.width, t2.height);
+      } else g2.drawImage(t2, 0, 0, e2, s2);
+      p2 && (g2.drawImage(f2, 0, 0, d2, c2, u2 ? p2 - d2 : d2, u2 ? c2 : p2 - c2, d2, c2), g2.drawImage(f2, 0, 0, d2, c2, u2 ? p2 : d2, u2 ? c2 : p2, d2, c2));
+    }
+    return f2;
+  }, canUse: (t2) => t2 && t2.width && !t2.__closed, setPatternTransform(t2, e2, s2) {
+    try {
+      e2 && t2.setTransform && (t2.setTransform(e2), e2 = void 0);
+    } catch (t3) {
+    }
+    s2 && _$2.stintSet(s2, "transform", e2);
+  } } }, { image: Kt$3 } = $t$2, { randColor: te$2 } = I$4;
+  let ee$2 = class ee2 {
+    constructor(t2) {
+      this.repeatMap = {}, this.name = t2;
+    }
+    static get(t2) {
+      return new ee2(t2);
+    }
+    static set filter(t2) {
+      this.filterList = se$2(t2);
+    }
+    static set exclude(t2) {
+      this.excludeList = se$2(t2);
+    }
+    static drawRepaint(t2, e2) {
+      const s2 = te$2();
+      t2.fillWorld(e2, s2.replace("1)", ".1)")), t2.strokeWorld(e2, s2);
+    }
+    static drawBounds(t2, e2, s2) {
+      const r2 = "hit" === ee2.showBounds, i2 = t2.__nowWorld, n2 = te$2();
+      r2 && (e2.setWorld(i2), t2.__drawHitPath(e2), e2.fillStyle = n2.replace("1)", ".2)"), e2.fill()), e2.resetTransform(), e2.setStroke(n2, 2), r2 ? e2.stroke() : e2.strokeWorld(i2, n2);
+    }
+    log(...t2) {
+      if (re$2.enable) {
+        if (re$2.filterList.length && re$2.filterList.every((t3) => t3 !== this.name)) return;
+        if (re$2.excludeList.length && re$2.excludeList.some((t3) => t3 === this.name)) return;
+        console.log("%c" + this.name, "color:#21ae62", ...t2);
+      }
+    }
+    tip(...t2) {
+      re$2.enable && this.warn(...t2);
+    }
+    warn(...t2) {
+      re$2.showWarn && console.warn(this.name, ...t2);
+    }
+    repeat(t2, ...e2) {
+      this.repeatMap[t2] || (this.warn("repeat:" + t2, ...e2), this.repeatMap[t2] = true);
+    }
+    error(...t2) {
+      try {
+        throw new Error();
+      } catch (e2) {
+        console.error(this.name, ...t2, e2);
+      }
+    }
+  };
+  function se$2(t2) {
+    return t2 ? i(t2) && (t2 = [t2]) : t2 = [], t2;
+  }
+  ee$2.filterList = [], ee$2.excludeList = [], ee$2.showWarn = true;
+  const re$2 = ee$2, ie$2 = ee$2.get("RunTime"), ne$2 = { currentId: 0, currentName: "", idMap: {}, nameMap: {}, nameToIdMap: {}, start(t2, e2) {
+    const s2 = g$2.create(g$2.RUNTIME);
+    return oe$2.currentId = oe$2.idMap[s2] = e2 ? performance.now() : Date.now(), oe$2.currentName = oe$2.nameMap[s2] = t2, oe$2.nameToIdMap[t2] = s2, s2;
+  }, end(t2, e2) {
+    const s2 = oe$2.idMap[t2], r2 = oe$2.nameMap[t2], i2 = e2 ? (performance.now() - s2) / 1e3 : Date.now() - s2;
+    oe$2.idMap[t2] = oe$2.nameMap[t2] = oe$2.nameToIdMap[r2] = void 0, ie$2.log(r2, i2, "ms");
+  }, endOfName(t2, e2) {
+    const r2 = oe$2.nameToIdMap[t2];
+    s(r2) || oe$2.end(r2, e2);
+  } }, oe$2 = ne$2, ae$2 = [], he$2 = { list: {}, add(t2, ...e2) {
+    this.list[t2] = true, ae$2.push(...e2);
+  }, has(t2, e2) {
+    const s2 = this.list[t2];
+    return !s2 && e2 && this.need(t2), s2;
+  }, need(t2) {
+    console.error("please install and import plugin: " + (t2.includes("-x") ? "" : "@leafer-in/") + t2);
+  } };
+  setTimeout(() => ae$2.forEach((t2) => he$2.has(t2, true)));
+  const le$2 = { editor: (t2) => he$2.need("editor") }, de$2 = ee$2.get("UICreator"), ce$2 = { list: {}, register(t2) {
+    const { __tag: e2 } = t2.prototype;
+    ue$2[e2] && de$2.repeat(e2), ue$2[e2] = t2;
+  }, get(t2, e2, r2, i2, n2, o2) {
+    if (!ue$2[t2]) return void de$2.warn("not register " + t2);
+    const a2 = new ue$2[t2](e2);
+    return s(r2) || (a2.x = r2, i2 && (a2.y = i2), n2 && (a2.width = n2), o2 && (a2.height = o2)), a2;
+  } }, { list: ue$2 } = ce$2, _e$2 = ee$2.get("EventCreator"), pe$2 = { nameList: {}, register(t2) {
+    let e2;
+    Object.keys(t2).forEach((s2) => {
+      e2 = t2[s2], i(e2) && (fe$2[e2] && _e$2.repeat(e2), fe$2[e2] = t2);
+    });
+  }, changeName(t2, e2) {
+    const s2 = fe$2[t2];
+    if (s2) {
+      const r2 = Object.keys(s2).find((e3) => s2[e3] === t2);
+      r2 && (s2[r2] = e2, fe$2[e2] = s2);
+    }
+  }, has(t2) {
+    return !!this.nameList[t2];
+  }, get: (t2, ...e2) => new fe$2[t2](...e2) }, { nameList: fe$2 } = pe$2;
+  let ge$2 = class ge {
+    constructor() {
+      this.list = [];
+    }
+    add(t2) {
+      t2.manager = this, this.list.push(t2);
+    }
+    get(t2) {
+      let e2;
+      const { list: s2 } = this;
+      for (let r3 = 0, i2 = s2.length; r3 < i2; r3++) if (e2 = s2[r3], e2.recycled && e2.isSameSize(t2)) return e2.recycled = false, e2.manager || (e2.manager = this), e2;
+      const r2 = le$2.canvas(t2);
+      return this.add(r2), r2;
+    }
+    recycle(t2) {
+      t2.recycled = true;
+    }
+    clearRecycled() {
+      let t2;
+      const e2 = [];
+      for (let s2 = 0, r2 = this.list.length; s2 < r2; s2++) t2 = this.list[s2], t2.recycled ? t2.destroy() : e2.push(t2);
+      this.list = e2;
+    }
+    clear() {
+      this.list.forEach((t2) => {
+        t2.destroy();
+      }), this.list.length = 0;
+    }
+    destroy() {
+      this.clear();
+    }
+  };
+  function ye$2(t2, e2, s2, r2) {
+    var i2, n2 = arguments.length, o2 = n2 < 3 ? e2 : null === r2 ? r2 = Object.getOwnPropertyDescriptor(e2, s2) : r2;
+    if ("object" == typeof Reflect && "function" == typeof Reflect.decorate) o2 = Reflect.decorate(t2, e2, s2, r2);
+    else for (var a2 = t2.length - 1; a2 >= 0; a2--) (i2 = t2[a2]) && (o2 = (n2 < 3 ? i2(o2) : n2 > 3 ? i2(e2, s2, o2) : i2(e2, s2)) || o2);
+    return n2 > 3 && o2 && Object.defineProperty(e2, s2, o2), o2;
+  }
+  function me$2(t2, e2, s2, r2) {
+    return new (s2 || (s2 = Promise))(function(i2, n2) {
+      function o2(t3) {
+        try {
+          h2(r2.next(t3));
+        } catch (t4) {
+          n2(t4);
+        }
+      }
+      function a2(t3) {
+        try {
+          h2(r2.throw(t3));
+        } catch (t4) {
+          n2(t4);
+        }
+      }
+      function h2(t3) {
+        var e3;
+        t3.done ? i2(t3.value) : (e3 = t3.value, e3 instanceof s2 ? e3 : new s2(function(t4) {
+          t4(e3);
+        })).then(o2, a2);
+      }
+      h2((r2 = r2.apply(t2, [])).next());
+    });
+  }
+  function xe$2(t2) {
+    return (e2, s2) => {
+      t2 || (t2 = s2);
+      const r2 = { get() {
+        return this.context[t2];
+      }, set(e3) {
+        this.context[t2] = e3;
+      } };
+      "strokeCap" === s2 && (r2.set = function(e3) {
+        this.context[t2] = "none" === e3 ? "butt" : e3;
+      }), Object.defineProperty(e2, s2, r2);
+    };
+  }
+  "function" == typeof SuppressedError && SuppressedError;
+  const we$2 = [];
+  function be$2() {
+    return (t2, e2) => {
+      we$2.push(e2);
+    };
+  }
+  const Be$2 = [];
+  let ve$2 = class ve {
+    set blendMode(t2) {
+      "normal" === t2 && (t2 = "source-over"), this.context.globalCompositeOperation = t2;
+    }
+    get blendMode() {
+      return this.context.globalCompositeOperation;
+    }
+    set dashPattern(t2) {
+      this.context.setLineDash(t2 || Be$2);
+    }
+    get dashPattern() {
+      return this.context.getLineDash();
+    }
+    __bindContext() {
+      let t2;
+      we$2.forEach((e2) => {
+        t2 = this.context[e2], t2 && (this[e2] = t2.bind(this.context));
+      }), this.textBaseline = "alphabetic";
+    }
+    setTransform(t2, e2, s2, r2, i2, n2) {
+    }
+    resetTransform() {
+    }
+    getTransform() {
+    }
+    save() {
+    }
+    restore() {
+    }
+    transform(t2, e2, s2, r2, i2, n2) {
+      d$1(t2) ? this.context.transform(t2.a, t2.b, t2.c, t2.d, t2.e, t2.f) : this.context.transform(t2, e2, s2, r2, i2, n2);
+    }
+    translate(t2, e2) {
+    }
+    scale(t2, e2) {
+    }
+    rotate(t2) {
+    }
+    fill(t2, e2) {
+    }
+    stroke(t2) {
+    }
+    clip(t2, e2) {
+    }
+    fillRect(t2, e2, s2, r2) {
+    }
+    strokeRect(t2, e2, s2, r2) {
+    }
+    clearRect(t2, e2, s2, r2) {
+    }
+    drawImage(t2, e2, s2, r2, i2, n2, o2, a2, h2) {
+      switch (arguments.length) {
+        case 9:
+          if (e2 < 0) {
+            const t3 = -e2 / r2 * a2;
+            r2 += e2, e2 = 0, n2 += t3, a2 -= t3;
+          }
+          if (s2 < 0) {
+            const t3 = -s2 / i2 * h2;
+            i2 += s2, s2 = 0, o2 += t3, h2 -= t3;
+          }
+          this.context.drawImage(t2, e2, s2, r2, i2, n2, o2, a2, h2);
+          break;
+        case 5:
+          this.context.drawImage(t2, e2, s2, r2, i2);
+          break;
+        case 3:
+          this.context.drawImage(t2, e2, s2);
+      }
+    }
+    beginPath() {
+    }
+    moveTo(t2, e2) {
+    }
+    lineTo(t2, e2) {
+    }
+    bezierCurveTo(t2, e2, s2, r2, i2, n2) {
+    }
+    quadraticCurveTo(t2, e2, s2, r2) {
+    }
+    closePath() {
+    }
+    arc(t2, e2, s2, r2, i2, n2) {
+    }
+    arcTo(t2, e2, s2, r2, i2) {
+    }
+    ellipse(t2, e2, s2, r2, i2, n2, o2, a2) {
+    }
+    rect(t2, e2, s2, r2) {
+    }
+    roundRect(t2, e2, s2, r2, i2) {
+    }
+    createConicGradient(t2, e2, s2) {
+    }
+    createLinearGradient(t2, e2, s2, r2) {
+    }
+    createPattern(t2, e2) {
+    }
+    createRadialGradient(t2, e2, s2, r2, i2, n2) {
+    }
+    fillText(t2, e2, s2, r2) {
+    }
+    measureText(t2) {
+    }
+    strokeText(t2, e2, s2, r2) {
+    }
+    destroy() {
+      this.context = null;
+    }
+  };
+  ye$2([xe$2("imageSmoothingEnabled")], ve$2.prototype, "smooth", void 0), ye$2([xe$2("imageSmoothingQuality")], ve$2.prototype, "smoothLevel", void 0), ye$2([xe$2("globalAlpha")], ve$2.prototype, "opacity", void 0), ye$2([xe$2()], ve$2.prototype, "fillStyle", void 0), ye$2([xe$2()], ve$2.prototype, "strokeStyle", void 0), ye$2([xe$2("lineWidth")], ve$2.prototype, "strokeWidth", void 0), ye$2([xe$2("lineCap")], ve$2.prototype, "strokeCap", void 0), ye$2([xe$2("lineJoin")], ve$2.prototype, "strokeJoin", void 0), ye$2([xe$2("lineDashOffset")], ve$2.prototype, "dashOffset", void 0), ye$2([xe$2()], ve$2.prototype, "miterLimit", void 0), ye$2([xe$2()], ve$2.prototype, "shadowBlur", void 0), ye$2([xe$2()], ve$2.prototype, "shadowColor", void 0), ye$2([xe$2()], ve$2.prototype, "shadowOffsetX", void 0), ye$2([xe$2()], ve$2.prototype, "shadowOffsetY", void 0), ye$2([xe$2()], ve$2.prototype, "filter", void 0), ye$2([xe$2()], ve$2.prototype, "font", void 0), ye$2([xe$2()], ve$2.prototype, "fontKerning", void 0), ye$2([xe$2()], ve$2.prototype, "fontStretch", void 0), ye$2([xe$2()], ve$2.prototype, "fontVariantCaps", void 0), ye$2([xe$2()], ve$2.prototype, "textAlign", void 0), ye$2([xe$2()], ve$2.prototype, "textBaseline", void 0), ye$2([xe$2()], ve$2.prototype, "textRendering", void 0), ye$2([xe$2()], ve$2.prototype, "wordSpacing", void 0), ye$2([xe$2()], ve$2.prototype, "letterSpacing", void 0), ye$2([xe$2()], ve$2.prototype, "direction", void 0), ye$2([be$2()], ve$2.prototype, "setTransform", null), ye$2([be$2()], ve$2.prototype, "resetTransform", null), ye$2([be$2()], ve$2.prototype, "getTransform", null), ye$2([be$2()], ve$2.prototype, "save", null), ye$2([be$2()], ve$2.prototype, "restore", null), ye$2([be$2()], ve$2.prototype, "translate", null), ye$2([be$2()], ve$2.prototype, "scale", null), ye$2([be$2()], ve$2.prototype, "rotate", null), ye$2([be$2()], ve$2.prototype, "fill", null), ye$2([be$2()], ve$2.prototype, "stroke", null), ye$2([be$2()], ve$2.prototype, "clip", null), ye$2([be$2()], ve$2.prototype, "fillRect", null), ye$2([be$2()], ve$2.prototype, "strokeRect", null), ye$2([be$2()], ve$2.prototype, "clearRect", null), ye$2([be$2()], ve$2.prototype, "beginPath", null), ye$2([be$2()], ve$2.prototype, "moveTo", null), ye$2([be$2()], ve$2.prototype, "lineTo", null), ye$2([be$2()], ve$2.prototype, "bezierCurveTo", null), ye$2([be$2()], ve$2.prototype, "quadraticCurveTo", null), ye$2([be$2()], ve$2.prototype, "closePath", null), ye$2([be$2()], ve$2.prototype, "arc", null), ye$2([be$2()], ve$2.prototype, "arcTo", null), ye$2([be$2()], ve$2.prototype, "ellipse", null), ye$2([be$2()], ve$2.prototype, "rect", null), ye$2([be$2()], ve$2.prototype, "roundRect", null), ye$2([be$2()], ve$2.prototype, "createConicGradient", null), ye$2([be$2()], ve$2.prototype, "createLinearGradient", null), ye$2([be$2()], ve$2.prototype, "createPattern", null), ye$2([be$2()], ve$2.prototype, "createRadialGradient", null), ye$2([be$2()], ve$2.prototype, "fillText", null), ye$2([be$2()], ve$2.prototype, "measureText", null), ye$2([be$2()], ve$2.prototype, "strokeText", null);
+  const { copy: ke$2, multiplyParent: Ce$2, pixelScale: Oe$2 } = q$2, { round: Te$2 } = Math, Pe$2 = new Vt$3(), Se$2 = new Vt$3(), Le$2 = { width: 1, height: 1, pixelRatio: 1 }, Re$2 = ["width", "height", "pixelRatio"];
+  let Ee$2 = class Ee extends ve$2 {
+    get width() {
+      return this.size.width;
+    }
+    get height() {
+      return this.size.height;
+    }
+    get pixelRatio() {
+      return this.size.pixelRatio;
+    }
+    get pixelWidth() {
+      return this.width * this.pixelRatio || 0;
+    }
+    get pixelHeight() {
+      return this.height * this.pixelRatio || 0;
+    }
+    get pixelSnap() {
+      return this.config.pixelSnap;
+    }
+    set pixelSnap(t2) {
+      this.config.pixelSnap = t2;
+    }
+    get allowBackgroundColor() {
+      return this.view && this.parentView;
+    }
+    constructor(t2, e2) {
+      super(), this.size = {}, this.worldTransform = {}, t2 || (t2 = Le$2), this.manager = e2, this.innerId = g$2.create(g$2.CNAVAS);
+      const { width: s2, height: r2, pixelRatio: i2 } = t2;
+      this.autoLayout = !s2 || !r2, this.size.pixelRatio = i2 || $t$2.devicePixelRatio, this.config = t2, this.init();
+    }
+    init() {
+    }
+    __createContext() {
+      const { view: t2 } = this, { contextSettings: e2 } = this.config;
+      this.context = e2 ? t2.getContext("2d", e2) : t2.getContext("2d"), this.__bindContext();
+    }
+    export(t2, e2) {
+    }
+    toBlob(t2, e2) {
+    }
+    toDataURL(t2, e2) {
+    }
+    saveAs(t2, e2) {
+    }
+    resize(t2, e2 = true) {
+      if (this.isSameSize(t2)) return;
+      let s2;
+      this.context && !this.unreal && e2 && this.width && (s2 = this.getSameCanvas(), s2.copyWorld(this));
+      const r2 = this.size;
+      _$2.copyAttrs(r2, t2, Re$2), Re$2.forEach((t3) => r2[t3] || (r2[t3] = 1)), this.bounds = new Vt$3(0, 0, this.width, this.height), this.updateViewSize(), this.updateClientBounds(), this.context && (this.smooth = this.config.smooth, !this.unreal && s2 && (this.clearWorld(s2.bounds), this.copyWorld(s2), s2.recycle()));
+    }
+    updateViewSize() {
+    }
+    updateClientBounds() {
+    }
+    getClientBounds(t2) {
+      return t2 && this.updateClientBounds(), this.clientBounds || this.bounds;
+    }
+    startAutoLayout(t2, e2) {
+    }
+    stopAutoLayout() {
+    }
+    setCursor(t2) {
+    }
+    setWorld(t2, e2) {
+      const { pixelRatio: s2, pixelSnap: r2 } = this, i2 = this.worldTransform;
+      e2 && Ce$2(t2, e2, i2), Oe$2(t2, s2, i2), r2 && !t2.ignorePixelSnap && (t2.half && t2.half * s2 % 2 ? (i2.e = Te$2(i2.e - 0.5) + 0.5, i2.f = Te$2(i2.f - 0.5) + 0.5) : (i2.e = Te$2(i2.e), i2.f = Te$2(i2.f))), this.setTransform(i2.a, i2.b, i2.c, i2.d, i2.e, i2.f);
+    }
+    useWorldTransform(t2) {
+      t2 && (this.worldTransform = t2);
+      const e2 = this.worldTransform;
+      e2 && this.setTransform(e2.a, e2.b, e2.c, e2.d, e2.e, e2.f);
+    }
+    setStroke(t2, e2, s2, r2) {
+      e2 && (this.strokeWidth = e2), t2 && (this.strokeStyle = t2), s2 && this.setStrokeOptions(s2, r2);
+    }
+    setStrokeOptions(t2, e2) {
+      let { strokeCap: r2, strokeJoin: i2, dashPattern: n2, dashOffset: o2, miterLimit: a2 } = t2;
+      e2 && (e2.strokeCap && (r2 = e2.strokeCap), e2.strokeJoin && (i2 = e2.strokeJoin), s(e2.dashPattern) || (n2 = e2.dashPattern), s(e2.dashOffset) || (o2 = e2.dashOffset), e2.miterLimit && (a2 = e2.miterLimit)), this.strokeCap = r2, this.strokeJoin = i2, this.dashPattern = n2, this.dashOffset = o2, this.miterLimit = a2;
+    }
+    saveBlendMode(t2) {
+      this.savedBlendMode = this.blendMode, this.blendMode = t2;
+    }
+    restoreBlendMode() {
+      this.blendMode = this.savedBlendMode;
+    }
+    hitFill(t2, e2) {
+      return true;
+    }
+    hitStroke(t2, e2) {
+      return true;
+    }
+    hitPixel(t2, e2, s2 = 1) {
+      return true;
+    }
+    setWorldShadow(t2, e2, s2, r2) {
+      const { pixelRatio: i2 } = this;
+      this.shadowOffsetX = t2 * i2, this.shadowOffsetY = e2 * i2, this.shadowBlur = s2 * i2, this.shadowColor = r2 || "black";
+    }
+    setWorldBlur(t2) {
+      const { pixelRatio: e2 } = this;
+      this.filter = `blur(${t2 * e2}px)`;
+    }
+    copyWorld(t2, e2, s2, r2, i2) {
+      r2 && (this.blendMode = r2), e2 ? (this.setTempPixelBounds(e2, i2), s2 ? (this.setTempPixelBounds2(s2, i2), s2 = Se$2) : s2 = Pe$2, this.drawImage(t2.view, Pe$2.x, Pe$2.y, Pe$2.width, Pe$2.height, s2.x, s2.y, s2.width, s2.height)) : this.drawImage(t2.view, 0, 0), r2 && (this.blendMode = "source-over");
+    }
+    copyWorldToInner(t2, e2, s2, r2, i2) {
+      e2.b || e2.c ? (this.save(), this.resetTransform(), this.copyWorld(t2, e2, zt$2.tempToOuterOf(s2, e2), r2, i2), this.restore()) : (r2 && (this.blendMode = r2), this.setTempPixelBounds(e2, i2), this.drawImage(t2.view, Pe$2.x, Pe$2.y, Pe$2.width, Pe$2.height, s2.x, s2.y, s2.width, s2.height), r2 && (this.blendMode = "source-over"));
+    }
+    copyWorldByReset(t2, e2, s2, r2, i2, n2) {
+      this.resetTransform(), this.copyWorld(t2, e2, s2, r2, n2), i2 || this.useWorldTransform();
+    }
+    useGrayscaleAlpha(t2) {
+      let e2, s2;
+      this.setTempPixelBounds(t2, true, true);
+      const { context: r2 } = this, i2 = r2.getImageData(Pe$2.x, Pe$2.y, Pe$2.width, Pe$2.height), { data: n2 } = i2;
+      for (let t3 = 0, r3 = n2.length; t3 < r3; t3 += 4) s2 = 0.299 * n2[t3] + 0.587 * n2[t3 + 1] + 0.114 * n2[t3 + 2], (e2 = n2[t3 + 3]) && (n2[t3 + 3] = 255 === e2 ? s2 : e2 * (s2 / 255));
+      r2.putImageData(i2, Pe$2.x, Pe$2.y);
+    }
+    useMask(t2, e2, s2) {
+      this.copyWorld(t2, e2, s2, "destination-in");
+    }
+    useEraser(t2, e2, s2) {
+      this.copyWorld(t2, e2, s2, "destination-out");
+    }
+    fillWorld(t2, e2, s2, r2) {
+      s2 && (this.blendMode = s2), this.fillStyle = e2, this.setTempPixelBounds(t2, r2), this.fillRect(Pe$2.x, Pe$2.y, Pe$2.width, Pe$2.height), s2 && (this.blendMode = "source-over");
+    }
+    strokeWorld(t2, e2, s2, r2) {
+      s2 && (this.blendMode = s2), this.strokeStyle = e2, this.setTempPixelBounds(t2, r2), this.strokeRect(Pe$2.x, Pe$2.y, Pe$2.width, Pe$2.height), s2 && (this.blendMode = "source-over");
+    }
+    clipWorld(t2, e2 = true) {
+      this.beginPath(), this.setTempPixelBounds(t2, e2), this.rect(Pe$2.x, Pe$2.y, Pe$2.width, Pe$2.height), this.clip();
+    }
+    clipUI(t2) {
+      t2.windingRule ? this.clip(t2.windingRule) : this.clip();
+    }
+    clearWorld(t2, e2 = true) {
+      this.setTempPixelBounds(t2, e2), this.clearRect(Pe$2.x, Pe$2.y, Pe$2.width, Pe$2.height);
+    }
+    clear() {
+      const { pixelRatio: t2 } = this;
+      this.clearRect(0, 0, this.width * t2 + 2, this.height * t2 + 2);
+    }
+    setTempPixelBounds(t2, e2, s2) {
+      this.copyToPixelBounds(Pe$2, t2, e2, s2);
+    }
+    setTempPixelBounds2(t2, e2, s2) {
+      this.copyToPixelBounds(Se$2, t2, e2, s2);
+    }
+    copyToPixelBounds(t2, e2, s2, r2) {
+      t2.set(e2), r2 && t2.intersect(this.bounds), t2.scale(this.pixelRatio), s2 && t2.ceil();
+    }
+    isSameSize(t2) {
+      return this.width === t2.width && this.height === t2.height && (!t2.pixelRatio || this.pixelRatio === t2.pixelRatio);
+    }
+    getSameCanvas(t2, e2) {
+      const { size: s2, pixelSnap: r2 } = this, i2 = this.manager ? this.manager.get(s2) : le$2.canvas(Object.assign({}, s2));
+      return i2.save(), t2 && (ke$2(i2.worldTransform, this.worldTransform), i2.useWorldTransform()), e2 && (i2.smooth = this.smooth), i2.pixelSnap !== r2 && (i2.pixelSnap = r2), i2;
+    }
+    recycle(t2) {
+      this.recycled || (this.restore(), t2 ? this.clearWorld(t2) : this.clear(), this.manager ? this.manager.recycle(this) : this.destroy());
+    }
+    updateRender(t2) {
+    }
+    unrealCanvas() {
+    }
+    destroy() {
+      this.manager = this.view = this.parentView = null;
+    }
+  };
+  const Ie$2 = { creator: {}, parse(t2, e2) {
+  }, convertToCanvasData(t2, e2) {
+  } }, Me$2 = { N: 21, D: 22, X: 23, G: 24, F: 25, O: 26, P: 27, U: 28 }, Ae$2 = Object.assign({ M: 1, m: 10, L: 2, l: 20, H: 3, h: 30, V: 4, v: 40, C: 5, c: 50, S: 6, s: 60, Q: 7, q: 70, T: 8, t: 80, A: 9, a: 90, Z: 11, z: 11, R: 12 }, Me$2), We$2 = { M: 3, m: 3, L: 3, l: 3, H: 2, h: 2, V: 2, v: 2, C: 7, c: 7, S: 5, s: 5, Q: 5, q: 5, T: 3, t: 3, A: 8, a: 8, Z: 1, z: 1, N: 5, D: 9, X: 6, G: 9, F: 5, O: 7, P: 4, U: 6 }, Ne$2 = { m: 10, l: 20, H: 3, h: 30, V: 4, v: 40, c: 50, S: 6, s: 60, q: 70, T: 8, t: 80, A: 9, a: 90 }, Ye$2 = Object.assign(Object.assign({}, Ne$2), Me$2), De$2 = Ae$2, Xe$2 = {};
+  for (let t2 in De$2) Xe$2[De$2[t2]] = t2;
+  const ze$2 = {};
+  for (let t2 in De$2) ze$2[De$2[t2]] = We$2[t2];
+  const Fe$2 = { drawRoundRect(t2, e2, s2, r2, i2, n2) {
+    const o2 = I$4.fourNumber(n2, Math.min(r2 / 2, i2 / 2)), a2 = e2 + r2, h2 = s2 + i2;
+    o2[0] ? t2.moveTo(e2 + o2[0], s2) : t2.moveTo(e2, s2), o2[1] ? t2.arcTo(a2, s2, a2, h2, o2[1]) : t2.lineTo(a2, s2), o2[2] ? t2.arcTo(a2, h2, e2, h2, o2[2]) : t2.lineTo(a2, h2), o2[3] ? t2.arcTo(e2, h2, e2, s2, o2[3]) : t2.lineTo(e2, h2), o2[0] ? t2.arcTo(e2, s2, a2, s2, o2[0]) : t2.lineTo(e2, s2);
+  } }, { sin: Ue$2, cos: je$2, hypot: Ve$2, atan2: He$2, ceil: Ge$2, abs: qe$2, PI: Qe$2, sqrt: Je$2, pow: Ze$2 } = Math, { setPoint: $e$2, addPoint: Ke$2 } = gt$2, { set: ts$1, toNumberPoints: es$1 } = ot$2, { M: ss$1, L: rs$1, C: is$1, Q: ns$1, Z: os$1 } = Ae$2, as$1 = {}, hs = { points(t2, e2, s2, r2) {
+    let i2 = es$1(e2);
+    if (t2.push(ss$1, i2[0], i2[1]), s2 && i2.length > 5) {
+      let e3, n2, o2, a2, h2, l2, d2, c2, u2, _2, p2, f2, g2, y2, m2, x2 = i2.length;
+      const w2 = true === s2 ? 0.5 : s2;
+      r2 && (i2 = [i2[x2 - 2], i2[x2 - 1], ...i2, i2[0], i2[1], i2[2], i2[3]], x2 = i2.length);
+      for (let s3 = 2; s3 < x2 - 2; s3 += 2) e3 = i2[s3 - 2], n2 = i2[s3 - 1], o2 = i2[s3], a2 = i2[s3 + 1], h2 = i2[s3 + 2], l2 = i2[s3 + 3], p2 = o2 - e3, f2 = a2 - n2, g2 = Je$2(Ze$2(p2, 2) + Ze$2(f2, 2)), y2 = Je$2(Ze$2(h2 - o2, 2) + Ze$2(l2 - a2, 2)), (g2 || y2) && (m2 = g2 + y2, g2 = w2 * g2 / m2, y2 = w2 * y2 / m2, h2 -= e3, l2 -= n2, d2 = o2 - g2 * h2, c2 = a2 - g2 * l2, 2 === s3 ? r2 || t2.push(ns$1, d2, c2, o2, a2) : (p2 || f2) && t2.push(is$1, u2, _2, d2, c2, o2, a2), u2 = o2 + y2 * h2, _2 = a2 + y2 * l2);
+      r2 || t2.push(ns$1, u2, _2, i2[x2 - 2], i2[x2 - 1]);
+    } else for (let e3 = 2, s3 = i2.length; e3 < s3; e3 += 2) t2.push(rs$1, i2[e3], i2[e3 + 1]);
+    r2 && t2.push(os$1);
+  }, rect(t2, e2, s2, r2, i2) {
+    Ie$2.creator.path = t2, Ie$2.creator.moveTo(e2, s2).lineTo(e2 + r2, s2).lineTo(e2 + r2, s2 + i2).lineTo(e2, s2 + i2).lineTo(e2, s2);
+  }, roundRect(t2, e2, s2, r2, i2, n2) {
+    Ie$2.creator.path = [], Fe$2.drawRoundRect(Ie$2.creator, e2, s2, r2, i2, n2), t2.push(...Ie$2.convertToCanvasData(Ie$2.creator.path, true));
+  }, arcTo(t2, e2, s2, r2, i2, n2, o2, a2, h2, l2, d2) {
+    const c2 = r2 - e2, u2 = i2 - s2, _2 = n2 - r2, p2 = o2 - i2;
+    let f2 = He$2(u2, c2), g2 = He$2(p2, _2);
+    const y2 = Ve$2(c2, u2), m2 = Ve$2(_2, p2);
+    let x2 = g2 - f2;
+    if (x2 < 0 && (x2 += W$4), y2 < 1e-12 || m2 < 1e-12 || x2 < 1e-12 || qe$2(x2 - Qe$2) < 1e-12) return t2 && t2.push(rs$1, r2, i2), h2 && ($e$2(h2, e2, s2), Ke$2(h2, r2, i2)), d2 && ts$1(d2, e2, s2), void (l2 && ts$1(l2, r2, i2));
+    const w2 = c2 * p2 - _2 * u2 < 0, b2 = w2 ? -1 : 1, B2 = a2 / je$2(x2 / 2), v2 = r2 + B2 * je$2(f2 + x2 / 2 + N$4 * b2), k2 = i2 + B2 * Ue$2(f2 + x2 / 2 + N$4 * b2);
+    return f2 -= N$4 * b2, g2 -= N$4 * b2, cs(t2, v2, k2, a2, a2, 0, f2 / A$4, g2 / A$4, w2, h2, l2, d2);
+  }, arc: (t2, e2, s2, r2, i2, n2, o2, a2, h2, l2) => cs(t2, e2, s2, r2, r2, 0, i2, n2, o2, a2, h2, l2), ellipse(t2, e2, s2, r2, i2, n2, o2, a2, h2, l2, d2, c2) {
+    const u2 = n2 * A$4, _2 = Ue$2(u2), p2 = je$2(u2);
+    let f2 = o2 * A$4, g2 = a2 * A$4;
+    f2 > Qe$2 && (f2 -= W$4), g2 < 0 && (g2 += W$4);
+    let y2 = g2 - f2;
+    y2 < 0 ? y2 += W$4 : y2 > W$4 && (y2 -= W$4), h2 && (y2 -= W$4);
+    const m2 = Ge$2(qe$2(y2 / N$4)), x2 = y2 / m2, w2 = Ue$2(x2 / 4), b2 = 8 / 3 * w2 * w2 / Ue$2(x2 / 2);
+    g2 = f2 + x2;
+    let B2, v2, k2, C2, O2, T2, P2, S2, L2 = je$2(f2), R2 = Ue$2(f2), E2 = k2 = p2 * r2 * L2 - _2 * i2 * R2, I2 = C2 = _2 * r2 * L2 + p2 * i2 * R2, M2 = e2 + k2, Y2 = s2 + C2;
+    t2 && t2.push(t2.length ? rs$1 : ss$1, M2, Y2), l2 && $e$2(l2, M2, Y2), c2 && ts$1(c2, M2, Y2);
+    for (let n3 = 0; n3 < m2; n3++) B2 = je$2(g2), v2 = Ue$2(g2), k2 = p2 * r2 * B2 - _2 * i2 * v2, C2 = _2 * r2 * B2 + p2 * i2 * v2, O2 = e2 + E2 - b2 * (p2 * r2 * R2 + _2 * i2 * L2), T2 = s2 + I2 - b2 * (_2 * r2 * R2 - p2 * i2 * L2), P2 = e2 + k2 + b2 * (p2 * r2 * v2 + _2 * i2 * B2), S2 = s2 + C2 + b2 * (_2 * r2 * v2 - p2 * i2 * B2), t2 && t2.push(is$1, O2, T2, P2, S2, e2 + k2, s2 + C2), l2 && ds(e2 + E2, s2 + I2, O2, T2, P2, S2, e2 + k2, s2 + C2, l2, true), E2 = k2, I2 = C2, L2 = B2, R2 = v2, f2 = g2, g2 += x2;
+    d2 && ts$1(d2, e2 + k2, s2 + C2);
+  }, quadraticCurveTo(t2, e2, s2, r2, i2, n2, o2) {
+    t2.push(is$1, (e2 + 2 * r2) / 3, (s2 + 2 * i2) / 3, (n2 + 2 * r2) / 3, (o2 + 2 * i2) / 3, n2, o2);
+  }, toTwoPointBoundsByQuadraticCurve(t2, e2, s2, r2, i2, n2, o2, a2) {
+    ds(t2, e2, (t2 + 2 * s2) / 3, (e2 + 2 * r2) / 3, (i2 + 2 * s2) / 3, (n2 + 2 * r2) / 3, i2, n2, o2, a2);
+  }, toTwoPointBounds(t2, e2, s2, r2, i2, n2, o2, a2, h2, l2) {
+    const d2 = [];
+    let c2, u2, _2, p2, f2, g2, y2, m2, x2 = t2, w2 = s2, b2 = i2, B2 = o2;
+    for (let t3 = 0; t3 < 2; ++t3) if (1 == t3 && (x2 = e2, w2 = r2, b2 = n2, B2 = a2), c2 = -3 * x2 + 9 * w2 - 9 * b2 + 3 * B2, u2 = 6 * x2 - 12 * w2 + 6 * b2, _2 = 3 * w2 - 3 * x2, Math.abs(c2) < 1e-12) {
+      if (Math.abs(u2) < 1e-12) continue;
+      p2 = -_2 / u2, 0 < p2 && p2 < 1 && d2.push(p2);
+    } else y2 = u2 * u2 - 4 * _2 * c2, m2 = Math.sqrt(y2), y2 < 0 || (f2 = (-u2 + m2) / (2 * c2), 0 < f2 && f2 < 1 && d2.push(f2), g2 = (-u2 - m2) / (2 * c2), 0 < g2 && g2 < 1 && d2.push(g2));
+    l2 ? Ke$2(h2, t2, e2) : $e$2(h2, t2, e2), Ke$2(h2, o2, a2);
+    for (let l3 = 0, c3 = d2.length; l3 < c3; l3++) ls(d2[l3], t2, e2, s2, r2, i2, n2, o2, a2, as$1), Ke$2(h2, as$1.x, as$1.y);
+  }, getPointAndSet(t2, e2, s2, r2, i2, n2, o2, a2, h2, l2) {
+    const d2 = 1 - t2, c2 = d2 * d2 * d2, u2 = 3 * d2 * d2 * t2, _2 = 3 * d2 * t2 * t2, p2 = t2 * t2 * t2;
+    l2.x = c2 * e2 + u2 * r2 + _2 * n2 + p2 * a2, l2.y = c2 * s2 + u2 * i2 + _2 * o2 + p2 * h2;
+  }, getPoint(t2, e2, s2, r2, i2, n2, o2, a2, h2) {
+    const l2 = {};
+    return ls(t2, e2, s2, r2, i2, n2, o2, a2, h2, l2), l2;
+  }, getDerivative(t2, e2, s2, r2, i2) {
+    const n2 = 1 - t2;
+    return 3 * n2 * n2 * (s2 - e2) + 6 * n2 * t2 * (r2 - s2) + 3 * t2 * t2 * (i2 - r2);
+  } }, { getPointAndSet: ls, toTwoPointBounds: ds, ellipse: cs } = hs, { sin: us, cos: _s, sqrt: ps, atan2: fs } = Math, { ellipse: gs } = hs, ys = { ellipticalArc(t2, e2, s2, r2, i2, n2, o2, a2, h2, l2, d2) {
+    const c2 = (h2 - e2) / 2, u2 = (l2 - s2) / 2, _2 = n2 * A$4, p2 = us(_2), f2 = _s(_2), g2 = -f2 * c2 - p2 * u2, y2 = -f2 * u2 + p2 * c2, m2 = r2 * r2, x2 = i2 * i2, w2 = y2 * y2, b2 = g2 * g2, B2 = m2 * x2 - m2 * w2 - x2 * b2;
+    let v2 = 0;
+    if (B2 < 0) {
+      const t3 = ps(1 - B2 / (m2 * x2));
+      r2 *= t3, i2 *= t3;
+    } else v2 = (o2 === a2 ? -1 : 1) * ps(B2 / (m2 * w2 + x2 * b2));
+    const k2 = v2 * r2 * y2 / i2, C2 = -v2 * i2 * g2 / r2, O2 = fs((y2 - C2) / i2, (g2 - k2) / r2), T2 = fs((-y2 - C2) / i2, (-g2 - k2) / r2);
+    let P2 = T2 - O2;
+    0 === a2 && P2 > 0 ? P2 -= W$4 : 1 === a2 && P2 < 0 && (P2 += W$4);
+    const S2 = e2 + c2 + f2 * k2 - p2 * C2, L2 = s2 + u2 + p2 * k2 + f2 * C2, R2 = P2 < 0 ? 1 : 0;
+    d2 || $t$2.ellipseToCurve ? gs(t2, S2, L2, r2, i2, n2, O2 / A$4, T2 / A$4, R2) : r2 !== i2 || n2 ? t2.push(Ae$2.G, S2, L2, r2, i2, n2, O2 / A$4, T2 / A$4, R2) : t2.push(Ae$2.O, S2, L2, r2, O2 / A$4, T2 / A$4, R2);
+  } }, ms = { toCommand: (t2) => [], toNode: (t2) => [] }, { M: xs, m: ws, L: bs, l: Bs, H: vs, h: ks, V: Cs, v: Os, C: Ts, c: Ps, S: Ss, s: Ls, Q: Rs, q: Es, T: Is, t: Ms, A: As, a: Ws, Z: Ns, z: Ys, N: Ds, D: Xs, X: zs, G: Fs, F: Us, O: js, P: Vs, U: Hs } = Ae$2, { rect: Gs, roundRect: qs, arcTo: Qs, arc: Js, ellipse: Zs, quadraticCurveTo: $s } = hs, { ellipticalArc: Ks } = ys, tr = ee$2.get("PathConvert"), er = {}, sr = { current: { dot: 0 }, stringify(t2, e2) {
+    let s2, r2, i2, n2 = 0, o2 = t2.length, a2 = "";
+    for (; n2 < o2; ) {
+      r2 = t2[n2], s2 = ze$2[r2], a2 += r2 === i2 ? " " : Xe$2[r2];
+      for (let r3 = 1; r3 < s2; r3++) a2 += I$4.float(t2[n2 + r3], e2), r3 === s2 - 1 || (a2 += " ");
+      i2 = r2, n2 += s2;
+    }
+    return a2;
+  }, parse(t2, e2) {
+    let s2, r2, i2, n2 = "";
+    const o2 = [], a2 = e2 ? Ye$2 : Ne$2;
+    for (let e3 = 0, h2 = t2.length; e3 < h2; e3++) r2 = t2[e3], Qt$2[r2] ? ("." === r2 && (rr.dot && (ir(o2, n2), n2 = ""), rr.dot++), "0" === n2 && "." !== r2 && (ir(o2, n2), n2 = ""), n2 += r2) : Ae$2[r2] ? (n2 && (ir(o2, n2), n2 = ""), rr.name = Ae$2[r2], rr.length = We$2[r2], rr.index = 0, ir(o2, rr.name), !s2 && a2[r2] && (s2 = true)) : "-" === r2 || "+" === r2 ? "e" === i2 || "E" === i2 ? n2 += r2 : (n2 && ir(o2, n2), n2 = r2) : n2 && (ir(o2, n2), n2 = ""), i2 = r2;
+    return n2 && ir(o2, n2), s2 ? sr.toCanvasData(o2, e2) : o2;
+  }, toCanvasData(t2, e2) {
+    let s2, r2, i2, n2, o2, a2 = 0, h2 = 0, l2 = 0, d2 = 0, c2 = 0, u2 = t2.length;
+    const _2 = [];
+    for (; c2 < u2; ) {
+      switch (i2 = t2[c2], i2) {
+        case ws:
+          t2[c2 + 1] += a2, t2[c2 + 2] += h2;
+        case xs:
+          a2 = t2[c2 + 1], h2 = t2[c2 + 2], _2.push(xs, a2, h2), c2 += 3;
+          break;
+        case ks:
+          t2[c2 + 1] += a2;
+        case vs:
+          a2 = t2[c2 + 1], _2.push(bs, a2, h2), c2 += 2;
+          break;
+        case Os:
+          t2[c2 + 1] += h2;
+        case Cs:
+          h2 = t2[c2 + 1], _2.push(bs, a2, h2), c2 += 2;
+          break;
+        case Bs:
+          t2[c2 + 1] += a2, t2[c2 + 2] += h2;
+        case bs:
+          a2 = t2[c2 + 1], h2 = t2[c2 + 2], _2.push(bs, a2, h2), c2 += 3;
+          break;
+        case Ls:
+          t2[c2 + 1] += a2, t2[c2 + 2] += h2, t2[c2 + 3] += a2, t2[c2 + 4] += h2, i2 = Ss;
+        case Ss:
+          o2 = n2 === Ts || n2 === Ss, l2 = o2 ? 2 * a2 - s2 : t2[c2 + 1], d2 = o2 ? 2 * h2 - r2 : t2[c2 + 2], s2 = t2[c2 + 1], r2 = t2[c2 + 2], a2 = t2[c2 + 3], h2 = t2[c2 + 4], _2.push(Ts, l2, d2, s2, r2, a2, h2), c2 += 5;
+          break;
+        case Ps:
+          t2[c2 + 1] += a2, t2[c2 + 2] += h2, t2[c2 + 3] += a2, t2[c2 + 4] += h2, t2[c2 + 5] += a2, t2[c2 + 6] += h2, i2 = Ts;
+        case Ts:
+          s2 = t2[c2 + 3], r2 = t2[c2 + 4], a2 = t2[c2 + 5], h2 = t2[c2 + 6], _2.push(Ts, t2[c2 + 1], t2[c2 + 2], s2, r2, a2, h2), c2 += 7;
+          break;
+        case Ms:
+          t2[c2 + 1] += a2, t2[c2 + 2] += h2, i2 = Is;
+        case Is:
+          o2 = n2 === Rs || n2 === Is, s2 = o2 ? 2 * a2 - s2 : t2[c2 + 1], r2 = o2 ? 2 * h2 - r2 : t2[c2 + 2], e2 ? $s(_2, a2, h2, s2, r2, t2[c2 + 1], t2[c2 + 2]) : _2.push(Rs, s2, r2, t2[c2 + 1], t2[c2 + 2]), a2 = t2[c2 + 1], h2 = t2[c2 + 2], c2 += 3;
+          break;
+        case Es:
+          t2[c2 + 1] += a2, t2[c2 + 2] += h2, t2[c2 + 3] += a2, t2[c2 + 4] += h2, i2 = Rs;
+        case Rs:
+          s2 = t2[c2 + 1], r2 = t2[c2 + 2], e2 ? $s(_2, a2, h2, s2, r2, t2[c2 + 3], t2[c2 + 4]) : _2.push(Rs, s2, r2, t2[c2 + 3], t2[c2 + 4]), a2 = t2[c2 + 3], h2 = t2[c2 + 4], c2 += 5;
+          break;
+        case Ws:
+          t2[c2 + 6] += a2, t2[c2 + 7] += h2;
+        case As:
+          Ks(_2, a2, h2, t2[c2 + 1], t2[c2 + 2], t2[c2 + 3], t2[c2 + 4], t2[c2 + 5], t2[c2 + 6], t2[c2 + 7], e2), a2 = t2[c2 + 6], h2 = t2[c2 + 7], c2 += 8;
+          break;
+        case Ys:
+        case Ns:
+          _2.push(Ns), c2++;
+          break;
+        case Ds:
+          a2 = t2[c2 + 1], h2 = t2[c2 + 2], e2 ? Gs(_2, a2, h2, t2[c2 + 3], t2[c2 + 4]) : nr(_2, t2, c2, 5), c2 += 5;
+          break;
+        case Xs:
+          a2 = t2[c2 + 1], h2 = t2[c2 + 2], e2 ? qs(_2, a2, h2, t2[c2 + 3], t2[c2 + 4], [t2[c2 + 5], t2[c2 + 6], t2[c2 + 7], t2[c2 + 8]]) : nr(_2, t2, c2, 9), c2 += 9;
+          break;
+        case zs:
+          a2 = t2[c2 + 1], h2 = t2[c2 + 2], e2 ? qs(_2, a2, h2, t2[c2 + 3], t2[c2 + 4], t2[c2 + 5]) : nr(_2, t2, c2, 6), c2 += 6;
+          break;
+        case Fs:
+          Zs(e2 ? _2 : nr(_2, t2, c2, 9), t2[c2 + 1], t2[c2 + 2], t2[c2 + 3], t2[c2 + 4], t2[c2 + 5], t2[c2 + 6], t2[c2 + 7], t2[c2 + 8], null, er), a2 = er.x, h2 = er.y, c2 += 9;
+          break;
+        case Us:
+          e2 ? Zs(_2, t2[c2 + 1], t2[c2 + 2], t2[c2 + 3], t2[c2 + 4], 0, 0, 360, false) : nr(_2, t2, c2, 5), a2 = t2[c2 + 1] + t2[c2 + 3], h2 = t2[c2 + 2], c2 += 5;
+          break;
+        case js:
+          Js(e2 ? _2 : nr(_2, t2, c2, 7), t2[c2 + 1], t2[c2 + 2], t2[c2 + 3], t2[c2 + 4], t2[c2 + 5], t2[c2 + 6], null, er), a2 = er.x, h2 = er.y, c2 += 7;
+          break;
+        case Vs:
+          e2 ? Js(_2, t2[c2 + 1], t2[c2 + 2], t2[c2 + 3], 0, 360, false) : nr(_2, t2, c2, 4), a2 = t2[c2 + 1] + t2[c2 + 3], h2 = t2[c2 + 2], c2 += 4;
+          break;
+        case Hs:
+          Qs(e2 ? _2 : nr(_2, t2, c2, 6), a2, h2, t2[c2 + 1], t2[c2 + 2], t2[c2 + 3], t2[c2 + 4], t2[c2 + 5], null, er), a2 = er.x, h2 = er.y, c2 += 6;
+          break;
+        default:
+          return tr.error(`command: ${i2} [index:${c2}]`, t2), _2;
+      }
+      n2 = i2;
+    }
+    return _2;
+  }, objectToCanvasData(t2) {
+    if (t2[0].name.length > 1) return ms.toCommand(t2);
+    {
+      const e2 = [];
+      return t2.forEach((t3) => {
+        switch (t3.name) {
+          case "M":
+            e2.push(xs, t3.x, t3.y);
+            break;
+          case "L":
+            e2.push(bs, t3.x, t3.y);
+            break;
+          case "C":
+            e2.push(Ts, t3.x1, t3.y1, t3.x2, t3.y2, t3.x, t3.y);
+            break;
+          case "Q":
+            e2.push(Rs, t3.x1, t3.y1, t3.x, t3.y);
+            break;
+          case "Z":
+            e2.push(Ns);
+        }
+      }), e2;
+    }
+  }, copyData(t2, e2, s2, r2) {
+    for (let i2 = s2, n2 = s2 + r2; i2 < n2; i2++) t2.push(e2[i2]);
+  }, pushData(t2, e2) {
+    rr.index === rr.length && (rr.index = 1, t2.push(rr.name)), t2.push(Number(e2)), rr.index++, rr.dot = 0;
+  } }, { current: rr, pushData: ir, copyData: nr } = sr, { M: or, L: ar, C: hr, Q: lr, Z: dr, N: cr, D: ur, X: _r, G: pr, F: fr, O: gr, P: yr, U: mr } = Ae$2, { getMinDistanceFrom: xr, getRadianFrom: wr } = ot$2, { tan: br, min: Br, abs: vr } = Math, kr = {}, Cr = { beginPath(t2) {
+    t2.length = 0;
+  }, moveTo(t2, e2, s2) {
+    t2.push(or, e2, s2);
+  }, lineTo(t2, e2, s2) {
+    t2.push(ar, e2, s2);
+  }, bezierCurveTo(t2, e2, s2, r2, i2, n2, o2) {
+    t2.push(hr, e2, s2, r2, i2, n2, o2);
+  }, quadraticCurveTo(t2, e2, s2, r2, i2) {
+    t2.push(lr, e2, s2, r2, i2);
+  }, closePath(t2) {
+    t2.push(dr);
+  }, rect(t2, e2, s2, r2, i2) {
+    t2.push(cr, e2, s2, r2, i2);
+  }, roundRect(t2, e2, s2, r2, i2, n2) {
+    if (o(n2)) t2.push(_r, e2, s2, r2, i2, n2);
+    else {
+      const o2 = I$4.fourNumber(n2);
+      o2 ? t2.push(ur, e2, s2, r2, i2, ...o2) : t2.push(cr, e2, s2, r2, i2);
+    }
+  }, ellipse(t2, e2, s2, i2, n2, o2, a2, h2, l2) {
+    if (i2 === n2) return Tr(t2, e2, s2, i2, a2, h2, l2);
+    r(o2) ? t2.push(fr, e2, s2, i2, n2) : (r(a2) && (a2 = 0), r(h2) && (h2 = 360), t2.push(pr, e2, s2, i2, n2, o2, a2, h2, l2 ? 1 : 0));
+  }, arc(t2, e2, s2, i2, n2, o2, a2) {
+    r(n2) ? t2.push(yr, e2, s2, i2) : (r(n2) && (n2 = 0), r(o2) && (o2 = 360), t2.push(gr, e2, s2, i2, n2, o2, a2 ? 1 : 0));
+  }, arcTo(t2, e2, r2, i2, n2, o2, a2, h2, l2) {
+    if (!s(a2)) {
+      const t3 = xr(a2, h2, e2, r2, i2, n2) / (l2 ? 1 : 2);
+      o2 = Br(o2, Br(t3, t3 * vr(br(wr(a2, h2, e2, r2, i2, n2) / 2))));
+    }
+    t2.push(mr, e2, r2, i2, n2, o2);
+  }, drawEllipse(t2, e2, s2, i2, n2, o2, a2, h2, l2) {
+    hs.ellipse(null, e2, s2, i2, n2, r(o2) ? 0 : o2, r(a2) ? 0 : a2, r(h2) ? 360 : h2, l2, null, null, kr), t2.push(or, kr.x, kr.y), Or(t2, e2, s2, i2, n2, o2, a2, h2, l2);
+  }, drawArc(t2, e2, s2, i2, n2, o2, a2) {
+    hs.arc(null, e2, s2, i2, r(n2) ? 0 : n2, r(o2) ? 360 : o2, a2, null, null, kr), t2.push(or, kr.x, kr.y), Tr(t2, e2, s2, i2, n2, o2, a2);
+  }, drawPoints(t2, e2, s2, r2) {
+    hs.points(t2, e2, s2, r2);
+  } }, { ellipse: Or, arc: Tr } = Cr, { moveTo: Pr, lineTo: Sr, quadraticCurveTo: Lr, bezierCurveTo: Rr, closePath: Er, beginPath: Ir, rect: Mr, roundRect: Ar, ellipse: Wr, arc: Nr, arcTo: Yr, drawEllipse: Dr, drawArc: Xr, drawPoints: zr } = Cr;
+  class Fr {
+    set path(t2) {
+      this.__path = t2;
+    }
+    get path() {
+      return this.__path;
+    }
+    constructor(t2) {
+      this.set(t2);
+    }
+    set(t2) {
+      return this.__path = t2 ? i(t2) ? Ie$2.parse(t2) : t2 : [], this;
+    }
+    beginPath() {
+      return Ir(this.__path), this.paint(), this;
+    }
+    moveTo(t2, e2) {
+      return Pr(this.__path, t2, e2), this.paint(), this;
+    }
+    lineTo(t2, e2) {
+      return Sr(this.__path, t2, e2), this.paint(), this;
+    }
+    bezierCurveTo(t2, e2, s2, r2, i2, n2) {
+      return Rr(this.__path, t2, e2, s2, r2, i2, n2), this.paint(), this;
+    }
+    quadraticCurveTo(t2, e2, s2, r2) {
+      return Lr(this.__path, t2, e2, s2, r2), this.paint(), this;
+    }
+    closePath() {
+      return Er(this.__path), this.paint(), this;
+    }
+    rect(t2, e2, s2, r2) {
+      return Mr(this.__path, t2, e2, s2, r2), this.paint(), this;
+    }
+    roundRect(t2, e2, s2, r2, i2) {
+      return Ar(this.__path, t2, e2, s2, r2, i2), this.paint(), this;
+    }
+    ellipse(t2, e2, s2, r2, i2, n2, o2, a2) {
+      return Wr(this.__path, t2, e2, s2, r2, i2, n2, o2, a2), this.paint(), this;
+    }
+    arc(t2, e2, s2, r2, i2, n2) {
+      return Nr(this.__path, t2, e2, s2, r2, i2, n2), this.paint(), this;
+    }
+    arcTo(t2, e2, s2, r2, i2) {
+      return Yr(this.__path, t2, e2, s2, r2, i2), this.paint(), this;
+    }
+    drawEllipse(t2, e2, s2, r2, i2, n2, o2, a2) {
+      return Dr(this.__path, t2, e2, s2, r2, i2, n2, o2, a2), this.paint(), this;
+    }
+    drawArc(t2, e2, s2, r2, i2, n2) {
+      return Xr(this.__path, t2, e2, s2, r2, i2, n2), this.paint(), this;
+    }
+    drawPoints(t2, e2, s2) {
+      return zr(this.__path, t2, e2, s2), this.paint(), this;
+    }
+    clearPath() {
+      return this.beginPath();
+    }
+    paint() {
+    }
+  }
+  const { M: Ur, L: jr, C: Vr, Q: Hr, Z: Gr, N: qr, D: Qr, X: Jr, G: Zr, F: $r, O: Kr, P: ti$2, U: ei$2 } = Ae$2, si$2 = ee$2.get("PathDrawer"), ri$2 = { drawPathByData(t2, e2) {
+    if (!e2) return;
+    let s2, r2 = 0, i2 = e2.length;
+    for (; r2 < i2; ) switch (s2 = e2[r2], s2) {
+      case Ur:
+        t2.moveTo(e2[r2 + 1], e2[r2 + 2]), r2 += 3;
+        break;
+      case jr:
+        t2.lineTo(e2[r2 + 1], e2[r2 + 2]), r2 += 3;
+        break;
+      case Vr:
+        t2.bezierCurveTo(e2[r2 + 1], e2[r2 + 2], e2[r2 + 3], e2[r2 + 4], e2[r2 + 5], e2[r2 + 6]), r2 += 7;
+        break;
+      case Hr:
+        t2.quadraticCurveTo(e2[r2 + 1], e2[r2 + 2], e2[r2 + 3], e2[r2 + 4]), r2 += 5;
+        break;
+      case Gr:
+        t2.closePath(), r2 += 1;
+        break;
+      case qr:
+        t2.rect(e2[r2 + 1], e2[r2 + 2], e2[r2 + 3], e2[r2 + 4]), r2 += 5;
+        break;
+      case Qr:
+        t2.roundRect(e2[r2 + 1], e2[r2 + 2], e2[r2 + 3], e2[r2 + 4], [e2[r2 + 5], e2[r2 + 6], e2[r2 + 7], e2[r2 + 8]]), r2 += 9;
+        break;
+      case Jr:
+        t2.roundRect(e2[r2 + 1], e2[r2 + 2], e2[r2 + 3], e2[r2 + 4], e2[r2 + 5]), r2 += 6;
+        break;
+      case Zr:
+        t2.ellipse(e2[r2 + 1], e2[r2 + 2], e2[r2 + 3], e2[r2 + 4], e2[r2 + 5] * A$4, e2[r2 + 6] * A$4, e2[r2 + 7] * A$4, e2[r2 + 8]), r2 += 9;
+        break;
+      case $r:
+        t2.ellipse(e2[r2 + 1], e2[r2 + 2], e2[r2 + 3], e2[r2 + 4], 0, 0, W$4, false), r2 += 5;
+        break;
+      case Kr:
+        t2.arc(e2[r2 + 1], e2[r2 + 2], e2[r2 + 3], e2[r2 + 4] * A$4, e2[r2 + 5] * A$4, e2[r2 + 6]), r2 += 7;
+        break;
+      case ti$2:
+        t2.arc(e2[r2 + 1], e2[r2 + 2], e2[r2 + 3], 0, W$4, false), r2 += 4;
+        break;
+      case ei$2:
+        t2.arcTo(e2[r2 + 1], e2[r2 + 2], e2[r2 + 3], e2[r2 + 4], e2[r2 + 5]), r2 += 6;
+        break;
+      default:
+        return void si$2.error(`command: ${s2} [index:${r2}]`, e2);
+    }
+  } }, { M: ii$2, L: ni$2, C: oi$2, Q: ai$2, Z: hi$2, N: li$2, D: di$2, X: ci$1, G: ui$1, F: _i$2, O: pi$1, P: fi$1, U: gi$1 } = Ae$2, { toTwoPointBounds: yi$1, toTwoPointBoundsByQuadraticCurve: mi$1, arcTo: xi$1, arc: wi$1, ellipse: bi$1 } = hs, { addPointBounds: Bi$1, copy: vi$1, addPoint: ki$1, setPoint: Ci$1, addBounds: Oi$1, toBounds: Ti$1 } = gt$2, Pi$1 = ee$2.get("PathBounds");
+  let Si$1, Li$1, Ri$1;
+  const Ei$1 = {}, Ii$1 = {}, Mi$1 = {}, Ai$1 = { toBounds(t2, e2) {
+    Ai$1.toTwoPointBounds(t2, Ii$1), Ti$1(Ii$1, e2);
+  }, toTwoPointBounds(t2, e2) {
+    if (!t2 || !t2.length) return Ci$1(e2, 0, 0);
+    let s2, r2, i2, n2, o2, a2 = 0, h2 = 0, l2 = 0;
+    const d2 = t2.length;
+    for (; a2 < d2; ) switch (o2 = t2[a2], 0 === a2 && (o2 === hi$2 || o2 === oi$2 || o2 === ai$2 ? Ci$1(e2, h2, l2) : Ci$1(e2, t2[a2 + 1], t2[a2 + 2])), o2) {
+      case ii$2:
+      case ni$2:
+        h2 = t2[a2 + 1], l2 = t2[a2 + 2], ki$1(e2, h2, l2), a2 += 3;
+        break;
+      case oi$2:
+        i2 = t2[a2 + 5], n2 = t2[a2 + 6], yi$1(h2, l2, t2[a2 + 1], t2[a2 + 2], t2[a2 + 3], t2[a2 + 4], i2, n2, Ei$1), Bi$1(e2, Ei$1), h2 = i2, l2 = n2, a2 += 7;
+        break;
+      case ai$2:
+        s2 = t2[a2 + 1], r2 = t2[a2 + 2], i2 = t2[a2 + 3], n2 = t2[a2 + 4], mi$1(h2, l2, s2, r2, i2, n2, Ei$1), Bi$1(e2, Ei$1), h2 = i2, l2 = n2, a2 += 5;
+        break;
+      case hi$2:
+        a2 += 1;
+        break;
+      case li$2:
+        h2 = t2[a2 + 1], l2 = t2[a2 + 2], Oi$1(e2, h2, l2, t2[a2 + 3], t2[a2 + 4]), a2 += 5;
+        break;
+      case di$2:
+      case ci$1:
+        h2 = t2[a2 + 1], l2 = t2[a2 + 2], Oi$1(e2, h2, l2, t2[a2 + 3], t2[a2 + 4]), a2 += o2 === di$2 ? 9 : 6;
+        break;
+      case ui$1:
+        bi$1(null, t2[a2 + 1], t2[a2 + 2], t2[a2 + 3], t2[a2 + 4], t2[a2 + 5], t2[a2 + 6], t2[a2 + 7], t2[a2 + 8], Ei$1, Mi$1), 0 === a2 ? vi$1(e2, Ei$1) : Bi$1(e2, Ei$1), h2 = Mi$1.x, l2 = Mi$1.y, a2 += 9;
+        break;
+      case _i$2:
+        h2 = t2[a2 + 1], l2 = t2[a2 + 2], Li$1 = t2[a2 + 3], Ri$1 = t2[a2 + 4], Oi$1(e2, h2 - Li$1, l2 - Ri$1, 2 * Li$1, 2 * Ri$1), h2 += Li$1, a2 += 5;
+        break;
+      case pi$1:
+        wi$1(null, t2[a2 + 1], t2[a2 + 2], t2[a2 + 3], t2[a2 + 4], t2[a2 + 5], t2[a2 + 6], Ei$1, Mi$1), 0 === a2 ? vi$1(e2, Ei$1) : Bi$1(e2, Ei$1), h2 = Mi$1.x, l2 = Mi$1.y, a2 += 7;
+        break;
+      case fi$1:
+        h2 = t2[a2 + 1], l2 = t2[a2 + 2], Si$1 = t2[a2 + 3], Oi$1(e2, h2 - Si$1, l2 - Si$1, 2 * Si$1, 2 * Si$1), h2 += Si$1, a2 += 4;
+        break;
+      case gi$1:
+        xi$1(null, h2, l2, t2[a2 + 1], t2[a2 + 2], t2[a2 + 3], t2[a2 + 4], t2[a2 + 5], Ei$1, Mi$1), 0 === a2 ? vi$1(e2, Ei$1) : Bi$1(e2, Ei$1), h2 = Mi$1.x, l2 = Mi$1.y, a2 += 6;
+        break;
+      default:
+        return void Pi$1.error(`command: ${o2} [index:${a2}]`, t2);
+    }
+  } }, { M: Wi$1, L: Ni$1, Z: Yi$1 } = Ae$2, { getCenterX: Di$1, getCenterY: Xi$1 } = ot$2, { arcTo: zi$1 } = Cr, Fi$1 = { smooth(t2, e2, s2) {
+    let r2, i2, n2, o2 = 0, a2 = 0, h2 = 0, d2 = 0, c2 = 0, u2 = 0, _2 = 0, p2 = 0, f2 = 0;
+    l(e2) && (e2 = e2[0] || 0);
+    const g2 = t2.length, y2 = 9 === g2, m2 = [];
+    for (; o2 < g2; ) {
+      switch (r2 = t2[o2], r2) {
+        case Wi$1:
+          d2 = p2 = t2[o2 + 1], c2 = f2 = t2[o2 + 2], o2 += 3, t2[o2] === Ni$1 ? (u2 = t2[o2 + 1], _2 = t2[o2 + 2], y2 ? m2.push(Wi$1, d2, c2) : m2.push(Wi$1, Di$1(d2, u2), Xi$1(c2, _2))) : m2.push(Wi$1, d2, c2);
+          break;
+        case Ni$1:
+          switch (a2 = t2[o2 + 1], h2 = t2[o2 + 2], o2 += 3, t2[o2]) {
+            case Ni$1:
+              zi$1(m2, a2, h2, t2[o2 + 1], t2[o2 + 2], e2, p2, f2, y2);
+              break;
+            case Yi$1:
+              zi$1(m2, a2, h2, d2, c2, e2, p2, f2, y2);
+              break;
+            default:
+              m2.push(Ni$1, a2, h2);
+          }
+          p2 = a2, f2 = h2;
+          break;
+        case Yi$1:
+          i2 !== Yi$1 && (zi$1(m2, d2, c2, u2, _2, e2, p2, f2, y2), m2.push(Yi$1)), o2 += 1;
+          break;
+        default:
+          n2 = ze$2[r2];
+          for (let e3 = 0; e3 < n2; e3++) m2.push(t2[o2 + e3]);
+          o2 += n2;
+      }
+      i2 = r2;
+    }
+    return r2 !== Yi$1 && (m2[1] = d2, m2[2] = c2), m2;
+  } };
+  function Ui$1(t2) {
+    return new Fr(t2);
+  }
+  const ji$1 = Ui$1();
+  Ie$2.creator = Ui$1(), Ie$2.parse = sr.parse, Ie$2.convertToCanvasData = sr.toCanvasData;
+  const { drawRoundRect: Vi$1 } = Fe$2;
+  function Hi$1(t2) {
+    !(function(t3) {
+      t3 && !t3.roundRect && (t3.roundRect = function(t4, e2, s2, r2, i2) {
+        Vi$1(this, t4, e2, s2, r2, i2);
+      });
+    })(t2);
+  }
+  const Gi$1 = { alphaPixelTypes: ["png", "webp", "svg"], upperCaseTypeMap: {}, mimeType: (t2, e2 = "image") => !t2 || t2.startsWith(e2) ? t2 : ("jpg" === t2 && (t2 = "jpeg"), e2 + "/" + t2), fileType(t2) {
+    const e2 = t2.split(".");
+    return e2[e2.length - 1];
+  }, isOpaqueImage(t2) {
+    const e2 = qi$1.fileType(t2);
+    return ["jpg", "jpeg"].some((t3) => t3 === e2);
+  }, getExportOptions(t2) {
+    switch (typeof t2) {
+      case "object":
+        return t2;
+      case "number":
+        return { quality: t2 };
+      case "boolean":
+        return { blob: t2 };
+      default:
+        return {};
+    }
+  } }, qi$1 = Gi$1;
+  qi$1.mineType = qi$1.mimeType, qi$1.alphaPixelTypes.forEach((t2) => qi$1.upperCaseTypeMap[t2] = t2.toUpperCase());
+  const Qi$1 = ee$2.get("TaskProcessor");
+  let Ji$1 = class Ji {
+    constructor(t2) {
+      this.parallel = true, this.time = 1, this.id = g$2.create(g$2.TASK), this.task = t2;
+    }
+    run() {
+      return me$2(this, void 0, void 0, function* () {
+        try {
+          if (this.isComplete || this.runing) return;
+          if (this.runing = true, this.canUse && !this.canUse()) return this.cancel();
+          this.task && (yield this.task());
+        } catch (t2) {
+          Qi$1.error(t2);
+        }
+      });
+    }
+    complete() {
+      this.isComplete = true, this.parent = this.task = this.canUse = null;
+    }
+    cancel() {
+      this.isCancel = true, this.complete();
+    }
+  };
+  let Zi$1 = class Zi {
+    get total() {
+      return this.list.length + this.delayNumber;
+    }
+    get finishedIndex() {
+      return this.isComplete ? 0 : this.index + this.parallelSuccessNumber;
+    }
+    get remain() {
+      return this.isComplete ? this.total : this.total - this.finishedIndex;
+    }
+    get percent() {
+      const { total: t2 } = this;
+      let e2 = 0, s2 = 0;
+      for (let r2 = 0; r2 < t2; r2++) r2 <= this.finishedIndex ? (s2 += this.list[r2].time, r2 === this.finishedIndex && (e2 = s2)) : e2 += this.list[r2].time;
+      return this.isComplete ? 1 : s2 / e2;
+    }
+    constructor(t2) {
+      this.config = { parallel: 6 }, this.list = [], this.running = false, this.isComplete = true, this.index = 0, this.delayNumber = 0, t2 && _$2.assign(this.config, t2), this.empty();
+    }
+    add(t2, e2, r2) {
+      let i2, n2, a2, h2;
+      const l2 = new Ji$1(t2);
+      return l2.parent = this, o(e2) ? h2 = e2 : e2 && (n2 = e2.parallel, i2 = e2.start, a2 = e2.time, h2 = e2.delay, r2 || (r2 = e2.canUse)), a2 && (l2.time = a2), false === n2 && (l2.parallel = false), r2 && (l2.canUse = r2), s(h2) ? this.push(l2, i2) : (this.delayNumber++, setTimeout(() => {
+        this.delayNumber && (this.delayNumber--, this.push(l2, i2));
+      }, h2)), this.isComplete = false, l2;
+    }
+    push(t2, e2) {
+      this.list.push(t2), false === e2 || this.timer || (this.timer = setTimeout(() => this.start()));
+    }
+    empty() {
+      this.index = 0, this.parallelSuccessNumber = 0, this.list = [], this.parallelList = [], this.delayNumber = 0;
+    }
+    start() {
+      this.running || (this.running = true, this.isComplete = false, this.run());
+    }
+    pause() {
+      clearTimeout(this.timer), this.timer = null, this.running = false;
+    }
+    resume() {
+      this.start();
+    }
+    skip() {
+      this.index++, this.resume();
+    }
+    stop() {
+      this.isComplete = true, this.list.forEach((t2) => {
+        t2.isComplete || t2.run();
+      }), this.pause(), this.empty();
+    }
+    run() {
+      this.running && (this.setParallelList(), this.parallelList.length > 1 ? this.runParallelTasks() : this.remain ? this.runTask() : this.onComplete());
+    }
+    runTask() {
+      const t2 = this.list[this.index];
+      t2 ? t2.run().then(() => {
+        this.onTask(t2), this.index++, t2.isCancel ? this.runTask() : this.nextTask();
+      }).catch((t3) => {
+        this.onError(t3);
+      }) : this.timer = setTimeout(() => this.nextTask());
+    }
+    runParallelTasks() {
+      this.parallelList.forEach((t2) => this.runParallelTask(t2));
+    }
+    runParallelTask(t2) {
+      t2.run().then(() => {
+        this.onTask(t2), this.fillParallelTask();
+      }).catch((t3) => {
+        this.onParallelError(t3);
+      });
+    }
+    nextTask() {
+      this.total === this.finishedIndex ? this.onComplete() : this.timer = setTimeout(() => this.run());
+    }
+    setParallelList() {
+      let t2;
+      const { config: e2, list: s2, index: r2 } = this;
+      this.parallelList = [], this.parallelSuccessNumber = 0;
+      let i2 = r2 + e2.parallel;
+      if (i2 > s2.length && (i2 = s2.length), e2.parallel > 1) for (let e3 = r2; e3 < i2 && (t2 = s2[e3], t2.parallel); e3++) this.parallelList.push(t2);
+    }
+    fillParallelTask() {
+      let t2;
+      const e2 = this.parallelList;
+      this.parallelSuccessNumber++, e2.pop();
+      const s2 = e2.length, r2 = this.finishedIndex + s2;
+      if (e2.length) {
+        if (!this.running) return;
+        r2 < this.total && (t2 = this.list[r2], t2 && t2.parallel && (e2.push(t2), this.runParallelTask(t2)));
+      } else this.index += this.parallelSuccessNumber, this.parallelSuccessNumber = 0, this.nextTask();
+    }
+    onComplete() {
+      this.stop(), this.config.onComplete && this.config.onComplete();
+    }
+    onTask(t2) {
+      t2.complete(), this.config.onTask && this.config.onTask();
+    }
+    onParallelError(t2) {
+      this.parallelList.forEach((t3) => {
+        t3.parallel = false;
+      }), this.parallelList.length = 0, this.parallelSuccessNumber = 0, this.onError(t2);
+    }
+    onError(t2) {
+      this.pause(), this.config.onError && this.config.onError(t2);
+    }
+    destroy() {
+      this.stop();
+    }
+  };
+  const $i$1 = ee$2.get("Resource"), Ki$1 = { tasker: new Zi$1(), queue: new Zi$1({ parallel: 1 }), map: {}, get isComplete() {
+    return tn.tasker.isComplete;
+  }, set(t2, e2) {
+    tn.map[t2] && $i$1.repeat(t2), tn.map[t2] = e2;
+  }, get: (t2) => tn.map[t2], remove(t2) {
+    const e2 = tn.map[t2];
+    e2 && (e2.destroy && e2.destroy(), delete tn.map[t2]);
+  }, loadImage(t2, e2) {
+    return new Promise((s2, r2) => {
+      const i2 = this.setImage(t2, t2, e2);
+      i2.load(() => s2(i2), (t3) => r2(t3));
+    });
+  }, setImage(t2, e2, s2) {
+    let r2;
+    return i(e2) ? r2 = { url: e2 } : e2.url || (r2 = { url: t2, view: e2 }), r2 && (s2 && (r2.format = s2), e2 = le$2.image(r2)), tn.set(t2, e2), e2;
+  }, loadFilm(t2, e2) {
+  }, loadVideo(t2, e2) {
+  }, destroy() {
+    tn.map = {};
+  } }, tn = Ki$1, en = { maxRecycled: 10, recycledList: [], patternTasker: Ki$1.queue, get(t2, e2) {
+    let s2 = Ki$1.get(t2.url);
+    return s2 || Ki$1.set(t2.url, s2 = "film" === e2 ? le$2.film(t2) : le$2.image(t2)), s2.use++, s2;
+  }, recycle(t2) {
+    t2.use--, setTimeout(() => {
+      t2.use || ($t$2.image.isLarge(t2) ? t2.url && Ki$1.remove(t2.url) : (t2.clearLevels(), sn.recycledList.push(t2)));
+    });
+  }, recyclePaint(t2) {
+    sn.recycle(t2.image);
+  }, clearRecycled(t2) {
+    const e2 = sn.recycledList;
+    (e2.length > sn.maxRecycled || t2) && (e2.forEach((e3) => (!e3.use || t2) && e3.url && Ki$1.remove(e3.url)), e2.length = 0);
+  }, clearLevels() {
+  }, hasAlphaPixel: (t2) => Gi$1.alphaPixelTypes.some((e2) => sn.isFormat(e2, t2)), isFormat(t2, e2) {
+    if (e2.format) return e2.format === t2;
+    const { url: s2 } = e2;
+    if (s2.startsWith("data:")) {
+      if (s2.startsWith("data:" + Gi$1.mimeType(t2))) return true;
+    } else {
+      if (s2.includes("." + t2) || s2.includes("." + Gi$1.upperCaseTypeMap[t2])) return true;
+      if ("png" === t2 && !s2.includes(".")) return true;
+    }
+    return false;
+  }, destroy() {
+    this.clearRecycled(true);
+  } }, sn = en, { IMAGE: rn, create: nn } = g$2;
+  class on {
+    get tag() {
+      return "Image";
+    }
+    get url() {
+      return this.config.url;
+    }
+    get crossOrigin() {
+      const { crossOrigin: t2 } = this.config;
+      return s(t2) ? $t$2.image.crossOrigin : t2;
+    }
+    get completed() {
+      return this.ready || !!this.error;
+    }
+    constructor(t2) {
+      if (this.use = 0, this.waitComplete = [], this.innerId = nn(rn), this.config = t2 || (t2 = { url: "" }), t2.view) {
+        const { view: e2 } = t2;
+        this.setView(e2.config ? e2.view : e2);
+      }
+      en.isFormat("svg", t2) && (this.isSVG = true), en.hasAlphaPixel(t2) && (this.hasAlphaPixel = true);
+    }
+    load(t2, e2, s2) {
+      return this.loading || (this.loading = true, Ki$1.tasker.add(() => me$2(this, void 0, void 0, function* () {
+        return yield $t$2.origin["load" + this.tag](this.getLoadUrl(s2), this.crossOrigin, this).then((t3) => {
+          s2 && this.setThumbView(t3), this.setView(t3);
+        }).catch((t3) => {
+          this.error = t3, this.onComplete(false);
+        });
+      }))), this.waitComplete.push(t2, e2), this.waitComplete.length - 2;
+    }
+    unload(t2, e2) {
+      const s2 = this.waitComplete;
+      if (e2) {
+        const e3 = s2[t2 + 1];
+        e3 && e3({ type: "stop" });
+      }
+      s2[t2] = s2[t2 + 1] = void 0;
+    }
+    setView(t2) {
+      this.ready = true, this.width || (this.width = t2.width, this.height = t2.height, this.view = t2), this.onComplete(true);
+    }
+    onComplete(t2) {
+      let e2;
+      this.waitComplete.forEach((s2, r2) => {
+        e2 = r2 % 2, s2 && (t2 ? e2 || s2(this) : e2 && s2(this.error));
+      }), this.waitComplete.length = 0, this.loading = false;
+    }
+    getFull(t2) {
+      return this.view;
+    }
+    getCanvas(t2, e2, s2, r2, i2, n2, o2, a2) {
+      if (t2 || (t2 = this.width), e2 || (e2 = this.height), this.cache) {
+        let { params: t3, data: e3 } = this.cache;
+        for (let s3 in t3) if (t3[s3] !== arguments[s3]) {
+          e3 = null;
+          break;
+        }
+        if (e3) return e3;
+      }
+      const h2 = $t$2.image.resize(this.view, t2, e2, i2, n2, void 0, o2, s2, r2, a2);
+      return this.cache = this.use > 1 ? { data: h2, params: arguments } : null, h2;
+    }
+    getPattern(t2, e2, s2, r2) {
+      const i2 = $t$2.canvas.createPattern(t2, e2);
+      return $t$2.image.setPatternTransform(i2, s2, r2), i2;
+    }
+    render(t2, e2, s2, r2, i2, n2, o2, a2, h2) {
+      t2.drawImage(this.view, e2, s2, r2, i2);
+    }
+    getLoadUrl(t2) {
+      return this.url;
+    }
+    setThumbView(t2) {
+    }
+    getThumbSize(t2) {
+    }
+    getMinLevel() {
+    }
+    getLevelData(t2, e2, s2) {
+    }
+    clearLevels(t2) {
+    }
+    destroy() {
+      this.clearLevels();
+      const { view: t2 } = this;
+      t2 && t2.close && t2.close(), this.config = { url: "" }, this.cache = this.view = null, this.waitComplete.length = 0;
+    }
+  }
+  class an extends on {
+    get tag() {
+      return "Film";
+    }
+  }
+  class hn extends on {
+    get tag() {
+      return "Video";
+    }
+  }
+  function ln(t2, e2, s2, r2) {
+    r2 || (s2.configurable = s2.enumerable = true), Object.defineProperty(t2, e2, s2);
+  }
+  function dn(t2, e2) {
+    return Object.getOwnPropertyDescriptor(t2, e2);
+  }
+  function cn(t2, e2) {
+    const s2 = "_" + t2;
+    return { get() {
+      const t3 = this[s2];
+      return null == t3 ? e2 : t3;
+    }, set(t3) {
+      this[s2] = t3;
+    } };
+  }
+  function un(t2, e2) {
+    return (s2, r2) => pn(s2, r2, t2, e2 && e2(r2));
+  }
+  function _n(t2) {
+    return t2;
+  }
+  function pn(t2, e2, s2, r2) {
+    const i2 = { get() {
+      return this.__getAttr(e2);
+    }, set(t3) {
+      this.__setAttr(e2, t3);
+    } };
+    ln(t2, e2, Object.assign(i2, r2 || {})), Un(t2, e2, s2);
+  }
+  function fn(t2) {
+    return un(t2);
+  }
+  function gn(t2, e2) {
+    return un(t2, (t3) => ({ set(s2) {
+      this.__setAttr(t3, s2, e2) && (this.__layout.matrixChanged || this.__layout.matrixChange());
+    } }));
+  }
+  function yn(t2, e2) {
+    return un(t2, (t3) => ({ set(s2) {
+      this.__setAttr(t3, s2, e2) && (this.__layout.matrixChanged || this.__layout.matrixChange(), this.__scrollWorld || (this.__scrollWorld = {}));
+    } }));
+  }
+  function mn(t2) {
+    return un(t2, (t3) => ({ set(e2) {
+      this.__setAttr(t3, e2) && (this.__hasAutoLayout = !!(this.origin || this.around || this.flow), this.__local || this.__layout.createLocal(), vn(this));
+    } }));
+  }
+  function xn(t2, e2) {
+    return un(t2, (t3) => ({ set(s2) {
+      this.__setAttr(t3, s2, e2) && (this.__layout.scaleChanged || this.__layout.scaleChange());
+    } }));
+  }
+  function wn(t2, e2) {
+    return un(t2, (t3) => ({ set(s2) {
+      this.__setAttr(t3, s2, e2) && (this.__layout.rotationChanged || this.__layout.rotationChange());
+    } }));
+  }
+  function bn(t2, e2) {
+    return un(t2, (t3) => ({ set(s2) {
+      this.__setAttr(t3, s2, e2) && vn(this);
+    } }));
+  }
+  function Bn(t2) {
+    return un(t2, (t3) => ({ set(e2) {
+      this.__setAttr(t3, e2) && (vn(this), this.__.__removeNaturalSize());
+    } }));
+  }
+  function vn(t2) {
+    t2.__layout.boxChanged || t2.__layout.boxChange(), t2.__hasAutoLayout && (t2.__layout.matrixChanged || t2.__layout.matrixChange());
+  }
+  function kn(t2) {
+    return un(t2, (t3) => ({ set(e2) {
+      const s2 = this.__;
+      2 !== s2.__pathInputed && (s2.__pathInputed = e2 ? 1 : 0), e2 || (s2.__pathForRender = void 0), this.__setAttr(t3, e2), vn(this);
+    } }));
+  }
+  const Cn = bn;
+  function On(t2, e2) {
+    return un(t2, (t3) => ({ set(s2) {
+      this.__setAttr(t3, s2) && (Tn(this), e2 && (this.__.__useStroke = true));
+    } }));
+  }
+  function Tn(t2) {
+    t2.__layout.strokeChanged || t2.__layout.strokeChange(), t2.__.__useArrow && vn(t2);
+  }
+  const Pn = On;
+  function Sn(t2) {
+    return un(t2, (t3) => ({ set(e2) {
+      this.__setAttr(t3, e2), this.__layout.renderChanged || this.__layout.renderChange();
+    } }));
+  }
+  function Ln(t2) {
+    return un(t2, (t3) => ({ set(e2) {
+      this.__setAttr(t3, e2) && (this.__layout.surfaceChanged || this.__layout.surfaceChange());
+    } }));
+  }
+  function Rn(t2) {
+    return un(t2, (t3) => ({ set(e2) {
+      if (this.__setAttr(t3, e2)) {
+        const t4 = this.__;
+        _$2.stintSet(t4, "__useDim", t4.dim || t4.bright || t4.dimskip), this.__layout.surfaceChange();
+      }
+    } }));
+  }
+  function En(t2) {
+    return un(t2, (t3) => ({ set(e2) {
+      this.__setAttr(t3, e2) && (this.__layout.opacityChanged || this.__layout.opacityChange()), this.mask && Mn(this);
+    } }));
+  }
+  function In(t2) {
+    return un(t2, (t3) => ({ set(e2) {
+      const s2 = this.visible;
+      if (true === s2 && 0 === e2) {
+        if (this.animationOut) return this.__runAnimation("out", () => An(this, t3, e2, s2));
+      } else 0 === s2 && true === e2 && this.animation && this.__runAnimation("in");
+      An(this, t3, e2, s2), this.mask && Mn(this);
+    } }));
+  }
+  function Mn(t2) {
+    const { parent: e2 } = t2;
+    if (e2) {
+      const { __hasMask: t3 } = e2;
+      e2.__updateMask(), t3 !== e2.__hasMask && e2.forceUpdate();
+    }
+  }
+  function An(t2, e2, s2, r2) {
+    t2.__setAttr(e2, s2) && (t2.__layout.opacityChanged || t2.__layout.opacityChange(), 0 !== r2 && 0 !== s2 || vn(t2));
+  }
+  function Wn(t2) {
+    return un(t2, (t3) => ({ set(e2) {
+      this.__setAttr(t3, e2) && (this.__layout.surfaceChange(), this.waitParent(() => {
+        this.parent.__layout.childrenSortChange();
+      }));
+    } }));
+  }
+  function Nn(t2) {
+    return un(t2, (t3) => ({ set(e2) {
+      this.__setAttr(t3, e2) && (this.__layout.boxChanged || this.__layout.boxChange(), this.waitParent(() => {
+        this.parent.__updateMask(e2);
+      }));
+    } }));
+  }
+  function Yn(t2) {
+    return un(t2, (t3) => ({ set(e2) {
+      this.__setAttr(t3, e2) && this.waitParent(() => {
+        this.parent.__updateEraser(e2);
+      });
+    } }));
+  }
+  function Dn(t2) {
+    return un(t2, (t3) => ({ set(e2) {
+      this.__setAttr(t3, e2) && (this.__layout.hitCanvasChanged = true, "hit" === ee$2.showBounds && this.__layout.surfaceChange(), this.leafer && this.leafer.updateCursor());
+    } }));
+  }
+  function Xn(t2) {
+    return un(t2, (t3) => ({ set(e2) {
+      this.__setAttr(t3, e2), this.leafer && this.leafer.updateCursor();
+    } }));
+  }
+  function zn(t2) {
+    return (e2, s2) => {
+      ln(e2, "__DataProcessor", { get: () => t2 });
+    };
+  }
+  function Fn(t2) {
+    return (e2, s2) => {
+      ln(e2, "__LayoutProcessor", { get: () => t2 });
+    };
+  }
+  function Un(t2, e2, r2) {
+    const i2 = t2.__DataProcessor.prototype, n2 = "_" + e2, o2 = (function(t3) {
+      return "set" + t3.charAt(0).toUpperCase() + t3.slice(1);
+    })(e2), a2 = cn(e2, r2);
+    if (s(r2)) a2.get = function() {
+      return this[n2];
+    };
+    else if ("function" == typeof r2) a2.get = function() {
+      const t3 = this[n2];
+      return null == t3 ? r2(this.__leaf) : t3;
+    };
+    else if (d$1(r2)) {
+      const t3 = u$1(r2);
+      a2.get = function() {
+        const e3 = this[n2];
+        return null == e3 ? this[n2] = t3 ? {} : _$2.clone(r2) : e3;
+      };
+    }
+    const h2 = t2.isBranchLeaf;
+    "width" === e2 ? a2.get = function() {
+      const t3 = this[n2];
+      if (null == t3) {
+        const t4 = this, e3 = t4.__naturalWidth, s2 = t4.__leaf;
+        return !r2 || s2.pathInputed ? s2.boxBounds.width : e3 ? t4._height && t4.__useNaturalRatio ? t4._height * e3 / t4.__naturalHeight : e3 : h2 && s2.children.length ? s2.boxBounds.width : r2;
+      }
+      return t3;
+    } : "height" === e2 && (a2.get = function() {
+      const t3 = this[n2];
+      if (null == t3) {
+        const t4 = this, e3 = t4.__naturalHeight, s2 = t4.__leaf;
+        return !r2 || s2.pathInputed ? s2.boxBounds.height : e3 ? t4._width && t4.__useNaturalRatio ? t4._width * e3 / t4.__naturalWidth : e3 : h2 && s2.children.length ? s2.boxBounds.height : r2;
+      }
+      return t3;
+    });
+    let l2, c2 = i2;
+    for (; !l2 && c2; ) l2 = dn(c2, e2), c2 = c2.__proto__;
+    l2 && l2.set && (a2.set = l2.set), i2[o2] && (a2.set = i2[o2], delete i2[o2]), ln(i2, e2, a2);
+  }
+  const jn = new ee$2("rewrite"), Vn = [], Hn = ["destroy", "constructor"];
+  function Gn(t2) {
+    return (e2, s2) => {
+      Vn.push({ name: e2.constructor.name + "." + s2, run: () => {
+        e2[s2] = t2;
+      } });
+    };
+  }
+  function qn() {
+    return (t2) => {
+      Qn();
+    };
+  }
+  function Qn(t2) {
+    Vn.length && (Vn.forEach((e2) => {
+      t2 && jn.error(e2.name, "需在Class上装饰@rewriteAble()"), e2.run();
+    }), Vn.length = 0);
+  }
+  function Jn(t2, e2) {
+    return (s2) => {
+      var r2;
+      (t2.prototype ? (r2 = t2.prototype, Object.getOwnPropertyNames(r2)) : Object.keys(t2)).forEach((r3) => {
+        if (!(Hn.includes(r3) || e2 && e2.includes(r3))) if (t2.prototype) {
+          dn(t2.prototype, r3).writable && (s2.prototype[r3] = t2.prototype[r3]);
+        } else s2.prototype[r3] = t2[r3];
+      });
+    };
+  }
+  function Zn() {
+    return (t2) => {
+      ce$2.register(t2);
+    };
+  }
+  function $n() {
+    return (t2) => {
+      pe$2.register(t2);
+    };
+  }
+  setTimeout(() => Qn(true));
+  const { copy: Kn, toInnerPoint: to, toOuterPoint: eo, scaleOfOuter: so, rotateOfOuter: ro, skewOfOuter: io, multiplyParent: no, divideParent: oo, getLayout: ao } = q$2, ho = {}, { round: lo } = Math, co = { updateAllMatrix(t2, e2, s2) {
+    if (e2 && t2.__hasAutoLayout && t2.__layout.matrixChanged && (s2 = true), po(t2, e2, s2), t2.isBranch) {
+      const { children: r2 } = t2;
+      for (let t3 = 0, i2 = r2.length; t3 < i2; t3++) _o(r2[t3], e2, s2);
+    }
+  }, updateMatrix(t2, e2, s2) {
+    const r2 = t2.__layout;
+    e2 ? s2 && (r2.waitAutoLayout = true, t2.__hasAutoLayout && (r2.matrixChanged = false)) : r2.waitAutoLayout && (r2.waitAutoLayout = false), r2.matrixChanged && t2.__updateLocalMatrix(), r2.waitAutoLayout || t2.__updateWorldMatrix();
+  }, updateBounds(t2) {
+    const e2 = t2.__layout;
+    e2.boundsChanged && t2.__updateLocalBounds(), e2.waitAutoLayout || t2.__updateWorldBounds();
+  }, updateAllWorldOpacity(t2) {
+    if (t2.__updateWorldOpacity(), t2.isBranch) {
+      const { children: e2 } = t2;
+      for (let t3 = 0, s2 = e2.length; t3 < s2; t3++) fo(e2[t3]);
+    }
+  }, updateChange(t2) {
+    const e2 = t2.__layout;
+    e2.stateStyleChanged && t2.updateState(), e2.opacityChanged && fo(t2), t2.__updateChange();
+  }, updateAllChange(t2) {
+    if (yo(t2), t2.isBranch) {
+      const { children: e2 } = t2;
+      for (let t3 = 0, s2 = e2.length; t3 < s2; t3++) go(e2[t3]);
+    }
+  }, worldHittable(t2) {
+    for (; t2; ) {
+      if (!t2.__.hittable) return false;
+      t2 = t2.parent;
+    }
+    return true;
+  }, draggable: (t2) => (t2.draggable || t2.editable) && t2.hitSelf && !t2.locked, copyCanvasByWorld(t2, e2, s2, r2, i2, n2) {
+    r2 || (r2 = t2.__nowWorld), t2.__worldFlipped || $t$2.fullImageShadow ? e2.copyWorldByReset(s2, r2, t2.__nowWorld, i2, n2) : e2.copyWorldToInner(s2, r2, t2.__layout.renderBounds, i2);
+  }, moveWorld(t2, e2, s2 = 0, r2, i2) {
+    const n2 = d$1(e2) ? Object.assign({}, e2) : { x: e2, y: s2 };
+    r2 ? eo(t2.localTransform, n2, n2, true) : t2.parent && to(t2.parent.scrollWorldTransform, n2, n2, true), uo.moveLocal(t2, n2.x, n2.y, i2);
+  }, moveLocal(t2, e2, s2 = 0, r2) {
+    d$1(e2) && (s2 = e2.y, e2 = e2.x), e2 += t2.x, s2 += t2.y, t2.leafer && t2.leafer.config.pointSnap && (e2 = lo(e2), s2 = lo(s2)), r2 ? t2.animate({ x: e2, y: s2 }, r2) : (t2.x = e2, t2.y = s2);
+  }, zoomOfWorld(t2, e2, s2, r2, i2, n2) {
+    uo.zoomOfLocal(t2, mo(t2, e2), s2, r2, i2, n2);
+  }, zoomOfLocal(t2, e2, s2, r2 = s2, i2, n2) {
+    const a2 = t2.__localMatrix;
+    if (o(r2) || (r2 && (n2 = r2), r2 = s2), Kn(ho, a2), so(ho, e2, s2, r2), uo.hasHighPosition(t2)) uo.setTransform(t2, ho, i2, n2);
+    else {
+      const e3 = t2.x + ho.e - a2.e, o2 = t2.y + ho.f - a2.f;
+      n2 && !i2 ? t2.animate({ x: e3, y: o2, scaleX: t2.scaleX * s2, scaleY: t2.scaleY * r2 }, n2) : (t2.x = e3, t2.y = o2, t2.scaleResize(s2, r2, true !== i2));
+    }
+  }, rotateOfWorld(t2, e2, s2, r2) {
+    uo.rotateOfLocal(t2, mo(t2, e2), s2, r2);
+  }, rotateOfLocal(t2, e2, s2, r2) {
+    const i2 = t2.__localMatrix;
+    Kn(ho, i2), ro(ho, e2, s2), uo.hasHighPosition(t2) ? uo.setTransform(t2, ho, false, r2) : t2.set({ x: t2.x + ho.e - i2.e, y: t2.y + ho.f - i2.f, rotation: I$4.formatRotation(t2.rotation + s2) }, r2);
+  }, skewOfWorld(t2, e2, s2, r2, i2, n2) {
+    uo.skewOfLocal(t2, mo(t2, e2), s2, r2, i2, n2);
+  }, skewOfLocal(t2, e2, s2, r2 = 0, i2, n2) {
+    Kn(ho, t2.__localMatrix), io(ho, e2, s2, r2), uo.setTransform(t2, ho, i2, n2);
+  }, transformWorld(t2, e2, s2, r2) {
+    Kn(ho, t2.worldTransform), no(ho, e2), t2.parent && oo(ho, t2.parent.scrollWorldTransform), uo.setTransform(t2, ho, s2, r2);
+  }, transform(t2, e2, s2, r2) {
+    Kn(ho, t2.localTransform), no(ho, e2), uo.setTransform(t2, ho, s2, r2);
+  }, setTransform(t2, e2, s2, r2) {
+    const i2 = t2.__, n2 = i2.origin && uo.getInnerOrigin(t2, i2.origin), o2 = ao(e2, n2, i2.around && uo.getInnerOrigin(t2, i2.around));
+    if (uo.hasOffset(t2) && (o2.x -= i2.offsetX, o2.y -= i2.offsetY), s2) {
+      const e3 = o2.scaleX / t2.scaleX, s3 = o2.scaleY / t2.scaleY;
+      if (delete o2.scaleX, delete o2.scaleY, n2) {
+        zt$2.scale(t2.boxBounds, Math.abs(e3), Math.abs(s3));
+        const r3 = uo.getInnerOrigin(t2, i2.origin);
+        ot$2.move(o2, n2.x - r3.x, n2.y - r3.y);
+      }
+      t2.set(o2), t2.scaleResize(e3, s3, false);
+    } else t2.set(o2, r2);
+  }, getFlipTransform(t2, e2) {
+    const s2 = { a: 1, b: 0, c: 0, d: 1, e: 0, f: 0 }, r2 = "x" === e2 ? 1 : -1;
+    return so(s2, uo.getLocalOrigin(t2, "center"), -1 * r2, 1 * r2), s2;
+  }, getLocalOrigin: (t2, e2) => ot$2.tempToOuterOf(uo.getInnerOrigin(t2, e2), t2.localTransform), getInnerOrigin(t2, e2) {
+    const s2 = {};
+    return bt$3.toPoint(e2, t2.boxBounds, s2), s2;
+  }, getRelativeWorld: (t2, e2, s2) => (Kn(ho, t2.worldTransform), oo(ho, e2.scrollWorldTransform), s2 ? ho : Object.assign({}, ho)), drop(t2, e2, s2, r2) {
+    t2.setTransform(uo.getRelativeWorld(t2, e2, true), r2), e2.add(t2, s2);
+  }, hasHighPosition: (t2) => t2.origin || t2.around || uo.hasOffset(t2), hasOffset: (t2) => t2.offsetX || t2.offsetY, hasParent(t2, e2) {
+    if (!e2) return false;
+    for (; t2; ) {
+      if (e2 === t2) return true;
+      t2 = t2.parent;
+    }
+  }, animateMove(t2, e2, s2 = 0.3) {
+    if (e2.x || e2.y) if (Math.abs(e2.x) < 1 && Math.abs(e2.y) < 1) t2.move(e2);
+    else {
+      const r2 = e2.x * s2, i2 = e2.y * s2;
+      e2.x -= r2, e2.y -= i2, t2.move(r2, i2), $t$2.requestRender(() => uo.animateMove(t2, e2, s2));
+    }
+  } }, uo = co, { updateAllMatrix: _o, updateMatrix: po, updateAllWorldOpacity: fo, updateAllChange: go, updateChange: yo } = uo;
+  function mo(t2, e2) {
+    return t2.updateLayout(), t2.parent ? ot$2.tempToInnerOf(e2, t2.parent.scrollWorldTransform) : e2;
+  }
+  const xo = { worldBounds: (t2) => t2.__world, localBoxBounds: (t2) => t2.__.eraser || 0 === t2.__.visible ? null : t2.__local || t2.__layout, localStrokeBounds: (t2) => t2.__.eraser || 0 === t2.__.visible ? null : t2.__layout.localStrokeBounds, localRenderBounds: (t2) => t2.__.eraser || 0 === t2.__.visible ? null : t2.__layout.localRenderBounds, maskLocalBoxBounds: (t2, e2) => bo(t2, e2) && t2.__localBoxBounds, maskLocalStrokeBounds: (t2, e2) => bo(t2, e2) && t2.__layout.localStrokeBounds, maskLocalRenderBounds: (t2, e2) => bo(t2, e2) && t2.__layout.localRenderBounds, excludeRenderBounds: (t2, e2) => !(!e2.bounds || e2.bounds.hit(t2.__world, e2.matrix)) || !(!e2.hideBounds || !e2.hideBounds.includes(t2.__world, e2.matrix)) };
+  let wo;
+  function bo(t2, e2) {
+    return e2 || (wo = 0), t2.__.mask && (wo = 1), wo < 0 ? null : (wo && (wo = -1), true);
+  }
+  const { updateBounds: Bo } = co, vo = { sort: (t2, e2) => t2.__.zIndex === e2.__.zIndex ? t2.__tempNumber - e2.__tempNumber : t2.__.zIndex - e2.__.zIndex, pushAllChildBranch(t2, e2) {
+    if (t2.__tempNumber = 1, t2.__.__childBranchNumber) {
+      const { children: s2 } = t2;
+      for (let r2 = 0, i2 = s2.length; r2 < i2; r2++) (t2 = s2[r2]).isBranch && (t2.__tempNumber = 1, e2.add(t2), ko(t2, e2));
+    }
+  }, pushAllParent(t2, e2) {
+    const { keys: r2 } = e2;
+    if (r2) for (; t2.parent && s(r2[t2.parent.innerId]); ) e2.add(t2.parent), t2 = t2.parent;
+    else for (; t2.parent; ) e2.add(t2.parent), t2 = t2.parent;
+  }, pushAllBranchStack(t2, e2) {
+    let s2 = e2.length;
+    const { children: r2 } = t2;
+    for (let t3 = 0, s3 = r2.length; t3 < s3; t3++) r2[t3].isBranch && e2.push(r2[t3]);
+    for (let t3 = s2, r3 = e2.length; t3 < r3; t3++) Co(e2[t3], e2);
+  }, updateBounds(t2, e2) {
+    const s2 = [t2];
+    Co(t2, s2), Oo(s2, e2);
+  }, updateBoundsByBranchStack(t2, e2) {
+    let s2, r2;
+    for (let i2 = t2.length - 1; i2 > -1; i2--) {
+      s2 = t2[i2], r2 = s2.children;
+      for (let t3 = 0, e3 = r2.length; t3 < e3; t3++) Bo(r2[t3]);
+      e2 && e2 === s2 || Bo(s2);
+    }
+  }, move(t2, e2, s2) {
+    let r2;
+    const { children: i2 } = t2;
+    for (let n2 = 0, o2 = i2.length; n2 < o2; n2++) r2 = (t2 = i2[n2]).__world, r2.e += e2, r2.f += s2, r2.x += e2, r2.y += s2, t2.isBranch && To(t2, e2, s2);
+  }, scale(t2, e2, s2, r2, i2, n2, o2) {
+    let a2;
+    const { children: h2 } = t2, l2 = r2 - 1, d2 = i2 - 1;
+    for (let c2 = 0, u2 = h2.length; c2 < u2; c2++) a2 = (t2 = h2[c2]).__world, a2.a *= r2, a2.d *= i2, (a2.b || a2.c) && (a2.b *= r2, a2.c *= i2), a2.e === a2.x && a2.f === a2.y ? (a2.x = a2.e += (a2.e - n2) * l2 + e2, a2.y = a2.f += (a2.f - o2) * d2 + s2) : (a2.e += (a2.e - n2) * l2 + e2, a2.f += (a2.f - o2) * d2 + s2, a2.x += (a2.x - n2) * l2 + e2, a2.y += (a2.y - o2) * d2 + s2), a2.width *= r2, a2.height *= i2, a2.scaleX *= r2, a2.scaleY *= i2, t2.isBranch && Po(t2, e2, s2, r2, i2, n2, o2);
+  } }, { pushAllChildBranch: ko, pushAllBranchStack: Co, updateBoundsByBranchStack: Oo, move: To, scale: Po } = vo, So = { run(t2) {
+    if (t2 && t2.length) {
+      const e2 = t2.length;
+      for (let s2 = 0; s2 < e2; s2++) t2[s2]();
+      t2.length === e2 ? t2.length = 0 : t2.splice(0, e2);
+    }
+  } }, { getRelativeWorld: Lo, updateBounds: Ro } = co, { toOuterOf: Eo, getPoints: Io, copy: Mo } = zt$2, Ao = "_localContentBounds", Wo = "_worldContentBounds", No = "_worldBoxBounds", Yo = "_worldStrokeBounds";
+  class Do {
+    get contentBounds() {
+      return this._contentBounds || this.boxBounds;
+    }
+    set contentBounds(t2) {
+      this._contentBounds = t2;
+    }
+    get strokeBounds() {
+      return this._strokeBounds || this.boxBounds;
+    }
+    get renderBounds() {
+      return this._renderBounds || this.boxBounds;
+    }
+    set renderBounds(t2) {
+      this._renderBounds = t2;
+    }
+    get localContentBounds() {
+      return Eo(this.contentBounds, this.leaf.__localMatrix, this[Ao] || (this[Ao] = {})), this[Ao];
+    }
+    get localStrokeBounds() {
+      return this._localStrokeBounds || this;
+    }
+    get localRenderBounds() {
+      return this._localRenderBounds || this;
+    }
+    get worldContentBounds() {
+      return Eo(this.contentBounds, this.leaf.__world, this[Wo] || (this[Wo] = {})), this[Wo];
+    }
+    get worldBoxBounds() {
+      return Eo(this.boxBounds, this.leaf.__world, this[No] || (this[No] = {})), this[No];
+    }
+    get worldStrokeBounds() {
+      return Eo(this.strokeBounds, this.leaf.__world, this[Yo] || (this[Yo] = {})), this[Yo];
+    }
+    get a() {
+      return 1;
+    }
+    get b() {
+      return 0;
+    }
+    get c() {
+      return 0;
+    }
+    get d() {
+      return 1;
+    }
+    get e() {
+      return this.leaf.__.x;
+    }
+    get f() {
+      return this.leaf.__.y;
+    }
+    get x() {
+      return this.e + this.boxBounds.x;
+    }
+    get y() {
+      return this.f + this.boxBounds.y;
+    }
+    get width() {
+      return this.boxBounds.width;
+    }
+    get height() {
+      return this.boxBounds.height;
+    }
+    constructor(t2) {
+      this.leaf = t2, this.leaf.__local && (this._localRenderBounds = this._localStrokeBounds = this.leaf.__local), t2.__world && (this.boxBounds = { x: 0, y: 0, width: 0, height: 0 }, this.boxChange(), this.matrixChange());
+    }
+    createLocal() {
+      const t2 = this.leaf.__local = { a: 1, b: 0, c: 0, d: 1, e: 0, f: 0, x: 0, y: 0, width: 0, height: 0 };
+      this._localStrokeBounds || (this._localStrokeBounds = t2), this._localRenderBounds || (this._localRenderBounds = t2);
+    }
+    update() {
+      const { leaf: t2 } = this, { leafer: e2 } = t2;
+      if (t2.isApp) return Ro(t2);
+      if (e2) e2.ready ? e2.watcher.changed && e2.layouter.layout() : e2.start();
+      else {
+        let e3 = t2;
+        for (; e3.parent && !e3.parent.leafer; ) e3 = e3.parent;
+        const s2 = e3;
+        if (s2.__fullLayouting) return;
+        s2.__fullLayouting = true, $t$2.layout(s2), delete s2.__fullLayouting;
+      }
+    }
+    getTransform(t2 = "world") {
+      this.update();
+      const { leaf: e2 } = this;
+      switch (t2) {
+        case "world":
+          return e2.__world;
+        case "local":
+          return e2.__localMatrix;
+        case "inner":
+          return q$2.defaultMatrix;
+        case "page":
+          t2 = e2.zoomLayer;
+        default:
+          return Lo(e2, t2);
+      }
+    }
+    getBounds(t2, e2 = "world") {
+      switch (this.update(), e2) {
+        case "world":
+          return this.getWorldBounds(t2);
+        case "local":
+          return this.getLocalBounds(t2);
+        case "inner":
+          return this.getInnerBounds(t2);
+        case "page":
+          e2 = this.leaf.zoomLayer;
+        default:
+          return new Vt$3(this.getInnerBounds(t2)).toOuterOf(this.getTransform(e2));
+      }
+    }
+    getInnerBounds(t2 = "box") {
+      switch (t2) {
+        case "render":
+          return this.renderBounds;
+        case "content":
+          if (this.contentBounds) return this.contentBounds;
+        case "box":
+          return this.boxBounds;
+        case "stroke":
+          return this.strokeBounds;
+      }
+    }
+    getLocalBounds(t2 = "box") {
+      switch (t2) {
+        case "render":
+          return this.localRenderBounds;
+        case "stroke":
+          return this.localStrokeBounds;
+        case "content":
+          if (this.contentBounds) return this.localContentBounds;
+        case "box":
+          return this.leaf.__localBoxBounds;
+      }
+    }
+    getWorldBounds(t2 = "box") {
+      switch (t2) {
+        case "render":
+          return this.leaf.__world;
+        case "stroke":
+          return this.worldStrokeBounds;
+        case "content":
+          if (this.contentBounds) return this.worldContentBounds;
+        case "box":
+          return this.worldBoxBounds;
+      }
+    }
+    getLayoutBounds(t2, e2 = "world", s2) {
+      const { leaf: r2 } = this;
+      let i2, n2, o2, a2 = this.getInnerBounds(t2);
+      switch (e2) {
+        case "world":
+          i2 = r2.getWorldPoint(a2), n2 = r2.__world;
+          break;
+        case "local":
+          const { scaleX: t3, scaleY: s3, rotation: h2, skewX: l2, skewY: d2 } = r2.__;
+          o2 = { scaleX: t3, scaleY: s3, rotation: h2, skewX: l2, skewY: d2 }, i2 = r2.getLocalPointByInner(a2);
+          break;
+        case "inner":
+          i2 = a2, n2 = q$2.defaultMatrix;
+          break;
+        case "page":
+          e2 = r2.zoomLayer;
+        default:
+          i2 = r2.getWorldPoint(a2, e2), n2 = Lo(r2, e2, true);
+      }
+      if (o2 || (o2 = q$2.getLayout(n2)), Mo(o2, a2), ot$2.copy(o2, i2), s2) {
+        const { scaleX: t3, scaleY: e3 } = o2, s3 = Math.abs(t3), r3 = Math.abs(e3);
+        1 === s3 && 1 === r3 || (o2.scaleX /= s3, o2.scaleY /= r3, o2.width *= s3, o2.height *= r3);
+      }
+      return o2;
+    }
+    getLayoutPoints(t2, e2 = "world") {
+      const { leaf: r2 } = this, i2 = Io(this.getInnerBounds(t2));
+      let n2;
+      switch (e2) {
+        case "world":
+          n2 = null;
+          break;
+        case "local":
+          n2 = r2.parent;
+          break;
+        case "inner":
+          break;
+        case "page":
+          e2 = r2.zoomLayer;
+        default:
+          n2 = e2;
+      }
+      return s(n2) || i2.forEach((t3) => r2.innerToWorld(t3, null, false, n2)), i2;
+    }
+    shrinkContent() {
+      const { x: t2, y: e2, width: s2, height: r2 } = this.boxBounds;
+      this._contentBounds = { x: t2, y: e2, width: s2, height: r2 };
+    }
+    spreadStroke() {
+      const { x: t2, y: e2, width: s2, height: r2 } = this.strokeBounds;
+      this._strokeBounds = { x: t2, y: e2, width: s2, height: r2 }, this._localStrokeBounds = { x: t2, y: e2, width: s2, height: r2 }, this.renderSpread || this.spreadRenderCancel();
+    }
+    spreadRender() {
+      const { x: t2, y: e2, width: s2, height: r2 } = this.renderBounds;
+      this._renderBounds = { x: t2, y: e2, width: s2, height: r2 }, this._localRenderBounds = { x: t2, y: e2, width: s2, height: r2 };
+    }
+    shrinkContentCancel() {
+      this._contentBounds = void 0;
+    }
+    spreadStrokeCancel() {
+      const t2 = this.renderBounds === this.strokeBounds;
+      this._strokeBounds = this.boxBounds, this._localStrokeBounds = this.leaf.__localBoxBounds, t2 && this.spreadRenderCancel();
+    }
+    spreadRenderCancel() {
+      this._renderBounds = this._strokeBounds, this._localRenderBounds = this._localStrokeBounds;
+    }
+    boxChange() {
+      this.boxChanged = true, this.localBoxChanged ? this.boundsChanged || (this.boundsChanged = true) : this.localBoxChange(), this.hitCanvasChanged = true;
+    }
+    localBoxChange() {
+      this.localBoxChanged = true, this.boundsChanged = true;
+    }
+    strokeChange() {
+      this.strokeChanged = true, this.strokeSpread || (this.strokeSpread = 1), this.boundsChanged = true, this.hitCanvasChanged = true;
+    }
+    renderChange() {
+      this.renderChanged = true, this.renderSpread || (this.renderSpread = 1), this.boundsChanged = true;
+    }
+    scaleChange() {
+      this.scaleChanged = true, this._scaleOrRotationChange();
+    }
+    rotationChange() {
+      this.rotationChanged = true, this.affectRotation = true, this._scaleOrRotationChange();
+    }
+    _scaleOrRotationChange() {
+      this.affectScaleOrRotation = true, this.matrixChange(), this.leaf.__local || this.createLocal();
+    }
+    matrixChange() {
+      this.matrixChanged = true, this.localBoxChanged ? this.boundsChanged || (this.boundsChanged = true) : this.localBoxChange();
+    }
+    surfaceChange() {
+      this.surfaceChanged = true;
+    }
+    opacityChange() {
+      this.opacityChanged = true, this.surfaceChanged || this.surfaceChange();
+    }
+    childrenSortChange() {
+      this.childrenSortChanged || (this.childrenSortChanged = this.affectChildrenSort = true, this.leaf.forceUpdate("surface"));
+    }
+    destroy() {
+    }
+  }
+  class Xo {
+    constructor(t2, e2) {
+      this.bubbles = false, this.type = t2, e2 && (this.target = e2);
+    }
+    stopDefault() {
+      this.isStopDefault = true, this.origin && $t$2.event.stopDefault(this.origin);
+    }
+    stopNow() {
+      this.isStopNow = true, this.isStop = true, this.origin && $t$2.event.stopNow(this.origin);
+    }
+    stop() {
+      this.isStop = true, this.origin && $t$2.event.stop(this.origin);
+    }
+  }
+  class zo extends Xo {
+    constructor(t2, e2, s2) {
+      super(t2, e2), this.parent = s2, this.child = e2;
+    }
+  }
+  zo.ADD = "child.add", zo.REMOVE = "child.remove", zo.CREATED = "created", zo.MOUNTED = "mounted", zo.UNMOUNTED = "unmounted", zo.DESTROY = "destroy";
+  const Fo = "property.scroll";
+  class Uo extends Xo {
+    constructor(t2, e2, s2, r2, i2) {
+      super(t2, e2), this.attrName = s2, this.oldValue = r2, this.newValue = i2;
+    }
+  }
+  Uo.CHANGE = "property.change", Uo.LEAFER_CHANGE = "property.leafer_change", Uo.SCROLL = Fo;
+  const jo = { scrollX: Fo, scrollY: Fo };
+  class Vo extends Xo {
+    constructor(t2, e2) {
+      super(t2), Object.assign(this, e2);
+    }
+  }
+  Vo.LOAD = "image.load", Vo.LOADED = "image.loaded", Vo.ERROR = "image.error";
+  class Ho extends Xo {
+    static checkHas(t2, e2, s2) {
+      "on" === s2 ? e2 === Jo ? t2.__hasWorldEvent = true : t2.__hasLocalEvent = true : (t2.__hasLocalEvent = t2.hasEvent(Go) || t2.hasEvent(qo) || t2.hasEvent(Qo), t2.__hasWorldEvent = t2.hasEvent(Jo));
+    }
+    static emitLocal(t2) {
+      if (t2.leaferIsReady) {
+        const { resized: e2 } = t2.__layout;
+        "local" !== e2 && (t2.emit(Go, t2), "inner" === e2 && t2.emit(qo, t2)), t2.emit(Qo, t2);
+      }
+    }
+    static emitWorld(t2) {
+      t2.leaferIsReady && t2.emit(Jo, this);
+    }
+  }
+  Ho.RESIZE = "bounds.resize", Ho.INNER = "bounds.inner", Ho.LOCAL = "bounds.local", Ho.WORLD = "bounds.world";
+  const { RESIZE: Go, INNER: qo, LOCAL: Qo, WORLD: Jo } = Ho, Zo = {};
+  [Go, qo, Qo, Jo].forEach((t2) => Zo[t2] = 1);
+  class $o extends Xo {
+    get bigger() {
+      if (!this.old) return true;
+      const { width: t2, height: e2 } = this.old;
+      return this.width >= t2 && this.height >= e2;
+    }
+    get smaller() {
+      return !this.bigger;
+    }
+    get samePixelRatio() {
+      return !this.old || this.pixelRatio === this.old.pixelRatio;
+    }
+    constructor(t2, e2) {
+      d$1(t2) ? (super($o.RESIZE), Object.assign(this, t2)) : super(t2), this.old = e2;
+    }
+    static isResizing(t2) {
+      return this.resizingKeys && !s(this.resizingKeys[t2.innerId]);
+    }
+  }
+  $o.RESIZE = "resize";
+  class Ko extends Xo {
+    constructor(t2, e2) {
+      super(t2), this.data = e2;
+    }
+  }
+  Ko.REQUEST = "watch.request", Ko.DATA = "watch.data";
+  class ta extends Xo {
+    constructor(t2, e2, s2) {
+      super(t2), e2 && (this.data = e2, this.times = s2);
+    }
+  }
+  ta.REQUEST = "layout.request", ta.START = "layout.start", ta.BEFORE = "layout.before", ta.LAYOUT = "layout", ta.AFTER = "layout.after", ta.AGAIN = "layout.again", ta.END = "layout.end";
+  class ea extends Xo {
+    constructor(t2, e2, s2, r2) {
+      super(t2), e2 && (this.times = e2), s2 && (this.renderBounds = s2, this.renderOptions = r2);
+    }
+  }
+  ea.REQUEST = "render.request", ea.CHILD_START = "render.child_start", ea.CHILD_END = "render.child_end", ea.START = "render.start", ea.BEFORE = "render.before", ea.RENDER = "render", ea.AFTER = "render.after", ea.AGAIN = "render.again", ea.END = "render.end", ea.NEXT = "render.next";
+  class sa extends Xo {
+  }
+  sa.START = "leafer.start", sa.BEFORE_READY = "leafer.before_ready", sa.READY = "leafer.ready", sa.AFTER_READY = "leafer.after_ready", sa.VIEW_READY = "leafer.view_ready", sa.VIEW_COMPLETED = "leafer.view_completed", sa.STOP = "leafer.stop", sa.RESTART = "leafer.restart", sa.END = "leafer.end", sa.UPDATE_MODE = "leafer.update_mode", sa.TRANSFORM = "leafer.transform", sa.MOVE = "leafer.move", sa.SCALE = "leafer.scale", sa.ROTATE = "leafer.rotate", sa.SKEW = "leafer.skew";
+  const { MOVE: ra, SCALE: ia, ROTATE: na, SKEW: oa } = sa, aa = { x: ra, y: ra, scaleX: ia, scaleY: ia, rotation: na, skewX: oa, skewY: oa }, ha = {};
+  class la {
+    set event(t2) {
+      this.on(t2);
+    }
+    on(t2, e2, s2) {
+      if (!e2) {
+        let e3;
+        if (l(t2)) t2.forEach((t3) => this.on(t3[0], t3[1], t3[2]));
+        else for (let s3 in t2) l(e3 = t2[s3]) ? this.on(s3, e3[0], e3[1]) : this.on(s3, e3);
+        return;
+      }
+      let r2, n2, o2;
+      s2 && ("once" === s2 ? n2 = true : "boolean" == typeof s2 ? r2 = s2 : (r2 = s2.capture, n2 = s2.once));
+      const a2 = da(this, r2, true), h2 = i(t2) ? t2.split(" ") : t2, d2 = n2 ? { listener: e2, once: n2 } : { listener: e2 };
+      h2.forEach((t3) => {
+        t3 && (o2 = a2[t3], o2 ? -1 === o2.findIndex((t4) => t4.listener === e2) && o2.push(d2) : a2[t3] = [d2], Zo[t3] && Ho.checkHas(this, t3, "on"));
+      });
+    }
+    off(t2, e2, s2) {
+      if (t2) {
+        const r2 = i(t2) ? t2.split(" ") : t2;
+        if (e2) {
+          let t3, i2, n2;
+          s2 && (t3 = "boolean" == typeof s2 ? s2 : "once" !== s2 && s2.capture);
+          const o2 = da(this, t3);
+          r2.forEach((t4) => {
+            t4 && (i2 = o2[t4], i2 && (n2 = i2.findIndex((t5) => t5.listener === e2), n2 > -1 && i2.splice(n2, 1), i2.length || delete o2[t4], Zo[t4] && Ho.checkHas(this, t4, "off")));
+          });
+        } else {
+          const { __bubbleMap: t3, __captureMap: e3 } = this;
+          r2.forEach((s3) => {
+            t3 && delete t3[s3], e3 && delete e3[s3];
+          });
+        }
+      } else this.__bubbleMap = this.__captureMap = void 0;
+    }
+    on_(t2, e2, s2, r2) {
+      return e2 ? this.on(t2, s2 ? e2 = e2.bind(s2) : e2, r2) : l(t2) && t2.forEach((t3) => this.on(t3[0], t3[2] ? t3[1] = t3[1].bind(t3[2]) : t3[1], t3[3])), { type: t2, current: this, listener: e2, options: r2 };
+    }
+    off_(t2) {
+      if (!t2) return;
+      const e2 = l(t2) ? t2 : [t2];
+      e2.forEach((t3) => {
+        t3 && (t3.listener ? t3.current.off(t3.type, t3.listener, t3.options) : l(t3.type) && t3.type.forEach((e3) => t3.current.off(e3[0], e3[1], e3[3])));
+      }), e2.length = 0;
+    }
+    once(t2, e2, s2, r2) {
+      if (!e2) return l(t2) && t2.forEach((t3) => this.once(t3[0], t3[1], t3[2], t3[3]));
+      d$1(s2) ? e2 = e2.bind(s2) : r2 = s2, this.on(t2, e2, { once: true, capture: r2 });
+    }
+    emit(t2, e2, s2) {
+      !e2 && pe$2.has(t2) && (e2 = pe$2.get(t2, { type: t2, target: this, current: this }));
+      const r2 = da(this, s2)[t2];
+      if (r2) {
+        let i2;
+        for (let n2 = 0, o2 = r2.length; n2 < o2 && !((i2 = r2[n2]) && (i2.listener(e2), i2.once && (this.off(t2, i2.listener, s2), n2--, o2--), e2 && e2.isStopNow)); n2++) ;
+      }
+      this.syncEventer && this.syncEventer.emitEvent(e2, s2);
+    }
+    emitEvent(t2, e2) {
+      t2.current = this, this.emit(t2.type, t2, e2);
+    }
+    hasEvent(t2, e2) {
+      if (this.syncEventer && this.syncEventer.hasEvent(t2, e2)) return true;
+      const { __bubbleMap: r2, __captureMap: i2 } = this, n2 = r2 && r2[t2], o2 = i2 && i2[t2];
+      return !!(s(e2) ? n2 || o2 : e2 ? o2 : n2);
+    }
+    destroy() {
+      this.__captureMap = this.__bubbleMap = this.syncEventer = null;
+    }
+  }
+  function da(t2, e2, s2) {
+    if (e2) {
+      const { __captureMap: e3 } = t2;
+      return e3 || (s2 ? t2.__captureMap = {} : ha);
+    }
+    {
+      const { __bubbleMap: e3 } = t2;
+      return e3 || (s2 ? t2.__bubbleMap = {} : ha);
+    }
+  }
+  const { on: ca, on_: ua, off: _a, off_: pa, once: fa, emit: ga, emitEvent: ya, hasEvent: ma, destroy: xa } = la.prototype, wa = { on: ca, on_: ua, off: _a, off_: pa, once: fa, emit: ga, emitEvent: ya, hasEvent: ma, destroyEventer: xa }, ba = ee$2.get("setAttr"), Ba = { __setAttr(t2, e2, r2) {
+    if (this.leaferIsCreated) {
+      const i2 = this.__.__getInput(t2);
+      if (!r2 || n(e2) || s(e2) || (ba.warn(this.innerName, t2, e2), e2 = void 0), d$1(e2) || i2 !== e2) {
+        if (this.__realSetAttr(t2, e2), this.isLeafer) {
+          this.emitEvent(new Uo(Uo.LEAFER_CHANGE, this, t2, i2, e2));
+          const s3 = aa[t2];
+          s3 && (this.emitEvent(new sa(s3, this)), this.emitEvent(new sa(sa.TRANSFORM, this)));
+        }
+        this.emitPropertyEvent(Uo.CHANGE, t2, i2, e2);
+        const s2 = jo[t2];
+        return s2 && this.emitPropertyEvent(s2, t2, i2, e2), true;
+      }
+      return false;
+    }
+    return this.__realSetAttr(t2, e2), true;
+  }, emitPropertyEvent(t2, e2, s2, r2) {
+    const i2 = new Uo(t2, this, e2, s2, r2);
+    this.isLeafer || this.hasEvent(t2) && this.emitEvent(i2), this.leafer.emitEvent(i2);
+  }, __realSetAttr(t2, e2) {
+    const r2 = this.__;
+    r2[t2] = e2, this.__proxyData && this.setProxyAttr(t2, e2), r2.normalStyle && (this.lockNormalStyle || s(r2.normalStyle[t2]) || (r2.normalStyle[t2] = e2));
+  }, __getAttr(t2) {
+    return this.__proxyData ? this.getProxyAttr(t2) : this.__.__get(t2);
+  } }, { setLayout: va, multiplyParent: ka, translateInner: Ca, defaultWorld: Oa } = q$2, { toPoint: Ta, tempPoint: Pa } = bt$3, Sa = { __updateWorldMatrix() {
+    const { parent: t2, __layout: e2, __world: s2, __scrollWorld: r2, __: i2 } = this;
+    ka(this.__local || e2, t2 ? t2.__scrollWorld || t2.__world : Oa, s2, !!e2.affectScaleOrRotation, i2), r2 && Ca(Object.assign(r2, s2), i2.scrollX, i2.scrollY);
+  }, __updateLocalMatrix() {
+    if (this.__local) {
+      const t2 = this.__layout, e2 = this.__local, s2 = this.__;
+      t2.affectScaleOrRotation && (t2.scaleChanged && (t2.resized || (t2.resized = "scale")) || t2.rotationChanged) && (va(e2, s2, null, null, t2.affectRotation), t2.scaleChanged = t2.rotationChanged = void 0), e2.e = s2.x + s2.offsetX, e2.f = s2.y + s2.offsetY, (s2.around || s2.origin) && (Ta(s2.around || s2.origin, t2.boxBounds, Pa), Ca(e2, -Pa.x, -Pa.y, !s2.around));
+    }
+    this.__layout.matrixChanged = void 0;
+  } }, { updateMatrix: La, updateAllMatrix: Ra } = co, { updateBounds: Ea } = vo, { toOuterOf: Ia, copyAndSpread: Ma, copy: Aa } = zt$2, { toBounds: Wa } = Ai$1, Na = { __updateWorldBounds() {
+    const { __layout: t2, __world: e2 } = this;
+    Ia(t2.renderBounds, e2, e2), t2.resized && ("inner" === t2.resized && this.__onUpdateSize(), this.__hasLocalEvent && Ho.emitLocal(this), t2.resized = void 0), this.__hasWorldEvent && Ho.emitWorld(this);
+  }, __updateLocalBounds() {
+    const t2 = this.__layout;
+    t2.boxChanged && (this.__.__pathInputed || this.__updatePath(), this.__updateRenderPath(), this.__updateBoxBounds(), t2.resized = "inner"), t2.localBoxChanged && (this.__local && this.__updateLocalBoxBounds(), t2.localBoxChanged = void 0, t2.strokeSpread && (t2.strokeChanged = true), t2.renderSpread && (t2.renderChanged = true), this.parent && this.parent.__layout.boxChange()), t2.boxChanged = void 0, t2.strokeChanged && (t2.strokeSpread = this.__updateStrokeSpread(), t2.strokeSpread ? (t2.strokeBounds === t2.boxBounds && t2.spreadStroke(), this.__updateStrokeBounds(), this.__updateLocalStrokeBounds()) : t2.spreadStrokeCancel(), t2.strokeChanged = void 0, (t2.renderSpread || t2.strokeSpread !== t2.strokeBoxSpread) && (t2.renderChanged = true), this.parent && this.parent.__layout.strokeChange(), t2.resized = "inner"), t2.renderChanged && (t2.renderSpread = this.__updateRenderSpread(), t2.renderSpread ? (t2.renderBounds !== t2.boxBounds && t2.renderBounds !== t2.strokeBounds || t2.spreadRender(), this.__updateRenderBounds(), this.__updateLocalRenderBounds()) : t2.spreadRenderCancel(), t2.renderChanged = void 0, this.parent && this.parent.__layout.renderChange()), t2.resized || (t2.resized = "local"), t2.boundsChanged = void 0;
+  }, __updateLocalBoxBounds() {
+    this.__hasMotionPath && this.__updateMotionPath(), this.__hasAutoLayout && this.__updateAutoLayout(), Ia(this.__layout.boxBounds, this.__local, this.__local);
+  }, __updateLocalStrokeBounds() {
+    Ia(this.__layout.strokeBounds, this.__localMatrix, this.__layout.localStrokeBounds);
+  }, __updateLocalRenderBounds() {
+    Ia(this.__layout.renderBounds, this.__localMatrix, this.__layout.localRenderBounds);
+  }, __updateBoxBounds(t2, e2) {
+    const s2 = this.__layout.boxBounds, r2 = this.__;
+    r2.__usePathBox ? Wa(r2.path, s2) : (s2.x = 0, s2.y = 0, s2.width = r2.width, s2.height = r2.height);
+  }, __updateAutoLayout() {
+    this.__layout.matrixChanged = true, this.isBranch ? (this.__extraUpdate(), this.__.flow ? (this.__layout.boxChanged && this.__updateFlowLayout(), Ra(this), Ea(this, this), this.__.__autoSide && this.__updateBoxBounds(true)) : (Ra(this), Ea(this, this))) : La(this);
+  }, __updateNaturalSize() {
+    const { __: t2, __layout: e2 } = this;
+    t2.__naturalWidth = e2.boxBounds.width, t2.__naturalHeight = e2.boxBounds.height;
+  }, __updateStrokeBounds(t2) {
+    const e2 = this.__layout;
+    Ma(e2.strokeBounds, e2.boxBounds, e2.strokeBoxSpread);
+  }, __updateRenderBounds(t2) {
+    const e2 = this.__layout, { renderSpread: s2 } = e2;
+    o(s2) && s2 <= 0 ? Aa(e2.renderBounds, e2.strokeBounds) : Ma(e2.renderBounds, e2.boxBounds, s2);
+  } }, Ya = { __render(t2, e2) {
+    if (e2.shape) return this.__renderShape(t2, e2);
+    if ((!e2.cellList || e2.cellList.has(this)) && this.__worldOpacity) {
+      const s2 = this.__;
+      if (s2.bright && !e2.topRendering) return e2.topList.add(this);
+      if (t2.setWorld(this.__nowWorld = this.__getNowWorld(e2)), t2.opacity = e2.dimOpacity && !s2.dimskip ? s2.opacity * e2.dimOpacity : s2.opacity, this.__.__single) {
+        if ("path" === s2.eraser) return this.__renderEraser(t2, e2);
+        const r2 = t2.getSameCanvas(true, true);
+        this.__draw(r2, e2, t2), co.copyCanvasByWorld(this, t2, r2, this.__nowWorld, s2.__blendMode, true), r2.recycle(this.__nowWorld);
+      } else this.__draw(t2, e2);
+      ee$2.showBounds && ee$2.drawBounds(this, t2, e2);
+    }
+  }, __renderShape(t2, e2) {
+    this.__worldOpacity && (t2.setWorld(this.__nowWorld = this.__getNowWorld(e2)), this.__drawShape(t2, e2));
+  }, __clip(t2, e2) {
+    this.__worldOpacity && (t2.setWorld(this.__nowWorld = this.__getNowWorld(e2)), this.__drawRenderPath(t2), t2.clipUI(this));
+  }, __updateWorldOpacity() {
+    this.__worldOpacity = this.__.visible ? this.parent ? this.parent.__worldOpacity * this.__.opacity : this.__.opacity : 0, this.__layout.opacityChanged && (this.__layout.opacityChanged = false);
+  } }, { excludeRenderBounds: Da } = xo, { hasSize: Xa } = zt$2, za = { __updateChange() {
+    const { __layout: t2 } = this;
+    t2.childrenSortChanged && (this.__updateSortChildren(), t2.childrenSortChanged = false), this.__.__checkSingle();
+  }, __render(t2, e2) {
+    const s2 = this.__nowWorld = this.__getNowWorld(e2);
+    if (this.__worldOpacity && Xa(s2)) {
+      const r2 = this.__;
+      if (r2.__useDim) if (r2.dim) e2.dimOpacity = true === r2.dim ? 0.2 : r2.dim;
+      else {
+        if (r2.bright && !e2.topRendering) return e2.topList.add(this);
+        r2.dimskip && e2.dimOpacity && (e2.dimOpacity = 0);
+      }
+      if (r2.__single && !this.isBranchLeaf) {
+        if ("path" === r2.eraser) return this.__renderEraser(t2, e2);
+        const i2 = t2.getSameCanvas(false, true);
+        this.__renderBranch(i2, e2), t2.opacity = e2.dimOpacity ? r2.opacity * e2.dimOpacity : r2.opacity, t2.copyWorldByReset(i2, s2, s2, r2.__blendMode, true), i2.recycle(s2);
+      } else this.__renderBranch(t2, e2);
+    }
+  }, __renderBranch(t2, e2) {
+    if (this.__hasMask) this.__renderMask(t2, e2);
+    else {
+      let s2;
+      const { children: r2 } = this;
+      for (let i2 = 0, n2 = r2.length; i2 < n2; i2++) s2 = r2[i2], Da(s2, e2) || (s2.__.complex ? s2.__renderComplex(t2, e2) : s2.__render(t2, e2));
+    }
+  }, __clip(t2, e2) {
+    if (this.__worldOpacity) {
+      const { children: s2 } = this;
+      for (let r2 = 0, i2 = s2.length; r2 < i2; r2++) Da(s2[r2], e2) || s2[r2].__clip(t2, e2);
+    }
+  } }, Fa = {}, { LEAF: Ua, create: ja } = g$2, { stintSet: Va } = _$2, { toInnerPoint: Ha, toOuterPoint: Ga, multiplyParent: qa } = q$2, { toOuterOf: Qa } = zt$2, { copy: Ja, move: Za } = ot$2, { moveLocal: $a, zoomOfLocal: Ka, rotateOfLocal: th, skewOfLocal: eh, moveWorld: sh, zoomOfWorld: rh, rotateOfWorld: ih, skewOfWorld: nh, transform: oh, transformWorld: ah, setTransform: hh, getFlipTransform: lh, getLocalOrigin: dh, getRelativeWorld: ch, drop: uh } = co;
+  let _h = class {
+    get tag() {
+      return this.__tag;
+    }
+    set tag(t2) {
+    }
+    get __tag() {
+      return "Leaf";
+    }
+    get innerName() {
+      return this.__.name || this.tag + this.innerId;
+    }
+    get __DataProcessor() {
+      return f;
+    }
+    get __LayoutProcessor() {
+      return Do;
+    }
+    get leaferIsCreated() {
+      return this.leafer && this.leafer.created;
+    }
+    get leaferIsReady() {
+      return this.leafer && this.leafer.ready;
+    }
+    get isLeafer() {
+      return false;
+    }
+    get isBranch() {
+      return false;
+    }
+    get isBranchLeaf() {
+      return false;
+    }
+    get __localMatrix() {
+      return this.__local || this.__layout;
+    }
+    get __localBoxBounds() {
+      return this.__local || this.__layout;
+    }
+    get worldTransform() {
+      return this.__layout.getTransform("world");
+    }
+    get localTransform() {
+      return this.__layout.getTransform("local");
+    }
+    get scrollWorldTransform() {
+      return this.updateLayout(), this.__scrollWorld || this.__world;
+    }
+    get boxBounds() {
+      return this.getBounds("box", "inner");
+    }
+    get renderBounds() {
+      return this.getBounds("render", "inner");
+    }
+    get worldBoxBounds() {
+      return this.getBounds("box");
+    }
+    get worldStrokeBounds() {
+      return this.getBounds("stroke");
+    }
+    get worldRenderBounds() {
+      return this.getBounds("render");
+    }
+    get worldOpacity() {
+      return this.updateLayout(), this.__worldOpacity;
+    }
+    get __worldFlipped() {
+      return this.__world.scaleX < 0 || this.__world.scaleY < 0;
+    }
+    get __onlyHitMask() {
+      return this.__hasMask && !this.__.hitChildren;
+    }
+    get __ignoreHitWorld() {
+      return (this.__hasMask || this.__hasEraser) && this.__.hitChildren;
+    }
+    get __inLazyBounds() {
+      return this.leaferIsCreated && this.leafer.lazyBounds.hit(this.__world);
+    }
+    get pathInputed() {
+      return this.__.__pathInputed;
+    }
+    set event(t2) {
+      this.on(t2);
+    }
+    constructor(t2) {
+      this.innerId = ja(Ua), this.reset(t2), this.__bubbleMap && this.__emitLifeEvent(zo.CREATED);
+    }
+    reset(t2) {
+      this.leafer && this.leafer.forceRender(this.__world), 0 !== t2 && (this.__world = { a: 1, b: 0, c: 0, d: 1, e: 0, f: 0, x: 0, y: 0, width: 0, height: 0, scaleX: 1, scaleY: 1 }, null !== t2 && (this.__local = { a: 1, b: 0, c: 0, d: 1, e: 0, f: 0, x: 0, y: 0, width: 0, height: 0 })), this.__worldOpacity = 1, this.__ = new this.__DataProcessor(this), this.__layout = new this.__LayoutProcessor(this), this.__level && this.resetCustom(), t2 && (t2.__ && (t2 = t2.toJSON()), t2.children ? this.set(t2) : Object.assign(this, t2));
+    }
+    resetCustom() {
+      this.__hasMask = this.__hasEraser = null, this.forceUpdate();
+    }
+    waitParent(t2, e2) {
+      e2 && (t2 = t2.bind(e2)), this.parent ? t2() : this.on(zo.ADD, t2, "once");
+    }
+    waitLeafer(t2, e2) {
+      e2 && (t2 = t2.bind(e2)), this.leafer ? t2() : this.on(zo.MOUNTED, t2, "once");
+    }
+    nextRender(t2, e2, s2) {
+      this.leafer ? this.leafer.nextRender(t2, e2, s2) : this.waitLeafer(() => this.leafer.nextRender(t2, e2, s2));
+    }
+    removeNextRender(t2) {
+      this.nextRender(t2, null, "off");
+    }
+    __bindLeafer(t2) {
+      if (this.isLeafer && null !== t2 && (t2 = this), this.leafer && !t2 && this.leafer.leafs--, this.leafer = t2, t2 ? (t2.leafs++, this.__level = this.parent ? this.parent.__level + 1 : 1, this.animation && this.__runAnimation("in"), this.__bubbleMap && this.__emitLifeEvent(zo.MOUNTED)) : this.__emitLifeEvent(zo.UNMOUNTED), this.isBranch) {
+        const { children: e2 } = this;
+        for (let s2 = 0, r2 = e2.length; s2 < r2; s2++) e2[s2].__bindLeafer(t2);
+      }
+    }
+    set(t2, e2) {
+    }
+    get(t2) {
+    }
+    setAttr(t2, e2) {
+      this[t2] = e2;
+    }
+    getAttr(t2) {
+      return this[t2];
+    }
+    getComputedAttr(t2) {
+      return this.__[t2];
+    }
+    toJSON(t2) {
+      return t2 && this.__layout.update(), this.__.__getInputData(null, t2);
+    }
+    toString(t2) {
+      return JSON.stringify(this.toJSON(t2));
+    }
+    toSVG() {
+    }
+    __SVG(t2) {
+    }
+    toHTML() {
+    }
+    __setAttr(t2, e2) {
+      return true;
+    }
+    __getAttr(t2) {
+    }
+    setProxyAttr(t2, e2) {
+    }
+    getProxyAttr(t2) {
+    }
+    find(t2, e2) {
+    }
+    findTag(t2) {
+    }
+    findOne(t2, e2) {
+    }
+    findId(t2) {
+    }
+    focus(t2) {
+    }
+    updateState() {
+    }
+    updateLayout() {
+      this.__layout.update();
+    }
+    forceUpdate(t2) {
+      s(t2) ? t2 = "width" : "surface" === t2 && (t2 = "blendMode");
+      const e2 = this.__.__getInput(t2);
+      this.__[t2] = s(e2) ? null : void 0, this[t2] = e2;
+    }
+    forceRender(t2, e2) {
+      this.forceUpdate("surface");
+    }
+    __extraUpdate() {
+      this.leaferIsReady && this.leafer.layouter.addExtra(this);
+    }
+    __updateWorldMatrix() {
+    }
+    __updateLocalMatrix() {
+    }
+    __updateWorldBounds() {
+    }
+    __updateLocalBounds() {
+    }
+    __updateLocalBoxBounds() {
+    }
+    __updateLocalStrokeBounds() {
+    }
+    __updateLocalRenderBounds() {
+    }
+    __updateBoxBounds(t2, e2) {
+    }
+    __updateContentBounds() {
+    }
+    __updateStrokeBounds(t2) {
+    }
+    __updateRenderBounds(t2) {
+    }
+    __updateAutoLayout() {
+    }
+    __updateFlowLayout() {
+    }
+    __updateNaturalSize() {
+    }
+    __updateStrokeSpread() {
+      return 0;
+    }
+    __updateRenderSpread() {
+      return 0;
+    }
+    __onUpdateSize() {
+    }
+    __updateEraser(t2) {
+      this.__hasEraser = !!t2 || this.children.some((t3) => t3.__.eraser);
+    }
+    __renderEraser(t2, e2) {
+      t2.save(), this.__clip(t2, e2);
+      const { renderBounds: s2 } = this.__layout;
+      t2.clearRect(s2.x, s2.y, s2.width, s2.height), t2.restore();
+    }
+    __updateMask(t2) {
+      this.__hasMask = this.children.some((t3) => t3.__.mask && t3.__.visible && t3.__.opacity);
+    }
+    __renderMask(t2, e2) {
+    }
+    __getNowWorld(t2) {
+      if (t2.matrix) {
+        this.__cameraWorld || (this.__cameraWorld = {});
+        const e2 = this.__cameraWorld, s2 = this.__world;
+        return qa(s2, t2.matrix, e2, void 0, s2), Qa(this.__layout.renderBounds, e2, e2), Va(e2, "half", s2.half), Va(e2, "ignorePixelSnap", s2.ignorePixelSnap), e2;
+      }
+      return this.__world;
+    }
+    getClampRenderScale() {
+      let { scaleX: t2 } = this.__nowWorld || this.__world;
+      return t2 < 0 && (t2 = -t2), t2 > 1 ? t2 : 1;
+    }
+    getRenderScaleData(t2, e2) {
+      let { scaleX: s2, scaleY: r2 } = en.patternLocked ? this.__world : this.__nowWorld;
+      return t2 && (s2 < 0 && (s2 = -s2), r2 < 0 && (r2 = -r2)), (true === e2 || "zoom-in" === e2 && s2 > 1 && r2 > 1) && (s2 = r2 = 1), Fa.scaleX = s2, Fa.scaleY = r2, Fa;
+    }
+    getTransform(t2) {
+      return this.__layout.getTransform(t2 || "local");
+    }
+    getBounds(t2, e2) {
+      return this.__layout.getBounds(t2, e2);
+    }
+    getLayoutBounds(t2, e2, s2) {
+      return this.__layout.getLayoutBounds(t2, e2, s2);
+    }
+    getLayoutPoints(t2, e2) {
+      return this.__layout.getLayoutPoints(t2, e2);
+    }
+    getWorldBounds(t2, e2, s2) {
+      const r2 = e2 ? ch(this, e2) : this.worldTransform, i2 = s2 ? t2 : {};
+      return Qa(t2, r2, i2), i2;
+    }
+    worldToLocal(t2, e2, s2, r2) {
+      this.parent ? this.parent.worldToInner(t2, e2, s2, r2) : e2 && Ja(e2, t2);
+    }
+    localToWorld(t2, e2, s2, r2) {
+      this.parent ? this.parent.innerToWorld(t2, e2, s2, r2) : e2 && Ja(e2, t2);
+    }
+    worldToInner(t2, e2, s2, r2) {
+      r2 && (r2.innerToWorld(t2, e2, s2), t2 = e2 || t2), Ha(this.scrollWorldTransform, t2, e2, s2);
+    }
+    innerToWorld(t2, e2, s2, r2) {
+      Ga(this.scrollWorldTransform, t2, e2, s2), r2 && r2.worldToInner(e2 || t2, null, s2);
+    }
+    getBoxPoint(t2, e2, s2, r2) {
+      return this.getBoxPointByInner(this.getInnerPoint(t2, e2, s2, r2), null, null, true);
+    }
+    getBoxPointByInner(t2, e2, s2, r2) {
+      const i2 = r2 ? t2 : Object.assign({}, t2), { x: n2, y: o2 } = this.boxBounds;
+      return Za(i2, -n2, -o2), i2;
+    }
+    getInnerPoint(t2, e2, s2, r2) {
+      const i2 = r2 ? t2 : {};
+      return this.worldToInner(t2, i2, s2, e2), i2;
+    }
+    getInnerPointByBox(t2, e2, s2, r2) {
+      const i2 = r2 ? t2 : Object.assign({}, t2), { x: n2, y: o2 } = this.boxBounds;
+      return Za(i2, n2, o2), i2;
+    }
+    getInnerPointByLocal(t2, e2, s2, r2) {
+      return this.getInnerPoint(t2, this.parent, s2, r2);
+    }
+    getLocalPoint(t2, e2, s2, r2) {
+      const i2 = r2 ? t2 : {};
+      return this.worldToLocal(t2, i2, s2, e2), i2;
+    }
+    getLocalPointByInner(t2, e2, s2, r2) {
+      return this.getWorldPoint(t2, this.parent, s2, r2);
+    }
+    getPagePoint(t2, e2, s2, r2) {
+      return (this.leafer ? this.leafer.zoomLayer : this).getInnerPoint(t2, e2, s2, r2);
+    }
+    getWorldPoint(t2, e2, s2, r2) {
+      const i2 = r2 ? t2 : {};
+      return this.innerToWorld(t2, i2, s2, e2), i2;
+    }
+    getWorldPointByBox(t2, e2, s2, r2) {
+      return this.getWorldPoint(this.getInnerPointByBox(t2, null, null, r2), e2, s2, true);
+    }
+    getWorldPointByLocal(t2, e2, s2, r2) {
+      const i2 = r2 ? t2 : {};
+      return this.localToWorld(t2, i2, s2, e2), i2;
+    }
+    getWorldPointByPage(t2, e2, s2, r2) {
+      return (this.leafer ? this.leafer.zoomLayer : this).getWorldPoint(t2, e2, s2, r2);
+    }
+    setTransform(t2, e2, s2) {
+      hh(this, t2, e2, s2);
+    }
+    transform(t2, e2, s2) {
+      oh(this, t2, e2, s2);
+    }
+    move(t2, e2, s2) {
+      $a(this, t2, e2, s2);
+    }
+    moveInner(t2, e2, s2) {
+      sh(this, t2, e2, true, s2);
+    }
+    scaleOf(t2, e2, s2, r2, i2) {
+      Ka(this, dh(this, t2), e2, s2, r2, i2);
+    }
+    rotateOf(t2, e2, s2) {
+      th(this, dh(this, t2), e2, s2);
+    }
+    skewOf(t2, e2, s2, r2, i2) {
+      eh(this, dh(this, t2), e2, s2, r2, i2);
+    }
+    transformWorld(t2, e2, s2) {
+      ah(this, t2, e2, s2);
+    }
+    moveWorld(t2, e2, s2) {
+      sh(this, t2, e2, false, s2);
+    }
+    scaleOfWorld(t2, e2, s2, r2, i2) {
+      rh(this, t2, e2, s2, r2, i2);
+    }
+    rotateOfWorld(t2, e2) {
+      ih(this, t2, e2);
+    }
+    skewOfWorld(t2, e2, s2, r2, i2) {
+      nh(this, t2, e2, s2, r2, i2);
+    }
+    flip(t2, e2) {
+      oh(this, lh(this, t2), false, e2);
+    }
+    scaleResize(t2, e2 = t2, s2) {
+      this.scaleX *= t2, this.scaleY *= e2;
+    }
+    __scaleResize(t2, e2) {
+    }
+    resizeWidth(t2) {
+    }
+    resizeHeight(t2) {
+    }
+    hit(t2, e2) {
+      return true;
+    }
+    __hitWorld(t2, e2) {
+      return true;
+    }
+    __hit(t2, e2) {
+      return true;
+    }
+    __hitFill(t2) {
+      return true;
+    }
+    __hitStroke(t2, e2) {
+      return true;
+    }
+    __hitPixel(t2) {
+      return true;
+    }
+    __drawHitPath(t2) {
+    }
+    __updateHitCanvas() {
+    }
+    __render(t2, e2) {
+    }
+    __renderComplex(t2, e2) {
+    }
+    __drawFast(t2, e2) {
+    }
+    __draw(t2, e2, s2) {
+    }
+    __clip(t2, e2) {
+    }
+    __renderShape(t2, e2) {
+    }
+    __drawShape(t2, e2) {
+    }
+    __updateWorldOpacity() {
+    }
+    __updateChange() {
+    }
+    __drawPath(t2) {
+    }
+    __drawRenderPath(t2) {
+    }
+    __updatePath() {
+    }
+    __updateRenderPath() {
+    }
+    getMotionPathData() {
+      return he$2.need("path");
+    }
+    getMotionPoint(t2) {
+      return he$2.need("path");
+    }
+    getMotionTotal() {
+      return 0;
+    }
+    __updateMotionPath() {
+    }
+    __runAnimation(t2, e2) {
+    }
+    __updateSortChildren() {
+    }
+    add(t2, e2) {
+    }
+    remove(t2, e2) {
+      this.parent && this.parent.remove(this, e2);
+    }
+    dropTo(t2, e2, s2) {
+      uh(this, t2, e2, s2);
+    }
+    on(t2, e2, s2) {
+    }
+    off(t2, e2, s2) {
+    }
+    on_(t2, e2, s2, r2) {
+    }
+    off_(t2) {
+    }
+    once(t2, e2, s2, r2) {
+    }
+    emit(t2, e2, s2) {
+    }
+    emitEvent(t2, e2) {
+    }
+    hasEvent(t2, e2) {
+      return false;
+    }
+    static changeAttr(t2, e2, s2) {
+      s2 ? this.addAttr(t2, e2, s2) : Un(this.prototype, t2, e2);
+    }
+    static addAttr(t2, e2, s2, r2) {
+      s2 || (s2 = bn), s2(e2, r2)(this.prototype, t2);
+    }
+    __emitLifeEvent(t2) {
+      this.hasEvent(t2) && this.emitEvent(new zo(t2, this, this.parent));
+    }
+    destroy() {
+      this.destroyed || (this.parent && this.remove(), this.children && this.clear(), this.__emitLifeEvent(zo.DESTROY), this.__.destroy(), this.__layout.destroy(), this.destroyEventer(), this.destroyed = true);
+    }
+  };
+  _h = ye$2([Jn(Ba), Jn(Sa), Jn(Na), Jn(wa), Jn(Ya)], _h);
+  const { setListWithFn: ph } = zt$2, { sort: fh } = vo, { localBoxBounds: gh, localStrokeBounds: yh, localRenderBounds: mh, maskLocalBoxBounds: xh, maskLocalStrokeBounds: wh, maskLocalRenderBounds: bh } = xo, Bh = new ee$2("Branch");
+  let vh = class extends _h {
+    __updateStrokeSpread() {
+      const { children: t2 } = this;
+      for (let e2 = 0, s2 = t2.length; e2 < s2; e2++) if (t2[e2].__layout.strokeSpread) return 1;
+      return 0;
+    }
+    __updateRenderSpread() {
+      const { children: t2 } = this;
+      for (let e2 = 0, s2 = t2.length; e2 < s2; e2++) if (t2[e2].__layout.renderSpread) return 1;
+      return 0;
+    }
+    __updateBoxBounds(t2, e2) {
+      ph(e2 || this.__layout.boxBounds, this.children, this.__hasMask ? xh : gh);
+    }
+    __updateStrokeBounds(t2) {
+      ph(t2 || this.__layout.strokeBounds, this.children, this.__hasMask ? wh : yh);
+    }
+    __updateRenderBounds(t2) {
+      ph(t2 || this.__layout.renderBounds, this.children, this.__hasMask ? bh : mh);
+    }
+    __updateSortChildren() {
+      let t2;
+      const { children: e2 } = this;
+      if (e2.length > 1) {
+        for (let s2 = 0, r2 = e2.length; s2 < r2; s2++) e2[s2].__tempNumber = s2, e2[s2].__.zIndex && (t2 = true);
+        e2.sort(fh), this.__layout.affectChildrenSort = t2;
+      }
+    }
+    add(t2, e2) {
+      if (t2 === this || t2.destroyed) return Bh.warn("add self or destroyed");
+      const r2 = s(e2);
+      if (!t2.__) {
+        if (l(t2)) return t2.forEach((t3) => {
+          this.add(t3, e2), r2 || e2++;
+        });
+        if (!(t2 = ce$2.get(t2.tag, t2))) return;
+      }
+      t2.parent && t2.parent.remove(t2), t2.parent = this, r2 ? this.children.push(t2) : this.children.splice(e2, 0, t2), t2.isBranch && (this.__.__childBranchNumber = (this.__.__childBranchNumber || 0) + 1);
+      const i2 = t2.__layout;
+      i2.boxChanged || i2.boxChange(), i2.matrixChanged || i2.matrixChange(), t2.__bubbleMap && t2.__emitLifeEvent(zo.ADD), this.leafer && (t2.__bindLeafer(this.leafer), this.leafer.created && this.__emitChildEvent(zo.ADD, t2)), this.__layout.affectChildrenSort && this.__layout.childrenSortChange();
+    }
+    addMany(...t2) {
+      this.add(t2);
+    }
+    remove(t2, e2) {
+      t2 ? t2.__ ? t2.animationOut ? t2.__runAnimation("out", () => this.__remove(t2, e2)) : this.__remove(t2, e2) : this.find(t2).forEach((t3) => this.remove(t3, e2)) : s(t2) && super.remove(null, e2);
+    }
+    removeAll(t2) {
+      const { children: e2 } = this;
+      e2.length && (this.children = [], this.__preRemove(), this.__.__childBranchNumber = 0, e2.forEach((e3) => {
+        this.__realRemoveChild(e3), t2 && e3.destroy();
+      }));
+    }
+    clear() {
+      this.removeAll(true);
+    }
+    __remove(t2, e2) {
+      const s2 = this.children.indexOf(t2);
+      s2 > -1 && (this.children.splice(s2, 1), t2.isBranch && (this.__.__childBranchNumber = (this.__.__childBranchNumber || 1) - 1), this.__preRemove(), this.__realRemoveChild(t2), e2 && t2.destroy());
+    }
+    __preRemove() {
+      this.__hasMask && this.__updateMask(), this.__hasEraser && this.__updateEraser(), this.__layout.boxChange(), this.__layout.affectChildrenSort && this.__layout.childrenSortChange();
+    }
+    __realRemoveChild(t2) {
+      t2.__emitLifeEvent(zo.REMOVE), t2.parent = null, this.leafer && (t2.__bindLeafer(null), this.leafer.created && (this.__emitChildEvent(zo.REMOVE, t2), this.leafer.hitCanvasManager && this.leafer.hitCanvasManager.clear()));
+    }
+    __emitChildEvent(t2, e2) {
+      const s2 = new zo(t2, e2, this);
+      this.hasEvent(t2) && !this.isLeafer && this.emitEvent(s2), this.leafer.emitEvent(s2);
+    }
+  };
+  vh = ye$2([Jn(za)], vh);
+  class kh {
+    get length() {
+      return this.list.length;
+    }
+    constructor(t2) {
+      this.reset(), t2 && (l(t2) ? this.addList(t2) : this.add(t2));
+    }
+    has(t2) {
+      return t2 && !s(this.keys[t2.innerId]);
+    }
+    indexAt(t2) {
+      return this.list[t2];
+    }
+    indexOf(t2) {
+      const e2 = this.keys[t2.innerId];
+      return s(e2) ? -1 : e2;
+    }
+    add(t2) {
+      const { list: e2, keys: r2 } = this;
+      s(r2[t2.innerId]) && (e2.push(t2), r2[t2.innerId] = e2.length - 1);
+    }
+    addAt(t2, e2 = 0) {
+      const { keys: r2 } = this;
+      if (s(r2[t2.innerId])) {
+        const { list: s2 } = this;
+        for (let t3 = e2, i2 = s2.length; t3 < i2; t3++) r2[s2[t3].innerId]++;
+        0 === e2 ? s2.unshift(t2) : (e2 > s2.length && (e2 = s2.length), s2.splice(e2, 0, t2)), r2[t2.innerId] = e2;
+      }
+    }
+    addList(t2) {
+      for (let e2 = 0; e2 < t2.length; e2++) this.add(t2[e2]);
+    }
+    remove(t2) {
+      const { list: e2 } = this;
+      let r2;
+      for (let i2 = 0, n2 = e2.length; i2 < n2; i2++) s(r2) ? e2[i2].innerId === t2.innerId && (r2 = i2, delete this.keys[t2.innerId]) : this.keys[e2[i2].innerId] = i2 - 1;
+      s(r2) || e2.splice(r2, 1);
+    }
+    sort(t2) {
+      const { list: e2 } = this;
+      t2 ? e2.sort((t3, e3) => e3.__level - t3.__level) : e2.sort((t3, e3) => t3.__level - e3.__level);
+    }
+    forEach(t2) {
+      this.list.forEach(t2);
+    }
+    clone() {
+      const t2 = new kh();
+      return t2.list = [...this.list], t2.keys = Object.assign({}, this.keys), t2;
+    }
+    update() {
+      this.keys = {};
+      const { list: t2, keys: e2 } = this;
+      for (let s2 = 0, r2 = t2.length; s2 < r2; s2++) e2[t2[s2].innerId] = s2;
+    }
+    reset() {
+      this.list = [], this.keys = {};
+    }
+    destroy() {
+      this.reset();
+    }
+  }
+  class Ch {
+    get length() {
+      return this._length;
+    }
+    constructor(t2) {
+      this._length = 0, this.reset(), t2 && (l(t2) ? this.addList(t2) : this.add(t2));
+    }
+    has(t2) {
+      return !s(this.keys[t2.innerId]);
+    }
+    without(t2) {
+      return s(this.keys[t2.innerId]);
+    }
+    sort(t2) {
+      const { levels: e2 } = this;
+      t2 ? e2.sort((t3, e3) => e3 - t3) : e2.sort((t3, e3) => t3 - e3);
+    }
+    addList(t2) {
+      t2.forEach((t3) => {
+        this.add(t3);
+      });
+    }
+    add(t2) {
+      const { keys: e2, levelMap: s2 } = this;
+      e2[t2.innerId] || (e2[t2.innerId] = 1, s2[t2.__level] ? s2[t2.__level].push(t2) : (s2[t2.__level] = [t2], this.levels.push(t2.__level)), this._length++);
+    }
+    forEach(t2) {
+      let e2;
+      this.levels.forEach((s2) => {
+        e2 = this.levelMap[s2];
+        for (let s3 = 0, r2 = e2.length; s3 < r2; s3++) t2(e2[s3]);
+      });
+    }
+    reset() {
+      this.levelMap = {}, this.keys = {}, this.levels = [], this._length = 0;
+    }
+    destroy() {
+      this.levelMap = null;
+    }
+  }
+  const Oh = "2.0.2";
+  function St$2(t2, e2, i2, s2) {
+    var o2, r2 = arguments.length, a2 = r2 < 3 ? e2 : null === s2 ? s2 = Object.getOwnPropertyDescriptor(e2, i2) : s2;
+    if ("object" == typeof Reflect && "function" == typeof Reflect.decorate) a2 = Reflect.decorate(t2, e2, i2, s2);
+    else for (var n2 = t2.length - 1; n2 >= 0; n2--) (o2 = t2[n2]) && (a2 = (r2 < 3 ? o2(a2) : r2 > 3 ? o2(e2, i2, a2) : o2(e2, i2)) || a2);
+    return r2 > 3 && a2 && Object.defineProperty(e2, i2, a2), a2;
+  }
+  function mt$2(t2) {
+    return un(t2, (t3) => _n({ set(e2) {
+      this.__setAttr(t3, e2), e2 && (this.__.__useEffect = true), this.__layout.renderChanged || this.__layout.renderChange();
+    } }));
+  }
+  function Rt$2(t2) {
+    return un(t2, (t3) => _n({ set(e2) {
+      this.__setAttr(t3, e2), this.__layout.boxChanged || this.__layout.boxChange(), this.__updateSize();
+    } }));
+  }
+  function kt$2() {
+    return (e2, i2) => {
+      const s2 = "_" + i2;
+      ln(e2, i2, { set(t2) {
+        this.isLeafer && (this[s2] = t2);
+      }, get() {
+        return this.isApp ? this.tree.zoomLayer : this.isLeafer ? this[s2] || this : this.leafer && this.leafer.zoomLayer;
+      } });
+    };
+  }
+  function Bt$2(e2) {
+    return (i2, o2) => {
+      ln(i2, o2, cn(o2, e2));
+    };
+  }
+  "function" == typeof SuppressedError && SuppressedError;
+  const At$2 = {}, Ct$2 = { hasTransparent: function(t2) {
+    if (!t2 || 7 === t2.length || 4 === t2.length) return false;
+    if ("transparent" === t2) return true;
+    const e2 = t2[0];
+    if ("#" === e2) switch (t2.length) {
+      case 5:
+        return "f" !== t2[4] && "F" !== t2[4];
+      case 9:
+        return "f" !== t2[7] && "F" !== t2[7] || "f" !== t2[8] && "F" !== t2[8];
+    }
+    else if (("r" === e2 || "h" === e2) && "a" === t2[3]) {
+      const e3 = t2.lastIndexOf(",");
+      if (e3 > -1) return parseFloat(t2.slice(e3 + 1)) < 1;
+    }
+    return false;
+  } }, bt$2 = qt$2, Pt$2 = {}, Ft$2 = {}, Wt$2 = {}, Et$2 = {}, Tt$2 = {}, Dt$2 = { apply() {
+    he$2.need("filter");
+  } }, It$2 = {}, Lt$2 = { setStyleName: () => he$2.need("state"), set: () => he$2.need("state") }, zt$1 = { list: {}, register(t2, e2) {
+    zt$1.list[t2] = e2;
+  }, get: (t2) => zt$1.list[t2] }, { parse: Mt$2, objectToCanvasData: Ot$2 } = sr, { stintSet: Nt$2 } = _$2, { hasTransparent: Vt$2 } = Ct$2, Ht$2 = { originPaint: {} }, Yt$2 = ee$2.get("UIData");
+  let Ut$2 = class Ut extends f {
+    get scale() {
+      const { scaleX: t2, scaleY: e2 } = this;
+      return t2 !== e2 ? { x: t2, y: e2 } : t2;
+    }
+    get __strokeWidth() {
+      return this.__getRealStrokeWidth();
+    }
+    get __maxStrokeWidth() {
+      const t2 = this;
+      return t2.__hasMultiStrokeStyle ? Math.max(t2.__hasMultiStrokeStyle, t2.strokeWidth) : t2.strokeWidth;
+    }
+    get __hasMultiPaint() {
+      const t2 = this;
+      return t2.fill && this.__useStroke || t2.__isFills && t2.fill.length > 1 || t2.__isStrokes && t2.stroke.length > 1 || t2.__useEffect;
+    }
+    get __clipAfterFill() {
+      const t2 = this;
+      return t2.cornerRadius || t2.innerShadow || t2.__pathInputed;
+    }
+    get __hasSurface() {
+      return this.fill || this.stroke;
+    }
+    get __autoWidth() {
+      return null == this._width;
+    }
+    get __autoHeight() {
+      return null == this._height;
+    }
+    get __autoSide() {
+      return null == this._width || null == this._height;
+    }
+    get __autoSize() {
+      return null == this._width && null == this._height;
+    }
+    setVisible(t2) {
+      this._visible = t2;
+      const { leafer: e2 } = this.__leaf;
+      e2 && (e2.watcher.hasVisible = true);
+    }
+    setWidth(t2) {
+      t2 < 0 ? (this._width = -t2, this.__leaf.scaleX *= -1, Yt$2.warn("width < 0, instead -scaleX ", this)) : this._width = t2;
+    }
+    setHeight(t2) {
+      t2 < 0 ? (this._height = -t2, this.__leaf.scaleY *= -1, Yt$2.warn("height < 0, instead -scaleY", this)) : this._height = t2;
+    }
+    setFill(t2) {
+      this.__naturalWidth && this.__removeNaturalSize(), i(t2) || !t2 ? (Nt$2(this, "__isTransparentFill", Vt$2(t2)), this.__isFills && this.__removePaint("fill", true), this._fill = t2) : d$1(t2) && this.__setPaint("fill", t2);
+    }
+    setStroke(t2) {
+      i(t2) || !t2 ? (Nt$2(this, "__isTransparentStroke", Vt$2(t2)), this.__isStrokes && this.__removePaint("stroke", true), this._stroke = t2) : d$1(t2) && this.__setPaint("stroke", t2);
+    }
+    setPath(t2) {
+      const e2 = i(t2);
+      e2 || t2 && d$1(t2[0]) ? (this.__setInput("path", t2), this._path = e2 ? Mt$2(t2) : Ot$2(t2)) : (this.__input && this.__removeInput("path"), this._path = t2);
+    }
+    setShadow(t2) {
+      Xt$2(this, "shadow", t2);
+    }
+    setInnerShadow(t2) {
+      Xt$2(this, "innerShadow", t2);
+    }
+    setFilter(t2) {
+      Xt$2(this, "filter", t2);
+    }
+    __computePaint() {
+      const { fill: t2, stroke: e2 } = this.__input;
+      t2 && Ft$2.compute("fill", this.__leaf), e2 && Ft$2.compute("stroke", this.__leaf), this.__needComputePaint = void 0;
+    }
+    __getRealStrokeWidth(t2) {
+      let { strokeWidth: e2, strokeWidthFixed: i2 } = this;
+      if (t2 && (t2.strokeWidth && (e2 = t2.strokeWidth), s(t2.strokeWidthFixed) || (i2 = t2.strokeWidthFixed)), i2) {
+        const t3 = this.__leaf.getClampRenderScale();
+        return t3 > 1 ? e2 / t3 : e2;
+      }
+      return e2;
+    }
+    __setPaint(t2, e2) {
+      this.__setInput(t2, e2);
+      const i2 = this.__leaf.__layout;
+      i2.boxChanged || i2.boxChange(), l(e2) && !e2.length ? this.__removePaint(t2) : "fill" === t2 ? (this.__isFills = true, this._fill || (this._fill = Ht$2)) : (this.__isStrokes = true, this._stroke || (this._stroke = Ht$2));
+    }
+    __removePaint(t2, e2) {
+      e2 && this.__removeInput(t2), Wt$2.recycleImage(t2, this), "fill" === t2 ? (Nt$2(this, "__isAlphaPixelFill", void 0), this._fill = this.__isFills = void 0) : (Nt$2(this, "__isAlphaPixelStroke", void 0), Nt$2(this, "__hasMultiStrokeStyle", void 0), this._stroke = this.__isStrokes = void 0);
+    }
+  };
+  function Xt$2(t2, e2, i2) {
+    t2.__setInput(e2, i2), l(i2) ? (i2.some((t3) => false === t3.visible) && (i2 = i2.filter((t3) => false !== t3.visible)), i2.length || (i2 = void 0)) : i2 = i2 && false !== i2.visible ? [i2] : void 0, t2["_" + e2] = i2;
+  }
+  let jt$2 = class jt extends Ut$2 {
+  };
+  let Jt$1 = class Jt extends jt$2 {
+    get __boxStroke() {
+      return !this.__pathInputed;
+    }
+    get __drawAfterFill() {
+      return this.__single || this.__clipAfterFill;
+    }
+    get __clipAfterFill() {
+      const t2 = this;
+      return "show" !== t2.overflow && t2.__leaf.children.length && (t2.__leaf.isOverflow || super.__clipAfterFill);
+    }
+  };
+  let qt$1 = class qt extends jt$2 {
+    __getInputData(t2, e2) {
+      const i2 = super.__getInputData(t2, e2);
+      return Re$2.forEach((t3) => delete i2[t3]), i2;
+    }
+  };
+  let Gt$1 = class Gt extends Jt$1 {
+  };
+  let $t$1 = class $t extends Ut$2 {
+    get __usePathBox() {
+      return this.points || this.__pathInputed;
+    }
+  };
+  let Kt$2 = class Kt extends Ut$2 {
+    get __boxStroke() {
+      return !this.__pathInputed;
+    }
+  };
+  let Qt$1 = class Qt extends Ut$2 {
+    get __boxStroke() {
+      return !this.__pathInputed;
+    }
+  };
+  let Zt$1 = class Zt extends $t$1 {
+  };
+  let te$1 = class te extends Ut$2 {
+  };
+  let ee$1 = class ee extends Ut$2 {
+    get __pathInputed() {
+      return 2;
+    }
+  };
+  let ie$1 = class ie extends jt$2 {
+  };
+  const se$1 = { thin: 100, "extra-light": 200, light: 300, normal: 400, medium: 500, "semi-bold": 600, bold: 700, "extra-bold": 800, black: 900 };
+  let oe$1 = class oe extends Ut$2 {
+    get __useNaturalRatio() {
+      return false;
+    }
+    setFontWeight(t2) {
+      i(t2) ? (this.__setInput("fontWeight", t2), t2 = se$1[t2] || 400) : this.__input && this.__removeInput("fontWeight"), this._fontWeight = t2;
+    }
+    setBoxStyle(t2) {
+      let e2 = this.__leaf, i2 = e2.__box;
+      if (t2) {
+        const { boxStyle: s2 } = this;
+        if (i2) for (let t3 in s2) i2[t3] = void 0;
+        else i2 = e2.__box = ce$2.get("Rect", 0);
+        const o2 = e2.__layout, r2 = i2.__layout;
+        s2 || (i2.parent = e2, i2.__world = e2.__world, r2.boxBounds = o2.boxBounds), i2.set(t2), r2.strokeChanged && o2.strokeChange();
+      } else i2 && (e2.__box = i2.parent = null, i2.destroy());
+      this._boxStyle = t2;
+    }
+    __getInputData(t2, e2) {
+      const i2 = super.__getInputData(t2, e2);
+      return i2.textEditing && delete i2.textEditing, i2;
+    }
+  };
+  let re$1 = class re extends Kt$2 {
+    get __urlType() {
+      return "image";
+    }
+    setUrl(t2) {
+      this.__setImageFill(t2), this._url = t2;
+    }
+    __setImageFill(t2) {
+      this.fill = t2 ? { type: this.__urlType, mode: "stretch", url: t2 } : void 0;
+    }
+    __getData() {
+      const t2 = super.__getData();
+      return t2.url && delete t2.fill, t2;
+    }
+    __getInputData(t2, e2) {
+      const i2 = super.__getInputData(t2, e2);
+      return i2.url && delete i2.fill, i2;
+    }
+  };
+  let ae$1 = class ae extends Kt$2 {
+    get __isCanvas() {
+      return true;
+    }
+    get __drawAfterFill() {
+      return true;
+    }
+    __getInputData(t2, e2) {
+      const i2 = super.__getInputData(t2, e2);
+      return i2.url = this.__leaf.canvas.toDataURL("image/png"), i2;
+    }
+  };
+  const { max: ne$1, add: _e$1 } = v$3, he$1 = { __updateStrokeSpread() {
+    let t2 = 0, e2 = 0;
+    const i2 = this.__, { strokeAlign: s2, __maxStrokeWidth: o2 } = i2, r2 = this.__box;
+    if ((i2.stroke || "all" === i2.hitStroke) && o2 && "inside" !== s2 && (e2 = t2 = "center" === s2 ? o2 / 2 : o2, !i2.__boxStroke)) {
+      const e3 = i2.__isLinePath ? 0 : 10 * t2, s3 = "none" === i2.strokeCap ? 0 : o2;
+      t2 += Math.max(e3, s3);
+    }
+    return i2.__useArrow && (t2 += 5 * o2), r2 && (t2 = ne$1(t2, r2.__layout.strokeSpread = r2.__updateStrokeSpread()), e2 = Math.max(e2, r2.__layout.strokeBoxSpread)), this.__layout.strokeBoxSpread = e2, t2;
+  }, __updateRenderSpread() {
+    let t2 = 0;
+    const { shadow: e2, innerShadow: i2, blur: s2, backgroundBlur: o2, filter: r2, renderSpread: a2 } = this.__, { strokeSpread: n2 } = this.__layout, _2 = this.__box;
+    e2 && (t2 = Tt$2.getShadowRenderSpread(this, e2)), s2 && (t2 = ne$1(t2, s2)), r2 && (t2 = _e$1(t2, Dt$2.getSpread(r2))), a2 && (t2 = _e$1(t2, a2)), n2 && (t2 = _e$1(t2, n2));
+    let h2 = t2;
+    return i2 && (h2 = ne$1(h2, Tt$2.getInnerShadowSpread(this, i2))), o2 && (h2 = ne$1(h2, o2)), this.__layout.renderShapeSpread = h2, _2 ? ne$1(_2.__updateRenderSpread(), t2) : t2;
+  } }, { stintSet: de$1 } = _$2, le$1 = { __updateChange() {
+    const t2 = this.__;
+    if (t2.__useStroke) {
+      const e2 = t2.__useStroke = !(!t2.stroke || !t2.strokeWidth);
+      de$1(this.__world, "half", e2 && "center" === t2.strokeAlign && t2.strokeWidth % 2), de$1(t2, "__fillAfterStroke", e2 && "outside" === t2.strokeAlign && t2.fill && !t2.__isTransparentFill);
+    }
+    if (t2.__useEffect) {
+      const { shadow: e2, fill: i2, stroke: s2 } = t2, o2 = t2.innerShadow || t2.blur || t2.backgroundBlur || t2.filter;
+      de$1(t2, "__isFastShadow", e2 && !o2 && e2.length < 2 && !e2[0].spread && !Tt$2.isTransformShadow(e2[0]) && i2 && !t2.__isTransparentFill && !(l(i2) && i2.length > 1) && (this.useFastShadow || !s2 || s2 && "inside" === t2.strokeAlign)), t2.__useEffect = !(!e2 && !o2);
+    }
+    t2.__checkSingle(), de$1(t2, "__complex", t2.__isFills || t2.__isStrokes || t2.cornerRadius || t2.__useEffect);
+  }, __drawFast(t2, e2) {
+    pe$1(this, t2, e2);
+  }, __draw(t2, e2, i2) {
+    const s2 = this.__;
+    if (s2.__complex) {
+      s2.__needComputePaint && s2.__computePaint();
+      const { fill: o2, stroke: r2, __drawAfterFill: a2, __fillAfterStroke: n2, __isFastShadow: _2 } = s2;
+      if (this.__drawRenderPath(t2), s2.__useEffect && !_2) {
+        const _3 = Ft$2.shape(this, t2, e2);
+        this.__nowWorld = this.__getNowWorld(e2);
+        const { shadow: h2, innerShadow: d2, filter: l2 } = s2;
+        h2 && Tt$2.shadow(this, t2, _3), n2 && (s2.__isStrokes ? Ft$2.strokes(r2, this, t2, e2) : Ft$2.stroke(r2, this, t2, e2)), o2 && (s2.__isFills ? Ft$2.fills(o2, this, t2, e2) : Ft$2.fill(o2, this, t2, e2)), a2 && this.__drawAfterFill(t2, e2), d2 && Tt$2.innerShadow(this, t2, _3), r2 && !n2 && (s2.__isStrokes ? Ft$2.strokes(r2, this, t2, e2) : Ft$2.stroke(r2, this, t2, e2)), l2 && Dt$2.apply(l2, this, this.__nowWorld, t2, i2, _3), _3.worldCanvas && _3.worldCanvas.recycle(), _3.canvas.recycle();
+      } else {
+        if (n2 && (s2.__isStrokes ? Ft$2.strokes(r2, this, t2, e2) : Ft$2.stroke(r2, this, t2, e2)), _2) {
+          const e3 = s2.shadow[0], { scaleX: i3, scaleY: o3 } = this.getRenderScaleData(true, e3.scaleFixed);
+          t2.save(), t2.setWorldShadow(e3.x * i3, e3.y * o3, e3.blur * i3, Ct$2.string(e3.color));
+        }
+        o2 && (s2.__isFills ? Ft$2.fills(o2, this, t2, e2) : Ft$2.fill(o2, this, t2, e2)), _2 && t2.restore(), a2 && this.__drawAfterFill(t2, e2), r2 && !n2 && (s2.__isStrokes ? Ft$2.strokes(r2, this, t2, e2) : Ft$2.stroke(r2, this, t2, e2));
+      }
+    } else s2.__pathForRender ? pe$1(this, t2, e2) : this.__drawFast(t2, e2);
+  }, __drawShape(t2, e2) {
+    this.__drawRenderPath(t2);
+    const i2 = this.__, { fill: s2, stroke: o2 } = i2;
+    s2 && !e2.ignoreFill && (i2.__isAlphaPixelFill ? Ft$2.fills(s2, this, t2, e2) : Ft$2.fill("#000000", this, t2, e2)), i2.__isCanvas && this.__drawAfterFill(t2, e2), o2 && !e2.ignoreStroke && (i2.__isAlphaPixelStroke ? Ft$2.strokes(o2, this, t2, e2) : Ft$2.stroke("#000000", this, t2, e2));
+  }, __drawAfterFill(t2, e2) {
+    this.__.__clipAfterFill ? (t2.save(), t2.clipUI(this), this.__drawContent(t2, e2), t2.restore()) : this.__drawContent(t2, e2);
+  } };
+  function pe$1(t2, e2, i2) {
+    const { fill: s2, stroke: o2, __drawAfterFill: r2, __fillAfterStroke: a2 } = t2.__;
+    t2.__drawRenderPath(e2), a2 && Ft$2.stroke(o2, t2, e2, i2), s2 && Ft$2.fill(s2, t2, e2, i2), r2 && t2.__drawAfterFill(e2, i2), o2 && !a2 && Ft$2.stroke(o2, t2, e2, i2);
+  }
+  const ue$1 = { __drawFast(t2, e2) {
+    let { x: i2, y: s2, width: o2, height: r2 } = this.__layout.boxBounds;
+    const { fill: a2, stroke: n2, __drawAfterFill: _2 } = this.__;
+    if (a2 && (t2.fillStyle = a2, t2.fillRect(i2, s2, o2, r2)), _2 && this.__drawAfterFill(t2, e2), n2) {
+      const { strokeAlign: a3, __strokeWidth: _3 } = this.__;
+      if (!_3) return;
+      t2.setStroke(n2, _3, this.__);
+      const h2 = _3 / 2;
+      switch (a3) {
+        case "center":
+          t2.strokeRect(0, 0, o2, r2);
+          break;
+        case "inside":
+          o2 -= _3, r2 -= _3, o2 < 0 || r2 < 0 ? (t2.save(), this.__clip(t2, e2), t2.strokeRect(i2 + h2, s2 + h2, o2, r2), t2.restore()) : t2.strokeRect(i2 + h2, s2 + h2, o2, r2);
+          break;
+        case "outside":
+          t2.strokeRect(i2 - h2, s2 - h2, o2 + _3, r2 + _3);
+      }
+    }
+  } };
+  var ce$1;
+  let ge$1 = ce$1 = class extends _h {
+    get app() {
+      return this.leafer && this.leafer.app;
+    }
+    get isFrame() {
+      return false;
+    }
+    set scale(t2) {
+      I$4.assignScale(this, t2);
+    }
+    get scale() {
+      return this.__.scale;
+    }
+    get isAutoWidth() {
+      const t2 = this.__;
+      return t2.__autoWidth || t2.autoWidth;
+    }
+    get isAutoHeight() {
+      const t2 = this.__;
+      return t2.__autoHeight || t2.autoHeight;
+    }
+    get pen() {
+      const { path: t2 } = this.__;
+      return ji$1.set(this.path = t2 || []), t2 || this.__drawPathByBox(ji$1), ji$1;
+    }
+    reset(t2) {
+    }
+    set(t2, e2) {
+      t2 && Object.assign(this, t2);
+    }
+    get(t2) {
+      return i(t2) ? this.__.__getInput(t2) : this.__.__getInputData(t2);
+    }
+    createProxyData() {
+    }
+    find(t2, e2) {
+      return he$2.need("find");
+    }
+    findTag(t2) {
+      return this.find({ tag: t2 });
+    }
+    findOne(t2, e2) {
+      return he$2.need("find");
+    }
+    findId(t2) {
+      return this.findOne({ id: t2 });
+    }
+    getPath(t2, e2) {
+      this.__layout.update();
+      let i2 = e2 ? this.__.__pathForRender : this.__.path;
+      return i2 || (ji$1.set(i2 = []), this.__drawPathByBox(ji$1, !e2)), t2 ? sr.toCanvasData(i2, true) : i2;
+    }
+    getPathString(t2, e2, i2) {
+      return sr.stringify(this.getPath(t2, e2), i2);
+    }
+    load() {
+      this.__.__computePaint();
+    }
+    __onUpdateSize() {
+      if (this.__.__input) {
+        const t2 = this.__;
+        !t2.lazy || this.__inLazyBounds || It$2.running ? t2.__computePaint() : t2.__needComputePaint = true;
+      }
+    }
+    __updateRenderPath() {
+      const t2 = this.__;
+      t2.path ? (t2.__pathForRender = t2.cornerRadius ? Fi$1.smooth(t2.path, t2.cornerRadius, t2.cornerSmoothing) : t2.path, t2.__useArrow && Pt$2.addArrows(this)) : t2.__pathForRender && (t2.__pathForRender = void 0);
+    }
+    __drawRenderPath(t2) {
+      t2.beginPath(), this.__drawPathByData(t2, this.__.__pathForRender);
+    }
+    __drawPath(t2) {
+      t2.beginPath(), this.__drawPathByData(t2, this.__.path, true);
+    }
+    __drawPathByData(t2, e2, i2) {
+      e2 ? ri$2.drawPathByData(t2, e2) : this.__drawPathByBox(t2, i2);
+    }
+    __drawPathByBox(t2, e2) {
+      const { x: i2, y: s2, width: o$1, height: r2 } = this.__layout.boxBounds;
+      if (this.__.cornerRadius && !e2) {
+        const { cornerRadius: e3 } = this.__;
+        t2.roundRect(i2, s2, o$1, r2, o(e3) ? [e3] : e3);
+      } else t2.rect(i2, s2, o$1, r2);
+      t2.closePath();
+    }
+    drawImagePlaceholder(t2, e2, i2) {
+      Ft$2.fill(this.__.placeholderColor, this, e2, i2);
+    }
+    animate(t2, e2, i2, s2) {
+      return this.set(t2), he$2.need("animate");
+    }
+    killAnimate(t2, e2) {
+    }
+    export(t2, e2) {
+      return he$2.need("export");
+    }
+    syncExport(t2, e2) {
+      return he$2.need("export");
+    }
+    clone(t2) {
+      const e2 = _$2.clone(this.toJSON());
+      return t2 && Object.assign(e2, t2), ce$1.one(e2);
+    }
+    static one(t2, e2, i2, s2, o2) {
+      return ce$2.get(t2.tag || this.prototype.__tag, t2, e2, i2, s2, o2);
+    }
+    static registerUI() {
+      Zn()(this);
+    }
+    static registerData(t2) {
+      zn(t2)(this.prototype);
+    }
+    static setEditConfig(t2) {
+    }
+    static setEditOuter(t2) {
+    }
+    static setEditInner(t2) {
+    }
+    destroy() {
+      this.fill = this.stroke = null, this.__animate && this.killAnimate(), super.destroy();
+    }
+  };
+  St$2([zn(Ut$2)], ge$1.prototype, "__", void 0), St$2([kt$2()], ge$1.prototype, "zoomLayer", void 0), St$2([fn("")], ge$1.prototype, "id", void 0), St$2([fn("")], ge$1.prototype, "name", void 0), St$2([fn("")], ge$1.prototype, "className", void 0), St$2([Ln("pass-through")], ge$1.prototype, "blendMode", void 0), St$2([En(1)], ge$1.prototype, "opacity", void 0), St$2([In(true)], ge$1.prototype, "visible", void 0), St$2([Ln(false)], ge$1.prototype, "locked", void 0), St$2([Rn(false)], ge$1.prototype, "dim", void 0), St$2([Rn(false)], ge$1.prototype, "dimskip", void 0), St$2([Wn(0)], ge$1.prototype, "zIndex", void 0), St$2([Nn(false)], ge$1.prototype, "mask", void 0), St$2([Yn(false)], ge$1.prototype, "eraser", void 0), St$2([gn(0, true)], ge$1.prototype, "x", void 0), St$2([gn(0, true)], ge$1.prototype, "y", void 0), St$2([bn(100, true)], ge$1.prototype, "width", void 0), St$2([bn(100, true)], ge$1.prototype, "height", void 0), St$2([xn(1, true)], ge$1.prototype, "scaleX", void 0), St$2([xn(1, true)], ge$1.prototype, "scaleY", void 0), St$2([wn(0, true)], ge$1.prototype, "rotation", void 0), St$2([wn(0, true)], ge$1.prototype, "skewX", void 0), St$2([wn(0, true)], ge$1.prototype, "skewY", void 0), St$2([gn(0, true)], ge$1.prototype, "offsetX", void 0), St$2([gn(0, true)], ge$1.prototype, "offsetY", void 0), St$2([yn(0, true)], ge$1.prototype, "scrollX", void 0), St$2([yn(0, true)], ge$1.prototype, "scrollY", void 0), St$2([mn()], ge$1.prototype, "origin", void 0), St$2([mn()], ge$1.prototype, "around", void 0), St$2([fn(false)], ge$1.prototype, "lazy", void 0), St$2([Bn(1)], ge$1.prototype, "pixelRatio", void 0), St$2([Sn(0)], ge$1.prototype, "renderSpread", void 0), St$2([kn()], ge$1.prototype, "path", void 0), St$2([Cn()], ge$1.prototype, "windingRule", void 0), St$2([Cn(true)], ge$1.prototype, "closed", void 0), St$2([bn(0)], ge$1.prototype, "padding", void 0), St$2([bn(false)], ge$1.prototype, "lockRatio", void 0), St$2([bn()], ge$1.prototype, "widthRange", void 0), St$2([bn()], ge$1.prototype, "heightRange", void 0), St$2([fn(false)], ge$1.prototype, "draggable", void 0), St$2([fn()], ge$1.prototype, "dragBounds", void 0), St$2([fn("auto")], ge$1.prototype, "dragBoundsType", void 0), St$2([fn(false)], ge$1.prototype, "editable", void 0), St$2([Dn(true)], ge$1.prototype, "hittable", void 0), St$2([Dn("path")], ge$1.prototype, "hitFill", void 0), St$2([Pn("path")], ge$1.prototype, "hitStroke", void 0), St$2([Dn(false)], ge$1.prototype, "hitBox", void 0), St$2([Dn(true)], ge$1.prototype, "hitChildren", void 0), St$2([Dn(true)], ge$1.prototype, "hitSelf", void 0), St$2([Dn()], ge$1.prototype, "hitRadius", void 0), St$2([Xn("")], ge$1.prototype, "cursor", void 0), St$2([Ln()], ge$1.prototype, "fill", void 0), St$2([Pn(void 0, true)], ge$1.prototype, "stroke", void 0), St$2([Pn("inside")], ge$1.prototype, "strokeAlign", void 0), St$2([Pn(1, true)], ge$1.prototype, "strokeWidth", void 0), St$2([Pn(false)], ge$1.prototype, "strokeWidthFixed", void 0), St$2([Pn("none")], ge$1.prototype, "strokeCap", void 0), St$2([Pn("miter")], ge$1.prototype, "strokeJoin", void 0), St$2([Pn()], ge$1.prototype, "dashPattern", void 0), St$2([Pn(0)], ge$1.prototype, "dashOffset", void 0), St$2([Pn(10)], ge$1.prototype, "miterLimit", void 0), St$2([Cn(0)], ge$1.prototype, "cornerRadius", void 0), St$2([Cn()], ge$1.prototype, "cornerSmoothing", void 0), St$2([mt$2()], ge$1.prototype, "shadow", void 0), St$2([mt$2()], ge$1.prototype, "innerShadow", void 0), St$2([mt$2()], ge$1.prototype, "blur", void 0), St$2([mt$2()], ge$1.prototype, "backgroundBlur", void 0), St$2([mt$2()], ge$1.prototype, "grayscale", void 0), St$2([mt$2()], ge$1.prototype, "filter", void 0), St$2([Ln()], ge$1.prototype, "placeholderColor", void 0), St$2([fn(100)], ge$1.prototype, "placeholderDelay", void 0), St$2([fn({})], ge$1.prototype, "data", void 0), St$2([Gn(_h.prototype.reset)], ge$1.prototype, "reset", null), ge$1 = ce$1 = St$2([Jn(he$1), Jn(le$1), qn()], ge$1);
+  let ye$1 = class ye extends ge$1 {
+    get __tag() {
+      return "Group";
+    }
+    get isBranch() {
+      return true;
+    }
+    reset(t2) {
+      this.__setBranch(), super.reset(t2);
+    }
+    __setBranch() {
+      this.children || (this.children = []);
+    }
+    set(t2, e2) {
+      if (t2) if (t2.children) {
+        const { children: i2 } = t2;
+        delete t2.children, this.children ? this.clear() : this.__setBranch(), super.set(t2, e2), i2.forEach((t3) => this.add(t3)), t2.children = i2;
+      } else super.set(t2, e2);
+    }
+    toJSON(t2) {
+      const e2 = super.toJSON(t2);
+      if (!this.childlessJSON) {
+        const i2 = e2.children = [];
+        this.children.forEach((e3) => e3.skipJSON || i2.push(e3.toJSON(t2)));
+      }
+      return e2;
+    }
+    pick(t2, e2) {
+    }
+    addAt(t2, e2) {
+      this.add(t2, e2);
+    }
+    addAfter(t2, e2) {
+      this.add(t2, this.children.indexOf(e2) + 1);
+    }
+    addBefore(t2, e2) {
+      this.add(t2, this.children.indexOf(e2));
+    }
+    add(t2, e2) {
+    }
+    addMany(...t2) {
+    }
+    remove(t2, e2) {
+    }
+    removeAll(t2) {
+    }
+    clear() {
+    }
+  };
+  var ve$1;
+  St$2([zn(jt$2)], ye$1.prototype, "__", void 0), St$2([bn(0)], ye$1.prototype, "width", void 0), St$2([bn(0)], ye$1.prototype, "height", void 0), ye$1 = St$2([Jn(vh), Zn()], ye$1);
+  const fe$1 = ee$2.get("Leafer");
+  let we$1 = ve$1 = class extends ye$1 {
+    get __tag() {
+      return "Leafer";
+    }
+    get isApp() {
+      return false;
+    }
+    get app() {
+      return this.parent || this;
+    }
+    get isLeafer() {
+      return true;
+    }
+    get imageReady() {
+      return this.viewReady && Ki$1.isComplete;
+    }
+    get layoutLocked() {
+      return !this.layouter.running;
+    }
+    get view() {
+      return this.canvas && this.canvas.view;
+    }
+    get FPS() {
+      return this.renderer ? this.renderer.FPS : 60;
+    }
+    get cursorPoint() {
+      return this.interaction && this.interaction.hoverData || { x: this.width / 2, y: this.height / 2 };
+    }
+    get clientBounds() {
+      return this.canvas && this.canvas.getClientBounds(true) || D$4();
+    }
+    constructor(t2, e2) {
+      super(e2), this.config = { start: true, hittable: true, smooth: true, lazySpeard: 100 }, this.leafs = 0, this.__eventIds = [], this.__controllers = [], this.__readyWait = [], this.__viewReadyWait = [], this.__viewCompletedWait = [], this.__nextRenderWait = [], this.userConfig = t2, t2 && (t2.view || t2.width) && this.init(t2), ve$1.list.add(this);
+    }
+    init(t2, e2) {
+      if (this.canvas) return;
+      let i2;
+      const { config: s2 } = this;
+      this.__setLeafer(this), e2 && (this.parentApp = e2, this.__bindApp(e2), i2 = e2.running), t2 && (this.parent = e2, this.initType(t2.type), this.parent = void 0, _$2.assign(s2, t2));
+      const o2 = this.canvas = le$2.canvas(s2);
+      this.__controllers.push(this.renderer = le$2.renderer(this, o2, s2), this.watcher = le$2.watcher(this, s2), this.layouter = le$2.layouter(this, s2)), this.isApp && this.__setApp(), this.__checkAutoLayout(), e2 || (this.selector = le$2.selector(this), this.interaction = le$2.interaction(this, o2, this.selector, s2), this.interaction && (this.__controllers.unshift(this.interaction), this.hitCanvasManager = le$2.hitCanvasManager()), this.canvasManager = new ge$2(), i2 = s2.start), this.hittable = s2.hittable, this.fill = s2.fill, this.canvasManager.add(o2), this.__listenEvents(), i2 && (this.__startTimer = setTimeout(this.start.bind(this))), So.run(this.__initWait), this.onInit();
+    }
+    onInit() {
+    }
+    initType(t2) {
+    }
+    set(t2, e2) {
+      this.waitInit(() => {
+        super.set(t2, e2);
+      });
+    }
+    start() {
+      clearTimeout(this.__startTimer), !this.running && this.canvas && (this.running = true, this.ready ? this.emitLeafer(sa.RESTART) : this.emitLeafer(sa.START), this.__controllers.forEach((t2) => t2.start()), this.isApp || this.renderer.render());
+    }
+    stop() {
+      clearTimeout(this.__startTimer), this.running && this.canvas && (this.__controllers.forEach((t2) => t2.stop()), this.running = false, this.emitLeafer(sa.STOP));
+    }
+    unlockLayout(t2 = true) {
+      this.layouter.start(), t2 && this.updateLayout();
+    }
+    lockLayout(t2 = true) {
+      t2 && this.updateLayout(), this.layouter.stop();
+    }
+    resize(t2) {
+      const e2 = _$2.copyAttrs({}, t2, Re$2);
+      Object.keys(e2).forEach((t3) => this[t3] = e2[t3]);
+    }
+    forceRender(t2, e2) {
+      const { renderer: i2 } = this;
+      i2 && (i2.addBlock(t2 ? new Vt$3(t2) : this.canvas.bounds), this.viewReady && (e2 ? i2.render() : i2.update()));
+    }
+    requestRender(t2 = false) {
+      this.renderer && this.renderer.update(t2);
+    }
+    updateCursor(t2) {
+      const e2 = this.interaction;
+      e2 && (t2 ? e2.setCursor(t2) : e2.updateCursor());
+    }
+    updateLazyBounds() {
+      this.lazyBounds = this.canvas.bounds.clone().spread(this.config.lazySpeard);
+    }
+    __doResize(t2) {
+      const { canvas: e2 } = this;
+      if (!e2 || e2.isSameSize(t2)) return;
+      const i2 = _$2.copyAttrs({}, this.canvas, Re$2);
+      e2.resize(t2), this.updateLazyBounds(), this.__onResize(new $o(t2, i2));
+    }
+    __onResize(t2) {
+      this.emitEvent(t2), _$2.copyAttrs(this.__, t2, Re$2), setTimeout(() => {
+        this.canvasManager && this.canvasManager.clearRecycled();
+      }, 0);
+    }
+    __setApp() {
+    }
+    __bindApp(t2) {
+      this.selector = t2.selector, this.interaction = t2.interaction, this.canvasManager = t2.canvasManager, this.hitCanvasManager = t2.hitCanvasManager;
+    }
+    __setLeafer(t2) {
+      this.leafer = t2, this.__level = 1;
+    }
+    __checkAutoLayout() {
+      const { config: t2, parentApp: e2 } = this;
+      e2 || (t2.width && t2.height || (this.autoLayout = new Gt$2(t2)), this.canvas.startAutoLayout(this.autoLayout, this.__onResize.bind(this)));
+    }
+    __setAttr(t2, e2) {
+      return this.canvas && (Re$2.includes(t2) ? this.__changeCanvasSize(t2, e2) : "fill" === t2 ? this.__changeFill(e2) : "hittable" === t2 ? this.parent || (this.canvas.hittable = e2) : "zIndex" === t2 ? (this.canvas.zIndex = e2, setTimeout(() => this.parent && this.parent.__updateSortChildren())) : "mode" === t2 && this.emit(sa.UPDATE_MODE, { mode: e2 })), super.__setAttr(t2, e2);
+    }
+    __getAttr(t2) {
+      return this.canvas && Re$2.includes(t2) ? this.canvas[t2] : super.__getAttr(t2);
+    }
+    __changeCanvasSize(t2, e2) {
+      const { config: i2, canvas: s2 } = this, o2 = _$2.copyAttrs({}, s2, Re$2);
+      o2[t2] = i2[t2] = e2, i2.width && i2.height ? s2.stopAutoLayout() : this.__checkAutoLayout(), this.__doResize(o2);
+    }
+    __changeFill(t2) {
+      this.config.fill = t2, this.canvas.allowBackgroundColor ? this.canvas.backgroundColor = t2 : this.forceRender();
+    }
+    __onCreated() {
+      this.created = true;
+    }
+    __onReady() {
+      this.ready = true, this.emitLeafer(sa.BEFORE_READY), this.emitLeafer(sa.READY), this.emitLeafer(sa.AFTER_READY), So.run(this.__readyWait);
+    }
+    __onViewReady() {
+      this.viewReady || (this.viewReady = true, this.emitLeafer(sa.VIEW_READY), So.run(this.__viewReadyWait));
+    }
+    __onLayoutEnd() {
+      const { grow: t2, width: e2, height: i2 } = this.config;
+      if (t2) {
+        let { width: s2, height: o2, pixelRatio: r2 } = this;
+        const a2 = "box" === t2 ? this.worldBoxBounds : this.__world;
+        e2 || (s2 = Math.max(1, a2.x + a2.width)), i2 || (o2 = Math.max(1, a2.y + a2.height)), this.__doResize({ width: s2, height: o2, pixelRatio: r2 });
+      }
+      this.ready || this.__onReady();
+    }
+    __onNextRender() {
+      if (this.viewReady) {
+        So.run(this.__nextRenderWait);
+        const { imageReady: t2 } = this;
+        t2 && !this.viewCompleted && this.__checkViewCompleted(), t2 || (this.viewCompleted = false, this.requestRender());
+      } else this.requestRender();
+    }
+    __checkViewCompleted(t2 = true) {
+      this.nextRender(() => {
+        this.imageReady && (t2 && this.emitLeafer(sa.VIEW_COMPLETED), So.run(this.__viewCompletedWait), this.viewCompleted = true);
+      });
+    }
+    __onWatchData() {
+      this.watcher.childrenChanged && this.interaction && this.nextRender(() => this.interaction.updateCursor());
+    }
+    waitInit(t2, e2) {
+      e2 && (t2 = t2.bind(e2)), this.__initWait || (this.__initWait = []), this.canvas ? t2() : this.__initWait.push(t2);
+    }
+    waitReady(t2, e2) {
+      e2 && (t2 = t2.bind(e2)), this.ready ? t2() : this.__readyWait.push(t2);
+    }
+    waitViewReady(t2, e2) {
+      e2 && (t2 = t2.bind(e2)), this.viewReady ? t2() : this.__viewReadyWait.push(t2);
+    }
+    waitViewCompleted(t2, e2) {
+      e2 && (t2 = t2.bind(e2)), this.__viewCompletedWait.push(t2), this.viewCompleted ? this.__checkViewCompleted(false) : this.running || this.start();
+    }
+    nextRender(t2, e2, i2) {
+      e2 && (t2 = t2.bind(e2));
+      const s2 = this.__nextRenderWait;
+      if (i2) {
+        for (let e3 = 0; e3 < s2.length; e3++) if (s2[e3] === t2) {
+          s2.splice(e3, 1);
+          break;
+        }
+      } else s2.push(t2);
+      this.requestRender();
+    }
+    zoom(t2, e2, i2, s2) {
+      return he$2.need("view");
+    }
+    getValidMove(t2, e2, i2) {
+      return { x: t2, y: e2 };
+    }
+    getValidScale(t2) {
+      return t2;
+    }
+    getWorldPointByClient(t2, e2) {
+      return this.interaction && this.interaction.getLocal(t2, e2);
+    }
+    getPagePointByClient(t2, e2) {
+      return this.getPagePoint(this.getWorldPointByClient(t2, e2));
+    }
+    getClientPointByWorld(t2) {
+      const { x: e2, y: i2 } = this.clientBounds;
+      return { x: e2 + t2.x, y: i2 + t2.y };
+    }
+    updateClientBounds() {
+      this.canvas && this.canvas.updateClientBounds();
+    }
+    receiveEvent(t2) {
+    }
+    emitLeafer(t2) {
+      this.emitEvent(new sa(t2, this));
+    }
+    __listenEvents() {
+      const t2 = ne$2.start("FirstCreate " + this.innerName);
+      this.once([[sa.START, () => ne$2.end(t2)], [ta.START, this.updateLazyBounds, this], [ea.START, this.__onCreated, this], [ea.END, this.__onViewReady, this]]), this.__eventIds.push(this.on_([[Ko.DATA, this.__onWatchData, this], [ta.END, this.__onLayoutEnd, this], [ea.NEXT, this.__onNextRender, this]]));
+    }
+    __removeListenEvents() {
+      this.off_(this.__eventIds);
+    }
+    destroy(t2) {
+      const e2 = () => {
+        if (!this.destroyed) {
+          ve$1.list.remove(this);
+          try {
+            this.stop(), this.emitLeafer(sa.END), this.__removeListenEvents(), this.__controllers.forEach((t3) => !(this.parent && t3 === this.interaction) && t3.destroy()), this.__controllers.length = 0, this.parent || (this.selector && this.selector.destroy(), this.hitCanvasManager && this.hitCanvasManager.destroy(), this.canvasManager && this.canvasManager.destroy()), this.canvas && this.canvas.destroy(), this.config.view = this.parentApp = null, this.userConfig && (this.userConfig.view = null), super.destroy(), setTimeout(() => {
+              en.clearRecycled();
+            }, 100);
+          } catch (t3) {
+            fe$1.error(t3);
+          }
+        }
+      };
+      t2 ? e2() : setTimeout(e2);
+    }
+  };
+  we$1.list = new kh(), St$2([zn(qt$1)], we$1.prototype, "__", void 0), St$2([bn()], we$1.prototype, "pixelRatio", void 0), St$2([fn("normal")], we$1.prototype, "mode", void 0), we$1 = ve$1 = St$2([Zn()], we$1);
+  let xe$1 = class xe extends ge$1 {
+    get __tag() {
+      return "Rect";
+    }
+  };
+  St$2([zn(Kt$2)], xe$1.prototype, "__", void 0), xe$1 = St$2([Jn(ue$1), qn(), Zn()], xe$1);
+  const { add: Se$1, includes: me$1, scroll: Re$1 } = zt$2, ke$1 = xe$1.prototype, Be$1 = ye$1.prototype;
+  let Ae$1 = class Ae extends ye$1 {
+    get __tag() {
+      return "Box";
+    }
+    get isBranchLeaf() {
+      return true;
+    }
+    constructor(t2) {
+      super(t2), this.__layout.renderChanged || this.__layout.renderChange();
+    }
+    __updateStrokeSpread() {
+      return 0;
+    }
+    __updateRectRenderSpread() {
+      return 0;
+    }
+    __updateRenderSpread() {
+      return this.__updateRectRenderSpread() || -1;
+    }
+    __updateRectBoxBounds() {
+    }
+    __updateBoxBounds(t2) {
+      if (this.children.length && !this.pathInputed) {
+        const t3 = this.__;
+        if (t3.__autoSide) {
+          t3.__hasSurface && this.__extraUpdate(), super.__updateBoxBounds();
+          const { boxBounds: e2 } = this.__layout;
+          t3.__autoSize || (t3.__autoWidth ? (e2.width += e2.x, e2.x = 0, e2.height = t3.height, e2.y = 0) : (e2.height += e2.y, e2.y = 0, e2.width = t3.width, e2.x = 0)), this.__updateNaturalSize();
+        } else this.__updateRectBoxBounds();
+      } else this.__updateRectBoxBounds();
+    }
+    __updateStrokeBounds() {
+    }
+    __updateRenderBounds() {
+      let t2, e2;
+      if (this.children.length) {
+        const i2 = this.__, s2 = this.__layout, { renderBounds: o2, boxBounds: r2 } = s2, { overflow: a2 } = i2, n2 = s2.childrenRenderBounds || (s2.childrenRenderBounds = D$4());
+        super.__updateRenderBounds(n2), (e2 = a2 && a2.includes("scroll")) && (Se$1(n2, r2), Re$1(n2, i2)), this.__updateRectRenderBounds(), t2 = !me$1(r2, n2), t2 && "show" === a2 && Se$1(o2, n2);
+      } else this.__updateRectRenderBounds();
+      _$2.stintSet(this, "isOverflow", t2), this.__checkScroll(e2);
+    }
+    __updateRectRenderBounds() {
+    }
+    __checkScroll(t2) {
+    }
+    __updateRectChange() {
+    }
+    __updateChange() {
+      super.__updateChange(), this.__updateRectChange();
+    }
+    __renderRect(t2, e2) {
+    }
+    __renderGroup(t2, e2) {
+    }
+    __render(t2, e2) {
+      this.__.__drawAfterFill ? this.__renderRect(t2, e2) : (this.__renderRect(t2, e2), this.children.length && this.__renderGroup(t2, e2)), this.hasScroller && this.scroller.__render(t2, e2);
+    }
+    __drawContent(t2, e2) {
+      this.__renderGroup(t2, e2), (this.__.__useStroke || this.__.__useEffect) && (t2.setWorld(this.__nowWorld), this.__drawRenderPath(t2));
+    }
+  };
+  St$2([zn(Jt$1)], Ae$1.prototype, "__", void 0), St$2([bn(100)], Ae$1.prototype, "width", void 0), St$2([bn(100)], Ae$1.prototype, "height", void 0), St$2([fn(false)], Ae$1.prototype, "resizeChildren", void 0), St$2([Sn("show")], Ae$1.prototype, "overflow", void 0), St$2([Gn(ke$1.__updateStrokeSpread)], Ae$1.prototype, "__updateStrokeSpread", null), St$2([Gn(ke$1.__updateRenderSpread)], Ae$1.prototype, "__updateRectRenderSpread", null), St$2([Gn(ke$1.__updateBoxBounds)], Ae$1.prototype, "__updateRectBoxBounds", null), St$2([Gn(ke$1.__updateStrokeBounds)], Ae$1.prototype, "__updateStrokeBounds", null), St$2([Gn(ke$1.__updateRenderBounds)], Ae$1.prototype, "__updateRectRenderBounds", null), St$2([Gn(ke$1.__updateChange)], Ae$1.prototype, "__updateRectChange", null), St$2([Gn(ke$1.__render)], Ae$1.prototype, "__renderRect", null), St$2([Gn(Be$1.__render)], Ae$1.prototype, "__renderGroup", null), Ae$1 = St$2([qn(), Zn()], Ae$1);
+  let Ce$1 = class Ce extends Ae$1 {
+    get __tag() {
+      return "Frame";
+    }
+    get isFrame() {
+      return true;
+    }
+  };
+  St$2([zn(Gt$1)], Ce$1.prototype, "__", void 0), St$2([Ln("#FFFFFF")], Ce$1.prototype, "fill", void 0), St$2([Sn("hide")], Ce$1.prototype, "overflow", void 0), Ce$1 = St$2([Zn()], Ce$1);
+  const { moveTo: be$1, closePath: Pe$1, ellipse: Fe$1 } = Cr;
+  let We$1 = class We extends ge$1 {
+    get __tag() {
+      return "Ellipse";
+    }
+    __updatePath() {
+      const { width: t2, height: e2, innerRadius: i2, startAngle: s2, endAngle: o2 } = this.__, r2 = t2 / 2, a2 = e2 / 2, n2 = this.__.path = [];
+      let _2;
+      i2 ? s2 || o2 ? (i2 < 1 ? Fe$1(n2, r2, a2, r2 * i2, a2 * i2, 0, s2, o2, false) : _2 = true, Fe$1(n2, r2, a2, r2, a2, 0, o2, s2, true)) : (i2 < 1 && (Fe$1(n2, r2, a2, r2 * i2, a2 * i2), be$1(n2, t2, a2)), Fe$1(n2, r2, a2, r2, a2, 0, 360, 0, true)) : s2 || o2 ? (be$1(n2, r2, a2), Fe$1(n2, r2, a2, r2, a2, 0, s2, o2, false)) : Fe$1(n2, r2, a2, r2, a2), _2 || Pe$1(n2), $t$2.ellipseToCurve && (this.__.path = this.getPath(true));
+    }
+  };
+  St$2([zn(Qt$1)], We$1.prototype, "__", void 0), St$2([Cn(0)], We$1.prototype, "innerRadius", void 0), St$2([Cn(0)], We$1.prototype, "startAngle", void 0), St$2([Cn(0)], We$1.prototype, "endAngle", void 0), We$1 = St$2([Zn()], We$1);
+  const { sin: Ee$1, cos: Te$1, PI: De$1 } = Math, { moveTo: Ie$1, lineTo: Le$1, closePath: ze$1, drawPoints: Me$1 } = Cr;
+  let Oe$1 = class Oe extends ge$1 {
+    get __tag() {
+      return "Polygon";
+    }
+    __updatePath() {
+      const t2 = this.__, e2 = t2.path = [];
+      if (t2.points) Me$1(e2, t2.points, t2.curve, true);
+      else {
+        const { width: i2, height: s2, sides: o2 } = t2, r2 = i2 / 2, a2 = s2 / 2;
+        Ie$1(e2, r2, 0);
+        for (let t3 = 1; t3 < o2; t3++) Le$1(e2, r2 + r2 * Ee$1(2 * t3 * De$1 / o2), a2 - a2 * Te$1(2 * t3 * De$1 / o2));
+        ze$1(e2);
+      }
+    }
+  };
+  St$2([zn(Zt$1)], Oe$1.prototype, "__", void 0), St$2([Cn(3)], Oe$1.prototype, "sides", void 0), St$2([Cn()], Oe$1.prototype, "points", void 0), St$2([Cn(0)], Oe$1.prototype, "curve", void 0), Oe$1 = St$2([qn(), Zn()], Oe$1);
+  const { sin: Ne$1, cos: Ve$1, PI: He$1 } = Math, { moveTo: Ye$1, lineTo: Ue$1, closePath: Xe$1 } = Cr;
+  let je$1 = class je extends ge$1 {
+    get __tag() {
+      return "Star";
+    }
+    __updatePath() {
+      const { width: t2, height: e2, corners: i2, innerRadius: s2 } = this.__, o2 = t2 / 2, r2 = e2 / 2, a2 = this.__.path = [];
+      Ye$1(a2, o2, 0);
+      for (let t3 = 1; t3 < 2 * i2; t3++) Ue$1(a2, o2 + (t3 % 2 == 0 ? o2 : o2 * s2) * Ne$1(t3 * He$1 / i2), r2 - (t3 % 2 == 0 ? r2 : r2 * s2) * Ve$1(t3 * He$1 / i2));
+      Xe$1(a2);
+    }
+  };
+  St$2([zn(te$1)], je$1.prototype, "__", void 0), St$2([Cn(5)], je$1.prototype, "corners", void 0), St$2([Cn(0.382)], je$1.prototype, "innerRadius", void 0), je$1 = St$2([Zn()], je$1);
+  const { moveTo: Je$1, lineTo: qe$1, drawPoints: Ge$1 } = Cr, { rotate: $e$1, getAngle: Ke$1, getDistance: Qe$1, defaultPoint: Ze$1 } = ot$2;
+  let ti$1 = class ti extends ge$1 {
+    get __tag() {
+      return "Line";
+    }
+    get toPoint() {
+      const { width: t2, rotation: e2 } = this.__, i2 = Y$4();
+      return t2 && (i2.x = t2), e2 && $e$1(i2, e2), i2;
+    }
+    set toPoint(t2) {
+      this.width = Qe$1(Ze$1, t2), this.rotation = Ke$1(Ze$1, t2), this.height && (this.height = 0);
+    }
+    __updatePath() {
+      const t2 = this.__, e2 = t2.path = [];
+      t2.points ? Ge$1(e2, t2.points, t2.curve, t2.closed) : (Je$1(e2, 0, 0), qe$1(e2, this.width, 0));
+    }
+  };
+  St$2([zn($t$1)], ti$1.prototype, "__", void 0), St$2([On("center")], ti$1.prototype, "strokeAlign", void 0), St$2([bn(0)], ti$1.prototype, "height", void 0), St$2([Cn()], ti$1.prototype, "points", void 0), St$2([Cn(0)], ti$1.prototype, "curve", void 0), St$2([Cn(false)], ti$1.prototype, "closed", void 0), ti$1 = St$2([Zn()], ti$1);
+  let ei$1 = class ei extends xe$1 {
+    get __tag() {
+      return "Image";
+    }
+    get ready() {
+      const { image: t2 } = this;
+      return t2 && t2.ready;
+    }
+    get image() {
+      const { fill: t2 } = this.__;
+      return l(t2) && t2[0].image;
+    }
+  };
+  St$2([zn(re$1)], ei$1.prototype, "__", void 0), St$2([bn("")], ei$1.prototype, "url", void 0), ei$1 = St$2([Zn()], ei$1);
+  const ii$1 = ei$1;
+  let si$1 = class si extends xe$1 {
+    get __tag() {
+      return "Canvas";
+    }
+    get context() {
+      return this.canvas.context;
+    }
+    get ready() {
+      return !this.url;
+    }
+    constructor(t2) {
+      super(t2), this.canvas = le$2.canvas(this.__), t2 && t2.url && this.drawImage(t2.url);
+    }
+    drawImage(t2) {
+      new on({ url: t2 }).load((t3) => {
+        this.context.drawImage(t3.view, 0, 0), this.url = void 0, this.paint(), this.emitEvent(new Vo(Vo.LOADED, { image: t3 }));
+      });
+    }
+    draw(t2, e2, i2, s2) {
+      const o$1 = new pt$2(t2.worldTransform).invert(), r2 = new pt$2();
+      e2 && r2.translate(e2.x, e2.y), i2 && (o(i2) ? r2.scale(i2) : r2.scale(i2.x, i2.y)), s2 && r2.rotate(s2), o$1.multiplyParent(r2), t2.__render(this.canvas, { matrix: o$1.withScale() }), this.paint();
+    }
+    paint() {
+      this.forceRender();
+    }
+    __drawContent(t2, e2) {
+      const { width: i2, height: s2 } = this.__, { view: o2 } = this.canvas;
+      t2.drawImage(o2, 0, 0, o2.width, o2.height, 0, 0, i2, s2);
+    }
+    __updateSize() {
+      const { canvas: t2 } = this;
+      if (t2) {
+        const { smooth: e2, safeResize: i2 } = this.__;
+        t2.resize(this.__, i2), t2.smooth !== e2 && (t2.smooth = e2);
+      }
+    }
+    destroy() {
+      this.canvas && (this.canvas.destroy(), this.canvas = null), super.destroy();
+    }
+  };
+  St$2([zn(ae$1)], si$1.prototype, "__", void 0), St$2([Rt$2(100)], si$1.prototype, "width", void 0), St$2([Rt$2(100)], si$1.prototype, "height", void 0), St$2([Rt$2(1)], si$1.prototype, "pixelRatio", void 0), St$2([Rt$2(true)], si$1.prototype, "smooth", void 0), St$2([fn(false)], si$1.prototype, "safeResize", void 0), St$2([Rt$2()], si$1.prototype, "contextSettings", void 0), si$1 = St$2([Zn()], si$1);
+  const { copyAndSpread: oi$1, includes: ri$1, spread: ai$1, setList: ni$1 } = zt$2, { stintSet: _i$1 } = _$2;
+  let hi$1 = class hi extends ge$1 {
+    get __tag() {
+      return "Text";
+    }
+    get textDrawData() {
+      return this.updateLayout(), this.__.__textDrawData;
+    }
+    __updateTextDrawData() {
+      const t2 = this.__, { lineHeight: e2, letterSpacing: i2, fontFamily: s2, fontSize: o2, fontWeight: r2, italic: a2, textCase: n2, textOverflow: _2, padding: h2, width: d2, height: l2 } = t2;
+      t2.__lineHeight = bt$2.number(e2, o2), t2.__letterSpacing = bt$2.number(i2, o2), t2.__baseLine = t2.__lineHeight - (t2.__lineHeight - 0.7 * o2) / 2, t2.__font = `${a2 ? "italic " : ""}${"small-caps" === n2 ? "small-caps " : ""}${"normal" !== r2 ? r2 + " " : ""}${o2 || 12}px ${s2 || "caption"}`, _i$1(t2, "__padding", h2 && I$4.fourNumber(h2)), _i$1(t2, "__clipText", "show" !== _2 && !t2.__autoSize), _i$1(t2, "__isCharMode", d2 || l2 || t2.__letterSpacing || "none" !== n2), t2.__textDrawData = At$2.getDrawData((t2.__isPlacehold = t2.placeholder && "" === t2.text) ? t2.placeholder : t2.text, this.__);
+    }
+    __updateBoxBounds() {
+      const t2 = this.__, e2 = this.__layout, { fontSize: i2, italic: s2, padding: o2, __autoWidth: r2, __autoHeight: a2 } = t2;
+      this.__updateTextDrawData();
+      const { bounds: _2 } = t2.__textDrawData, h2 = e2.boxBounds;
+      if (e2.contentBounds = _2, t2.__lineHeight < i2 && ai$1(_2, i2 / 2), r2 || a2) {
+        if (h2.x = r2 ? _2.x : 0, h2.y = a2 ? _2.y : 0, h2.width = r2 ? _2.width : t2.width, h2.height = a2 ? _2.height : t2.height, o2) {
+          const [e3, i3, s3, o3] = t2.__padding;
+          r2 && (h2.x -= o3, h2.width += i3 + o3), a2 && (h2.y -= e3, h2.height += s3 + e3);
+        }
+        this.__updateNaturalSize();
+      } else super.__updateBoxBounds();
+      s2 && (h2.width += 0.16 * i2), _$2.stintSet(this, "isOverflow", !ri$1(h2, _2)), this.isOverflow ? (ni$1(t2.__textBoxBounds = {}, [h2, _2]), e2.renderChanged = true) : t2.__textBoxBounds = h2;
+    }
+    __updateRenderSpread() {
+      let t2 = super.__updateRenderSpread();
+      return t2 || (t2 = this.isOverflow ? 1 : 0), t2;
+    }
+    __updateRenderBounds() {
+      const { renderBounds: t2, renderSpread: e2 } = this.__layout;
+      oi$1(t2, this.__.__textBoxBounds, e2), this.__box && (this.__box.__layout.renderBounds = t2);
+    }
+    __updateChange() {
+      super.__updateChange();
+      const t2 = this.__box;
+      t2 && (t2.__onUpdateSize(), t2.__updateChange());
+    }
+    __drawRenderPath(t2) {
+      t2.font = this.__.__font;
+    }
+    __draw(t2, e2, i2) {
+      const s2 = this.__box;
+      s2 && (s2.__nowWorld = this.__nowWorld, s2.__draw(t2, e2, i2)), this.textEditing && !e2.exporting || super.__draw(t2, e2, i2);
+    }
+    __drawShape(t2, e2) {
+      e2.shape && this.__box && this.__box.__drawShape(t2, e2), super.__drawShape(t2, e2);
+    }
+    destroy() {
+      this.boxStyle && (this.boxStyle = null), super.destroy();
+    }
+  };
+  St$2([zn(oe$1)], hi$1.prototype, "__", void 0), St$2([bn(0)], hi$1.prototype, "width", void 0), St$2([bn(0)], hi$1.prototype, "height", void 0), St$2([Ln()], hi$1.prototype, "boxStyle", void 0), St$2([fn(false)], hi$1.prototype, "resizeFontSize", void 0), St$2([Ln("#000000")], hi$1.prototype, "fill", void 0), St$2([On("outside")], hi$1.prototype, "strokeAlign", void 0), St$2([Dn("all")], hi$1.prototype, "hitFill", void 0), St$2([bn("")], hi$1.prototype, "text", void 0), St$2([bn("")], hi$1.prototype, "placeholder", void 0), St$2([bn("caption")], hi$1.prototype, "fontFamily", void 0), St$2([bn(12)], hi$1.prototype, "fontSize", void 0), St$2([bn("normal")], hi$1.prototype, "fontWeight", void 0), St$2([bn(false)], hi$1.prototype, "italic", void 0), St$2([bn("none")], hi$1.prototype, "textCase", void 0), St$2([bn("none")], hi$1.prototype, "textDecoration", void 0), St$2([bn(0)], hi$1.prototype, "letterSpacing", void 0), St$2([bn({ type: "percent", value: 1.5 })], hi$1.prototype, "lineHeight", void 0), St$2([bn(0)], hi$1.prototype, "paraIndent", void 0), St$2([bn(0)], hi$1.prototype, "paraSpacing", void 0), St$2([bn("x")], hi$1.prototype, "writingMode", void 0), St$2([bn("left")], hi$1.prototype, "textAlign", void 0), St$2([bn("top")], hi$1.prototype, "verticalAlign", void 0), St$2([bn(true)], hi$1.prototype, "autoSizeAlign", void 0), St$2([bn("normal")], hi$1.prototype, "textWrap", void 0), St$2([bn("show")], hi$1.prototype, "textOverflow", void 0), St$2([Ln(false)], hi$1.prototype, "textEditing", void 0), hi$1 = St$2([Zn()], hi$1);
+  let di$1 = class di extends ge$1 {
+    get __tag() {
+      return "Path";
+    }
+  };
+  St$2([zn(ee$1)], di$1.prototype, "__", void 0), St$2([On("center")], di$1.prototype, "strokeAlign", void 0), di$1 = St$2([Zn()], di$1);
+  let li$1 = class li extends ye$1 {
+    get __tag() {
+      return "Pen";
+    }
+    setStyle(t2) {
+      const e2 = this.pathElement = new di$1(t2);
+      return this.pathStyle = t2, this.__path = e2.path || (e2.path = []), this.add(e2), this;
+    }
+    beginPath() {
+      return this;
+    }
+    moveTo(t2, e2) {
+      return this;
+    }
+    lineTo(t2, e2) {
+      return this;
+    }
+    bezierCurveTo(t2, e2, i2, s2, o2, r2) {
+      return this;
+    }
+    quadraticCurveTo(t2, e2, i2, s2) {
+      return this;
+    }
+    closePath() {
+      return this;
+    }
+    rect(t2, e2, i2, s2) {
+      return this;
+    }
+    roundRect(t2, e2, i2, s2, o2) {
+      return this;
+    }
+    ellipse(t2, e2, i2, s2, o2, r2, a2, n2) {
+      return this;
+    }
+    arc(t2, e2, i2, s2, o2, r2) {
+      return this;
+    }
+    arcTo(t2, e2, i2, s2, o2) {
+      return this;
+    }
+    drawEllipse(t2, e2, i2, s2, o2, r2, a2, n2) {
+      return this;
+    }
+    drawArc(t2, e2, i2, s2, o2, r2) {
+      return this;
+    }
+    drawPoints(t2, e2, i2) {
+      return this;
+    }
+    clearPath() {
+      return this;
+    }
+    paint() {
+      this.pathElement.__layout.boxChanged || this.pathElement.forceUpdate("path");
+    }
+  };
+  St$2([zn(ie$1)], li$1.prototype, "__", void 0), St$2([(e2, i2) => {
+    ln(e2, i2, { get() {
+      return this.__path;
+    } });
+  }], li$1.prototype, "path", void 0), li$1 = St$2([Jn(Fr, ["set", "path", "paint"]), Zn()], li$1);
+  const { M: d, L: u, C: g$1, Q: z$3, Z: b$3, N: y, D: k$3, X: R$2, G: x$2, F: m$2, O: S$2, P: w$2, U: B$3 } = Ae$2, C$3 = { scale(t2, e2, i2) {
+    if (!t2) return;
+    let s2, o2 = 0, a2 = t2.length;
+    for (; o2 < a2; ) switch (s2 = t2[o2], s2) {
+      case d:
+      case u:
+        I$3(t2, e2, i2, o2, 1), o2 += 3;
+        break;
+      case g$1:
+        I$3(t2, e2, i2, o2, 3), o2 += 7;
+        break;
+      case z$3:
+        I$3(t2, e2, i2, o2, 2), o2 += 5;
+        break;
+      case b$3:
+        o2 += 1;
+        break;
+      case y:
+        I$3(t2, e2, i2, o2, 2), o2 += 5;
+        break;
+      case k$3:
+        I$3(t2, e2, i2, o2, 2), o2 += 9;
+        break;
+      case R$2:
+        I$3(t2, e2, i2, o2, 2), o2 += 6;
+        break;
+      case x$2:
+        I$3(t2, e2, i2, o2, 2), o2 += 9;
+        break;
+      case m$2:
+        I$3(t2, e2, i2, o2, 2), o2 += 5;
+        break;
+      case S$2:
+        t2[o2] = x$2, t2.splice(o2 + 4, 0, t2[o2 + 3], 0), I$3(t2, e2, i2, o2, 2), o2 += 9, a2 += 2;
+        break;
+      case w$2:
+        t2[o2] = m$2, t2.splice(o2 + 4, 0, t2[o2 + 3]), I$3(t2, e2, i2, o2, 2), o2 += 5, a2 += 1;
+        break;
+      case B$3:
+        I$3(t2, e2, i2, o2, 2), o2 += 6;
+    }
+  }, scalePoints(t2, e2, i2, s2, o2) {
+    for (let a2 = o2 ? s2 + 1 : 0, n2 = o2 ? a2 + 2 * o2 : t2.length; a2 < n2; a2 += 2) t2[a2] *= e2, t2[a2 + 1] *= i2;
+  } }, { scalePoints: I$3 } = C$3, O$3 = q$2.get(), { topLeft: P$3, top: v$2, topRight: H$3, right: W$3, bottom: X$3, left: A$3 } = xt$2;
+  function F$4(t2, e2, i2) {
+    t2.pathInputed ? Y$3(t2, e2, i2) : (1 !== e2 && (t2.width *= e2), 1 !== i2 && (t2.height *= i2));
+  }
+  function L$3(t2, e2, i2, a2) {
+    let n2 = e2;
+    if (!s(a2)) {
+      const s2 = t2.__layout;
+      let { width: o2, height: c3 } = s2.boxBounds;
+      switch (o2 *= i2 - e2, c3 *= e2 - i2, a2) {
+        case v$2:
+        case X$3:
+          n2 = i2, s2.affectScaleOrRotation ? t2.moveInner(-o2 / 2, 0) : t2.x -= o2 / 2;
+          break;
+        case A$3:
+        case W$3:
+          s2.affectScaleOrRotation ? t2.moveInner(0, -c3 / 2) : t2.y -= c3 / 2;
+          break;
+        case P$3:
+        case H$3:
+          s2.affectScaleOrRotation ? t2.moveInner(0, -c3) : t2.y -= c3;
+      }
+    }
+    t2.fontSize *= n2;
+    const c2 = t2.__, { padding: h2 } = c2;
+    h2 && (t2.padding = l(h2) ? h2.map((t3) => t3 * n2) : h2 * n2), c2.__autoWidth || (t2.width *= n2), c2.__autoHeight || (t2.height *= n2);
+  }
+  function Y$3(t2, e2, i2) {
+    C$3.scale(t2.__.path, e2, i2), t2.path = t2.__.path;
+  }
+  function D$3(t2, e2, i2) {
+    const { points: s2 } = t2;
+    d$1(s2[0]) ? s2.forEach((t3) => {
+      t3.x *= e2, t3.y *= i2;
+    }) : C$3.scalePoints(s2, e2, i2), t2.points = s2;
+  }
+  function E$3(t2, e2, i2) {
+    const { children: s2 } = t2;
+    for (let t3 = 0; t3 < s2.length; t3++) O$3.a = e2, O$3.d = i2, s2[t3].transform(O$3, true);
+  }
+  const G$3 = _h.prototype;
+  G$3.scaleResize = function(t2, e2 = t2, i2) {
+    const s2 = this;
+    i2 || s2.editConfig && "scale" === s2.editConfig.editSize ? (s2.scaleX *= t2, s2.scaleY *= e2) : (t2 < 0 && (s2.scaleX *= -1, t2 = -t2), e2 < 0 && (s2.scaleY *= -1, e2 = -e2), this.__scaleResize(t2, e2));
+  }, G$3.__scaleResize = function(t2, e2) {
+    F$4(this, t2, e2);
+  }, G$3.resizeWidth = function(t2) {
+    const e2 = t2 / this.getBounds("box", "local").width || 1;
+    this.scaleOf(this.__layout.boxBounds, e2, this.__.lockRatio ? e2 : 1, true);
+  }, G$3.resizeHeight = function(t2) {
+    const e2 = t2 / this.getBounds("box", "local").height || 1;
+    this.scaleOf(this.__layout.boxBounds, this.__.lockRatio ? e2 : 1, e2, true);
+  }, hi$1.prototype.__scaleResize = function(t2, e2) {
+    const { app: i2, editConfig: s2 } = this, o2 = i2 && i2.editor, a2 = o2 && o2.dragPoint;
+    if (this.__.resizeFontSize || s2 && "font-size" === s2.editSize || a2 && "font-size" === o2.mergedConfig.editSize) L$3(this, t2, e2, a2 && a2.direction);
+    else {
+      const { __autoWidth: i3, __autoHeight: s3, textAlign: o3, verticalAlign: a3 } = this.__, { boxBounds: n2 } = this.__layout;
+      i3 && "left" !== o3 && 1 !== t2 && (this.x += n2.x), s3 && "top" !== a3 && 1 !== e2 && (this.y += n2.y), F$4(this, t2, e2);
+    }
+  }, di$1.prototype.__scaleResize = function(t2, e2) {
+    Y$3(this, t2, e2);
+  }, ti$1.prototype.__scaleResize = function(t2, e2) {
+    this.pathInputed ? Y$3(this, t2, e2) : this.points ? D$3(this, t2, e2) : this.width *= t2;
+  }, Oe$1.prototype.__scaleResize = function(t2, e2) {
+    this.pathInputed ? Y$3(this, t2, e2) : this.points ? D$3(this, t2, e2) : F$4(this, t2, e2);
+  }, ye$1.prototype.__scaleResize = function(t2, e2) {
+    E$3(this, t2, e2);
+  }, Ae$1.prototype.__scaleResize = function(t2, e2) {
+    const { resizeChildren: i2, __autoSize: s2 } = this.__;
+    s2 && i2 || F$4(this, t2, e2), i2 && E$3(this, t2, e2);
+  }, he$2.add("resize");
+  function G$2(t2, o2, e2, i2) {
+    var n2, h2 = arguments.length, r2 = h2 < 3 ? o2 : i2;
+    if ("object" == typeof Reflect && "function" == typeof Reflect.decorate) r2 = Reflect.decorate(t2, o2, e2, i2);
+    else for (var s2 = t2.length - 1; s2 >= 0; s2--) (n2 = t2[s2]) && (r2 = (h2 < 3 ? n2(r2) : h2 > 3 ? n2(o2, e2, r2) : n2(o2, e2)) || r2);
+    return h2 > 3 && r2 && Object.defineProperty(o2, e2, r2), r2;
+  }
+  "function" == typeof SuppressedError && SuppressedError;
+  let m$1 = class m extends Ae$1 {
+    get __tag() {
+      return "Flow";
+    }
+    constructor(t2) {
+      super(t2), this.__hasAutoLayout = true;
+    }
+  };
+  G$2([zn(class extends Jt$1 {
+  })], m$1.prototype, "__", void 0), G$2([mn("x")], m$1.prototype, "flow", void 0), m$1 = G$2([Zn()], m$1);
+  const A$2 = {}, B$2 = { "top-left": "from", top: "center", "top-right": "to", right: "to", "bottom-right": "to", bottom: "center", "bottom-left": "from", left: "from", center: "center", "baseline-left": "from", "baseline-center": "center", "baseline-right": "to" }, b$2 = { "top-left": "from", top: "from", "top-right": "from", right: "center", "bottom-right": "to", bottom: "to", "bottom-left": "to", left: "center", center: "center", "baseline-left": "to", "baseline-center": "to", "baseline-right": "to" };
+  function v$1(t2, o2, e2) {
+    const i2 = t2.__, { contentBounds: n2 } = t2.__layout;
+    kt$3.toPoint(e2, o2, n2, A$2), o2.x = i2.__autoWidth ? n2.x : A$2.x, o2.y = i2.__autoHeight ? n2.y : A$2.y;
+  }
+  const { move: R$1 } = ot$2;
+  function F$3(t2, o2, e2, i2, n2, h2) {
+    const { children: r2 } = t2;
+    let s2, a2, { x: l2, start: _2 } = o2, c2 = i2;
+    l2 += e2;
+    for (let t3 = 0, e3 = o2.count; t3 < e3; t3++) s2 = r2[h2 ? _2 - t3 : _2 + t3], s2.__.inFlow && 0 !== s2.__.visible ? (a2 = s2.__flowBounds, "from" !== n2 && (c2 = i2 + (o2.height - a2.height) / ("center" === n2 ? 2 : 1)), R$1(s2, l2 - a2.x, c2 - a2.y), l2 += a2.width + o2.gap) : e3++;
+  }
+  function S$1(t2, o2, e2) {
+    const i2 = "width" === e2 ? "height" : "width";
+    t2[e2] = Math.max(t2[e2], o2[e2]), t2[i2] += t2.count ? o2[i2] + t2.gap : o2[i2], t2.list.push(o2), t2.count++;
+  }
+  const z$2 = {};
+  function X$2(t2, o2) {
+    const { gap: e2, flowAlign: i$1, flowWrap: n2, __autoWidth: h2, __autoHeight: r2 } = t2.__, _2 = n2 && (o2 ? !h2 : !r2);
+    return d$1(e2) ? (z$2.xGap = e2.x || 0, z$2.yGap = e2.y || 0) : z$2.xGap = z$2.yGap = h$1(e2), z$2.isAutoXGap = i(z$2.xGap) && !h2, z$2.isAutoYGap = i(z$2.yGap) && !r2, z$2.complex = _2 || "top-left" !== i$1 || t2.__hasGrow || z$2.isAutoXGap || z$2.isAutoYGap, z$2.wrap = _2, z$2.complex && (z$2.isFitXGap = "fit" === z$2.xGap && !h2, z$2.isFitYGap = "fit" === z$2.yGap && !r2, d$1(i$1) ? (z$2.contentAlign = i$1.content || "top-left", z$2.rowXAlign = i$1.x || "from", z$2.rowYAlign = i$1.y || "from") : (z$2.contentAlign = i$1, z$2.rowXAlign = B$2[i$1], z$2.rowYAlign = b$2[i$1])), z$2;
+  }
+  function Y$2(t2, o2) {
+    return { x: 0, y: 0, width: 0, height: 0, gap: o2, start: t2, count: 0, grow: 0 };
+  }
+  function W$2(t2, o2, e2, i2) {
+    const { count: n2 } = t2;
+    n2 > 1 && (e2 > t2[o2] || i2) && (t2.gap = (e2 - t2[o2]) / (n2 - 1), t2[o2] = e2);
+  }
+  function k$2(t2, o2) {
+    return "box" === o2 ? t2.__local : t2.__layout.localStrokeBounds;
+  }
+  const { within: C$2 } = I$4;
+  function E$2(t2, o2, e2, i2) {
+    let n2, h2, r2, s2 = 0, a2 = o2.hasRangeSize && [], { grow: l2, start: _2 } = o2;
+    const c2 = (e2 - o2.width) / l2, { children: d2 } = t2;
+    if (!(c2 <= 0)) {
+      o2.width = e2;
+      for (let t3 = 0, e3 = o2.count; t3 < e3; t3++) n2 = d2[i2 ? _2 - t3 : _2 + t3], n2.__.inFlow && 0 !== n2.__.visible ? (h2 = n2.__widthGrow) && (r2 = P$2(n2, n2.__flowBounds, c2 * h2), r2 ? (s2 += r2, l2 -= h2) : a2 && (n2.__.widthRange ? a2.unshift(n2) : a2.push(n2))) : e3++;
+      s2 && (function(t3, o3, e3) {
+        let i3, n3, h3, r3;
+        t3.forEach((t4) => {
+          i3 = t4.__widthGrow, n3 = o3 / e3 * i3, r3 = P$2(t4, h3 = t4.__flowBounds, h3.width + n3), o3 -= n3 - r3, e3 -= i3;
+        });
+      })(a2, s2, l2);
+    }
+  }
+  function P$2(t2, o2, e2) {
+    const { widthRange: i2, lockRatio: n2 } = t2.__, h2 = i2 ? C$2(e2, i2) : e2, r2 = h2 / o2.width;
+    return t2.scaleResize(r2, n2 ? r2 : 1), o2.width = h2, e2 - h2;
+  }
+  const { within: j$3 } = I$4;
+  function H$2(t2, o2, e2, i2) {
+    let n2, h2, r2, s2 = 0, a2 = o2.hasRangeSize && [], { grow: l2, start: _2 } = o2;
+    const c2 = (e2 - o2.height) / l2, { children: d2 } = t2;
+    if (!(c2 <= 0)) {
+      o2.height = e2;
+      for (let t3 = 0, e3 = o2.count; t3 < e3; t3++) n2 = d2[i2 ? _2 - t3 : _2 + t3], n2.__.inFlow && 0 !== n2.__.visible ? (h2 = n2.__heightGrow) && (r2 = M$1(n2, n2.__flowBounds, c2 * h2), r2 ? (s2 += r2, l2 -= h2) : a2 && (n2.__.heightRange ? a2.unshift(n2) : a2.push(n2))) : e3++;
+      s2 && (function(t3, o3, e3) {
+        let i3, n3, h3, r3;
+        t3.forEach((t4) => {
+          i3 = t4.__heightGrow, n3 = o3 / e3 * i3, r3 = M$1(t4, h3 = t4.__flowBounds, h3.height + n3), o3 -= n3 - r3, e3 -= i3;
+        });
+      })(a2, s2, l2);
+    }
+  }
+  function M$1(t2, o2, e2) {
+    const { heightRange: i2, lockRatio: n2 } = t2.__, h2 = i2 ? j$3(e2, i2) : e2, r2 = h2 / o2.height;
+    return t2.scaleResize(n2 ? r2 : 1, r2), o2.height = h2, e2 - h2;
+  }
+  const { move: O$2 } = ot$2;
+  function I$2(t2, o2) {
+    const e2 = "width", { children: i2, itemBox: n2 } = t2, h2 = X$2(t2, true), { complex: r2, wrap: s2, xGap: a2, yGap: l2, isAutoXGap: _2, isFitXGap: c2 } = h2;
+    if (!i2.length) return;
+    const d2 = s2 && { x: 0, y: 0, width: 0, height: 0, gap: 0, count: 0, list: [] }, u2 = _2 ? 0 : a2;
+    let g2, f2, w2, p2, x2, { x: y2, y: G2, width: m2, height: A2 } = t2.__layout.contentBounds;
+    for (let h3 = 0, a3 = i2.length; h3 < a3; h3++) g2 = i2[p2 = o2 ? a3 - 1 - h3 : h3], g2.__.inFlow && 0 !== g2.__.visible && (f2 = k$2(g2, n2), r2 ? (g2.__flowBounds = f2, x2 || (x2 = Y$2(p2, u2)), s2 && x2.count && x2.width + f2.width > m2 && (x2.grow ? E$2(t2, x2, m2, o2) : _2 && W$2(x2, e2, m2, c2), S$1(d2, x2, e2), x2 = Y$2(p2, u2)), w2 = f2.width, g2.__widthGrow && (x2.grow += g2.__widthGrow, w2 = 0, g2.__.widthRange && (x2.hasRangeSize = true)), g2.__heightGrow && M$1(g2, f2, A2), x2.width += x2.count ? w2 + u2 : w2, x2.height = Math.max(x2.height, f2.height), x2.count++) : (O$2(g2, y2 - f2.x, G2 - f2.y), y2 += f2.width + u2));
+    if (r2 && x2) {
+      const { isAutoYGap: i3, isFitYGap: n3, contentAlign: r3, rowXAlign: a3, rowYAlign: u3 } = h2;
+      x2.count && (x2.grow ? E$2(t2, x2, m2, o2) : _2 && W$2(x2, e2, m2, c2), s2 && S$1(d2, x2, e2)), s2 ? (i3 ? W$2(d2, "height", A2, n3) : d2.height += (d2.gap = l2) * (d2.list.length - 1), (function(t3, o3, e3, i4) {
+        v$1(t3, o3, e3);
+        const { list: n4 } = o3;
+        if (n4.length > 1 && (i4 || (i4 = B$2[e3]), "from" !== i4)) {
+          let t4;
+          for (let e4 = 0, h3 = n4.length; e4 < h3; e4++) t4 = n4[e4], t4.x = o3.width - t4.width, "center" === i4 && (t4.x /= 2);
+        }
+      })(t2, d2, r3, a3), (function(t3, o3, e3, i4) {
+        const { list: n4 } = o3, h3 = "reverse" === t3.__.flowWrap;
+        let r4, { x: s3, y: a4 } = o3;
+        for (let l3 = 0, _3 = n4.length; l3 < _3; l3++) r4 = n4[h3 ? _3 - 1 - l3 : l3], F$3(t3, r4, s3, a4, e3, i4), a4 += r4.height + o3.gap;
+      })(t2, d2, u3, o2)) : (v$1(t2, x2, r3), F$3(t2, x2, 0, x2.y, u3, o2));
+    }
+  }
+  const { move: L$2 } = ot$2;
+  function D$2(t2, o2, e2, i2, n2, h2) {
+    const { children: r2 } = t2;
+    let s2, a2, { y: l2, start: _2 } = o2, c2 = e2;
+    l2 += i2;
+    for (let t3 = 0, i3 = o2.count; t3 < i3; t3++) s2 = r2[h2 ? _2 - t3 : _2 + t3], s2.__.inFlow && 0 !== s2.__.visible ? (a2 = s2.__flowBounds, "from" !== n2 && (c2 = e2 + (o2.width - a2.width) / ("center" === n2 ? 2 : 1)), L$2(s2, c2 - a2.x, l2 - a2.y), l2 += a2.height + o2.gap) : i3++;
+  }
+  const { move: N$3 } = ot$2;
+  function U$1(t2, o2) {
+    const e2 = "height", { children: i2, itemBox: n2 } = t2, h2 = X$2(t2, false), { complex: r2, wrap: s2, xGap: a2, yGap: l2, isAutoYGap: _2, isFitYGap: c2 } = h2;
+    if (!i2.length) return;
+    const d2 = s2 && { x: 0, y: 0, width: 0, height: 0, gap: 0, count: 0, list: [] }, u2 = _2 ? 0 : l2;
+    let g2, f2, w2, p2, x2, { x: y2, y: G2, width: m2, height: A2 } = t2.__layout.contentBounds;
+    for (let h3 = 0, a3 = i2.length; h3 < a3; h3++) g2 = i2[p2 = o2 ? a3 - 1 - h3 : h3], g2.__.inFlow && 0 !== g2.__.visible && (f2 = k$2(g2, n2), r2 ? (g2.__flowBounds = f2, x2 || (x2 = Y$2(p2, u2)), s2 && x2.count && x2.height + f2.height > A2 && (x2.grow && H$2(t2, x2, A2, o2), _2 && W$2(x2, e2, A2, c2), S$1(d2, x2, e2), x2 = Y$2(p2, u2)), w2 = f2.height, g2.__heightGrow && (x2.grow += g2.__heightGrow, w2 = 0, g2.__.heightRange && (x2.hasRangeSize = true)), g2.__widthGrow && P$2(g2, f2, m2), x2.height += x2.count ? w2 + u2 : w2, x2.width = Math.max(x2.width, f2.width), x2.count++) : (N$3(g2, y2 - f2.x, G2 - f2.y), G2 += f2.height + u2));
+    if (r2 && x2) {
+      const { isAutoXGap: i3, isFitXGap: n3, contentAlign: r3, rowXAlign: l3, rowYAlign: u3 } = h2;
+      x2.count && (x2.grow && H$2(t2, x2, A2, o2), _2 && W$2(x2, e2, A2, c2), s2 && S$1(d2, x2, e2)), s2 ? (i3 ? W$2(d2, "width", m2, n3) : d2.width += (d2.gap = a2) * (d2.list.length - 1), (function(t3, o3, e3, i4) {
+        v$1(t3, o3, e3);
+        const { list: n4 } = o3;
+        if (n4.length > 1 && (i4 || (i4 = b$2[e3]), "from" !== i4)) {
+          let t4;
+          for (let e4 = 0, h3 = n4.length; e4 < h3; e4++) t4 = n4[e4], t4.y = o3.height - t4.height, "center" === i4 && (t4.y /= 2);
+        }
+      })(t2, d2, r3, u3), (function(t3, o3, e3, i4) {
+        const { list: n4 } = o3, h3 = "reverse" === t3.__.flowWrap;
+        let r4, { x: s3, y: a3 } = o3;
+        for (let l4 = 0, _3 = n4.length; l4 < _3; l4++) r4 = n4[h3 ? _3 - 1 - l4 : l4], D$2(t3, r4, s3, a3, e3, i4), s3 += r4.width + o3.gap;
+      })(t2, d2, l3, o2)) : (v$1(t2, x2, r3), D$2(t2, x2, x2.x, 0, l3, o2));
+    }
+  }
+  function q$1(t2) {
+    return un(t2, (t3) => _n({ set(o$1) {
+      const e2 = o(o$1) ? o$1 : 0;
+      "autoWidth" === t3 ? this.__widthGrow = e2 : this.__heightGrow = e2, !e2 || this.parent && this.parent.__hasGrow || this.waitParent(() => {
+        this.parent.__hasGrow = true;
+      }), this.__setAttr(t3, o$1) && vn(this);
+    } }));
+  }
+  he$2.add("flow", "resize");
+  const J$2 = Ae$1.prototype, { __updateBoxBounds: K$2 } = ye$1.prototype;
+  ge$1.addAttr("flow", false, mn), ge$1.addAttr("gap", 0, bn), ge$1.addAttr("flowAlign", "top-left", bn), ge$1.addAttr("flowWrap", false, bn), ge$1.addAttr("itemBox", "box", bn), ge$1.addAttr("inFlow", true, bn), ge$1.addAttr("autoWidth", void 0, q$1), ge$1.addAttr("autoHeight", void 0, q$1), ge$1.addAttr("autoBox", void 0, bn);
+  const { copyAndSpread: Q$1 } = zt$2;
+  J$2.__updateFlowLayout = function() {
+    const { leaferIsCreated: t2, flow: o2 } = this;
+    switch (t2 && (this.leafer.created = false), o2) {
+      case "x":
+      case true:
+        I$2(this);
+        break;
+      case "y":
+        U$1(this);
+        break;
+      case "x-reverse":
+        I$2(this, true);
+        break;
+      case "y-reverse":
+        U$1(this, true);
+    }
+    t2 && (this.leafer.created = true);
+  }, J$2.__updateContentBounds = function() {
+    const { padding: t2 } = this.__, o2 = this.__layout, e2 = o2.contentBounds === o2.boxBounds;
+    t2 ? (e2 && o2.shrinkContent(), Q$1(o2.contentBounds, o2.boxBounds, t2, true)) : e2 || o2.shrinkContentCancel();
+  }, J$2.__updateBoxBounds = function(t2) {
+    if (this.children.length && !this.pathInputed) {
+      const o2 = this.__, { flow: e2 } = o2;
+      if (o2.__autoSide) {
+        o2.__hasSurface && this.__extraUpdate(), e2 && !t2 ? this.__updateRectBoxBounds() : K$2.call(this);
+        const { boxBounds: i2 } = this.__layout;
+        o2.__autoSize || (o2.__autoWidth ? (e2 || (i2.width += i2.x, i2.x = 0), i2.height = o2.height, i2.y = 0) : (e2 || (i2.height += i2.y, i2.y = 0), i2.width = o2.width, i2.x = 0)), e2 && t2 && o2.padding && Q$1(i2, i2, o2.padding, false, o2.__autoSize ? null : o2.__autoWidth ? "width" : "height"), this.__updateNaturalSize();
+      } else this.__updateRectBoxBounds();
+      e2 && this.__updateContentBounds();
+    } else this.__updateRectBoxBounds();
+  };
   const LITEGRAPH_COMPAT_DIFF_IDS = {
     constantsGridSquareAlias: "constants.grid-square-alias",
     canvasStaticResize: "canvas-static.resize",
@@ -4621,4555 +9466,6 @@ var LiteGraphTSMigration = (function(exports) {
       return this.sceneSyncController.nodeHosts.get(node2.id) || null;
     }
   }
-  var t;
-  !(function(t2) {
-    t2[t2.No = 0] = "No", t2[t2.Yes = 1] = "Yes", t2[t2.NoAndSkip = 2] = "NoAndSkip", t2[t2.YesAndSkip = 3] = "YesAndSkip";
-  })(t || (t = {}));
-  const e = {};
-  function s(t2) {
-    return void 0 === t2;
-  }
-  function r(t2) {
-    return null == t2;
-  }
-  function i(t2) {
-    return "string" == typeof t2;
-  }
-  const { isFinite: n } = Number;
-  function o(t2) {
-    return "number" == typeof t2;
-  }
-  const a = /^-?\d+(?:\.\d+)?$/;
-  function h$1(t2) {
-    return "string" == typeof t2 && a.test(t2) ? +t2 : t2;
-  }
-  const { isArray: l } = Array;
-  function d(t2) {
-    return t2 && "object" == typeof t2;
-  }
-  function c(t2) {
-    return d(t2) && !l(t2);
-  }
-  function u(t2) {
-    return "{}" === JSON.stringify(t2);
-  }
-  const _$2 = { default: (t2, e2) => (p$1(e2, t2), p$1(t2, e2), t2), assign(t2, e2, s2) {
-    let r2;
-    Object.keys(e2).forEach((i2) => {
-      var n2, o2;
-      if (r2 = e2[i2], (null == r2 ? void 0 : r2.constructor) === Object && (null === (n2 = t2[i2]) || void 0 === n2 ? void 0 : n2.constructor) === Object) return p$1(t2[i2], e2[i2], s2 && s2[i2]);
-      s2 && i2 in s2 ? (null === (o2 = s2[i2]) || void 0 === o2 ? void 0 : o2.constructor) === Object && p$1(t2[i2] = {}, e2[i2], s2[i2]) : t2[i2] = e2[i2];
-    });
-  }, copyAttrs: (t2, e2, r2) => (r2.forEach((r3) => {
-    s(e2[r3]) || (t2[r3] = e2[r3]);
-  }), t2), clone: (t2) => JSON.parse(JSON.stringify(t2)), toMap(t2) {
-    const e2 = {};
-    for (let s2 = 0, r2 = t2.length; s2 < r2; s2++) e2[t2[s2]] = true;
-    return e2;
-  }, stintSet(t2, e2, s2) {
-    s2 || (s2 = void 0), t2[e2] !== s2 && (t2[e2] = s2);
-  } }, { assign: p$1 } = _$2;
-  class f {
-    get __useNaturalRatio() {
-      return true;
-    }
-    get __isLinePath() {
-      const { path: t2 } = this;
-      return t2 && 6 === t2.length && 1 === t2[0];
-    }
-    get __usePathBox() {
-      return this.__pathInputed;
-    }
-    get __blendMode() {
-      if (this.eraser && "path" !== this.eraser) return "destination-out";
-      const { blendMode: t2 } = this;
-      return "pass-through" === t2 ? null : t2;
-    }
-    constructor(t2) {
-      this.__leaf = t2;
-    }
-    __get(t2) {
-      if (this.__input) {
-        const e2 = this.__input[t2];
-        if (!s(e2)) return e2;
-      }
-      return this[t2];
-    }
-    __getData() {
-      const t2 = { tag: this.__leaf.tag }, { __input: e2 } = this;
-      let r2;
-      for (let i2 in this) "_" !== i2[0] && (r2 = e2 ? e2[i2] : void 0, t2[i2] = s(r2) ? this[i2] : r2);
-      return t2;
-    }
-    __setInput(t2, e2) {
-      this.__input || (this.__input = {}), this.__input[t2] = e2;
-    }
-    __getInput(t2) {
-      if (this.__input) {
-        const e2 = this.__input[t2];
-        if (!s(e2)) return e2;
-      }
-      if ("path" !== t2 || this.__pathInputed) return this["_" + t2];
-    }
-    __removeInput(t2) {
-      this.__input && !s(this.__input[t2]) && (this.__input[t2] = void 0);
-    }
-    __getInputData(t2, e2) {
-      const r2 = {};
-      if (t2) if (l(t2)) for (let e3 of t2) r2[e3] = this.__getInput(e3);
-      else for (let e3 in t2) r2[e3] = this.__getInput(e3);
-      else {
-        let t3, e3, { __input: i2 } = this;
-        r2.tag = this.__leaf.tag;
-        for (let n2 in this) if ("_" !== n2[0] && (t3 = this["_" + n2], !s(t3))) {
-          if ("path" === n2 && !this.__pathInputed) continue;
-          e3 = i2 ? i2[n2] : void 0, r2[n2] = s(e3) ? t3 : e3;
-        }
-      }
-      if (e2 && e2.matrix) {
-        const { a: t3, b: e3, c: s2, d: i2, e: n2, f: o2 } = this.__leaf.__localMatrix;
-        r2.matrix = { a: t3, b: e3, c: s2, d: i2, e: n2, f: o2 };
-      }
-      return r2;
-    }
-    __setMiddle(t2, e2) {
-      this.__middle || (this.__middle = {}), this.__middle[t2] = e2;
-    }
-    __getMiddle(t2) {
-      return this.__middle && this.__middle[t2];
-    }
-    __checkSingle() {
-      const t2 = this;
-      if ("pass-through" === t2.blendMode) {
-        const e2 = this.__leaf;
-        t2.opacity < 1 && (e2.isBranch || t2.__hasMultiPaint) || e2.__hasEraser || t2.eraser || t2.filter ? t2.__single = true : t2.__single && (t2.__single = false);
-      } else t2.__single = true;
-    }
-    __removeNaturalSize() {
-      this.__naturalWidth = this.__naturalHeight = void 0;
-    }
-    destroy() {
-      this.__input = this.__middle = null;
-    }
-  }
-  const g$1 = { RUNTIME: "runtime", LEAF: "leaf", TASK: "task", CNAVAS: "canvas", IMAGE: "image", types: {}, create(t2) {
-    const { types: e2 } = y;
-    return e2[t2] ? e2[t2]++ : (e2[t2] = 1, 0);
-  } }, y = g$1;
-  let m$1, x$2, w$2;
-  const { max: b$2 } = Math, B$2 = [0, 0, 0, 0], v$1 = { zero: [...B$2], tempFour: B$2, set: (t2, e2, s2, r2, i2) => (void 0 === s2 && (s2 = r2 = i2 = e2), t2[0] = e2, t2[1] = s2, t2[2] = r2, t2[3] = i2, t2), setTemp: (t2, e2, s2, r2) => k$2(B$2, t2, e2, s2, r2), toTempAB(t2, e2, s2) {
-    w$2 = s2 ? o(t2) ? e2 : t2 : [], o(t2) ? (m$1 = O$2(t2), x$2 = e2) : o(e2) ? (m$1 = t2, x$2 = O$2(e2)) : (m$1 = t2, x$2 = e2), 4 !== m$1.length && (m$1 = C$2(m$1)), 4 !== x$2.length && (x$2 = C$2(x$2));
-  }, get(t2, e2) {
-    let r2;
-    if (!o(t2)) switch (t2.length) {
-      case 4:
-        r2 = s(e2) ? t2 : [...t2];
-        break;
-      case 2:
-        r2 = [t2[0], t2[1], t2[0], t2[1]];
-        break;
-      case 3:
-        r2 = [t2[0], t2[1], t2[2], t2[1]];
-        break;
-      case 1:
-        t2 = t2[0];
-        break;
-      default:
-        t2 = 0;
-    }
-    if (r2 || (r2 = [t2, t2, t2, t2]), !s(e2)) for (let t3 = 0; t3 < 4; t3++) r2[t3] > e2 && (r2[t3] = e2);
-    return r2;
-  }, max: (t2, e2, s2) => o(t2) && o(e2) ? b$2(t2, e2) : (T$1(t2, e2, s2), k$2(w$2, b$2(m$1[0], x$2[0]), b$2(m$1[1], x$2[1]), b$2(m$1[2], x$2[2]), b$2(m$1[3], x$2[3]))), add: (t2, e2, s2) => o(t2) && o(e2) ? t2 + e2 : (T$1(t2, e2, s2), k$2(w$2, m$1[0] + x$2[0], m$1[1] + x$2[1], m$1[2] + x$2[2], m$1[3] + x$2[3])), swapAndScale(t2, e2, s2, r2) {
-    if (o(t2)) return e2 === s2 ? t2 * e2 : [t2 * s2, t2 * e2];
-    const i2 = r2 ? t2 : [], [n2, a2, h2, l2] = 4 === t2.length ? t2 : C$2(t2);
-    return k$2(i2, h2 * s2, l2 * e2, n2 * s2, a2 * e2);
-  } }, { set: k$2, get: C$2, setTemp: O$2, toTempAB: T$1 } = v$1, { round: P$2, pow: S$1, max: L$2, floor: R$1, PI: E$2 } = Math, I$2 = { within: (t2, e2, r2) => (d(e2) && (r2 = e2.max, e2 = e2.min), !s(e2) && t2 < e2 && (t2 = e2), !s(r2) && t2 > r2 && (t2 = r2), t2), fourNumber: v$1.get, formatRotation: (t2, e2) => (t2 %= 360, e2 ? t2 < 0 && (t2 += 360) : (t2 > 180 && (t2 -= 360), t2 < -180 && (t2 += 360)), I$2.float(t2)), getGapRotation(t2, e2, s2 = 0) {
-    let r2 = t2 + s2;
-    if (e2 > 1) {
-      const t3 = Math.abs(r2 % e2);
-      (t3 < 1 || t3 > e2 - 1) && (r2 = Math.round(r2 / e2) * e2);
-    }
-    return r2 - s2;
-  }, float(t2, e2) {
-    const r2 = s(e2) ? 1e12 : S$1(10, e2);
-    return -0 === (t2 = P$2(t2 * r2) / r2) ? 0 : t2;
-  }, sign: (t2) => t2 < 0 ? -1 : 1, getScaleData(t2, e2, s2, r2) {
-    if (r2 || (r2 = {}), e2) {
-      const t3 = (o(e2) ? e2 : e2.width || 0) / s2.width, i2 = (o(e2) ? e2 : e2.height || 0) / s2.height;
-      r2.scaleX = t3 || i2 || 1, r2.scaleY = i2 || t3 || 1;
-    } else t2 && I$2.assignScale(r2, t2);
-    return r2;
-  }, assignScale(t2, e2) {
-    o(e2) ? t2.scaleX = t2.scaleY = e2 : (t2.scaleX = e2.x, t2.scaleY = e2.y);
-  }, getFloorScale: (t2, e2 = 1) => L$2(R$1(t2), e2) / t2, randInt: M$1, randColor: (t2) => `rgba(${M$1(255)},${M$1(255)},${M$1(255)},${t2 || 1})` };
-  function M$1(t2) {
-    return Math.round(Math.random() * t2);
-  }
-  const A$2 = E$2 / 180, W$2 = 2 * E$2, N$3 = E$2 / 2;
-  function Y$2() {
-    return { x: 0, y: 0 };
-  }
-  function D$2() {
-    return { x: 0, y: 0, width: 0, height: 0 };
-  }
-  function X$2() {
-    return { a: 1, b: 0, c: 0, d: 1, e: 0, f: 0 };
-  }
-  const { sin: z$2, cos: F$3, acos: U$1, sqrt: j$3 } = Math, { float: V$2 } = I$2, H$2 = {};
-  function G$2() {
-    return Object.assign(Object.assign(Object.assign({}, { a: 1, b: 0, c: 0, d: 1, e: 0, f: 0 }), { x: 0, y: 0, width: 0, height: 0 }), { scaleX: 1, scaleY: 1, rotation: 0, skewX: 0, skewY: 0 });
-  }
-  const q$1 = { defaultMatrix: { a: 1, b: 0, c: 0, d: 1, e: 0, f: 0 }, defaultWorld: G$2(), tempMatrix: {}, set(t2, e2 = 1, s2 = 0, r2 = 0, i2 = 1, n2 = 0, o2 = 0) {
-    t2.a = e2, t2.b = s2, t2.c = r2, t2.d = i2, t2.e = n2, t2.f = o2;
-  }, get: X$2, getWorld: G$2, copy(t2, e2) {
-    t2.a = e2.a, t2.b = e2.b, t2.c = e2.c, t2.d = e2.d, t2.e = e2.e, t2.f = e2.f;
-  }, translate(t2, e2, s2) {
-    t2.e += e2, t2.f += s2;
-  }, translateInner(t2, e2, s2, r2) {
-    t2.e += t2.a * e2 + t2.c * s2, t2.f += t2.b * e2 + t2.d * s2, r2 && (t2.e -= e2, t2.f -= s2);
-  }, scale(t2, e2, s2 = e2) {
-    t2.a *= e2, t2.b *= e2, t2.c *= s2, t2.d *= s2;
-  }, pixelScale(t2, e2, s2) {
-    s2 || (s2 = t2), s2.a = t2.a * e2, s2.b = t2.b * e2, s2.c = t2.c * e2, s2.d = t2.d * e2, s2.e = t2.e * e2, s2.f = t2.f * e2;
-  }, scaleOfOuter(t2, e2, s2, r2) {
-    Q$1.toInnerPoint(t2, e2, H$2), Q$1.scaleOfInner(t2, H$2, s2, r2);
-  }, scaleOfInner(t2, e2, s2, r2 = s2) {
-    Q$1.translateInner(t2, e2.x, e2.y), Q$1.scale(t2, s2, r2), Q$1.translateInner(t2, -e2.x, -e2.y);
-  }, rotate(t2, e2) {
-    const { a: s2, b: r2, c: i2, d: n2 } = t2, o2 = F$3(e2 *= A$2), a2 = z$2(e2);
-    t2.a = s2 * o2 - r2 * a2, t2.b = s2 * a2 + r2 * o2, t2.c = i2 * o2 - n2 * a2, t2.d = i2 * a2 + n2 * o2;
-  }, rotateOfOuter(t2, e2, s2) {
-    Q$1.toInnerPoint(t2, e2, H$2), Q$1.rotateOfInner(t2, H$2, s2);
-  }, rotateOfInner(t2, e2, s2) {
-    Q$1.translateInner(t2, e2.x, e2.y), Q$1.rotate(t2, s2), Q$1.translateInner(t2, -e2.x, -e2.y);
-  }, skew(t2, e2, s2) {
-    const { a: r2, b: i2, c: n2, d: o2 } = t2;
-    s2 && (s2 *= A$2, t2.a = r2 + n2 * s2, t2.b = i2 + o2 * s2), e2 && (e2 *= A$2, t2.c = n2 + r2 * e2, t2.d = o2 + i2 * e2);
-  }, skewOfOuter(t2, e2, s2, r2) {
-    Q$1.toInnerPoint(t2, e2, H$2), Q$1.skewOfInner(t2, H$2, s2, r2);
-  }, skewOfInner(t2, e2, s2, r2 = 0) {
-    Q$1.translateInner(t2, e2.x, e2.y), Q$1.skew(t2, s2, r2), Q$1.translateInner(t2, -e2.x, -e2.y);
-  }, multiply(t2, e2) {
-    const { a: s2, b: r2, c: i2, d: n2, e: o2, f: a2 } = t2;
-    t2.a = e2.a * s2 + e2.b * i2, t2.b = e2.a * r2 + e2.b * n2, t2.c = e2.c * s2 + e2.d * i2, t2.d = e2.c * r2 + e2.d * n2, t2.e = e2.e * s2 + e2.f * i2 + o2, t2.f = e2.e * r2 + e2.f * n2 + a2;
-  }, multiplyParent(t2, e2, r2, i2, n2) {
-    const { e: o2, f: a2 } = t2;
-    if (r2 || (r2 = t2), s(i2) && (i2 = 1 !== t2.a || t2.b || t2.c || 1 !== t2.d), i2) {
-      const { a: s2, b: i3, c: o3, d: a3 } = t2;
-      r2.a = s2 * e2.a + i3 * e2.c, r2.b = s2 * e2.b + i3 * e2.d, r2.c = o3 * e2.a + a3 * e2.c, r2.d = o3 * e2.b + a3 * e2.d, n2 && (r2.scaleX = e2.scaleX * n2.scaleX, r2.scaleY = e2.scaleY * n2.scaleY);
-    } else r2.a = e2.a, r2.b = e2.b, r2.c = e2.c, r2.d = e2.d, n2 && (r2.scaleX = e2.scaleX, r2.scaleY = e2.scaleY);
-    r2.e = o2 * e2.a + a2 * e2.c + e2.e, r2.f = o2 * e2.b + a2 * e2.d + e2.f;
-  }, divide(t2, e2) {
-    Q$1.multiply(t2, Q$1.tempInvert(e2));
-  }, divideParent(t2, e2) {
-    Q$1.multiplyParent(t2, Q$1.tempInvert(e2));
-  }, tempInvert(t2) {
-    const { tempMatrix: e2 } = Q$1;
-    return Q$1.copy(e2, t2), Q$1.invert(e2), e2;
-  }, invert(t2) {
-    const { a: e2, b: s2, c: r2, d: i2, e: n2, f: o2 } = t2;
-    if (s2 || r2) {
-      const a2 = 1 / (e2 * i2 - s2 * r2);
-      t2.a = i2 * a2, t2.b = -s2 * a2, t2.c = -r2 * a2, t2.d = e2 * a2, t2.e = -(n2 * i2 - o2 * r2) * a2, t2.f = -(o2 * e2 - n2 * s2) * a2;
-    } else if (1 === e2 && 1 === i2) t2.e = -n2, t2.f = -o2;
-    else {
-      const s3 = 1 / (e2 * i2);
-      t2.a = i2 * s3, t2.d = e2 * s3, t2.e = -n2 * i2 * s3, t2.f = -o2 * e2 * s3;
-    }
-  }, toOuterPoint(t2, e2, s2, r2) {
-    const { x: i2, y: n2 } = e2;
-    s2 || (s2 = e2), s2.x = i2 * t2.a + n2 * t2.c, s2.y = i2 * t2.b + n2 * t2.d, r2 || (s2.x += t2.e, s2.y += t2.f);
-  }, toInnerPoint(t2, e2, s2, r2) {
-    const { a: i2, b: n2, c: o2, d: a2 } = t2, h2 = 1 / (i2 * a2 - n2 * o2), { x: l2, y: d2 } = e2;
-    if (s2 || (s2 = e2), s2.x = (l2 * a2 - d2 * o2) * h2, s2.y = (d2 * i2 - l2 * n2) * h2, !r2) {
-      const { e: e3, f: r3 } = t2;
-      s2.x -= (e3 * a2 - r3 * o2) * h2, s2.y -= (r3 * i2 - e3 * n2) * h2;
-    }
-  }, setLayout(t2, e2, r2, i2, n2) {
-    const { x: o2, y: a2, scaleX: h2, scaleY: l2 } = e2;
-    if (s(n2) && (n2 = e2.rotation || e2.skewX || e2.skewY), n2) {
-      const { rotation: s2, skewX: r3, skewY: i3 } = e2, n3 = s2 * A$2, o3 = F$3(n3), a3 = z$2(n3);
-      if (r3 || i3) {
-        const e3 = r3 * A$2, s3 = i3 * A$2;
-        t2.a = (o3 + s3 * -a3) * h2, t2.b = (a3 + s3 * o3) * h2, t2.c = (e3 * o3 - a3) * l2, t2.d = (o3 + e3 * a3) * l2;
-      } else t2.a = o3 * h2, t2.b = a3 * h2, t2.c = -a3 * l2, t2.d = o3 * l2;
-    } else t2.a = h2, t2.b = 0, t2.c = 0, t2.d = l2;
-    t2.e = o2, t2.f = a2, (r2 = r2 || i2) && Q$1.translateInner(t2, -r2.x, -r2.y, !i2);
-  }, getLayout(t2, e2, s2, r2) {
-    const { a: i2, b: n2, c: o2, d: a2, e: h2, f: l2 } = t2;
-    let d2, c2, u2, _2, p2, f2 = h2, g2 = l2;
-    if (n2 || o2) {
-      const t3 = i2 * a2 - n2 * o2;
-      if (o2 && !r2) {
-        d2 = j$3(i2 * i2 + n2 * n2), c2 = t3 / d2;
-        const e4 = i2 / d2;
-        u2 = n2 > 0 ? U$1(e4) : -U$1(e4);
-      } else {
-        c2 = j$3(o2 * o2 + a2 * a2), d2 = t3 / c2;
-        const e4 = o2 / c2;
-        u2 = N$3 - (a2 > 0 ? U$1(-e4) : -U$1(e4));
-      }
-      const e3 = V$2(F$3(u2)), s3 = z$2(u2);
-      d2 = V$2(d2), c2 = V$2(c2), _2 = e3 ? V$2((o2 / c2 + s3) / e3 / A$2, 9) : 0, p2 = e3 ? V$2((n2 / d2 - s3) / e3 / A$2, 9) : 0, u2 = V$2(u2 / A$2);
-    } else d2 = i2, c2 = a2, u2 = _2 = p2 = 0;
-    return (e2 = s2 || e2) && (f2 += e2.x * i2 + e2.y * o2, g2 += e2.x * n2 + e2.y * a2, s2 || (f2 -= e2.x, g2 -= e2.y)), { x: f2, y: g2, scaleX: d2, scaleY: c2, rotation: u2, skewX: _2, skewY: p2 };
-  }, withScale(t2, e2, s2 = e2) {
-    const r2 = t2;
-    if (!e2 || !s2) {
-      const { a: r3, b: i2, c: n2, d: o2 } = t2;
-      i2 || n2 ? s2 = (r3 * o2 - i2 * n2) / (e2 = j$3(r3 * r3 + i2 * i2)) : (e2 = r3, s2 = o2);
-    }
-    return r2.scaleX = e2, r2.scaleY = s2, r2;
-  }, reset(t2) {
-    Q$1.set(t2);
-  } }, Q$1 = q$1, { float: J$2 } = I$2, { toInnerPoint: Z$3, toOuterPoint: $$1 } = q$1, { sin: K$2, cos: tt$2, abs: et$2, sqrt: st$2, atan2: rt$2, min: it$2, round: nt$2 } = Math, ot$2 = { defaultPoint: { x: 0, y: 0 }, tempPoint: {}, tempRadiusPoint: {}, set(t2, e2 = 0, s2 = 0) {
-    t2.x = e2, t2.y = s2;
-  }, setRadius(t2, e2, r2) {
-    t2.radiusX = e2, t2.radiusY = s(r2) ? e2 : r2;
-  }, copy(t2, e2) {
-    t2.x = e2.x, t2.y = e2.y;
-  }, copyFrom(t2, e2, s2) {
-    t2.x = e2, t2.y = s2;
-  }, round(t2, e2) {
-    t2.x = e2 ? nt$2(t2.x - 0.5) + 0.5 : nt$2(t2.x), t2.y = e2 ? nt$2(t2.y - 0.5) + 0.5 : nt$2(t2.y);
-  }, move(t2, e2, s2) {
-    d(e2) ? (t2.x += e2.x, t2.y += e2.y) : (t2.x += e2, t2.y += s2);
-  }, scale(t2, e2, s2 = e2) {
-    t2.x && (t2.x *= e2), t2.y && (t2.y *= s2);
-  }, scaleOf(t2, e2, s2, r2 = s2) {
-    t2.x += (t2.x - e2.x) * (s2 - 1), t2.y += (t2.y - e2.y) * (r2 - 1);
-  }, rotate(t2, e2, s2) {
-    s2 || (s2 = at$2.defaultPoint);
-    const r2 = tt$2(e2 *= A$2), i2 = K$2(e2), n2 = t2.x - s2.x, o2 = t2.y - s2.y;
-    t2.x = s2.x + n2 * r2 - o2 * i2, t2.y = s2.y + n2 * i2 + o2 * r2;
-  }, tempToInnerOf(t2, e2) {
-    const { tempPoint: s2 } = at$2;
-    return lt$2(s2, t2), Z$3(e2, s2, s2), s2;
-  }, tempToOuterOf(t2, e2) {
-    const { tempPoint: s2 } = at$2;
-    return lt$2(s2, t2), $$1(e2, s2, s2), s2;
-  }, tempToInnerRadiusPointOf(t2, e2) {
-    const { tempRadiusPoint: s2 } = at$2;
-    return lt$2(s2, t2), at$2.toInnerRadiusPointOf(t2, e2, s2), s2;
-  }, copyRadiusPoint: (t2, e2, s2, r2) => (lt$2(t2, e2), dt$2(t2, s2, r2), t2), toInnerRadiusPointOf(t2, e2, s2) {
-    s2 || (s2 = t2), Z$3(e2, t2, s2), s2.radiusX = Math.abs(t2.radiusX / e2.scaleX), s2.radiusY = Math.abs(t2.radiusY / e2.scaleY);
-  }, toInnerOf(t2, e2, s2) {
-    Z$3(e2, t2, s2);
-  }, toOuterOf(t2, e2, s2) {
-    $$1(e2, t2, s2);
-  }, getCenter: (t2, e2) => ({ x: t2.x + (e2.x - t2.x) / 2, y: t2.y + (e2.y - t2.y) / 2 }), getCenterX: (t2, e2) => t2 + (e2 - t2) / 2, getCenterY: (t2, e2) => t2 + (e2 - t2) / 2, getDistance: (t2, e2) => ht$2(t2.x, t2.y, e2.x, e2.y), getDistanceFrom(t2, e2, s2, r2) {
-    const i2 = et$2(s2 - t2), n2 = et$2(r2 - e2);
-    return st$2(i2 * i2 + n2 * n2);
-  }, getMinDistanceFrom: (t2, e2, s2, r2, i2, n2) => it$2(ht$2(t2, e2, s2, r2), ht$2(s2, r2, i2, n2)), getAngle: (t2, e2) => ct$2(t2, e2) / A$2, getRotation: (t2, e2, s2, r2) => (r2 || (r2 = e2), at$2.getRadianFrom(t2.x, t2.y, e2.x, e2.y, s2.x, s2.y, r2.x, r2.y) / A$2), getRadianFrom(t2, e2, r2, i2, n2, o2, a2, h2) {
-    s(a2) && (a2 = r2, h2 = i2);
-    const l2 = t2 - r2, d2 = e2 - i2, c2 = n2 - a2, u2 = o2 - h2;
-    return Math.atan2(l2 * u2 - d2 * c2, l2 * c2 + d2 * u2);
-  }, getAtan2: (t2, e2) => rt$2(e2.y - t2.y, e2.x - t2.x), getDistancePoint(t2, e2, s2, r2, i2) {
-    const n2 = ct$2(t2, e2);
-    return i2 && (t2 = e2), r2 || (e2 = {}), e2.x = t2.x + tt$2(n2) * s2, e2.y = t2.y + K$2(n2) * s2, e2;
-  }, toNumberPoints(t2) {
-    let e2 = t2;
-    return d(t2[0]) && (e2 = [], t2.forEach((t3) => e2.push(t3.x, t3.y))), e2;
-  }, isSame: (t2, e2) => J$2(t2.x) === J$2(e2.x) && J$2(t2.y) === J$2(e2.y), reset(t2) {
-    at$2.reset(t2);
-  } }, at$2 = ot$2, { getDistanceFrom: ht$2, copy: lt$2, setRadius: dt$2, getAtan2: ct$2 } = at$2;
-  let ut$2 = class ut2 {
-    constructor(t2, e2) {
-      this.set(t2, e2);
-    }
-    set(t2, e2) {
-      return d(t2) ? ot$2.copy(this, t2) : ot$2.set(this, t2, e2), this;
-    }
-    get() {
-      const { x: t2, y: e2 } = this;
-      return { x: t2, y: e2 };
-    }
-    clone() {
-      return new ut2(this);
-    }
-    move(t2, e2) {
-      return ot$2.move(this, t2, e2), this;
-    }
-    scale(t2, e2) {
-      return ot$2.scale(this, t2, e2), this;
-    }
-    scaleOf(t2, e2, s2) {
-      return ot$2.scaleOf(this, t2, e2, s2), this;
-    }
-    rotate(t2, e2) {
-      return ot$2.rotate(this, t2, e2), this;
-    }
-    rotateOf(t2, e2) {
-      return ot$2.rotate(this, e2, t2), this;
-    }
-    getRotation(t2, e2, s2) {
-      return ot$2.getRotation(this, t2, e2, s2);
-    }
-    toInnerOf(t2, e2) {
-      return ot$2.toInnerOf(this, t2, e2), this;
-    }
-    toOuterOf(t2, e2) {
-      return ot$2.toOuterOf(this, t2, e2), this;
-    }
-    getCenter(t2) {
-      return new ut2(ot$2.getCenter(this, t2));
-    }
-    getDistance(t2) {
-      return ot$2.getDistance(this, t2);
-    }
-    getDistancePoint(t2, e2, s2, r2) {
-      return new ut2(ot$2.getDistancePoint(this, t2, e2, s2, r2));
-    }
-    getAngle(t2) {
-      return ot$2.getAngle(this, t2);
-    }
-    getAtan2(t2) {
-      return ot$2.getAtan2(this, t2);
-    }
-    isSame(t2) {
-      return ot$2.isSame(this, t2);
-    }
-    reset() {
-      return ot$2.reset(this), this;
-    }
-  };
-  const _t$2 = new ut$2();
-  let pt$2 = class pt2 {
-    constructor(t2, e2, s2, r2, i2, n2) {
-      this.set(t2, e2, s2, r2, i2, n2);
-    }
-    set(t2, e2, s2, r2, i2, n2) {
-      return d(t2) ? q$1.copy(this, t2) : q$1.set(this, t2, e2, s2, r2, i2, n2), this;
-    }
-    setWith(t2) {
-      return q$1.copy(this, t2), this.scaleX = t2.scaleX, this.scaleY = t2.scaleY, this;
-    }
-    get() {
-      const { a: t2, b: e2, c: s2, d: r2, e: i2, f: n2 } = this;
-      return { a: t2, b: e2, c: s2, d: r2, e: i2, f: n2 };
-    }
-    clone() {
-      return new pt2(this);
-    }
-    translate(t2, e2) {
-      return q$1.translate(this, t2, e2), this;
-    }
-    translateInner(t2, e2) {
-      return q$1.translateInner(this, t2, e2), this;
-    }
-    scale(t2, e2) {
-      return q$1.scale(this, t2, e2), this;
-    }
-    scaleWith(t2, e2) {
-      return q$1.scale(this, t2, e2), this.scaleX *= t2, this.scaleY *= e2 || t2, this;
-    }
-    pixelScale(t2) {
-      return q$1.pixelScale(this, t2), this;
-    }
-    scaleOfOuter(t2, e2, s2) {
-      return q$1.scaleOfOuter(this, t2, e2, s2), this;
-    }
-    scaleOfInner(t2, e2, s2) {
-      return q$1.scaleOfInner(this, t2, e2, s2), this;
-    }
-    rotate(t2) {
-      return q$1.rotate(this, t2), this;
-    }
-    rotateOfOuter(t2, e2) {
-      return q$1.rotateOfOuter(this, t2, e2), this;
-    }
-    rotateOfInner(t2, e2) {
-      return q$1.rotateOfInner(this, t2, e2), this;
-    }
-    skew(t2, e2) {
-      return q$1.skew(this, t2, e2), this;
-    }
-    skewOfOuter(t2, e2, s2) {
-      return q$1.skewOfOuter(this, t2, e2, s2), this;
-    }
-    skewOfInner(t2, e2, s2) {
-      return q$1.skewOfInner(this, t2, e2, s2), this;
-    }
-    multiply(t2) {
-      return q$1.multiply(this, t2), this;
-    }
-    multiplyParent(t2) {
-      return q$1.multiplyParent(this, t2), this;
-    }
-    divide(t2) {
-      return q$1.divide(this, t2), this;
-    }
-    divideParent(t2) {
-      return q$1.divideParent(this, t2), this;
-    }
-    invert() {
-      return q$1.invert(this), this;
-    }
-    invertWith() {
-      return q$1.invert(this), this.scaleX = 1 / this.scaleX, this.scaleY = 1 / this.scaleY, this;
-    }
-    toOuterPoint(t2, e2, s2) {
-      q$1.toOuterPoint(this, t2, e2, s2);
-    }
-    toInnerPoint(t2, e2, s2) {
-      q$1.toInnerPoint(this, t2, e2, s2);
-    }
-    setLayout(t2, e2, s2) {
-      return q$1.setLayout(this, t2, e2, s2), this;
-    }
-    getLayout(t2, e2, s2) {
-      return q$1.getLayout(this, t2, e2, s2);
-    }
-    withScale(t2, e2) {
-      return q$1.withScale(this, t2, e2);
-    }
-    reset() {
-      q$1.reset(this);
-    }
-  };
-  const ft$2 = new pt$2(), gt$2 = { tempPointBounds: {}, setPoint(t2, e2, s2) {
-    t2.minX = t2.maxX = e2, t2.minY = t2.maxY = s2;
-  }, addPoint(t2, e2, s2) {
-    t2.minX = e2 < t2.minX ? e2 : t2.minX, t2.minY = s2 < t2.minY ? s2 : t2.minY, t2.maxX = e2 > t2.maxX ? e2 : t2.maxX, t2.maxY = s2 > t2.maxY ? s2 : t2.maxY;
-  }, addBounds(t2, e2, s2, r2, i2) {
-    yt$2(t2, e2, s2), yt$2(t2, e2 + r2, s2 + i2);
-  }, copy(t2, e2) {
-    t2.minX = e2.minX, t2.minY = e2.minY, t2.maxX = e2.maxX, t2.maxY = e2.maxY;
-  }, addPointBounds(t2, e2) {
-    t2.minX = e2.minX < t2.minX ? e2.minX : t2.minX, t2.minY = e2.minY < t2.minY ? e2.minY : t2.minY, t2.maxX = e2.maxX > t2.maxX ? e2.maxX : t2.maxX, t2.maxY = e2.maxY > t2.maxY ? e2.maxY : t2.maxY;
-  }, toBounds(t2, e2) {
-    e2.x = t2.minX, e2.y = t2.minY, e2.width = t2.maxX - t2.minX, e2.height = t2.maxY - t2.minY;
-  } }, { addPoint: yt$2 } = gt$2;
-  var mt$3, xt$2;
-  !(function(t2) {
-    t2[t2.top = 0] = "top", t2[t2.right = 1] = "right", t2[t2.bottom = 2] = "bottom", t2[t2.left = 3] = "left";
-  })(mt$3 || (mt$3 = {})), (function(t2) {
-    t2[t2.topLeft = 0] = "topLeft", t2[t2.top = 1] = "top", t2[t2.topRight = 2] = "topRight", t2[t2.right = 3] = "right", t2[t2.bottomRight = 4] = "bottomRight", t2[t2.bottom = 5] = "bottom", t2[t2.bottomLeft = 6] = "bottomLeft", t2[t2.left = 7] = "left", t2[t2.center = 8] = "center", t2[t2["top-left"] = 0] = "top-left", t2[t2["top-right"] = 2] = "top-right", t2[t2["bottom-right"] = 4] = "bottom-right", t2[t2["bottom-left"] = 6] = "bottom-left";
-  })(xt$2 || (xt$2 = {}));
-  const wt$2 = [{ x: 0, y: 0 }, { x: 0.5, y: 0 }, { x: 1, y: 0 }, { x: 1, y: 0.5 }, { x: 1, y: 1 }, { x: 0.5, y: 1 }, { x: 0, y: 1 }, { x: 0, y: 0.5 }, { x: 0.5, y: 0.5 }];
-  wt$2.forEach((t2) => t2.type = "percent");
-  const bt$3 = { directionData: wt$2, tempPoint: {}, get: Bt$3, toPoint(t2, e2, s2, r2, i2, n2) {
-    const o2 = Bt$3(t2);
-    s2.x = o2.x, s2.y = o2.y, "percent" === o2.type && (s2.x *= e2.width, s2.y *= e2.height, i2 && (n2 || (s2.x -= i2.x, s2.y -= i2.y), o2.x && (s2.x -= 1 === o2.x ? i2.width : 0.5 === o2.x ? o2.x * i2.width : 0), o2.y && (s2.y -= 1 === o2.y ? i2.height : 0.5 === o2.y ? o2.y * i2.height : 0))), r2 || (s2.x += e2.x, s2.y += e2.y);
-  }, getPoint: (t2, e2, s2) => (s2 || (s2 = {}), bt$3.toPoint(t2, e2, s2, true), s2) };
-  function Bt$3(t2) {
-    return i(t2) ? wt$2[xt$2[t2]] : t2;
-  }
-  const { toPoint: vt$2 } = bt$3, kt$3 = { toPoint(t2, e2, s2, r2, i2, n2) {
-    vt$2(t2, s2, r2, i2, e2, n2);
-  } }, { tempPointBounds: Ct$3, setPoint: Ot$3, addPoint: Tt$3, toBounds: Pt$3 } = gt$2, { toOuterPoint: St$3 } = q$1, { float: Lt$3, fourNumber: Rt$3 } = I$2, { floor: Et$3, ceil: It$3 } = Math;
-  let Mt$3, At$3, Wt$3, Nt$3;
-  const Yt$3 = {}, Dt$3 = {}, Xt$3 = {}, zt$2 = { tempBounds: Xt$3, set(t2, e2 = 0, s2 = 0, r2 = 0, i2 = 0) {
-    t2.x = e2, t2.y = s2, t2.width = r2, t2.height = i2;
-  }, copy(t2, e2) {
-    t2.x = e2.x, t2.y = e2.y, t2.width = e2.width, t2.height = e2.height;
-  }, copyAndSpread(t2, e2, s2, r2, i2) {
-    const { x: n2, y: o2, width: a2, height: h2 } = e2;
-    if (l(s2)) {
-      const e3 = Rt$3(s2);
-      r2 ? Ft$3.set(t2, n2 + e3[3], o2 + e3[0], a2 - e3[1] - e3[3], h2 - e3[2] - e3[0]) : Ft$3.set(t2, n2 - e3[3], o2 - e3[0], a2 + e3[1] + e3[3], h2 + e3[2] + e3[0]);
-    } else r2 && (s2 = -s2), Ft$3.set(t2, n2 - s2, o2 - s2, a2 + 2 * s2, h2 + 2 * s2);
-    i2 && ("width" === i2 ? (t2.y = o2, t2.height = h2) : (t2.x = n2, t2.width = a2));
-  }, minX: (t2) => t2.width > 0 ? t2.x : t2.x + t2.width, minY: (t2) => t2.height > 0 ? t2.y : t2.y + t2.height, maxX: (t2) => t2.width > 0 ? t2.x + t2.width : t2.x, maxY: (t2) => t2.height > 0 ? t2.y + t2.height : t2.y, move(t2, e2, s2) {
-    t2.x += e2, t2.y += s2;
-  }, scroll(t2, e2) {
-    t2.x += e2.scrollX, t2.y += e2.scrollY;
-  }, getByMove: (t2, e2, s2) => (t2 = Object.assign({}, t2), Ft$3.move(t2, e2, s2), t2), toOffsetOutBounds(t2, e2, s2) {
-    e2 ? jt$3(e2, t2) : e2 = t2, s2 || (s2 = t2), e2.offsetX = Ft$3.maxX(s2), e2.offsetY = Ft$3.maxY(s2), Ft$3.move(e2, -e2.offsetX, -e2.offsetY);
-  }, scale(t2, e2, s2 = e2, r2) {
-    r2 || ot$2.scale(t2, e2, s2), t2.width *= e2, t2.height *= s2;
-  }, scaleOf(t2, e2, s2, r2 = s2) {
-    ot$2.scaleOf(t2, e2, s2, r2), t2.width *= s2, t2.height *= r2;
-  }, tempToOuterOf: (t2, e2) => (Ft$3.copy(Xt$3, t2), Ft$3.toOuterOf(Xt$3, e2), Xt$3), getOuterOf: (t2, e2) => (t2 = Object.assign({}, t2), Ft$3.toOuterOf(t2, e2), t2), toOuterOf(t2, e2, s2) {
-    if (s2 || (s2 = t2), 0 === e2.b && 0 === e2.c) {
-      const { a: r2, d: i2, e: n2, f: o2 } = e2;
-      r2 > 0 ? (s2.width = t2.width * r2, s2.x = n2 + t2.x * r2) : (s2.width = t2.width * -r2, s2.x = n2 + t2.x * r2 - s2.width), i2 > 0 ? (s2.height = t2.height * i2, s2.y = o2 + t2.y * i2) : (s2.height = t2.height * -i2, s2.y = o2 + t2.y * i2 - s2.height);
-    } else Yt$3.x = t2.x, Yt$3.y = t2.y, St$3(e2, Yt$3, Dt$3), Ot$3(Ct$3, Dt$3.x, Dt$3.y), Yt$3.x = t2.x + t2.width, St$3(e2, Yt$3, Dt$3), Tt$3(Ct$3, Dt$3.x, Dt$3.y), Yt$3.y = t2.y + t2.height, St$3(e2, Yt$3, Dt$3), Tt$3(Ct$3, Dt$3.x, Dt$3.y), Yt$3.x = t2.x, St$3(e2, Yt$3, Dt$3), Tt$3(Ct$3, Dt$3.x, Dt$3.y), Pt$3(Ct$3, s2);
-  }, toInnerOf(t2, e2, s2) {
-    s2 || (s2 = t2), Ft$3.move(s2, -e2.e, -e2.f), Ft$3.scale(s2, 1 / e2.a, 1 / e2.d);
-  }, getFitMatrix(t2, e2, s2 = 1) {
-    const r2 = Math.min(s2, Ft$3.getFitScale(t2, e2));
-    return new pt$2(r2, 0, 0, r2, -e2.x * r2, -e2.y * r2);
-  }, getFitScale(t2, e2, s2) {
-    const r2 = t2.width / e2.width, i2 = t2.height / e2.height;
-    return s2 ? Math.max(r2, i2) : Math.min(r2, i2);
-  }, put(t2, e2, s2 = "center", r2 = 1, n2 = true, o2) {
-    o2 || (o2 = e2), i(r2) && (r2 = Ft$3.getFitScale(t2, e2, "cover" === r2)), Xt$3.width = n2 ? e2.width *= r2 : e2.width * r2, Xt$3.height = n2 ? e2.height *= r2 : e2.height * r2, kt$3.toPoint(s2, Xt$3, t2, o2, true, true);
-  }, getSpread(t2, e2, s2) {
-    const r2 = {};
-    return Ft$3.copyAndSpread(r2, t2, e2, false, s2), r2;
-  }, spread(t2, e2, s2) {
-    Ft$3.copyAndSpread(t2, t2, e2, false, s2);
-  }, shrink(t2, e2, s2) {
-    Ft$3.copyAndSpread(t2, t2, e2, true, s2);
-  }, ceil(t2) {
-    const { x: e2, y: s2 } = t2;
-    t2.x = Et$3(t2.x), t2.y = Et$3(t2.y), t2.width = e2 > t2.x ? It$3(t2.width + e2 - t2.x) : It$3(t2.width), t2.height = s2 > t2.y ? It$3(t2.height + s2 - t2.y) : It$3(t2.height);
-  }, unsign(t2) {
-    t2.width < 0 && (t2.x += t2.width, t2.width = -t2.width), t2.height < 0 && (t2.y += t2.height, t2.height = -t2.height);
-  }, float(t2, e2) {
-    t2.x = Lt$3(t2.x, e2), t2.y = Lt$3(t2.y, e2), t2.width = Lt$3(t2.width, e2), t2.height = Lt$3(t2.height, e2);
-  }, add(t2, e2, s2) {
-    Mt$3 = t2.x + t2.width, At$3 = t2.y + t2.height, Wt$3 = e2.x, Nt$3 = e2.y, s2 || (Wt$3 += e2.width, Nt$3 += e2.height), Mt$3 = Mt$3 > Wt$3 ? Mt$3 : Wt$3, At$3 = At$3 > Nt$3 ? At$3 : Nt$3, t2.x = t2.x < e2.x ? t2.x : e2.x, t2.y = t2.y < e2.y ? t2.y : e2.y, t2.width = Mt$3 - t2.x, t2.height = At$3 - t2.y;
-  }, addList(t2, e2) {
-    Ft$3.setListWithFn(t2, e2, void 0, true);
-  }, setList(t2, e2, s2 = false) {
-    Ft$3.setListWithFn(t2, e2, void 0, s2);
-  }, addListWithFn(t2, e2, s2) {
-    Ft$3.setListWithFn(t2, e2, s2, true);
-  }, setListWithFn(t2, e2, s2, r2 = false) {
-    let i2, n2 = true;
-    for (let o2 = 0, a2 = e2.length; o2 < a2; o2++) i2 = s2 ? s2(e2[o2], o2) : e2[o2], i2 && (i2.width || i2.height) && (n2 ? (n2 = false, r2 || jt$3(t2, i2)) : Ut$3(t2, i2));
-    n2 && Ft$3.reset(t2);
-  }, setPoints(t2, e2) {
-    e2.forEach((t3, e3) => 0 === e3 ? Ot$3(Ct$3, t3.x, t3.y) : Tt$3(Ct$3, t3.x, t3.y)), Pt$3(Ct$3, t2);
-  }, setPoint(t2, e2) {
-    Ft$3.set(t2, e2.x, e2.y);
-  }, addPoint(t2, e2) {
-    Ut$3(t2, e2, true);
-  }, getPoints(t2) {
-    const { x: e2, y: s2, width: r2, height: i2 } = t2;
-    return [{ x: e2, y: s2 }, { x: e2 + r2, y: s2 }, { x: e2 + r2, y: s2 + i2 }, { x: e2, y: s2 + i2 }];
-  }, hitRadiusPoint: (t2, e2, s2) => (s2 && (e2 = ot$2.tempToInnerRadiusPointOf(e2, s2)), e2.x >= t2.x - e2.radiusX && e2.x <= t2.x + t2.width + e2.radiusX && e2.y >= t2.y - e2.radiusY && e2.y <= t2.y + t2.height + e2.radiusY), hitPoint: (t2, e2, s2) => (s2 && (e2 = ot$2.tempToInnerOf(e2, s2)), e2.x >= t2.x && e2.x <= t2.x + t2.width && e2.y >= t2.y && e2.y <= t2.y + t2.height), hit: (t2, e2, s2) => (s2 && (e2 = Ft$3.tempToOuterOf(e2, s2)), !(t2.y + t2.height < e2.y || e2.y + e2.height < t2.y || t2.x + t2.width < e2.x || e2.x + e2.width < t2.x)), includes: (t2, e2, s2) => (s2 && (e2 = Ft$3.tempToOuterOf(e2, s2)), t2.x <= e2.x && t2.y <= e2.y && t2.x + t2.width >= e2.x + e2.width && t2.y + t2.height >= e2.y + e2.height), getIntersectData(t2, e2, s2) {
-    if (s2 && (e2 = Ft$3.tempToOuterOf(e2, s2)), !Ft$3.hit(t2, e2)) return { x: 0, y: 0, width: 0, height: 0 };
-    let { x: r2, y: i2, width: n2, height: o2 } = e2;
-    return Mt$3 = r2 + n2, At$3 = i2 + o2, Wt$3 = t2.x + t2.width, Nt$3 = t2.y + t2.height, r2 = r2 > t2.x ? r2 : t2.x, i2 = i2 > t2.y ? i2 : t2.y, Mt$3 = Mt$3 < Wt$3 ? Mt$3 : Wt$3, At$3 = At$3 < Nt$3 ? At$3 : Nt$3, n2 = Mt$3 - r2, o2 = At$3 - i2, { x: r2, y: i2, width: n2, height: o2 };
-  }, intersect(t2, e2, s2) {
-    Ft$3.copy(t2, Ft$3.getIntersectData(t2, e2, s2));
-  }, isSame: (t2, e2) => t2.x === e2.x && t2.y === e2.y && t2.width === e2.width && t2.height === e2.height, isEmpty: (t2) => 0 === t2.x && 0 === t2.y && 0 === t2.width && 0 === t2.height, hasSize: (t2) => t2.width && t2.height, reset(t2) {
-    Ft$3.set(t2);
-  } }, Ft$3 = zt$2, { add: Ut$3, copy: jt$3 } = Ft$3;
-  let Vt$3 = class Vt2 {
-    get minX() {
-      return zt$2.minX(this);
-    }
-    get minY() {
-      return zt$2.minY(this);
-    }
-    get maxX() {
-      return zt$2.maxX(this);
-    }
-    get maxY() {
-      return zt$2.maxY(this);
-    }
-    constructor(t2, e2, s2, r2) {
-      this.set(t2, e2, s2, r2);
-    }
-    set(t2, e2, s2, r2) {
-      return d(t2) ? zt$2.copy(this, t2) : zt$2.set(this, t2, e2, s2, r2), this;
-    }
-    get() {
-      const { x: t2, y: e2, width: s2, height: r2 } = this;
-      return { x: t2, y: e2, width: s2, height: r2 };
-    }
-    clone() {
-      return new Vt2(this);
-    }
-    move(t2, e2) {
-      return zt$2.move(this, t2, e2), this;
-    }
-    scale(t2, e2, s2) {
-      return zt$2.scale(this, t2, e2, s2), this;
-    }
-    scaleOf(t2, e2, s2) {
-      return zt$2.scaleOf(this, t2, e2, s2), this;
-    }
-    toOuterOf(t2, e2) {
-      return zt$2.toOuterOf(this, t2, e2), this;
-    }
-    toInnerOf(t2, e2) {
-      return zt$2.toInnerOf(this, t2, e2), this;
-    }
-    getFitMatrix(t2, e2) {
-      return zt$2.getFitMatrix(this, t2, e2);
-    }
-    put(t2, e2, s2) {
-      zt$2.put(this, t2, e2, s2);
-    }
-    spread(t2, e2) {
-      return zt$2.spread(this, t2, e2), this;
-    }
-    shrink(t2, e2) {
-      return zt$2.shrink(this, t2, e2), this;
-    }
-    ceil() {
-      return zt$2.ceil(this), this;
-    }
-    unsign() {
-      return zt$2.unsign(this), this;
-    }
-    float(t2) {
-      return zt$2.float(this, t2), this;
-    }
-    add(t2) {
-      return zt$2.add(this, t2), this;
-    }
-    addList(t2) {
-      return zt$2.setList(this, t2, true), this;
-    }
-    setList(t2) {
-      return zt$2.setList(this, t2), this;
-    }
-    addListWithFn(t2, e2) {
-      return zt$2.setListWithFn(this, t2, e2, true), this;
-    }
-    setListWithFn(t2, e2) {
-      return zt$2.setListWithFn(this, t2, e2), this;
-    }
-    setPoint(t2) {
-      return zt$2.setPoint(this, t2), this;
-    }
-    setPoints(t2) {
-      return zt$2.setPoints(this, t2), this;
-    }
-    addPoint(t2) {
-      return zt$2.addPoint(this, t2), this;
-    }
-    getPoints() {
-      return zt$2.getPoints(this);
-    }
-    hitPoint(t2, e2) {
-      return zt$2.hitPoint(this, t2, e2);
-    }
-    hitRadiusPoint(t2, e2) {
-      return zt$2.hitRadiusPoint(this, t2, e2);
-    }
-    hit(t2, e2) {
-      return zt$2.hit(this, t2, e2);
-    }
-    includes(t2, e2) {
-      return zt$2.includes(this, t2, e2);
-    }
-    intersect(t2, e2) {
-      return zt$2.intersect(this, t2, e2), this;
-    }
-    getIntersect(t2, e2) {
-      return new Vt2(zt$2.getIntersectData(this, t2, e2));
-    }
-    isSame(t2) {
-      return zt$2.isSame(this, t2);
-    }
-    isEmpty() {
-      return zt$2.isEmpty(this);
-    }
-    reset() {
-      zt$2.reset(this);
-    }
-  };
-  const Ht$3 = new Vt$3();
-  let Gt$2 = class Gt {
-    constructor(t2, e2, s2, r2, i2, n2) {
-      d(t2) ? this.copy(t2) : this.set(t2, e2, s2, r2, i2, n2);
-    }
-    set(t2 = 0, e2 = 0, s2 = 0, r2 = 0, i2 = 0, n2 = 0) {
-      this.top = t2, this.right = e2, this.bottom = s2, this.left = r2, this.width = i2, this.height = n2;
-    }
-    copy(t2) {
-      const { top: e2, right: s2, bottom: r2, left: i2, width: n2, height: o2 } = t2;
-      this.set(e2, s2, r2, i2, n2, o2);
-    }
-    getBoundsFrom(t2) {
-      const { top: e2, right: s2, bottom: r2, left: i2, width: n2, height: o2 } = this;
-      return new Vt$3(i2, e2, n2 || t2.width - i2 - s2, o2 || t2.height - e2 - r2);
-    }
-  };
-  const qt$2 = { number: (t2, e2) => d(t2) ? "percent" === t2.type ? t2.value * e2 : t2.value : t2 }, Qt$2 = { 0: 1, 1: 1, 2: 1, 3: 1, 4: 1, 5: 1, 6: 1, 7: 1, 8: 1, 9: 1, ".": 1, e: 1, E: 1 }, { floor: Jt$2, max: Zt$2 } = Math, $t$2 = { toURL(t2, e2) {
-    let s2 = encodeURIComponent(t2);
-    return "text" === e2 ? s2 = "data:text/plain;charset=utf-8," + s2 : "svg" === e2 && (s2 = "data:image/svg+xml," + s2), s2;
-  }, image: { hitCanvasSize: 100, maxCacheSize: 4096e3, maxPatternSize: 8847360, crossOrigin: "anonymous", isLarge: (t2, e2, s2, r2) => t2.width * t2.height * (e2 ? e2 * s2 : 1) > (r2 || Kt$3.maxCacheSize), isSuperLarge: (t2, e2, s2) => Kt$3.isLarge(t2, e2, s2, Kt$3.maxPatternSize), getRealURL(t2) {
-    const { prefix: e2, suffix: s2 } = Kt$3;
-    return !s2 || t2.startsWith("data:") || t2.startsWith("blob:") || (t2 += (t2.includes("?") ? "&" : "?") + s2), e2 && "/" === t2[0] && (t2 = e2 + t2), t2;
-  }, resize(t2, e2, s2, r2, i2, n2, o2, a2, h2, l2) {
-    const d2 = Zt$2(Jt$2(e2 + (r2 || 0)), 1), c2 = Zt$2(Jt$2(s2 + (i2 || 0)), 1);
-    let u2, _2, p2;
-    l2 && (p2 = qt$2.number(l2.offset, "x" === l2.type ? e2 : s2)) && ("x" === l2.type ? u2 = true : _2 = true);
-    const f2 = $t$2.origin.createCanvas(_2 ? 2 * d2 : d2, u2 ? 2 * c2 : c2), g2 = f2.getContext("2d");
-    if (a2 && (g2.globalAlpha = a2), g2.imageSmoothingEnabled = false !== o2, Kt$3.canUse(t2)) {
-      if (n2) {
-        const r3 = e2 / n2.width, i3 = s2 / n2.height;
-        g2.setTransform(r3, 0, 0, i3, -n2.x * r3, -n2.y * i3), g2.drawImage(t2, 0, 0, t2.width, t2.height);
-      } else g2.drawImage(t2, 0, 0, e2, s2);
-      p2 && (g2.drawImage(f2, 0, 0, d2, c2, u2 ? p2 - d2 : d2, u2 ? c2 : p2 - c2, d2, c2), g2.drawImage(f2, 0, 0, d2, c2, u2 ? p2 : d2, u2 ? c2 : p2, d2, c2));
-    }
-    return f2;
-  }, canUse: (t2) => t2 && t2.width && !t2.__closed, setPatternTransform(t2, e2, s2) {
-    try {
-      e2 && t2.setTransform && (t2.setTransform(e2), e2 = void 0);
-    } catch (t3) {
-    }
-    s2 && _$2.stintSet(s2, "transform", e2);
-  } } }, { image: Kt$3 } = $t$2, { randColor: te$2 } = I$2;
-  let ee$2 = class ee2 {
-    constructor(t2) {
-      this.repeatMap = {}, this.name = t2;
-    }
-    static get(t2) {
-      return new ee2(t2);
-    }
-    static set filter(t2) {
-      this.filterList = se$2(t2);
-    }
-    static set exclude(t2) {
-      this.excludeList = se$2(t2);
-    }
-    static drawRepaint(t2, e2) {
-      const s2 = te$2();
-      t2.fillWorld(e2, s2.replace("1)", ".1)")), t2.strokeWorld(e2, s2);
-    }
-    static drawBounds(t2, e2, s2) {
-      const r2 = "hit" === ee2.showBounds, i2 = t2.__nowWorld, n2 = te$2();
-      r2 && (e2.setWorld(i2), t2.__drawHitPath(e2), e2.fillStyle = n2.replace("1)", ".2)"), e2.fill()), e2.resetTransform(), e2.setStroke(n2, 2), r2 ? e2.stroke() : e2.strokeWorld(i2, n2);
-    }
-    log(...t2) {
-      if (re$2.enable) {
-        if (re$2.filterList.length && re$2.filterList.every((t3) => t3 !== this.name)) return;
-        if (re$2.excludeList.length && re$2.excludeList.some((t3) => t3 === this.name)) return;
-        console.log("%c" + this.name, "color:#21ae62", ...t2);
-      }
-    }
-    tip(...t2) {
-      re$2.enable && this.warn(...t2);
-    }
-    warn(...t2) {
-      re$2.showWarn && console.warn(this.name, ...t2);
-    }
-    repeat(t2, ...e2) {
-      this.repeatMap[t2] || (this.warn("repeat:" + t2, ...e2), this.repeatMap[t2] = true);
-    }
-    error(...t2) {
-      try {
-        throw new Error();
-      } catch (e2) {
-        console.error(this.name, ...t2, e2);
-      }
-    }
-  };
-  function se$2(t2) {
-    return t2 ? i(t2) && (t2 = [t2]) : t2 = [], t2;
-  }
-  ee$2.filterList = [], ee$2.excludeList = [], ee$2.showWarn = true;
-  const re$2 = ee$2, ie$2 = ee$2.get("RunTime"), ne$2 = { currentId: 0, currentName: "", idMap: {}, nameMap: {}, nameToIdMap: {}, start(t2, e2) {
-    const s2 = g$1.create(g$1.RUNTIME);
-    return oe$2.currentId = oe$2.idMap[s2] = e2 ? performance.now() : Date.now(), oe$2.currentName = oe$2.nameMap[s2] = t2, oe$2.nameToIdMap[t2] = s2, s2;
-  }, end(t2, e2) {
-    const s2 = oe$2.idMap[t2], r2 = oe$2.nameMap[t2], i2 = e2 ? (performance.now() - s2) / 1e3 : Date.now() - s2;
-    oe$2.idMap[t2] = oe$2.nameMap[t2] = oe$2.nameToIdMap[r2] = void 0, ie$2.log(r2, i2, "ms");
-  }, endOfName(t2, e2) {
-    const r2 = oe$2.nameToIdMap[t2];
-    s(r2) || oe$2.end(r2, e2);
-  } }, oe$2 = ne$2, ae$2 = [], he$2 = { list: {}, add(t2, ...e2) {
-    this.list[t2] = true, ae$2.push(...e2);
-  }, has(t2, e2) {
-    const s2 = this.list[t2];
-    return !s2 && e2 && this.need(t2), s2;
-  }, need(t2) {
-    console.error("please install and import plugin: " + (t2.includes("-x") ? "" : "@leafer-in/") + t2);
-  } };
-  setTimeout(() => ae$2.forEach((t2) => he$2.has(t2, true)));
-  const le$2 = { editor: (t2) => he$2.need("editor") }, de$2 = ee$2.get("UICreator"), ce$2 = { list: {}, register(t2) {
-    const { __tag: e2 } = t2.prototype;
-    ue$2[e2] && de$2.repeat(e2), ue$2[e2] = t2;
-  }, get(t2, e2, r2, i2, n2, o2) {
-    if (!ue$2[t2]) return void de$2.warn("not register " + t2);
-    const a2 = new ue$2[t2](e2);
-    return s(r2) || (a2.x = r2, i2 && (a2.y = i2), n2 && (a2.width = n2), o2 && (a2.height = o2)), a2;
-  } }, { list: ue$2 } = ce$2, _e$2 = ee$2.get("EventCreator"), pe$2 = { nameList: {}, register(t2) {
-    let e2;
-    Object.keys(t2).forEach((s2) => {
-      e2 = t2[s2], i(e2) && (fe$2[e2] && _e$2.repeat(e2), fe$2[e2] = t2);
-    });
-  }, changeName(t2, e2) {
-    const s2 = fe$2[t2];
-    if (s2) {
-      const r2 = Object.keys(s2).find((e3) => s2[e3] === t2);
-      r2 && (s2[r2] = e2, fe$2[e2] = s2);
-    }
-  }, has(t2) {
-    return !!this.nameList[t2];
-  }, get: (t2, ...e2) => new fe$2[t2](...e2) }, { nameList: fe$2 } = pe$2;
-  let ge$2 = class ge {
-    constructor() {
-      this.list = [];
-    }
-    add(t2) {
-      t2.manager = this, this.list.push(t2);
-    }
-    get(t2) {
-      let e2;
-      const { list: s2 } = this;
-      for (let r3 = 0, i2 = s2.length; r3 < i2; r3++) if (e2 = s2[r3], e2.recycled && e2.isSameSize(t2)) return e2.recycled = false, e2.manager || (e2.manager = this), e2;
-      const r2 = le$2.canvas(t2);
-      return this.add(r2), r2;
-    }
-    recycle(t2) {
-      t2.recycled = true;
-    }
-    clearRecycled() {
-      let t2;
-      const e2 = [];
-      for (let s2 = 0, r2 = this.list.length; s2 < r2; s2++) t2 = this.list[s2], t2.recycled ? t2.destroy() : e2.push(t2);
-      this.list = e2;
-    }
-    clear() {
-      this.list.forEach((t2) => {
-        t2.destroy();
-      }), this.list.length = 0;
-    }
-    destroy() {
-      this.clear();
-    }
-  };
-  function ye$2(t2, e2, s2, r2) {
-    var i2, n2 = arguments.length, o2 = n2 < 3 ? e2 : null === r2 ? r2 = Object.getOwnPropertyDescriptor(e2, s2) : r2;
-    if ("object" == typeof Reflect && "function" == typeof Reflect.decorate) o2 = Reflect.decorate(t2, e2, s2, r2);
-    else for (var a2 = t2.length - 1; a2 >= 0; a2--) (i2 = t2[a2]) && (o2 = (n2 < 3 ? i2(o2) : n2 > 3 ? i2(e2, s2, o2) : i2(e2, s2)) || o2);
-    return n2 > 3 && o2 && Object.defineProperty(e2, s2, o2), o2;
-  }
-  function me$2(t2, e2, s2, r2) {
-    return new (s2 || (s2 = Promise))(function(i2, n2) {
-      function o2(t3) {
-        try {
-          h2(r2.next(t3));
-        } catch (t4) {
-          n2(t4);
-        }
-      }
-      function a2(t3) {
-        try {
-          h2(r2.throw(t3));
-        } catch (t4) {
-          n2(t4);
-        }
-      }
-      function h2(t3) {
-        var e3;
-        t3.done ? i2(t3.value) : (e3 = t3.value, e3 instanceof s2 ? e3 : new s2(function(t4) {
-          t4(e3);
-        })).then(o2, a2);
-      }
-      h2((r2 = r2.apply(t2, [])).next());
-    });
-  }
-  function xe$2(t2) {
-    return (e2, s2) => {
-      t2 || (t2 = s2);
-      const r2 = { get() {
-        return this.context[t2];
-      }, set(e3) {
-        this.context[t2] = e3;
-      } };
-      "strokeCap" === s2 && (r2.set = function(e3) {
-        this.context[t2] = "none" === e3 ? "butt" : e3;
-      }), Object.defineProperty(e2, s2, r2);
-    };
-  }
-  "function" == typeof SuppressedError && SuppressedError;
-  const we$2 = [];
-  function be$2() {
-    return (t2, e2) => {
-      we$2.push(e2);
-    };
-  }
-  const Be$2 = [];
-  let ve$2 = class ve {
-    set blendMode(t2) {
-      "normal" === t2 && (t2 = "source-over"), this.context.globalCompositeOperation = t2;
-    }
-    get blendMode() {
-      return this.context.globalCompositeOperation;
-    }
-    set dashPattern(t2) {
-      this.context.setLineDash(t2 || Be$2);
-    }
-    get dashPattern() {
-      return this.context.getLineDash();
-    }
-    __bindContext() {
-      let t2;
-      we$2.forEach((e2) => {
-        t2 = this.context[e2], t2 && (this[e2] = t2.bind(this.context));
-      }), this.textBaseline = "alphabetic";
-    }
-    setTransform(t2, e2, s2, r2, i2, n2) {
-    }
-    resetTransform() {
-    }
-    getTransform() {
-    }
-    save() {
-    }
-    restore() {
-    }
-    transform(t2, e2, s2, r2, i2, n2) {
-      d(t2) ? this.context.transform(t2.a, t2.b, t2.c, t2.d, t2.e, t2.f) : this.context.transform(t2, e2, s2, r2, i2, n2);
-    }
-    translate(t2, e2) {
-    }
-    scale(t2, e2) {
-    }
-    rotate(t2) {
-    }
-    fill(t2, e2) {
-    }
-    stroke(t2) {
-    }
-    clip(t2, e2) {
-    }
-    fillRect(t2, e2, s2, r2) {
-    }
-    strokeRect(t2, e2, s2, r2) {
-    }
-    clearRect(t2, e2, s2, r2) {
-    }
-    drawImage(t2, e2, s2, r2, i2, n2, o2, a2, h2) {
-      switch (arguments.length) {
-        case 9:
-          if (e2 < 0) {
-            const t3 = -e2 / r2 * a2;
-            r2 += e2, e2 = 0, n2 += t3, a2 -= t3;
-          }
-          if (s2 < 0) {
-            const t3 = -s2 / i2 * h2;
-            i2 += s2, s2 = 0, o2 += t3, h2 -= t3;
-          }
-          this.context.drawImage(t2, e2, s2, r2, i2, n2, o2, a2, h2);
-          break;
-        case 5:
-          this.context.drawImage(t2, e2, s2, r2, i2);
-          break;
-        case 3:
-          this.context.drawImage(t2, e2, s2);
-      }
-    }
-    beginPath() {
-    }
-    moveTo(t2, e2) {
-    }
-    lineTo(t2, e2) {
-    }
-    bezierCurveTo(t2, e2, s2, r2, i2, n2) {
-    }
-    quadraticCurveTo(t2, e2, s2, r2) {
-    }
-    closePath() {
-    }
-    arc(t2, e2, s2, r2, i2, n2) {
-    }
-    arcTo(t2, e2, s2, r2, i2) {
-    }
-    ellipse(t2, e2, s2, r2, i2, n2, o2, a2) {
-    }
-    rect(t2, e2, s2, r2) {
-    }
-    roundRect(t2, e2, s2, r2, i2) {
-    }
-    createConicGradient(t2, e2, s2) {
-    }
-    createLinearGradient(t2, e2, s2, r2) {
-    }
-    createPattern(t2, e2) {
-    }
-    createRadialGradient(t2, e2, s2, r2, i2, n2) {
-    }
-    fillText(t2, e2, s2, r2) {
-    }
-    measureText(t2) {
-    }
-    strokeText(t2, e2, s2, r2) {
-    }
-    destroy() {
-      this.context = null;
-    }
-  };
-  ye$2([xe$2("imageSmoothingEnabled")], ve$2.prototype, "smooth", void 0), ye$2([xe$2("imageSmoothingQuality")], ve$2.prototype, "smoothLevel", void 0), ye$2([xe$2("globalAlpha")], ve$2.prototype, "opacity", void 0), ye$2([xe$2()], ve$2.prototype, "fillStyle", void 0), ye$2([xe$2()], ve$2.prototype, "strokeStyle", void 0), ye$2([xe$2("lineWidth")], ve$2.prototype, "strokeWidth", void 0), ye$2([xe$2("lineCap")], ve$2.prototype, "strokeCap", void 0), ye$2([xe$2("lineJoin")], ve$2.prototype, "strokeJoin", void 0), ye$2([xe$2("lineDashOffset")], ve$2.prototype, "dashOffset", void 0), ye$2([xe$2()], ve$2.prototype, "miterLimit", void 0), ye$2([xe$2()], ve$2.prototype, "shadowBlur", void 0), ye$2([xe$2()], ve$2.prototype, "shadowColor", void 0), ye$2([xe$2()], ve$2.prototype, "shadowOffsetX", void 0), ye$2([xe$2()], ve$2.prototype, "shadowOffsetY", void 0), ye$2([xe$2()], ve$2.prototype, "filter", void 0), ye$2([xe$2()], ve$2.prototype, "font", void 0), ye$2([xe$2()], ve$2.prototype, "fontKerning", void 0), ye$2([xe$2()], ve$2.prototype, "fontStretch", void 0), ye$2([xe$2()], ve$2.prototype, "fontVariantCaps", void 0), ye$2([xe$2()], ve$2.prototype, "textAlign", void 0), ye$2([xe$2()], ve$2.prototype, "textBaseline", void 0), ye$2([xe$2()], ve$2.prototype, "textRendering", void 0), ye$2([xe$2()], ve$2.prototype, "wordSpacing", void 0), ye$2([xe$2()], ve$2.prototype, "letterSpacing", void 0), ye$2([xe$2()], ve$2.prototype, "direction", void 0), ye$2([be$2()], ve$2.prototype, "setTransform", null), ye$2([be$2()], ve$2.prototype, "resetTransform", null), ye$2([be$2()], ve$2.prototype, "getTransform", null), ye$2([be$2()], ve$2.prototype, "save", null), ye$2([be$2()], ve$2.prototype, "restore", null), ye$2([be$2()], ve$2.prototype, "translate", null), ye$2([be$2()], ve$2.prototype, "scale", null), ye$2([be$2()], ve$2.prototype, "rotate", null), ye$2([be$2()], ve$2.prototype, "fill", null), ye$2([be$2()], ve$2.prototype, "stroke", null), ye$2([be$2()], ve$2.prototype, "clip", null), ye$2([be$2()], ve$2.prototype, "fillRect", null), ye$2([be$2()], ve$2.prototype, "strokeRect", null), ye$2([be$2()], ve$2.prototype, "clearRect", null), ye$2([be$2()], ve$2.prototype, "beginPath", null), ye$2([be$2()], ve$2.prototype, "moveTo", null), ye$2([be$2()], ve$2.prototype, "lineTo", null), ye$2([be$2()], ve$2.prototype, "bezierCurveTo", null), ye$2([be$2()], ve$2.prototype, "quadraticCurveTo", null), ye$2([be$2()], ve$2.prototype, "closePath", null), ye$2([be$2()], ve$2.prototype, "arc", null), ye$2([be$2()], ve$2.prototype, "arcTo", null), ye$2([be$2()], ve$2.prototype, "ellipse", null), ye$2([be$2()], ve$2.prototype, "rect", null), ye$2([be$2()], ve$2.prototype, "roundRect", null), ye$2([be$2()], ve$2.prototype, "createConicGradient", null), ye$2([be$2()], ve$2.prototype, "createLinearGradient", null), ye$2([be$2()], ve$2.prototype, "createPattern", null), ye$2([be$2()], ve$2.prototype, "createRadialGradient", null), ye$2([be$2()], ve$2.prototype, "fillText", null), ye$2([be$2()], ve$2.prototype, "measureText", null), ye$2([be$2()], ve$2.prototype, "strokeText", null);
-  const { copy: ke$2, multiplyParent: Ce$2, pixelScale: Oe$2 } = q$1, { round: Te$2 } = Math, Pe$2 = new Vt$3(), Se$2 = new Vt$3(), Le$2 = { width: 1, height: 1, pixelRatio: 1 }, Re$2 = ["width", "height", "pixelRatio"];
-  let Ee$2 = class Ee extends ve$2 {
-    get width() {
-      return this.size.width;
-    }
-    get height() {
-      return this.size.height;
-    }
-    get pixelRatio() {
-      return this.size.pixelRatio;
-    }
-    get pixelWidth() {
-      return this.width * this.pixelRatio || 0;
-    }
-    get pixelHeight() {
-      return this.height * this.pixelRatio || 0;
-    }
-    get pixelSnap() {
-      return this.config.pixelSnap;
-    }
-    set pixelSnap(t2) {
-      this.config.pixelSnap = t2;
-    }
-    get allowBackgroundColor() {
-      return this.view && this.parentView;
-    }
-    constructor(t2, e2) {
-      super(), this.size = {}, this.worldTransform = {}, t2 || (t2 = Le$2), this.manager = e2, this.innerId = g$1.create(g$1.CNAVAS);
-      const { width: s2, height: r2, pixelRatio: i2 } = t2;
-      this.autoLayout = !s2 || !r2, this.size.pixelRatio = i2 || $t$2.devicePixelRatio, this.config = t2, this.init();
-    }
-    init() {
-    }
-    __createContext() {
-      const { view: t2 } = this, { contextSettings: e2 } = this.config;
-      this.context = e2 ? t2.getContext("2d", e2) : t2.getContext("2d"), this.__bindContext();
-    }
-    export(t2, e2) {
-    }
-    toBlob(t2, e2) {
-    }
-    toDataURL(t2, e2) {
-    }
-    saveAs(t2, e2) {
-    }
-    resize(t2, e2 = true) {
-      if (this.isSameSize(t2)) return;
-      let s2;
-      this.context && !this.unreal && e2 && this.width && (s2 = this.getSameCanvas(), s2.copyWorld(this));
-      const r2 = this.size;
-      _$2.copyAttrs(r2, t2, Re$2), Re$2.forEach((t3) => r2[t3] || (r2[t3] = 1)), this.bounds = new Vt$3(0, 0, this.width, this.height), this.updateViewSize(), this.updateClientBounds(), this.context && (this.smooth = this.config.smooth, !this.unreal && s2 && (this.clearWorld(s2.bounds), this.copyWorld(s2), s2.recycle()));
-    }
-    updateViewSize() {
-    }
-    updateClientBounds() {
-    }
-    getClientBounds(t2) {
-      return t2 && this.updateClientBounds(), this.clientBounds || this.bounds;
-    }
-    startAutoLayout(t2, e2) {
-    }
-    stopAutoLayout() {
-    }
-    setCursor(t2) {
-    }
-    setWorld(t2, e2) {
-      const { pixelRatio: s2, pixelSnap: r2 } = this, i2 = this.worldTransform;
-      e2 && Ce$2(t2, e2, i2), Oe$2(t2, s2, i2), r2 && !t2.ignorePixelSnap && (t2.half && t2.half * s2 % 2 ? (i2.e = Te$2(i2.e - 0.5) + 0.5, i2.f = Te$2(i2.f - 0.5) + 0.5) : (i2.e = Te$2(i2.e), i2.f = Te$2(i2.f))), this.setTransform(i2.a, i2.b, i2.c, i2.d, i2.e, i2.f);
-    }
-    useWorldTransform(t2) {
-      t2 && (this.worldTransform = t2);
-      const e2 = this.worldTransform;
-      e2 && this.setTransform(e2.a, e2.b, e2.c, e2.d, e2.e, e2.f);
-    }
-    setStroke(t2, e2, s2, r2) {
-      e2 && (this.strokeWidth = e2), t2 && (this.strokeStyle = t2), s2 && this.setStrokeOptions(s2, r2);
-    }
-    setStrokeOptions(t2, e2) {
-      let { strokeCap: r2, strokeJoin: i2, dashPattern: n2, dashOffset: o2, miterLimit: a2 } = t2;
-      e2 && (e2.strokeCap && (r2 = e2.strokeCap), e2.strokeJoin && (i2 = e2.strokeJoin), s(e2.dashPattern) || (n2 = e2.dashPattern), s(e2.dashOffset) || (o2 = e2.dashOffset), e2.miterLimit && (a2 = e2.miterLimit)), this.strokeCap = r2, this.strokeJoin = i2, this.dashPattern = n2, this.dashOffset = o2, this.miterLimit = a2;
-    }
-    saveBlendMode(t2) {
-      this.savedBlendMode = this.blendMode, this.blendMode = t2;
-    }
-    restoreBlendMode() {
-      this.blendMode = this.savedBlendMode;
-    }
-    hitFill(t2, e2) {
-      return true;
-    }
-    hitStroke(t2, e2) {
-      return true;
-    }
-    hitPixel(t2, e2, s2 = 1) {
-      return true;
-    }
-    setWorldShadow(t2, e2, s2, r2) {
-      const { pixelRatio: i2 } = this;
-      this.shadowOffsetX = t2 * i2, this.shadowOffsetY = e2 * i2, this.shadowBlur = s2 * i2, this.shadowColor = r2 || "black";
-    }
-    setWorldBlur(t2) {
-      const { pixelRatio: e2 } = this;
-      this.filter = `blur(${t2 * e2}px)`;
-    }
-    copyWorld(t2, e2, s2, r2, i2) {
-      r2 && (this.blendMode = r2), e2 ? (this.setTempPixelBounds(e2, i2), s2 ? (this.setTempPixelBounds2(s2, i2), s2 = Se$2) : s2 = Pe$2, this.drawImage(t2.view, Pe$2.x, Pe$2.y, Pe$2.width, Pe$2.height, s2.x, s2.y, s2.width, s2.height)) : this.drawImage(t2.view, 0, 0), r2 && (this.blendMode = "source-over");
-    }
-    copyWorldToInner(t2, e2, s2, r2, i2) {
-      e2.b || e2.c ? (this.save(), this.resetTransform(), this.copyWorld(t2, e2, zt$2.tempToOuterOf(s2, e2), r2, i2), this.restore()) : (r2 && (this.blendMode = r2), this.setTempPixelBounds(e2, i2), this.drawImage(t2.view, Pe$2.x, Pe$2.y, Pe$2.width, Pe$2.height, s2.x, s2.y, s2.width, s2.height), r2 && (this.blendMode = "source-over"));
-    }
-    copyWorldByReset(t2, e2, s2, r2, i2, n2) {
-      this.resetTransform(), this.copyWorld(t2, e2, s2, r2, n2), i2 || this.useWorldTransform();
-    }
-    useGrayscaleAlpha(t2) {
-      let e2, s2;
-      this.setTempPixelBounds(t2, true, true);
-      const { context: r2 } = this, i2 = r2.getImageData(Pe$2.x, Pe$2.y, Pe$2.width, Pe$2.height), { data: n2 } = i2;
-      for (let t3 = 0, r3 = n2.length; t3 < r3; t3 += 4) s2 = 0.299 * n2[t3] + 0.587 * n2[t3 + 1] + 0.114 * n2[t3 + 2], (e2 = n2[t3 + 3]) && (n2[t3 + 3] = 255 === e2 ? s2 : e2 * (s2 / 255));
-      r2.putImageData(i2, Pe$2.x, Pe$2.y);
-    }
-    useMask(t2, e2, s2) {
-      this.copyWorld(t2, e2, s2, "destination-in");
-    }
-    useEraser(t2, e2, s2) {
-      this.copyWorld(t2, e2, s2, "destination-out");
-    }
-    fillWorld(t2, e2, s2, r2) {
-      s2 && (this.blendMode = s2), this.fillStyle = e2, this.setTempPixelBounds(t2, r2), this.fillRect(Pe$2.x, Pe$2.y, Pe$2.width, Pe$2.height), s2 && (this.blendMode = "source-over");
-    }
-    strokeWorld(t2, e2, s2, r2) {
-      s2 && (this.blendMode = s2), this.strokeStyle = e2, this.setTempPixelBounds(t2, r2), this.strokeRect(Pe$2.x, Pe$2.y, Pe$2.width, Pe$2.height), s2 && (this.blendMode = "source-over");
-    }
-    clipWorld(t2, e2 = true) {
-      this.beginPath(), this.setTempPixelBounds(t2, e2), this.rect(Pe$2.x, Pe$2.y, Pe$2.width, Pe$2.height), this.clip();
-    }
-    clipUI(t2) {
-      t2.windingRule ? this.clip(t2.windingRule) : this.clip();
-    }
-    clearWorld(t2, e2 = true) {
-      this.setTempPixelBounds(t2, e2), this.clearRect(Pe$2.x, Pe$2.y, Pe$2.width, Pe$2.height);
-    }
-    clear() {
-      const { pixelRatio: t2 } = this;
-      this.clearRect(0, 0, this.width * t2 + 2, this.height * t2 + 2);
-    }
-    setTempPixelBounds(t2, e2, s2) {
-      this.copyToPixelBounds(Pe$2, t2, e2, s2);
-    }
-    setTempPixelBounds2(t2, e2, s2) {
-      this.copyToPixelBounds(Se$2, t2, e2, s2);
-    }
-    copyToPixelBounds(t2, e2, s2, r2) {
-      t2.set(e2), r2 && t2.intersect(this.bounds), t2.scale(this.pixelRatio), s2 && t2.ceil();
-    }
-    isSameSize(t2) {
-      return this.width === t2.width && this.height === t2.height && (!t2.pixelRatio || this.pixelRatio === t2.pixelRatio);
-    }
-    getSameCanvas(t2, e2) {
-      const { size: s2, pixelSnap: r2 } = this, i2 = this.manager ? this.manager.get(s2) : le$2.canvas(Object.assign({}, s2));
-      return i2.save(), t2 && (ke$2(i2.worldTransform, this.worldTransform), i2.useWorldTransform()), e2 && (i2.smooth = this.smooth), i2.pixelSnap !== r2 && (i2.pixelSnap = r2), i2;
-    }
-    recycle(t2) {
-      this.recycled || (this.restore(), t2 ? this.clearWorld(t2) : this.clear(), this.manager ? this.manager.recycle(this) : this.destroy());
-    }
-    updateRender(t2) {
-    }
-    unrealCanvas() {
-    }
-    destroy() {
-      this.manager = this.view = this.parentView = null;
-    }
-  };
-  const Ie$2 = { creator: {}, parse(t2, e2) {
-  }, convertToCanvasData(t2, e2) {
-  } }, Me$2 = { N: 21, D: 22, X: 23, G: 24, F: 25, O: 26, P: 27, U: 28 }, Ae$2 = Object.assign({ M: 1, m: 10, L: 2, l: 20, H: 3, h: 30, V: 4, v: 40, C: 5, c: 50, S: 6, s: 60, Q: 7, q: 70, T: 8, t: 80, A: 9, a: 90, Z: 11, z: 11, R: 12 }, Me$2), We$2 = { M: 3, m: 3, L: 3, l: 3, H: 2, h: 2, V: 2, v: 2, C: 7, c: 7, S: 5, s: 5, Q: 5, q: 5, T: 3, t: 3, A: 8, a: 8, Z: 1, z: 1, N: 5, D: 9, X: 6, G: 9, F: 5, O: 7, P: 4, U: 6 }, Ne$2 = { m: 10, l: 20, H: 3, h: 30, V: 4, v: 40, c: 50, S: 6, s: 60, q: 70, T: 8, t: 80, A: 9, a: 90 }, Ye$2 = Object.assign(Object.assign({}, Ne$2), Me$2), De$2 = Ae$2, Xe$2 = {};
-  for (let t2 in De$2) Xe$2[De$2[t2]] = t2;
-  const ze$2 = {};
-  for (let t2 in De$2) ze$2[De$2[t2]] = We$2[t2];
-  const Fe$2 = { drawRoundRect(t2, e2, s2, r2, i2, n2) {
-    const o2 = I$2.fourNumber(n2, Math.min(r2 / 2, i2 / 2)), a2 = e2 + r2, h2 = s2 + i2;
-    o2[0] ? t2.moveTo(e2 + o2[0], s2) : t2.moveTo(e2, s2), o2[1] ? t2.arcTo(a2, s2, a2, h2, o2[1]) : t2.lineTo(a2, s2), o2[2] ? t2.arcTo(a2, h2, e2, h2, o2[2]) : t2.lineTo(a2, h2), o2[3] ? t2.arcTo(e2, h2, e2, s2, o2[3]) : t2.lineTo(e2, h2), o2[0] ? t2.arcTo(e2, s2, a2, s2, o2[0]) : t2.lineTo(e2, s2);
-  } }, { sin: Ue$2, cos: je$2, hypot: Ve$2, atan2: He$2, ceil: Ge$2, abs: qe$2, PI: Qe$2, sqrt: Je$2, pow: Ze$2 } = Math, { setPoint: $e$2, addPoint: Ke$2 } = gt$2, { set: ts$1, toNumberPoints: es$1 } = ot$2, { M: ss$1, L: rs$1, C: is$1, Q: ns$1, Z: os$1 } = Ae$2, as$1 = {}, hs = { points(t2, e2, s2, r2) {
-    let i2 = es$1(e2);
-    if (t2.push(ss$1, i2[0], i2[1]), s2 && i2.length > 5) {
-      let e3, n2, o2, a2, h2, l2, d2, c2, u2, _2, p2, f2, g2, y2, m2, x2 = i2.length;
-      const w2 = true === s2 ? 0.5 : s2;
-      r2 && (i2 = [i2[x2 - 2], i2[x2 - 1], ...i2, i2[0], i2[1], i2[2], i2[3]], x2 = i2.length);
-      for (let s3 = 2; s3 < x2 - 2; s3 += 2) e3 = i2[s3 - 2], n2 = i2[s3 - 1], o2 = i2[s3], a2 = i2[s3 + 1], h2 = i2[s3 + 2], l2 = i2[s3 + 3], p2 = o2 - e3, f2 = a2 - n2, g2 = Je$2(Ze$2(p2, 2) + Ze$2(f2, 2)), y2 = Je$2(Ze$2(h2 - o2, 2) + Ze$2(l2 - a2, 2)), (g2 || y2) && (m2 = g2 + y2, g2 = w2 * g2 / m2, y2 = w2 * y2 / m2, h2 -= e3, l2 -= n2, d2 = o2 - g2 * h2, c2 = a2 - g2 * l2, 2 === s3 ? r2 || t2.push(ns$1, d2, c2, o2, a2) : (p2 || f2) && t2.push(is$1, u2, _2, d2, c2, o2, a2), u2 = o2 + y2 * h2, _2 = a2 + y2 * l2);
-      r2 || t2.push(ns$1, u2, _2, i2[x2 - 2], i2[x2 - 1]);
-    } else for (let e3 = 2, s3 = i2.length; e3 < s3; e3 += 2) t2.push(rs$1, i2[e3], i2[e3 + 1]);
-    r2 && t2.push(os$1);
-  }, rect(t2, e2, s2, r2, i2) {
-    Ie$2.creator.path = t2, Ie$2.creator.moveTo(e2, s2).lineTo(e2 + r2, s2).lineTo(e2 + r2, s2 + i2).lineTo(e2, s2 + i2).lineTo(e2, s2);
-  }, roundRect(t2, e2, s2, r2, i2, n2) {
-    Ie$2.creator.path = [], Fe$2.drawRoundRect(Ie$2.creator, e2, s2, r2, i2, n2), t2.push(...Ie$2.convertToCanvasData(Ie$2.creator.path, true));
-  }, arcTo(t2, e2, s2, r2, i2, n2, o2, a2, h2, l2, d2) {
-    const c2 = r2 - e2, u2 = i2 - s2, _2 = n2 - r2, p2 = o2 - i2;
-    let f2 = He$2(u2, c2), g2 = He$2(p2, _2);
-    const y2 = Ve$2(c2, u2), m2 = Ve$2(_2, p2);
-    let x2 = g2 - f2;
-    if (x2 < 0 && (x2 += W$2), y2 < 1e-12 || m2 < 1e-12 || x2 < 1e-12 || qe$2(x2 - Qe$2) < 1e-12) return t2 && t2.push(rs$1, r2, i2), h2 && ($e$2(h2, e2, s2), Ke$2(h2, r2, i2)), d2 && ts$1(d2, e2, s2), void (l2 && ts$1(l2, r2, i2));
-    const w2 = c2 * p2 - _2 * u2 < 0, b2 = w2 ? -1 : 1, B2 = a2 / je$2(x2 / 2), v2 = r2 + B2 * je$2(f2 + x2 / 2 + N$3 * b2), k2 = i2 + B2 * Ue$2(f2 + x2 / 2 + N$3 * b2);
-    return f2 -= N$3 * b2, g2 -= N$3 * b2, cs(t2, v2, k2, a2, a2, 0, f2 / A$2, g2 / A$2, w2, h2, l2, d2);
-  }, arc: (t2, e2, s2, r2, i2, n2, o2, a2, h2, l2) => cs(t2, e2, s2, r2, r2, 0, i2, n2, o2, a2, h2, l2), ellipse(t2, e2, s2, r2, i2, n2, o2, a2, h2, l2, d2, c2) {
-    const u2 = n2 * A$2, _2 = Ue$2(u2), p2 = je$2(u2);
-    let f2 = o2 * A$2, g2 = a2 * A$2;
-    f2 > Qe$2 && (f2 -= W$2), g2 < 0 && (g2 += W$2);
-    let y2 = g2 - f2;
-    y2 < 0 ? y2 += W$2 : y2 > W$2 && (y2 -= W$2), h2 && (y2 -= W$2);
-    const m2 = Ge$2(qe$2(y2 / N$3)), x2 = y2 / m2, w2 = Ue$2(x2 / 4), b2 = 8 / 3 * w2 * w2 / Ue$2(x2 / 2);
-    g2 = f2 + x2;
-    let B2, v2, k2, C2, O2, T2, P2, S2, L2 = je$2(f2), R2 = Ue$2(f2), E2 = k2 = p2 * r2 * L2 - _2 * i2 * R2, I2 = C2 = _2 * r2 * L2 + p2 * i2 * R2, M2 = e2 + k2, Y2 = s2 + C2;
-    t2 && t2.push(t2.length ? rs$1 : ss$1, M2, Y2), l2 && $e$2(l2, M2, Y2), c2 && ts$1(c2, M2, Y2);
-    for (let n3 = 0; n3 < m2; n3++) B2 = je$2(g2), v2 = Ue$2(g2), k2 = p2 * r2 * B2 - _2 * i2 * v2, C2 = _2 * r2 * B2 + p2 * i2 * v2, O2 = e2 + E2 - b2 * (p2 * r2 * R2 + _2 * i2 * L2), T2 = s2 + I2 - b2 * (_2 * r2 * R2 - p2 * i2 * L2), P2 = e2 + k2 + b2 * (p2 * r2 * v2 + _2 * i2 * B2), S2 = s2 + C2 + b2 * (_2 * r2 * v2 - p2 * i2 * B2), t2 && t2.push(is$1, O2, T2, P2, S2, e2 + k2, s2 + C2), l2 && ds(e2 + E2, s2 + I2, O2, T2, P2, S2, e2 + k2, s2 + C2, l2, true), E2 = k2, I2 = C2, L2 = B2, R2 = v2, f2 = g2, g2 += x2;
-    d2 && ts$1(d2, e2 + k2, s2 + C2);
-  }, quadraticCurveTo(t2, e2, s2, r2, i2, n2, o2) {
-    t2.push(is$1, (e2 + 2 * r2) / 3, (s2 + 2 * i2) / 3, (n2 + 2 * r2) / 3, (o2 + 2 * i2) / 3, n2, o2);
-  }, toTwoPointBoundsByQuadraticCurve(t2, e2, s2, r2, i2, n2, o2, a2) {
-    ds(t2, e2, (t2 + 2 * s2) / 3, (e2 + 2 * r2) / 3, (i2 + 2 * s2) / 3, (n2 + 2 * r2) / 3, i2, n2, o2, a2);
-  }, toTwoPointBounds(t2, e2, s2, r2, i2, n2, o2, a2, h2, l2) {
-    const d2 = [];
-    let c2, u2, _2, p2, f2, g2, y2, m2, x2 = t2, w2 = s2, b2 = i2, B2 = o2;
-    for (let t3 = 0; t3 < 2; ++t3) if (1 == t3 && (x2 = e2, w2 = r2, b2 = n2, B2 = a2), c2 = -3 * x2 + 9 * w2 - 9 * b2 + 3 * B2, u2 = 6 * x2 - 12 * w2 + 6 * b2, _2 = 3 * w2 - 3 * x2, Math.abs(c2) < 1e-12) {
-      if (Math.abs(u2) < 1e-12) continue;
-      p2 = -_2 / u2, 0 < p2 && p2 < 1 && d2.push(p2);
-    } else y2 = u2 * u2 - 4 * _2 * c2, m2 = Math.sqrt(y2), y2 < 0 || (f2 = (-u2 + m2) / (2 * c2), 0 < f2 && f2 < 1 && d2.push(f2), g2 = (-u2 - m2) / (2 * c2), 0 < g2 && g2 < 1 && d2.push(g2));
-    l2 ? Ke$2(h2, t2, e2) : $e$2(h2, t2, e2), Ke$2(h2, o2, a2);
-    for (let l3 = 0, c3 = d2.length; l3 < c3; l3++) ls(d2[l3], t2, e2, s2, r2, i2, n2, o2, a2, as$1), Ke$2(h2, as$1.x, as$1.y);
-  }, getPointAndSet(t2, e2, s2, r2, i2, n2, o2, a2, h2, l2) {
-    const d2 = 1 - t2, c2 = d2 * d2 * d2, u2 = 3 * d2 * d2 * t2, _2 = 3 * d2 * t2 * t2, p2 = t2 * t2 * t2;
-    l2.x = c2 * e2 + u2 * r2 + _2 * n2 + p2 * a2, l2.y = c2 * s2 + u2 * i2 + _2 * o2 + p2 * h2;
-  }, getPoint(t2, e2, s2, r2, i2, n2, o2, a2, h2) {
-    const l2 = {};
-    return ls(t2, e2, s2, r2, i2, n2, o2, a2, h2, l2), l2;
-  }, getDerivative(t2, e2, s2, r2, i2) {
-    const n2 = 1 - t2;
-    return 3 * n2 * n2 * (s2 - e2) + 6 * n2 * t2 * (r2 - s2) + 3 * t2 * t2 * (i2 - r2);
-  } }, { getPointAndSet: ls, toTwoPointBounds: ds, ellipse: cs } = hs, { sin: us, cos: _s, sqrt: ps, atan2: fs } = Math, { ellipse: gs } = hs, ys = { ellipticalArc(t2, e2, s2, r2, i2, n2, o2, a2, h2, l2, d2) {
-    const c2 = (h2 - e2) / 2, u2 = (l2 - s2) / 2, _2 = n2 * A$2, p2 = us(_2), f2 = _s(_2), g2 = -f2 * c2 - p2 * u2, y2 = -f2 * u2 + p2 * c2, m2 = r2 * r2, x2 = i2 * i2, w2 = y2 * y2, b2 = g2 * g2, B2 = m2 * x2 - m2 * w2 - x2 * b2;
-    let v2 = 0;
-    if (B2 < 0) {
-      const t3 = ps(1 - B2 / (m2 * x2));
-      r2 *= t3, i2 *= t3;
-    } else v2 = (o2 === a2 ? -1 : 1) * ps(B2 / (m2 * w2 + x2 * b2));
-    const k2 = v2 * r2 * y2 / i2, C2 = -v2 * i2 * g2 / r2, O2 = fs((y2 - C2) / i2, (g2 - k2) / r2), T2 = fs((-y2 - C2) / i2, (-g2 - k2) / r2);
-    let P2 = T2 - O2;
-    0 === a2 && P2 > 0 ? P2 -= W$2 : 1 === a2 && P2 < 0 && (P2 += W$2);
-    const S2 = e2 + c2 + f2 * k2 - p2 * C2, L2 = s2 + u2 + p2 * k2 + f2 * C2, R2 = P2 < 0 ? 1 : 0;
-    d2 || $t$2.ellipseToCurve ? gs(t2, S2, L2, r2, i2, n2, O2 / A$2, T2 / A$2, R2) : r2 !== i2 || n2 ? t2.push(Ae$2.G, S2, L2, r2, i2, n2, O2 / A$2, T2 / A$2, R2) : t2.push(Ae$2.O, S2, L2, r2, O2 / A$2, T2 / A$2, R2);
-  } }, ms = { toCommand: (t2) => [], toNode: (t2) => [] }, { M: xs, m: ws, L: bs, l: Bs, H: vs, h: ks, V: Cs, v: Os, C: Ts, c: Ps, S: Ss, s: Ls, Q: Rs, q: Es, T: Is, t: Ms, A: As, a: Ws, Z: Ns, z: Ys, N: Ds, D: Xs, X: zs, G: Fs, F: Us, O: js, P: Vs, U: Hs } = Ae$2, { rect: Gs, roundRect: qs, arcTo: Qs, arc: Js, ellipse: Zs, quadraticCurveTo: $s } = hs, { ellipticalArc: Ks } = ys, tr = ee$2.get("PathConvert"), er = {}, sr = { current: { dot: 0 }, stringify(t2, e2) {
-    let s2, r2, i2, n2 = 0, o2 = t2.length, a2 = "";
-    for (; n2 < o2; ) {
-      r2 = t2[n2], s2 = ze$2[r2], a2 += r2 === i2 ? " " : Xe$2[r2];
-      for (let r3 = 1; r3 < s2; r3++) a2 += I$2.float(t2[n2 + r3], e2), r3 === s2 - 1 || (a2 += " ");
-      i2 = r2, n2 += s2;
-    }
-    return a2;
-  }, parse(t2, e2) {
-    let s2, r2, i2, n2 = "";
-    const o2 = [], a2 = e2 ? Ye$2 : Ne$2;
-    for (let e3 = 0, h2 = t2.length; e3 < h2; e3++) r2 = t2[e3], Qt$2[r2] ? ("." === r2 && (rr.dot && (ir(o2, n2), n2 = ""), rr.dot++), "0" === n2 && "." !== r2 && (ir(o2, n2), n2 = ""), n2 += r2) : Ae$2[r2] ? (n2 && (ir(o2, n2), n2 = ""), rr.name = Ae$2[r2], rr.length = We$2[r2], rr.index = 0, ir(o2, rr.name), !s2 && a2[r2] && (s2 = true)) : "-" === r2 || "+" === r2 ? "e" === i2 || "E" === i2 ? n2 += r2 : (n2 && ir(o2, n2), n2 = r2) : n2 && (ir(o2, n2), n2 = ""), i2 = r2;
-    return n2 && ir(o2, n2), s2 ? sr.toCanvasData(o2, e2) : o2;
-  }, toCanvasData(t2, e2) {
-    let s2, r2, i2, n2, o2, a2 = 0, h2 = 0, l2 = 0, d2 = 0, c2 = 0, u2 = t2.length;
-    const _2 = [];
-    for (; c2 < u2; ) {
-      switch (i2 = t2[c2], i2) {
-        case ws:
-          t2[c2 + 1] += a2, t2[c2 + 2] += h2;
-        case xs:
-          a2 = t2[c2 + 1], h2 = t2[c2 + 2], _2.push(xs, a2, h2), c2 += 3;
-          break;
-        case ks:
-          t2[c2 + 1] += a2;
-        case vs:
-          a2 = t2[c2 + 1], _2.push(bs, a2, h2), c2 += 2;
-          break;
-        case Os:
-          t2[c2 + 1] += h2;
-        case Cs:
-          h2 = t2[c2 + 1], _2.push(bs, a2, h2), c2 += 2;
-          break;
-        case Bs:
-          t2[c2 + 1] += a2, t2[c2 + 2] += h2;
-        case bs:
-          a2 = t2[c2 + 1], h2 = t2[c2 + 2], _2.push(bs, a2, h2), c2 += 3;
-          break;
-        case Ls:
-          t2[c2 + 1] += a2, t2[c2 + 2] += h2, t2[c2 + 3] += a2, t2[c2 + 4] += h2, i2 = Ss;
-        case Ss:
-          o2 = n2 === Ts || n2 === Ss, l2 = o2 ? 2 * a2 - s2 : t2[c2 + 1], d2 = o2 ? 2 * h2 - r2 : t2[c2 + 2], s2 = t2[c2 + 1], r2 = t2[c2 + 2], a2 = t2[c2 + 3], h2 = t2[c2 + 4], _2.push(Ts, l2, d2, s2, r2, a2, h2), c2 += 5;
-          break;
-        case Ps:
-          t2[c2 + 1] += a2, t2[c2 + 2] += h2, t2[c2 + 3] += a2, t2[c2 + 4] += h2, t2[c2 + 5] += a2, t2[c2 + 6] += h2, i2 = Ts;
-        case Ts:
-          s2 = t2[c2 + 3], r2 = t2[c2 + 4], a2 = t2[c2 + 5], h2 = t2[c2 + 6], _2.push(Ts, t2[c2 + 1], t2[c2 + 2], s2, r2, a2, h2), c2 += 7;
-          break;
-        case Ms:
-          t2[c2 + 1] += a2, t2[c2 + 2] += h2, i2 = Is;
-        case Is:
-          o2 = n2 === Rs || n2 === Is, s2 = o2 ? 2 * a2 - s2 : t2[c2 + 1], r2 = o2 ? 2 * h2 - r2 : t2[c2 + 2], e2 ? $s(_2, a2, h2, s2, r2, t2[c2 + 1], t2[c2 + 2]) : _2.push(Rs, s2, r2, t2[c2 + 1], t2[c2 + 2]), a2 = t2[c2 + 1], h2 = t2[c2 + 2], c2 += 3;
-          break;
-        case Es:
-          t2[c2 + 1] += a2, t2[c2 + 2] += h2, t2[c2 + 3] += a2, t2[c2 + 4] += h2, i2 = Rs;
-        case Rs:
-          s2 = t2[c2 + 1], r2 = t2[c2 + 2], e2 ? $s(_2, a2, h2, s2, r2, t2[c2 + 3], t2[c2 + 4]) : _2.push(Rs, s2, r2, t2[c2 + 3], t2[c2 + 4]), a2 = t2[c2 + 3], h2 = t2[c2 + 4], c2 += 5;
-          break;
-        case Ws:
-          t2[c2 + 6] += a2, t2[c2 + 7] += h2;
-        case As:
-          Ks(_2, a2, h2, t2[c2 + 1], t2[c2 + 2], t2[c2 + 3], t2[c2 + 4], t2[c2 + 5], t2[c2 + 6], t2[c2 + 7], e2), a2 = t2[c2 + 6], h2 = t2[c2 + 7], c2 += 8;
-          break;
-        case Ys:
-        case Ns:
-          _2.push(Ns), c2++;
-          break;
-        case Ds:
-          a2 = t2[c2 + 1], h2 = t2[c2 + 2], e2 ? Gs(_2, a2, h2, t2[c2 + 3], t2[c2 + 4]) : nr(_2, t2, c2, 5), c2 += 5;
-          break;
-        case Xs:
-          a2 = t2[c2 + 1], h2 = t2[c2 + 2], e2 ? qs(_2, a2, h2, t2[c2 + 3], t2[c2 + 4], [t2[c2 + 5], t2[c2 + 6], t2[c2 + 7], t2[c2 + 8]]) : nr(_2, t2, c2, 9), c2 += 9;
-          break;
-        case zs:
-          a2 = t2[c2 + 1], h2 = t2[c2 + 2], e2 ? qs(_2, a2, h2, t2[c2 + 3], t2[c2 + 4], t2[c2 + 5]) : nr(_2, t2, c2, 6), c2 += 6;
-          break;
-        case Fs:
-          Zs(e2 ? _2 : nr(_2, t2, c2, 9), t2[c2 + 1], t2[c2 + 2], t2[c2 + 3], t2[c2 + 4], t2[c2 + 5], t2[c2 + 6], t2[c2 + 7], t2[c2 + 8], null, er), a2 = er.x, h2 = er.y, c2 += 9;
-          break;
-        case Us:
-          e2 ? Zs(_2, t2[c2 + 1], t2[c2 + 2], t2[c2 + 3], t2[c2 + 4], 0, 0, 360, false) : nr(_2, t2, c2, 5), a2 = t2[c2 + 1] + t2[c2 + 3], h2 = t2[c2 + 2], c2 += 5;
-          break;
-        case js:
-          Js(e2 ? _2 : nr(_2, t2, c2, 7), t2[c2 + 1], t2[c2 + 2], t2[c2 + 3], t2[c2 + 4], t2[c2 + 5], t2[c2 + 6], null, er), a2 = er.x, h2 = er.y, c2 += 7;
-          break;
-        case Vs:
-          e2 ? Js(_2, t2[c2 + 1], t2[c2 + 2], t2[c2 + 3], 0, 360, false) : nr(_2, t2, c2, 4), a2 = t2[c2 + 1] + t2[c2 + 3], h2 = t2[c2 + 2], c2 += 4;
-          break;
-        case Hs:
-          Qs(e2 ? _2 : nr(_2, t2, c2, 6), a2, h2, t2[c2 + 1], t2[c2 + 2], t2[c2 + 3], t2[c2 + 4], t2[c2 + 5], null, er), a2 = er.x, h2 = er.y, c2 += 6;
-          break;
-        default:
-          return tr.error(`command: ${i2} [index:${c2}]`, t2), _2;
-      }
-      n2 = i2;
-    }
-    return _2;
-  }, objectToCanvasData(t2) {
-    if (t2[0].name.length > 1) return ms.toCommand(t2);
-    {
-      const e2 = [];
-      return t2.forEach((t3) => {
-        switch (t3.name) {
-          case "M":
-            e2.push(xs, t3.x, t3.y);
-            break;
-          case "L":
-            e2.push(bs, t3.x, t3.y);
-            break;
-          case "C":
-            e2.push(Ts, t3.x1, t3.y1, t3.x2, t3.y2, t3.x, t3.y);
-            break;
-          case "Q":
-            e2.push(Rs, t3.x1, t3.y1, t3.x, t3.y);
-            break;
-          case "Z":
-            e2.push(Ns);
-        }
-      }), e2;
-    }
-  }, copyData(t2, e2, s2, r2) {
-    for (let i2 = s2, n2 = s2 + r2; i2 < n2; i2++) t2.push(e2[i2]);
-  }, pushData(t2, e2) {
-    rr.index === rr.length && (rr.index = 1, t2.push(rr.name)), t2.push(Number(e2)), rr.index++, rr.dot = 0;
-  } }, { current: rr, pushData: ir, copyData: nr } = sr, { M: or, L: ar, C: hr, Q: lr, Z: dr, N: cr, D: ur, X: _r, G: pr, F: fr, O: gr, P: yr, U: mr } = Ae$2, { getMinDistanceFrom: xr, getRadianFrom: wr } = ot$2, { tan: br, min: Br, abs: vr } = Math, kr = {}, Cr = { beginPath(t2) {
-    t2.length = 0;
-  }, moveTo(t2, e2, s2) {
-    t2.push(or, e2, s2);
-  }, lineTo(t2, e2, s2) {
-    t2.push(ar, e2, s2);
-  }, bezierCurveTo(t2, e2, s2, r2, i2, n2, o2) {
-    t2.push(hr, e2, s2, r2, i2, n2, o2);
-  }, quadraticCurveTo(t2, e2, s2, r2, i2) {
-    t2.push(lr, e2, s2, r2, i2);
-  }, closePath(t2) {
-    t2.push(dr);
-  }, rect(t2, e2, s2, r2, i2) {
-    t2.push(cr, e2, s2, r2, i2);
-  }, roundRect(t2, e2, s2, r2, i2, n2) {
-    if (o(n2)) t2.push(_r, e2, s2, r2, i2, n2);
-    else {
-      const o2 = I$2.fourNumber(n2);
-      o2 ? t2.push(ur, e2, s2, r2, i2, ...o2) : t2.push(cr, e2, s2, r2, i2);
-    }
-  }, ellipse(t2, e2, s2, i2, n2, o2, a2, h2, l2) {
-    if (i2 === n2) return Tr(t2, e2, s2, i2, a2, h2, l2);
-    r(o2) ? t2.push(fr, e2, s2, i2, n2) : (r(a2) && (a2 = 0), r(h2) && (h2 = 360), t2.push(pr, e2, s2, i2, n2, o2, a2, h2, l2 ? 1 : 0));
-  }, arc(t2, e2, s2, i2, n2, o2, a2) {
-    r(n2) ? t2.push(yr, e2, s2, i2) : (r(n2) && (n2 = 0), r(o2) && (o2 = 360), t2.push(gr, e2, s2, i2, n2, o2, a2 ? 1 : 0));
-  }, arcTo(t2, e2, r2, i2, n2, o2, a2, h2, l2) {
-    if (!s(a2)) {
-      const t3 = xr(a2, h2, e2, r2, i2, n2) / (l2 ? 1 : 2);
-      o2 = Br(o2, Br(t3, t3 * vr(br(wr(a2, h2, e2, r2, i2, n2) / 2))));
-    }
-    t2.push(mr, e2, r2, i2, n2, o2);
-  }, drawEllipse(t2, e2, s2, i2, n2, o2, a2, h2, l2) {
-    hs.ellipse(null, e2, s2, i2, n2, r(o2) ? 0 : o2, r(a2) ? 0 : a2, r(h2) ? 360 : h2, l2, null, null, kr), t2.push(or, kr.x, kr.y), Or(t2, e2, s2, i2, n2, o2, a2, h2, l2);
-  }, drawArc(t2, e2, s2, i2, n2, o2, a2) {
-    hs.arc(null, e2, s2, i2, r(n2) ? 0 : n2, r(o2) ? 360 : o2, a2, null, null, kr), t2.push(or, kr.x, kr.y), Tr(t2, e2, s2, i2, n2, o2, a2);
-  }, drawPoints(t2, e2, s2, r2) {
-    hs.points(t2, e2, s2, r2);
-  } }, { ellipse: Or, arc: Tr } = Cr, { moveTo: Pr, lineTo: Sr, quadraticCurveTo: Lr, bezierCurveTo: Rr, closePath: Er, beginPath: Ir, rect: Mr, roundRect: Ar, ellipse: Wr, arc: Nr, arcTo: Yr, drawEllipse: Dr, drawArc: Xr, drawPoints: zr } = Cr;
-  class Fr {
-    set path(t2) {
-      this.__path = t2;
-    }
-    get path() {
-      return this.__path;
-    }
-    constructor(t2) {
-      this.set(t2);
-    }
-    set(t2) {
-      return this.__path = t2 ? i(t2) ? Ie$2.parse(t2) : t2 : [], this;
-    }
-    beginPath() {
-      return Ir(this.__path), this.paint(), this;
-    }
-    moveTo(t2, e2) {
-      return Pr(this.__path, t2, e2), this.paint(), this;
-    }
-    lineTo(t2, e2) {
-      return Sr(this.__path, t2, e2), this.paint(), this;
-    }
-    bezierCurveTo(t2, e2, s2, r2, i2, n2) {
-      return Rr(this.__path, t2, e2, s2, r2, i2, n2), this.paint(), this;
-    }
-    quadraticCurveTo(t2, e2, s2, r2) {
-      return Lr(this.__path, t2, e2, s2, r2), this.paint(), this;
-    }
-    closePath() {
-      return Er(this.__path), this.paint(), this;
-    }
-    rect(t2, e2, s2, r2) {
-      return Mr(this.__path, t2, e2, s2, r2), this.paint(), this;
-    }
-    roundRect(t2, e2, s2, r2, i2) {
-      return Ar(this.__path, t2, e2, s2, r2, i2), this.paint(), this;
-    }
-    ellipse(t2, e2, s2, r2, i2, n2, o2, a2) {
-      return Wr(this.__path, t2, e2, s2, r2, i2, n2, o2, a2), this.paint(), this;
-    }
-    arc(t2, e2, s2, r2, i2, n2) {
-      return Nr(this.__path, t2, e2, s2, r2, i2, n2), this.paint(), this;
-    }
-    arcTo(t2, e2, s2, r2, i2) {
-      return Yr(this.__path, t2, e2, s2, r2, i2), this.paint(), this;
-    }
-    drawEllipse(t2, e2, s2, r2, i2, n2, o2, a2) {
-      return Dr(this.__path, t2, e2, s2, r2, i2, n2, o2, a2), this.paint(), this;
-    }
-    drawArc(t2, e2, s2, r2, i2, n2) {
-      return Xr(this.__path, t2, e2, s2, r2, i2, n2), this.paint(), this;
-    }
-    drawPoints(t2, e2, s2) {
-      return zr(this.__path, t2, e2, s2), this.paint(), this;
-    }
-    clearPath() {
-      return this.beginPath();
-    }
-    paint() {
-    }
-  }
-  const { M: Ur, L: jr, C: Vr, Q: Hr, Z: Gr, N: qr, D: Qr, X: Jr, G: Zr, F: $r, O: Kr, P: ti$2, U: ei$2 } = Ae$2, si$2 = ee$2.get("PathDrawer"), ri$2 = { drawPathByData(t2, e2) {
-    if (!e2) return;
-    let s2, r2 = 0, i2 = e2.length;
-    for (; r2 < i2; ) switch (s2 = e2[r2], s2) {
-      case Ur:
-        t2.moveTo(e2[r2 + 1], e2[r2 + 2]), r2 += 3;
-        break;
-      case jr:
-        t2.lineTo(e2[r2 + 1], e2[r2 + 2]), r2 += 3;
-        break;
-      case Vr:
-        t2.bezierCurveTo(e2[r2 + 1], e2[r2 + 2], e2[r2 + 3], e2[r2 + 4], e2[r2 + 5], e2[r2 + 6]), r2 += 7;
-        break;
-      case Hr:
-        t2.quadraticCurveTo(e2[r2 + 1], e2[r2 + 2], e2[r2 + 3], e2[r2 + 4]), r2 += 5;
-        break;
-      case Gr:
-        t2.closePath(), r2 += 1;
-        break;
-      case qr:
-        t2.rect(e2[r2 + 1], e2[r2 + 2], e2[r2 + 3], e2[r2 + 4]), r2 += 5;
-        break;
-      case Qr:
-        t2.roundRect(e2[r2 + 1], e2[r2 + 2], e2[r2 + 3], e2[r2 + 4], [e2[r2 + 5], e2[r2 + 6], e2[r2 + 7], e2[r2 + 8]]), r2 += 9;
-        break;
-      case Jr:
-        t2.roundRect(e2[r2 + 1], e2[r2 + 2], e2[r2 + 3], e2[r2 + 4], e2[r2 + 5]), r2 += 6;
-        break;
-      case Zr:
-        t2.ellipse(e2[r2 + 1], e2[r2 + 2], e2[r2 + 3], e2[r2 + 4], e2[r2 + 5] * A$2, e2[r2 + 6] * A$2, e2[r2 + 7] * A$2, e2[r2 + 8]), r2 += 9;
-        break;
-      case $r:
-        t2.ellipse(e2[r2 + 1], e2[r2 + 2], e2[r2 + 3], e2[r2 + 4], 0, 0, W$2, false), r2 += 5;
-        break;
-      case Kr:
-        t2.arc(e2[r2 + 1], e2[r2 + 2], e2[r2 + 3], e2[r2 + 4] * A$2, e2[r2 + 5] * A$2, e2[r2 + 6]), r2 += 7;
-        break;
-      case ti$2:
-        t2.arc(e2[r2 + 1], e2[r2 + 2], e2[r2 + 3], 0, W$2, false), r2 += 4;
-        break;
-      case ei$2:
-        t2.arcTo(e2[r2 + 1], e2[r2 + 2], e2[r2 + 3], e2[r2 + 4], e2[r2 + 5]), r2 += 6;
-        break;
-      default:
-        return void si$2.error(`command: ${s2} [index:${r2}]`, e2);
-    }
-  } }, { M: ii$2, L: ni$2, C: oi$2, Q: ai$2, Z: hi$2, N: li$2, D: di$2, X: ci$1, G: ui$1, F: _i$2, O: pi$1, P: fi$1, U: gi$1 } = Ae$2, { toTwoPointBounds: yi$1, toTwoPointBoundsByQuadraticCurve: mi$1, arcTo: xi$1, arc: wi$1, ellipse: bi$1 } = hs, { addPointBounds: Bi$1, copy: vi$1, addPoint: ki$1, setPoint: Ci$1, addBounds: Oi$1, toBounds: Ti$1 } = gt$2, Pi$1 = ee$2.get("PathBounds");
-  let Si$1, Li$1, Ri$1;
-  const Ei$1 = {}, Ii$1 = {}, Mi$1 = {}, Ai$1 = { toBounds(t2, e2) {
-    Ai$1.toTwoPointBounds(t2, Ii$1), Ti$1(Ii$1, e2);
-  }, toTwoPointBounds(t2, e2) {
-    if (!t2 || !t2.length) return Ci$1(e2, 0, 0);
-    let s2, r2, i2, n2, o2, a2 = 0, h2 = 0, l2 = 0;
-    const d2 = t2.length;
-    for (; a2 < d2; ) switch (o2 = t2[a2], 0 === a2 && (o2 === hi$2 || o2 === oi$2 || o2 === ai$2 ? Ci$1(e2, h2, l2) : Ci$1(e2, t2[a2 + 1], t2[a2 + 2])), o2) {
-      case ii$2:
-      case ni$2:
-        h2 = t2[a2 + 1], l2 = t2[a2 + 2], ki$1(e2, h2, l2), a2 += 3;
-        break;
-      case oi$2:
-        i2 = t2[a2 + 5], n2 = t2[a2 + 6], yi$1(h2, l2, t2[a2 + 1], t2[a2 + 2], t2[a2 + 3], t2[a2 + 4], i2, n2, Ei$1), Bi$1(e2, Ei$1), h2 = i2, l2 = n2, a2 += 7;
-        break;
-      case ai$2:
-        s2 = t2[a2 + 1], r2 = t2[a2 + 2], i2 = t2[a2 + 3], n2 = t2[a2 + 4], mi$1(h2, l2, s2, r2, i2, n2, Ei$1), Bi$1(e2, Ei$1), h2 = i2, l2 = n2, a2 += 5;
-        break;
-      case hi$2:
-        a2 += 1;
-        break;
-      case li$2:
-        h2 = t2[a2 + 1], l2 = t2[a2 + 2], Oi$1(e2, h2, l2, t2[a2 + 3], t2[a2 + 4]), a2 += 5;
-        break;
-      case di$2:
-      case ci$1:
-        h2 = t2[a2 + 1], l2 = t2[a2 + 2], Oi$1(e2, h2, l2, t2[a2 + 3], t2[a2 + 4]), a2 += o2 === di$2 ? 9 : 6;
-        break;
-      case ui$1:
-        bi$1(null, t2[a2 + 1], t2[a2 + 2], t2[a2 + 3], t2[a2 + 4], t2[a2 + 5], t2[a2 + 6], t2[a2 + 7], t2[a2 + 8], Ei$1, Mi$1), 0 === a2 ? vi$1(e2, Ei$1) : Bi$1(e2, Ei$1), h2 = Mi$1.x, l2 = Mi$1.y, a2 += 9;
-        break;
-      case _i$2:
-        h2 = t2[a2 + 1], l2 = t2[a2 + 2], Li$1 = t2[a2 + 3], Ri$1 = t2[a2 + 4], Oi$1(e2, h2 - Li$1, l2 - Ri$1, 2 * Li$1, 2 * Ri$1), h2 += Li$1, a2 += 5;
-        break;
-      case pi$1:
-        wi$1(null, t2[a2 + 1], t2[a2 + 2], t2[a2 + 3], t2[a2 + 4], t2[a2 + 5], t2[a2 + 6], Ei$1, Mi$1), 0 === a2 ? vi$1(e2, Ei$1) : Bi$1(e2, Ei$1), h2 = Mi$1.x, l2 = Mi$1.y, a2 += 7;
-        break;
-      case fi$1:
-        h2 = t2[a2 + 1], l2 = t2[a2 + 2], Si$1 = t2[a2 + 3], Oi$1(e2, h2 - Si$1, l2 - Si$1, 2 * Si$1, 2 * Si$1), h2 += Si$1, a2 += 4;
-        break;
-      case gi$1:
-        xi$1(null, h2, l2, t2[a2 + 1], t2[a2 + 2], t2[a2 + 3], t2[a2 + 4], t2[a2 + 5], Ei$1, Mi$1), 0 === a2 ? vi$1(e2, Ei$1) : Bi$1(e2, Ei$1), h2 = Mi$1.x, l2 = Mi$1.y, a2 += 6;
-        break;
-      default:
-        return void Pi$1.error(`command: ${o2} [index:${a2}]`, t2);
-    }
-  } }, { M: Wi$1, L: Ni$1, Z: Yi$1 } = Ae$2, { getCenterX: Di$1, getCenterY: Xi$1 } = ot$2, { arcTo: zi$1 } = Cr, Fi$1 = { smooth(t2, e2, s2) {
-    let r2, i2, n2, o2 = 0, a2 = 0, h2 = 0, d2 = 0, c2 = 0, u2 = 0, _2 = 0, p2 = 0, f2 = 0;
-    l(e2) && (e2 = e2[0] || 0);
-    const g2 = t2.length, y2 = 9 === g2, m2 = [];
-    for (; o2 < g2; ) {
-      switch (r2 = t2[o2], r2) {
-        case Wi$1:
-          d2 = p2 = t2[o2 + 1], c2 = f2 = t2[o2 + 2], o2 += 3, t2[o2] === Ni$1 ? (u2 = t2[o2 + 1], _2 = t2[o2 + 2], y2 ? m2.push(Wi$1, d2, c2) : m2.push(Wi$1, Di$1(d2, u2), Xi$1(c2, _2))) : m2.push(Wi$1, d2, c2);
-          break;
-        case Ni$1:
-          switch (a2 = t2[o2 + 1], h2 = t2[o2 + 2], o2 += 3, t2[o2]) {
-            case Ni$1:
-              zi$1(m2, a2, h2, t2[o2 + 1], t2[o2 + 2], e2, p2, f2, y2);
-              break;
-            case Yi$1:
-              zi$1(m2, a2, h2, d2, c2, e2, p2, f2, y2);
-              break;
-            default:
-              m2.push(Ni$1, a2, h2);
-          }
-          p2 = a2, f2 = h2;
-          break;
-        case Yi$1:
-          i2 !== Yi$1 && (zi$1(m2, d2, c2, u2, _2, e2, p2, f2, y2), m2.push(Yi$1)), o2 += 1;
-          break;
-        default:
-          n2 = ze$2[r2];
-          for (let e3 = 0; e3 < n2; e3++) m2.push(t2[o2 + e3]);
-          o2 += n2;
-      }
-      i2 = r2;
-    }
-    return r2 !== Yi$1 && (m2[1] = d2, m2[2] = c2), m2;
-  } };
-  function Ui$1(t2) {
-    return new Fr(t2);
-  }
-  const ji$1 = Ui$1();
-  Ie$2.creator = Ui$1(), Ie$2.parse = sr.parse, Ie$2.convertToCanvasData = sr.toCanvasData;
-  const { drawRoundRect: Vi$1 } = Fe$2;
-  function Hi$1(t2) {
-    !(function(t3) {
-      t3 && !t3.roundRect && (t3.roundRect = function(t4, e2, s2, r2, i2) {
-        Vi$1(this, t4, e2, s2, r2, i2);
-      });
-    })(t2);
-  }
-  const Gi$1 = { alphaPixelTypes: ["png", "webp", "svg"], upperCaseTypeMap: {}, mimeType: (t2, e2 = "image") => !t2 || t2.startsWith(e2) ? t2 : ("jpg" === t2 && (t2 = "jpeg"), e2 + "/" + t2), fileType(t2) {
-    const e2 = t2.split(".");
-    return e2[e2.length - 1];
-  }, isOpaqueImage(t2) {
-    const e2 = qi$1.fileType(t2);
-    return ["jpg", "jpeg"].some((t3) => t3 === e2);
-  }, getExportOptions(t2) {
-    switch (typeof t2) {
-      case "object":
-        return t2;
-      case "number":
-        return { quality: t2 };
-      case "boolean":
-        return { blob: t2 };
-      default:
-        return {};
-    }
-  } }, qi$1 = Gi$1;
-  qi$1.mineType = qi$1.mimeType, qi$1.alphaPixelTypes.forEach((t2) => qi$1.upperCaseTypeMap[t2] = t2.toUpperCase());
-  const Qi$1 = ee$2.get("TaskProcessor");
-  let Ji$1 = class Ji {
-    constructor(t2) {
-      this.parallel = true, this.time = 1, this.id = g$1.create(g$1.TASK), this.task = t2;
-    }
-    run() {
-      return me$2(this, void 0, void 0, function* () {
-        try {
-          if (this.isComplete || this.runing) return;
-          if (this.runing = true, this.canUse && !this.canUse()) return this.cancel();
-          this.task && (yield this.task());
-        } catch (t2) {
-          Qi$1.error(t2);
-        }
-      });
-    }
-    complete() {
-      this.isComplete = true, this.parent = this.task = this.canUse = null;
-    }
-    cancel() {
-      this.isCancel = true, this.complete();
-    }
-  };
-  let Zi$1 = class Zi {
-    get total() {
-      return this.list.length + this.delayNumber;
-    }
-    get finishedIndex() {
-      return this.isComplete ? 0 : this.index + this.parallelSuccessNumber;
-    }
-    get remain() {
-      return this.isComplete ? this.total : this.total - this.finishedIndex;
-    }
-    get percent() {
-      const { total: t2 } = this;
-      let e2 = 0, s2 = 0;
-      for (let r2 = 0; r2 < t2; r2++) r2 <= this.finishedIndex ? (s2 += this.list[r2].time, r2 === this.finishedIndex && (e2 = s2)) : e2 += this.list[r2].time;
-      return this.isComplete ? 1 : s2 / e2;
-    }
-    constructor(t2) {
-      this.config = { parallel: 6 }, this.list = [], this.running = false, this.isComplete = true, this.index = 0, this.delayNumber = 0, t2 && _$2.assign(this.config, t2), this.empty();
-    }
-    add(t2, e2, r2) {
-      let i2, n2, a2, h2;
-      const l2 = new Ji$1(t2);
-      return l2.parent = this, o(e2) ? h2 = e2 : e2 && (n2 = e2.parallel, i2 = e2.start, a2 = e2.time, h2 = e2.delay, r2 || (r2 = e2.canUse)), a2 && (l2.time = a2), false === n2 && (l2.parallel = false), r2 && (l2.canUse = r2), s(h2) ? this.push(l2, i2) : (this.delayNumber++, setTimeout(() => {
-        this.delayNumber && (this.delayNumber--, this.push(l2, i2));
-      }, h2)), this.isComplete = false, l2;
-    }
-    push(t2, e2) {
-      this.list.push(t2), false === e2 || this.timer || (this.timer = setTimeout(() => this.start()));
-    }
-    empty() {
-      this.index = 0, this.parallelSuccessNumber = 0, this.list = [], this.parallelList = [], this.delayNumber = 0;
-    }
-    start() {
-      this.running || (this.running = true, this.isComplete = false, this.run());
-    }
-    pause() {
-      clearTimeout(this.timer), this.timer = null, this.running = false;
-    }
-    resume() {
-      this.start();
-    }
-    skip() {
-      this.index++, this.resume();
-    }
-    stop() {
-      this.isComplete = true, this.list.forEach((t2) => {
-        t2.isComplete || t2.run();
-      }), this.pause(), this.empty();
-    }
-    run() {
-      this.running && (this.setParallelList(), this.parallelList.length > 1 ? this.runParallelTasks() : this.remain ? this.runTask() : this.onComplete());
-    }
-    runTask() {
-      const t2 = this.list[this.index];
-      t2 ? t2.run().then(() => {
-        this.onTask(t2), this.index++, t2.isCancel ? this.runTask() : this.nextTask();
-      }).catch((t3) => {
-        this.onError(t3);
-      }) : this.timer = setTimeout(() => this.nextTask());
-    }
-    runParallelTasks() {
-      this.parallelList.forEach((t2) => this.runParallelTask(t2));
-    }
-    runParallelTask(t2) {
-      t2.run().then(() => {
-        this.onTask(t2), this.fillParallelTask();
-      }).catch((t3) => {
-        this.onParallelError(t3);
-      });
-    }
-    nextTask() {
-      this.total === this.finishedIndex ? this.onComplete() : this.timer = setTimeout(() => this.run());
-    }
-    setParallelList() {
-      let t2;
-      const { config: e2, list: s2, index: r2 } = this;
-      this.parallelList = [], this.parallelSuccessNumber = 0;
-      let i2 = r2 + e2.parallel;
-      if (i2 > s2.length && (i2 = s2.length), e2.parallel > 1) for (let e3 = r2; e3 < i2 && (t2 = s2[e3], t2.parallel); e3++) this.parallelList.push(t2);
-    }
-    fillParallelTask() {
-      let t2;
-      const e2 = this.parallelList;
-      this.parallelSuccessNumber++, e2.pop();
-      const s2 = e2.length, r2 = this.finishedIndex + s2;
-      if (e2.length) {
-        if (!this.running) return;
-        r2 < this.total && (t2 = this.list[r2], t2 && t2.parallel && (e2.push(t2), this.runParallelTask(t2)));
-      } else this.index += this.parallelSuccessNumber, this.parallelSuccessNumber = 0, this.nextTask();
-    }
-    onComplete() {
-      this.stop(), this.config.onComplete && this.config.onComplete();
-    }
-    onTask(t2) {
-      t2.complete(), this.config.onTask && this.config.onTask();
-    }
-    onParallelError(t2) {
-      this.parallelList.forEach((t3) => {
-        t3.parallel = false;
-      }), this.parallelList.length = 0, this.parallelSuccessNumber = 0, this.onError(t2);
-    }
-    onError(t2) {
-      this.pause(), this.config.onError && this.config.onError(t2);
-    }
-    destroy() {
-      this.stop();
-    }
-  };
-  const $i$1 = ee$2.get("Resource"), Ki$1 = { tasker: new Zi$1(), queue: new Zi$1({ parallel: 1 }), map: {}, get isComplete() {
-    return tn.tasker.isComplete;
-  }, set(t2, e2) {
-    tn.map[t2] && $i$1.repeat(t2), tn.map[t2] = e2;
-  }, get: (t2) => tn.map[t2], remove(t2) {
-    const e2 = tn.map[t2];
-    e2 && (e2.destroy && e2.destroy(), delete tn.map[t2]);
-  }, loadImage(t2, e2) {
-    return new Promise((s2, r2) => {
-      const i2 = this.setImage(t2, t2, e2);
-      i2.load(() => s2(i2), (t3) => r2(t3));
-    });
-  }, setImage(t2, e2, s2) {
-    let r2;
-    return i(e2) ? r2 = { url: e2 } : e2.url || (r2 = { url: t2, view: e2 }), r2 && (s2 && (r2.format = s2), e2 = le$2.image(r2)), tn.set(t2, e2), e2;
-  }, loadFilm(t2, e2) {
-  }, loadVideo(t2, e2) {
-  }, destroy() {
-    tn.map = {};
-  } }, tn = Ki$1, en = { maxRecycled: 10, recycledList: [], patternTasker: Ki$1.queue, get(t2, e2) {
-    let s2 = Ki$1.get(t2.url);
-    return s2 || Ki$1.set(t2.url, s2 = "film" === e2 ? le$2.film(t2) : le$2.image(t2)), s2.use++, s2;
-  }, recycle(t2) {
-    t2.use--, setTimeout(() => {
-      t2.use || ($t$2.image.isLarge(t2) ? t2.url && Ki$1.remove(t2.url) : (t2.clearLevels(), sn.recycledList.push(t2)));
-    });
-  }, recyclePaint(t2) {
-    sn.recycle(t2.image);
-  }, clearRecycled(t2) {
-    const e2 = sn.recycledList;
-    (e2.length > sn.maxRecycled || t2) && (e2.forEach((e3) => (!e3.use || t2) && e3.url && Ki$1.remove(e3.url)), e2.length = 0);
-  }, clearLevels() {
-  }, hasAlphaPixel: (t2) => Gi$1.alphaPixelTypes.some((e2) => sn.isFormat(e2, t2)), isFormat(t2, e2) {
-    if (e2.format) return e2.format === t2;
-    const { url: s2 } = e2;
-    if (s2.startsWith("data:")) {
-      if (s2.startsWith("data:" + Gi$1.mimeType(t2))) return true;
-    } else {
-      if (s2.includes("." + t2) || s2.includes("." + Gi$1.upperCaseTypeMap[t2])) return true;
-      if ("png" === t2 && !s2.includes(".")) return true;
-    }
-    return false;
-  }, destroy() {
-    this.clearRecycled(true);
-  } }, sn = en, { IMAGE: rn, create: nn } = g$1;
-  class on {
-    get tag() {
-      return "Image";
-    }
-    get url() {
-      return this.config.url;
-    }
-    get crossOrigin() {
-      const { crossOrigin: t2 } = this.config;
-      return s(t2) ? $t$2.image.crossOrigin : t2;
-    }
-    get completed() {
-      return this.ready || !!this.error;
-    }
-    constructor(t2) {
-      if (this.use = 0, this.waitComplete = [], this.innerId = nn(rn), this.config = t2 || (t2 = { url: "" }), t2.view) {
-        const { view: e2 } = t2;
-        this.setView(e2.config ? e2.view : e2);
-      }
-      en.isFormat("svg", t2) && (this.isSVG = true), en.hasAlphaPixel(t2) && (this.hasAlphaPixel = true);
-    }
-    load(t2, e2, s2) {
-      return this.loading || (this.loading = true, Ki$1.tasker.add(() => me$2(this, void 0, void 0, function* () {
-        return yield $t$2.origin["load" + this.tag](this.getLoadUrl(s2), this.crossOrigin, this).then((t3) => {
-          s2 && this.setThumbView(t3), this.setView(t3);
-        }).catch((t3) => {
-          this.error = t3, this.onComplete(false);
-        });
-      }))), this.waitComplete.push(t2, e2), this.waitComplete.length - 2;
-    }
-    unload(t2, e2) {
-      const s2 = this.waitComplete;
-      if (e2) {
-        const e3 = s2[t2 + 1];
-        e3 && e3({ type: "stop" });
-      }
-      s2[t2] = s2[t2 + 1] = void 0;
-    }
-    setView(t2) {
-      this.ready = true, this.width || (this.width = t2.width, this.height = t2.height, this.view = t2), this.onComplete(true);
-    }
-    onComplete(t2) {
-      let e2;
-      this.waitComplete.forEach((s2, r2) => {
-        e2 = r2 % 2, s2 && (t2 ? e2 || s2(this) : e2 && s2(this.error));
-      }), this.waitComplete.length = 0, this.loading = false;
-    }
-    getFull(t2) {
-      return this.view;
-    }
-    getCanvas(t2, e2, s2, r2, i2, n2, o2, a2) {
-      if (t2 || (t2 = this.width), e2 || (e2 = this.height), this.cache) {
-        let { params: t3, data: e3 } = this.cache;
-        for (let s3 in t3) if (t3[s3] !== arguments[s3]) {
-          e3 = null;
-          break;
-        }
-        if (e3) return e3;
-      }
-      const h2 = $t$2.image.resize(this.view, t2, e2, i2, n2, void 0, o2, s2, r2, a2);
-      return this.cache = this.use > 1 ? { data: h2, params: arguments } : null, h2;
-    }
-    getPattern(t2, e2, s2, r2) {
-      const i2 = $t$2.canvas.createPattern(t2, e2);
-      return $t$2.image.setPatternTransform(i2, s2, r2), i2;
-    }
-    render(t2, e2, s2, r2, i2, n2, o2, a2, h2) {
-      t2.drawImage(this.view, e2, s2, r2, i2);
-    }
-    getLoadUrl(t2) {
-      return this.url;
-    }
-    setThumbView(t2) {
-    }
-    getThumbSize(t2) {
-    }
-    getMinLevel() {
-    }
-    getLevelData(t2, e2, s2) {
-    }
-    clearLevels(t2) {
-    }
-    destroy() {
-      this.clearLevels();
-      const { view: t2 } = this;
-      t2 && t2.close && t2.close(), this.config = { url: "" }, this.cache = this.view = null, this.waitComplete.length = 0;
-    }
-  }
-  class an extends on {
-    get tag() {
-      return "Film";
-    }
-  }
-  class hn extends on {
-    get tag() {
-      return "Video";
-    }
-  }
-  function ln(t2, e2, s2, r2) {
-    r2 || (s2.configurable = s2.enumerable = true), Object.defineProperty(t2, e2, s2);
-  }
-  function dn(t2, e2) {
-    return Object.getOwnPropertyDescriptor(t2, e2);
-  }
-  function cn(t2, e2) {
-    const s2 = "_" + t2;
-    return { get() {
-      const t3 = this[s2];
-      return null == t3 ? e2 : t3;
-    }, set(t3) {
-      this[s2] = t3;
-    } };
-  }
-  function un(t2, e2) {
-    return (s2, r2) => pn(s2, r2, t2, e2 && e2(r2));
-  }
-  function _n(t2) {
-    return t2;
-  }
-  function pn(t2, e2, s2, r2) {
-    const i2 = { get() {
-      return this.__getAttr(e2);
-    }, set(t3) {
-      this.__setAttr(e2, t3);
-    } };
-    ln(t2, e2, Object.assign(i2, r2 || {})), Un(t2, e2, s2);
-  }
-  function fn(t2) {
-    return un(t2);
-  }
-  function gn(t2, e2) {
-    return un(t2, (t3) => ({ set(s2) {
-      this.__setAttr(t3, s2, e2) && (this.__layout.matrixChanged || this.__layout.matrixChange());
-    } }));
-  }
-  function yn(t2, e2) {
-    return un(t2, (t3) => ({ set(s2) {
-      this.__setAttr(t3, s2, e2) && (this.__layout.matrixChanged || this.__layout.matrixChange(), this.__scrollWorld || (this.__scrollWorld = {}));
-    } }));
-  }
-  function mn(t2) {
-    return un(t2, (t3) => ({ set(e2) {
-      this.__setAttr(t3, e2) && (this.__hasAutoLayout = !!(this.origin || this.around || this.flow), this.__local || this.__layout.createLocal(), vn(this));
-    } }));
-  }
-  function xn(t2, e2) {
-    return un(t2, (t3) => ({ set(s2) {
-      this.__setAttr(t3, s2, e2) && (this.__layout.scaleChanged || this.__layout.scaleChange());
-    } }));
-  }
-  function wn(t2, e2) {
-    return un(t2, (t3) => ({ set(s2) {
-      this.__setAttr(t3, s2, e2) && (this.__layout.rotationChanged || this.__layout.rotationChange());
-    } }));
-  }
-  function bn(t2, e2) {
-    return un(t2, (t3) => ({ set(s2) {
-      this.__setAttr(t3, s2, e2) && vn(this);
-    } }));
-  }
-  function Bn(t2) {
-    return un(t2, (t3) => ({ set(e2) {
-      this.__setAttr(t3, e2) && (vn(this), this.__.__removeNaturalSize());
-    } }));
-  }
-  function vn(t2) {
-    t2.__layout.boxChanged || t2.__layout.boxChange(), t2.__hasAutoLayout && (t2.__layout.matrixChanged || t2.__layout.matrixChange());
-  }
-  function kn(t2) {
-    return un(t2, (t3) => ({ set(e2) {
-      const s2 = this.__;
-      2 !== s2.__pathInputed && (s2.__pathInputed = e2 ? 1 : 0), e2 || (s2.__pathForRender = void 0), this.__setAttr(t3, e2), vn(this);
-    } }));
-  }
-  const Cn = bn;
-  function On(t2, e2) {
-    return un(t2, (t3) => ({ set(s2) {
-      this.__setAttr(t3, s2) && (Tn(this), e2 && (this.__.__useStroke = true));
-    } }));
-  }
-  function Tn(t2) {
-    t2.__layout.strokeChanged || t2.__layout.strokeChange(), t2.__.__useArrow && vn(t2);
-  }
-  const Pn = On;
-  function Sn(t2) {
-    return un(t2, (t3) => ({ set(e2) {
-      this.__setAttr(t3, e2), this.__layout.renderChanged || this.__layout.renderChange();
-    } }));
-  }
-  function Ln(t2) {
-    return un(t2, (t3) => ({ set(e2) {
-      this.__setAttr(t3, e2) && (this.__layout.surfaceChanged || this.__layout.surfaceChange());
-    } }));
-  }
-  function Rn(t2) {
-    return un(t2, (t3) => ({ set(e2) {
-      if (this.__setAttr(t3, e2)) {
-        const t4 = this.__;
-        _$2.stintSet(t4, "__useDim", t4.dim || t4.bright || t4.dimskip), this.__layout.surfaceChange();
-      }
-    } }));
-  }
-  function En(t2) {
-    return un(t2, (t3) => ({ set(e2) {
-      this.__setAttr(t3, e2) && (this.__layout.opacityChanged || this.__layout.opacityChange()), this.mask && Mn(this);
-    } }));
-  }
-  function In(t2) {
-    return un(t2, (t3) => ({ set(e2) {
-      const s2 = this.visible;
-      if (true === s2 && 0 === e2) {
-        if (this.animationOut) return this.__runAnimation("out", () => An(this, t3, e2, s2));
-      } else 0 === s2 && true === e2 && this.animation && this.__runAnimation("in");
-      An(this, t3, e2, s2), this.mask && Mn(this);
-    } }));
-  }
-  function Mn(t2) {
-    const { parent: e2 } = t2;
-    if (e2) {
-      const { __hasMask: t3 } = e2;
-      e2.__updateMask(), t3 !== e2.__hasMask && e2.forceUpdate();
-    }
-  }
-  function An(t2, e2, s2, r2) {
-    t2.__setAttr(e2, s2) && (t2.__layout.opacityChanged || t2.__layout.opacityChange(), 0 !== r2 && 0 !== s2 || vn(t2));
-  }
-  function Wn(t2) {
-    return un(t2, (t3) => ({ set(e2) {
-      this.__setAttr(t3, e2) && (this.__layout.surfaceChange(), this.waitParent(() => {
-        this.parent.__layout.childrenSortChange();
-      }));
-    } }));
-  }
-  function Nn(t2) {
-    return un(t2, (t3) => ({ set(e2) {
-      this.__setAttr(t3, e2) && (this.__layout.boxChanged || this.__layout.boxChange(), this.waitParent(() => {
-        this.parent.__updateMask(e2);
-      }));
-    } }));
-  }
-  function Yn(t2) {
-    return un(t2, (t3) => ({ set(e2) {
-      this.__setAttr(t3, e2) && this.waitParent(() => {
-        this.parent.__updateEraser(e2);
-      });
-    } }));
-  }
-  function Dn(t2) {
-    return un(t2, (t3) => ({ set(e2) {
-      this.__setAttr(t3, e2) && (this.__layout.hitCanvasChanged = true, "hit" === ee$2.showBounds && this.__layout.surfaceChange(), this.leafer && this.leafer.updateCursor());
-    } }));
-  }
-  function Xn(t2) {
-    return un(t2, (t3) => ({ set(e2) {
-      this.__setAttr(t3, e2), this.leafer && this.leafer.updateCursor();
-    } }));
-  }
-  function zn(t2) {
-    return (e2, s2) => {
-      ln(e2, "__DataProcessor", { get: () => t2 });
-    };
-  }
-  function Fn(t2) {
-    return (e2, s2) => {
-      ln(e2, "__LayoutProcessor", { get: () => t2 });
-    };
-  }
-  function Un(t2, e2, r2) {
-    const i2 = t2.__DataProcessor.prototype, n2 = "_" + e2, o2 = (function(t3) {
-      return "set" + t3.charAt(0).toUpperCase() + t3.slice(1);
-    })(e2), a2 = cn(e2, r2);
-    if (s(r2)) a2.get = function() {
-      return this[n2];
-    };
-    else if ("function" == typeof r2) a2.get = function() {
-      const t3 = this[n2];
-      return null == t3 ? r2(this.__leaf) : t3;
-    };
-    else if (d(r2)) {
-      const t3 = u(r2);
-      a2.get = function() {
-        const e3 = this[n2];
-        return null == e3 ? this[n2] = t3 ? {} : _$2.clone(r2) : e3;
-      };
-    }
-    const h2 = t2.isBranchLeaf;
-    "width" === e2 ? a2.get = function() {
-      const t3 = this[n2];
-      if (null == t3) {
-        const t4 = this, e3 = t4.__naturalWidth, s2 = t4.__leaf;
-        return !r2 || s2.pathInputed ? s2.boxBounds.width : e3 ? t4._height && t4.__useNaturalRatio ? t4._height * e3 / t4.__naturalHeight : e3 : h2 && s2.children.length ? s2.boxBounds.width : r2;
-      }
-      return t3;
-    } : "height" === e2 && (a2.get = function() {
-      const t3 = this[n2];
-      if (null == t3) {
-        const t4 = this, e3 = t4.__naturalHeight, s2 = t4.__leaf;
-        return !r2 || s2.pathInputed ? s2.boxBounds.height : e3 ? t4._width && t4.__useNaturalRatio ? t4._width * e3 / t4.__naturalWidth : e3 : h2 && s2.children.length ? s2.boxBounds.height : r2;
-      }
-      return t3;
-    });
-    let l2, c2 = i2;
-    for (; !l2 && c2; ) l2 = dn(c2, e2), c2 = c2.__proto__;
-    l2 && l2.set && (a2.set = l2.set), i2[o2] && (a2.set = i2[o2], delete i2[o2]), ln(i2, e2, a2);
-  }
-  const jn = new ee$2("rewrite"), Vn = [], Hn = ["destroy", "constructor"];
-  function Gn(t2) {
-    return (e2, s2) => {
-      Vn.push({ name: e2.constructor.name + "." + s2, run: () => {
-        e2[s2] = t2;
-      } });
-    };
-  }
-  function qn() {
-    return (t2) => {
-      Qn();
-    };
-  }
-  function Qn(t2) {
-    Vn.length && (Vn.forEach((e2) => {
-      t2 && jn.error(e2.name, "需在Class上装饰@rewriteAble()"), e2.run();
-    }), Vn.length = 0);
-  }
-  function Jn(t2, e2) {
-    return (s2) => {
-      var r2;
-      (t2.prototype ? (r2 = t2.prototype, Object.getOwnPropertyNames(r2)) : Object.keys(t2)).forEach((r3) => {
-        if (!(Hn.includes(r3) || e2 && e2.includes(r3))) if (t2.prototype) {
-          dn(t2.prototype, r3).writable && (s2.prototype[r3] = t2.prototype[r3]);
-        } else s2.prototype[r3] = t2[r3];
-      });
-    };
-  }
-  function Zn() {
-    return (t2) => {
-      ce$2.register(t2);
-    };
-  }
-  function $n() {
-    return (t2) => {
-      pe$2.register(t2);
-    };
-  }
-  setTimeout(() => Qn(true));
-  const { copy: Kn, toInnerPoint: to, toOuterPoint: eo, scaleOfOuter: so, rotateOfOuter: ro, skewOfOuter: io, multiplyParent: no, divideParent: oo, getLayout: ao } = q$1, ho = {}, { round: lo } = Math, co = { updateAllMatrix(t2, e2, s2) {
-    if (e2 && t2.__hasAutoLayout && t2.__layout.matrixChanged && (s2 = true), po(t2, e2, s2), t2.isBranch) {
-      const { children: r2 } = t2;
-      for (let t3 = 0, i2 = r2.length; t3 < i2; t3++) _o(r2[t3], e2, s2);
-    }
-  }, updateMatrix(t2, e2, s2) {
-    const r2 = t2.__layout;
-    e2 ? s2 && (r2.waitAutoLayout = true, t2.__hasAutoLayout && (r2.matrixChanged = false)) : r2.waitAutoLayout && (r2.waitAutoLayout = false), r2.matrixChanged && t2.__updateLocalMatrix(), r2.waitAutoLayout || t2.__updateWorldMatrix();
-  }, updateBounds(t2) {
-    const e2 = t2.__layout;
-    e2.boundsChanged && t2.__updateLocalBounds(), e2.waitAutoLayout || t2.__updateWorldBounds();
-  }, updateAllWorldOpacity(t2) {
-    if (t2.__updateWorldOpacity(), t2.isBranch) {
-      const { children: e2 } = t2;
-      for (let t3 = 0, s2 = e2.length; t3 < s2; t3++) fo(e2[t3]);
-    }
-  }, updateChange(t2) {
-    const e2 = t2.__layout;
-    e2.stateStyleChanged && t2.updateState(), e2.opacityChanged && fo(t2), t2.__updateChange();
-  }, updateAllChange(t2) {
-    if (yo(t2), t2.isBranch) {
-      const { children: e2 } = t2;
-      for (let t3 = 0, s2 = e2.length; t3 < s2; t3++) go(e2[t3]);
-    }
-  }, worldHittable(t2) {
-    for (; t2; ) {
-      if (!t2.__.hittable) return false;
-      t2 = t2.parent;
-    }
-    return true;
-  }, draggable: (t2) => (t2.draggable || t2.editable) && t2.hitSelf && !t2.locked, copyCanvasByWorld(t2, e2, s2, r2, i2, n2) {
-    r2 || (r2 = t2.__nowWorld), t2.__worldFlipped || $t$2.fullImageShadow ? e2.copyWorldByReset(s2, r2, t2.__nowWorld, i2, n2) : e2.copyWorldToInner(s2, r2, t2.__layout.renderBounds, i2);
-  }, moveWorld(t2, e2, s2 = 0, r2, i2) {
-    const n2 = d(e2) ? Object.assign({}, e2) : { x: e2, y: s2 };
-    r2 ? eo(t2.localTransform, n2, n2, true) : t2.parent && to(t2.parent.scrollWorldTransform, n2, n2, true), uo.moveLocal(t2, n2.x, n2.y, i2);
-  }, moveLocal(t2, e2, s2 = 0, r2) {
-    d(e2) && (s2 = e2.y, e2 = e2.x), e2 += t2.x, s2 += t2.y, t2.leafer && t2.leafer.config.pointSnap && (e2 = lo(e2), s2 = lo(s2)), r2 ? t2.animate({ x: e2, y: s2 }, r2) : (t2.x = e2, t2.y = s2);
-  }, zoomOfWorld(t2, e2, s2, r2, i2, n2) {
-    uo.zoomOfLocal(t2, mo(t2, e2), s2, r2, i2, n2);
-  }, zoomOfLocal(t2, e2, s2, r2 = s2, i2, n2) {
-    const a2 = t2.__localMatrix;
-    if (o(r2) || (r2 && (n2 = r2), r2 = s2), Kn(ho, a2), so(ho, e2, s2, r2), uo.hasHighPosition(t2)) uo.setTransform(t2, ho, i2, n2);
-    else {
-      const e3 = t2.x + ho.e - a2.e, o2 = t2.y + ho.f - a2.f;
-      n2 && !i2 ? t2.animate({ x: e3, y: o2, scaleX: t2.scaleX * s2, scaleY: t2.scaleY * r2 }, n2) : (t2.x = e3, t2.y = o2, t2.scaleResize(s2, r2, true !== i2));
-    }
-  }, rotateOfWorld(t2, e2, s2, r2) {
-    uo.rotateOfLocal(t2, mo(t2, e2), s2, r2);
-  }, rotateOfLocal(t2, e2, s2, r2) {
-    const i2 = t2.__localMatrix;
-    Kn(ho, i2), ro(ho, e2, s2), uo.hasHighPosition(t2) ? uo.setTransform(t2, ho, false, r2) : t2.set({ x: t2.x + ho.e - i2.e, y: t2.y + ho.f - i2.f, rotation: I$2.formatRotation(t2.rotation + s2) }, r2);
-  }, skewOfWorld(t2, e2, s2, r2, i2, n2) {
-    uo.skewOfLocal(t2, mo(t2, e2), s2, r2, i2, n2);
-  }, skewOfLocal(t2, e2, s2, r2 = 0, i2, n2) {
-    Kn(ho, t2.__localMatrix), io(ho, e2, s2, r2), uo.setTransform(t2, ho, i2, n2);
-  }, transformWorld(t2, e2, s2, r2) {
-    Kn(ho, t2.worldTransform), no(ho, e2), t2.parent && oo(ho, t2.parent.scrollWorldTransform), uo.setTransform(t2, ho, s2, r2);
-  }, transform(t2, e2, s2, r2) {
-    Kn(ho, t2.localTransform), no(ho, e2), uo.setTransform(t2, ho, s2, r2);
-  }, setTransform(t2, e2, s2, r2) {
-    const i2 = t2.__, n2 = i2.origin && uo.getInnerOrigin(t2, i2.origin), o2 = ao(e2, n2, i2.around && uo.getInnerOrigin(t2, i2.around));
-    if (uo.hasOffset(t2) && (o2.x -= i2.offsetX, o2.y -= i2.offsetY), s2) {
-      const e3 = o2.scaleX / t2.scaleX, s3 = o2.scaleY / t2.scaleY;
-      if (delete o2.scaleX, delete o2.scaleY, n2) {
-        zt$2.scale(t2.boxBounds, Math.abs(e3), Math.abs(s3));
-        const r3 = uo.getInnerOrigin(t2, i2.origin);
-        ot$2.move(o2, n2.x - r3.x, n2.y - r3.y);
-      }
-      t2.set(o2), t2.scaleResize(e3, s3, false);
-    } else t2.set(o2, r2);
-  }, getFlipTransform(t2, e2) {
-    const s2 = { a: 1, b: 0, c: 0, d: 1, e: 0, f: 0 }, r2 = "x" === e2 ? 1 : -1;
-    return so(s2, uo.getLocalOrigin(t2, "center"), -1 * r2, 1 * r2), s2;
-  }, getLocalOrigin: (t2, e2) => ot$2.tempToOuterOf(uo.getInnerOrigin(t2, e2), t2.localTransform), getInnerOrigin(t2, e2) {
-    const s2 = {};
-    return bt$3.toPoint(e2, t2.boxBounds, s2), s2;
-  }, getRelativeWorld: (t2, e2, s2) => (Kn(ho, t2.worldTransform), oo(ho, e2.scrollWorldTransform), s2 ? ho : Object.assign({}, ho)), drop(t2, e2, s2, r2) {
-    t2.setTransform(uo.getRelativeWorld(t2, e2, true), r2), e2.add(t2, s2);
-  }, hasHighPosition: (t2) => t2.origin || t2.around || uo.hasOffset(t2), hasOffset: (t2) => t2.offsetX || t2.offsetY, hasParent(t2, e2) {
-    if (!e2) return false;
-    for (; t2; ) {
-      if (e2 === t2) return true;
-      t2 = t2.parent;
-    }
-  }, animateMove(t2, e2, s2 = 0.3) {
-    if (e2.x || e2.y) if (Math.abs(e2.x) < 1 && Math.abs(e2.y) < 1) t2.move(e2);
-    else {
-      const r2 = e2.x * s2, i2 = e2.y * s2;
-      e2.x -= r2, e2.y -= i2, t2.move(r2, i2), $t$2.requestRender(() => uo.animateMove(t2, e2, s2));
-    }
-  } }, uo = co, { updateAllMatrix: _o, updateMatrix: po, updateAllWorldOpacity: fo, updateAllChange: go, updateChange: yo } = uo;
-  function mo(t2, e2) {
-    return t2.updateLayout(), t2.parent ? ot$2.tempToInnerOf(e2, t2.parent.scrollWorldTransform) : e2;
-  }
-  const xo = { worldBounds: (t2) => t2.__world, localBoxBounds: (t2) => t2.__.eraser || 0 === t2.__.visible ? null : t2.__local || t2.__layout, localStrokeBounds: (t2) => t2.__.eraser || 0 === t2.__.visible ? null : t2.__layout.localStrokeBounds, localRenderBounds: (t2) => t2.__.eraser || 0 === t2.__.visible ? null : t2.__layout.localRenderBounds, maskLocalBoxBounds: (t2, e2) => bo(t2, e2) && t2.__localBoxBounds, maskLocalStrokeBounds: (t2, e2) => bo(t2, e2) && t2.__layout.localStrokeBounds, maskLocalRenderBounds: (t2, e2) => bo(t2, e2) && t2.__layout.localRenderBounds, excludeRenderBounds: (t2, e2) => !(!e2.bounds || e2.bounds.hit(t2.__world, e2.matrix)) || !(!e2.hideBounds || !e2.hideBounds.includes(t2.__world, e2.matrix)) };
-  let wo;
-  function bo(t2, e2) {
-    return e2 || (wo = 0), t2.__.mask && (wo = 1), wo < 0 ? null : (wo && (wo = -1), true);
-  }
-  const { updateBounds: Bo } = co, vo = { sort: (t2, e2) => t2.__.zIndex === e2.__.zIndex ? t2.__tempNumber - e2.__tempNumber : t2.__.zIndex - e2.__.zIndex, pushAllChildBranch(t2, e2) {
-    if (t2.__tempNumber = 1, t2.__.__childBranchNumber) {
-      const { children: s2 } = t2;
-      for (let r2 = 0, i2 = s2.length; r2 < i2; r2++) (t2 = s2[r2]).isBranch && (t2.__tempNumber = 1, e2.add(t2), ko(t2, e2));
-    }
-  }, pushAllParent(t2, e2) {
-    const { keys: r2 } = e2;
-    if (r2) for (; t2.parent && s(r2[t2.parent.innerId]); ) e2.add(t2.parent), t2 = t2.parent;
-    else for (; t2.parent; ) e2.add(t2.parent), t2 = t2.parent;
-  }, pushAllBranchStack(t2, e2) {
-    let s2 = e2.length;
-    const { children: r2 } = t2;
-    for (let t3 = 0, s3 = r2.length; t3 < s3; t3++) r2[t3].isBranch && e2.push(r2[t3]);
-    for (let t3 = s2, r3 = e2.length; t3 < r3; t3++) Co(e2[t3], e2);
-  }, updateBounds(t2, e2) {
-    const s2 = [t2];
-    Co(t2, s2), Oo(s2, e2);
-  }, updateBoundsByBranchStack(t2, e2) {
-    let s2, r2;
-    for (let i2 = t2.length - 1; i2 > -1; i2--) {
-      s2 = t2[i2], r2 = s2.children;
-      for (let t3 = 0, e3 = r2.length; t3 < e3; t3++) Bo(r2[t3]);
-      e2 && e2 === s2 || Bo(s2);
-    }
-  }, move(t2, e2, s2) {
-    let r2;
-    const { children: i2 } = t2;
-    for (let n2 = 0, o2 = i2.length; n2 < o2; n2++) r2 = (t2 = i2[n2]).__world, r2.e += e2, r2.f += s2, r2.x += e2, r2.y += s2, t2.isBranch && To(t2, e2, s2);
-  }, scale(t2, e2, s2, r2, i2, n2, o2) {
-    let a2;
-    const { children: h2 } = t2, l2 = r2 - 1, d2 = i2 - 1;
-    for (let c2 = 0, u2 = h2.length; c2 < u2; c2++) a2 = (t2 = h2[c2]).__world, a2.a *= r2, a2.d *= i2, (a2.b || a2.c) && (a2.b *= r2, a2.c *= i2), a2.e === a2.x && a2.f === a2.y ? (a2.x = a2.e += (a2.e - n2) * l2 + e2, a2.y = a2.f += (a2.f - o2) * d2 + s2) : (a2.e += (a2.e - n2) * l2 + e2, a2.f += (a2.f - o2) * d2 + s2, a2.x += (a2.x - n2) * l2 + e2, a2.y += (a2.y - o2) * d2 + s2), a2.width *= r2, a2.height *= i2, a2.scaleX *= r2, a2.scaleY *= i2, t2.isBranch && Po(t2, e2, s2, r2, i2, n2, o2);
-  } }, { pushAllChildBranch: ko, pushAllBranchStack: Co, updateBoundsByBranchStack: Oo, move: To, scale: Po } = vo, So = { run(t2) {
-    if (t2 && t2.length) {
-      const e2 = t2.length;
-      for (let s2 = 0; s2 < e2; s2++) t2[s2]();
-      t2.length === e2 ? t2.length = 0 : t2.splice(0, e2);
-    }
-  } }, { getRelativeWorld: Lo, updateBounds: Ro } = co, { toOuterOf: Eo, getPoints: Io, copy: Mo } = zt$2, Ao = "_localContentBounds", Wo = "_worldContentBounds", No = "_worldBoxBounds", Yo = "_worldStrokeBounds";
-  class Do {
-    get contentBounds() {
-      return this._contentBounds || this.boxBounds;
-    }
-    set contentBounds(t2) {
-      this._contentBounds = t2;
-    }
-    get strokeBounds() {
-      return this._strokeBounds || this.boxBounds;
-    }
-    get renderBounds() {
-      return this._renderBounds || this.boxBounds;
-    }
-    set renderBounds(t2) {
-      this._renderBounds = t2;
-    }
-    get localContentBounds() {
-      return Eo(this.contentBounds, this.leaf.__localMatrix, this[Ao] || (this[Ao] = {})), this[Ao];
-    }
-    get localStrokeBounds() {
-      return this._localStrokeBounds || this;
-    }
-    get localRenderBounds() {
-      return this._localRenderBounds || this;
-    }
-    get worldContentBounds() {
-      return Eo(this.contentBounds, this.leaf.__world, this[Wo] || (this[Wo] = {})), this[Wo];
-    }
-    get worldBoxBounds() {
-      return Eo(this.boxBounds, this.leaf.__world, this[No] || (this[No] = {})), this[No];
-    }
-    get worldStrokeBounds() {
-      return Eo(this.strokeBounds, this.leaf.__world, this[Yo] || (this[Yo] = {})), this[Yo];
-    }
-    get a() {
-      return 1;
-    }
-    get b() {
-      return 0;
-    }
-    get c() {
-      return 0;
-    }
-    get d() {
-      return 1;
-    }
-    get e() {
-      return this.leaf.__.x;
-    }
-    get f() {
-      return this.leaf.__.y;
-    }
-    get x() {
-      return this.e + this.boxBounds.x;
-    }
-    get y() {
-      return this.f + this.boxBounds.y;
-    }
-    get width() {
-      return this.boxBounds.width;
-    }
-    get height() {
-      return this.boxBounds.height;
-    }
-    constructor(t2) {
-      this.leaf = t2, this.leaf.__local && (this._localRenderBounds = this._localStrokeBounds = this.leaf.__local), t2.__world && (this.boxBounds = { x: 0, y: 0, width: 0, height: 0 }, this.boxChange(), this.matrixChange());
-    }
-    createLocal() {
-      const t2 = this.leaf.__local = { a: 1, b: 0, c: 0, d: 1, e: 0, f: 0, x: 0, y: 0, width: 0, height: 0 };
-      this._localStrokeBounds || (this._localStrokeBounds = t2), this._localRenderBounds || (this._localRenderBounds = t2);
-    }
-    update() {
-      const { leaf: t2 } = this, { leafer: e2 } = t2;
-      if (t2.isApp) return Ro(t2);
-      if (e2) e2.ready ? e2.watcher.changed && e2.layouter.layout() : e2.start();
-      else {
-        let e3 = t2;
-        for (; e3.parent && !e3.parent.leafer; ) e3 = e3.parent;
-        const s2 = e3;
-        if (s2.__fullLayouting) return;
-        s2.__fullLayouting = true, $t$2.layout(s2), delete s2.__fullLayouting;
-      }
-    }
-    getTransform(t2 = "world") {
-      this.update();
-      const { leaf: e2 } = this;
-      switch (t2) {
-        case "world":
-          return e2.__world;
-        case "local":
-          return e2.__localMatrix;
-        case "inner":
-          return q$1.defaultMatrix;
-        case "page":
-          t2 = e2.zoomLayer;
-        default:
-          return Lo(e2, t2);
-      }
-    }
-    getBounds(t2, e2 = "world") {
-      switch (this.update(), e2) {
-        case "world":
-          return this.getWorldBounds(t2);
-        case "local":
-          return this.getLocalBounds(t2);
-        case "inner":
-          return this.getInnerBounds(t2);
-        case "page":
-          e2 = this.leaf.zoomLayer;
-        default:
-          return new Vt$3(this.getInnerBounds(t2)).toOuterOf(this.getTransform(e2));
-      }
-    }
-    getInnerBounds(t2 = "box") {
-      switch (t2) {
-        case "render":
-          return this.renderBounds;
-        case "content":
-          if (this.contentBounds) return this.contentBounds;
-        case "box":
-          return this.boxBounds;
-        case "stroke":
-          return this.strokeBounds;
-      }
-    }
-    getLocalBounds(t2 = "box") {
-      switch (t2) {
-        case "render":
-          return this.localRenderBounds;
-        case "stroke":
-          return this.localStrokeBounds;
-        case "content":
-          if (this.contentBounds) return this.localContentBounds;
-        case "box":
-          return this.leaf.__localBoxBounds;
-      }
-    }
-    getWorldBounds(t2 = "box") {
-      switch (t2) {
-        case "render":
-          return this.leaf.__world;
-        case "stroke":
-          return this.worldStrokeBounds;
-        case "content":
-          if (this.contentBounds) return this.worldContentBounds;
-        case "box":
-          return this.worldBoxBounds;
-      }
-    }
-    getLayoutBounds(t2, e2 = "world", s2) {
-      const { leaf: r2 } = this;
-      let i2, n2, o2, a2 = this.getInnerBounds(t2);
-      switch (e2) {
-        case "world":
-          i2 = r2.getWorldPoint(a2), n2 = r2.__world;
-          break;
-        case "local":
-          const { scaleX: t3, scaleY: s3, rotation: h2, skewX: l2, skewY: d2 } = r2.__;
-          o2 = { scaleX: t3, scaleY: s3, rotation: h2, skewX: l2, skewY: d2 }, i2 = r2.getLocalPointByInner(a2);
-          break;
-        case "inner":
-          i2 = a2, n2 = q$1.defaultMatrix;
-          break;
-        case "page":
-          e2 = r2.zoomLayer;
-        default:
-          i2 = r2.getWorldPoint(a2, e2), n2 = Lo(r2, e2, true);
-      }
-      if (o2 || (o2 = q$1.getLayout(n2)), Mo(o2, a2), ot$2.copy(o2, i2), s2) {
-        const { scaleX: t3, scaleY: e3 } = o2, s3 = Math.abs(t3), r3 = Math.abs(e3);
-        1 === s3 && 1 === r3 || (o2.scaleX /= s3, o2.scaleY /= r3, o2.width *= s3, o2.height *= r3);
-      }
-      return o2;
-    }
-    getLayoutPoints(t2, e2 = "world") {
-      const { leaf: r2 } = this, i2 = Io(this.getInnerBounds(t2));
-      let n2;
-      switch (e2) {
-        case "world":
-          n2 = null;
-          break;
-        case "local":
-          n2 = r2.parent;
-          break;
-        case "inner":
-          break;
-        case "page":
-          e2 = r2.zoomLayer;
-        default:
-          n2 = e2;
-      }
-      return s(n2) || i2.forEach((t3) => r2.innerToWorld(t3, null, false, n2)), i2;
-    }
-    shrinkContent() {
-      const { x: t2, y: e2, width: s2, height: r2 } = this.boxBounds;
-      this._contentBounds = { x: t2, y: e2, width: s2, height: r2 };
-    }
-    spreadStroke() {
-      const { x: t2, y: e2, width: s2, height: r2 } = this.strokeBounds;
-      this._strokeBounds = { x: t2, y: e2, width: s2, height: r2 }, this._localStrokeBounds = { x: t2, y: e2, width: s2, height: r2 }, this.renderSpread || this.spreadRenderCancel();
-    }
-    spreadRender() {
-      const { x: t2, y: e2, width: s2, height: r2 } = this.renderBounds;
-      this._renderBounds = { x: t2, y: e2, width: s2, height: r2 }, this._localRenderBounds = { x: t2, y: e2, width: s2, height: r2 };
-    }
-    shrinkContentCancel() {
-      this._contentBounds = void 0;
-    }
-    spreadStrokeCancel() {
-      const t2 = this.renderBounds === this.strokeBounds;
-      this._strokeBounds = this.boxBounds, this._localStrokeBounds = this.leaf.__localBoxBounds, t2 && this.spreadRenderCancel();
-    }
-    spreadRenderCancel() {
-      this._renderBounds = this._strokeBounds, this._localRenderBounds = this._localStrokeBounds;
-    }
-    boxChange() {
-      this.boxChanged = true, this.localBoxChanged ? this.boundsChanged || (this.boundsChanged = true) : this.localBoxChange(), this.hitCanvasChanged = true;
-    }
-    localBoxChange() {
-      this.localBoxChanged = true, this.boundsChanged = true;
-    }
-    strokeChange() {
-      this.strokeChanged = true, this.strokeSpread || (this.strokeSpread = 1), this.boundsChanged = true, this.hitCanvasChanged = true;
-    }
-    renderChange() {
-      this.renderChanged = true, this.renderSpread || (this.renderSpread = 1), this.boundsChanged = true;
-    }
-    scaleChange() {
-      this.scaleChanged = true, this._scaleOrRotationChange();
-    }
-    rotationChange() {
-      this.rotationChanged = true, this.affectRotation = true, this._scaleOrRotationChange();
-    }
-    _scaleOrRotationChange() {
-      this.affectScaleOrRotation = true, this.matrixChange(), this.leaf.__local || this.createLocal();
-    }
-    matrixChange() {
-      this.matrixChanged = true, this.localBoxChanged ? this.boundsChanged || (this.boundsChanged = true) : this.localBoxChange();
-    }
-    surfaceChange() {
-      this.surfaceChanged = true;
-    }
-    opacityChange() {
-      this.opacityChanged = true, this.surfaceChanged || this.surfaceChange();
-    }
-    childrenSortChange() {
-      this.childrenSortChanged || (this.childrenSortChanged = this.affectChildrenSort = true, this.leaf.forceUpdate("surface"));
-    }
-    destroy() {
-    }
-  }
-  class Xo {
-    constructor(t2, e2) {
-      this.bubbles = false, this.type = t2, e2 && (this.target = e2);
-    }
-    stopDefault() {
-      this.isStopDefault = true, this.origin && $t$2.event.stopDefault(this.origin);
-    }
-    stopNow() {
-      this.isStopNow = true, this.isStop = true, this.origin && $t$2.event.stopNow(this.origin);
-    }
-    stop() {
-      this.isStop = true, this.origin && $t$2.event.stop(this.origin);
-    }
-  }
-  class zo extends Xo {
-    constructor(t2, e2, s2) {
-      super(t2, e2), this.parent = s2, this.child = e2;
-    }
-  }
-  zo.ADD = "child.add", zo.REMOVE = "child.remove", zo.CREATED = "created", zo.MOUNTED = "mounted", zo.UNMOUNTED = "unmounted", zo.DESTROY = "destroy";
-  const Fo = "property.scroll";
-  class Uo extends Xo {
-    constructor(t2, e2, s2, r2, i2) {
-      super(t2, e2), this.attrName = s2, this.oldValue = r2, this.newValue = i2;
-    }
-  }
-  Uo.CHANGE = "property.change", Uo.LEAFER_CHANGE = "property.leafer_change", Uo.SCROLL = Fo;
-  const jo = { scrollX: Fo, scrollY: Fo };
-  class Vo extends Xo {
-    constructor(t2, e2) {
-      super(t2), Object.assign(this, e2);
-    }
-  }
-  Vo.LOAD = "image.load", Vo.LOADED = "image.loaded", Vo.ERROR = "image.error";
-  class Ho extends Xo {
-    static checkHas(t2, e2, s2) {
-      "on" === s2 ? e2 === Jo ? t2.__hasWorldEvent = true : t2.__hasLocalEvent = true : (t2.__hasLocalEvent = t2.hasEvent(Go) || t2.hasEvent(qo) || t2.hasEvent(Qo), t2.__hasWorldEvent = t2.hasEvent(Jo));
-    }
-    static emitLocal(t2) {
-      if (t2.leaferIsReady) {
-        const { resized: e2 } = t2.__layout;
-        "local" !== e2 && (t2.emit(Go, t2), "inner" === e2 && t2.emit(qo, t2)), t2.emit(Qo, t2);
-      }
-    }
-    static emitWorld(t2) {
-      t2.leaferIsReady && t2.emit(Jo, this);
-    }
-  }
-  Ho.RESIZE = "bounds.resize", Ho.INNER = "bounds.inner", Ho.LOCAL = "bounds.local", Ho.WORLD = "bounds.world";
-  const { RESIZE: Go, INNER: qo, LOCAL: Qo, WORLD: Jo } = Ho, Zo = {};
-  [Go, qo, Qo, Jo].forEach((t2) => Zo[t2] = 1);
-  class $o extends Xo {
-    get bigger() {
-      if (!this.old) return true;
-      const { width: t2, height: e2 } = this.old;
-      return this.width >= t2 && this.height >= e2;
-    }
-    get smaller() {
-      return !this.bigger;
-    }
-    get samePixelRatio() {
-      return !this.old || this.pixelRatio === this.old.pixelRatio;
-    }
-    constructor(t2, e2) {
-      d(t2) ? (super($o.RESIZE), Object.assign(this, t2)) : super(t2), this.old = e2;
-    }
-    static isResizing(t2) {
-      return this.resizingKeys && !s(this.resizingKeys[t2.innerId]);
-    }
-  }
-  $o.RESIZE = "resize";
-  class Ko extends Xo {
-    constructor(t2, e2) {
-      super(t2), this.data = e2;
-    }
-  }
-  Ko.REQUEST = "watch.request", Ko.DATA = "watch.data";
-  class ta extends Xo {
-    constructor(t2, e2, s2) {
-      super(t2), e2 && (this.data = e2, this.times = s2);
-    }
-  }
-  ta.REQUEST = "layout.request", ta.START = "layout.start", ta.BEFORE = "layout.before", ta.LAYOUT = "layout", ta.AFTER = "layout.after", ta.AGAIN = "layout.again", ta.END = "layout.end";
-  class ea extends Xo {
-    constructor(t2, e2, s2, r2) {
-      super(t2), e2 && (this.times = e2), s2 && (this.renderBounds = s2, this.renderOptions = r2);
-    }
-  }
-  ea.REQUEST = "render.request", ea.CHILD_START = "render.child_start", ea.CHILD_END = "render.child_end", ea.START = "render.start", ea.BEFORE = "render.before", ea.RENDER = "render", ea.AFTER = "render.after", ea.AGAIN = "render.again", ea.END = "render.end", ea.NEXT = "render.next";
-  class sa extends Xo {
-  }
-  sa.START = "leafer.start", sa.BEFORE_READY = "leafer.before_ready", sa.READY = "leafer.ready", sa.AFTER_READY = "leafer.after_ready", sa.VIEW_READY = "leafer.view_ready", sa.VIEW_COMPLETED = "leafer.view_completed", sa.STOP = "leafer.stop", sa.RESTART = "leafer.restart", sa.END = "leafer.end", sa.UPDATE_MODE = "leafer.update_mode", sa.TRANSFORM = "leafer.transform", sa.MOVE = "leafer.move", sa.SCALE = "leafer.scale", sa.ROTATE = "leafer.rotate", sa.SKEW = "leafer.skew";
-  const { MOVE: ra, SCALE: ia, ROTATE: na, SKEW: oa } = sa, aa = { x: ra, y: ra, scaleX: ia, scaleY: ia, rotation: na, skewX: oa, skewY: oa }, ha = {};
-  class la {
-    set event(t2) {
-      this.on(t2);
-    }
-    on(t2, e2, s2) {
-      if (!e2) {
-        let e3;
-        if (l(t2)) t2.forEach((t3) => this.on(t3[0], t3[1], t3[2]));
-        else for (let s3 in t2) l(e3 = t2[s3]) ? this.on(s3, e3[0], e3[1]) : this.on(s3, e3);
-        return;
-      }
-      let r2, n2, o2;
-      s2 && ("once" === s2 ? n2 = true : "boolean" == typeof s2 ? r2 = s2 : (r2 = s2.capture, n2 = s2.once));
-      const a2 = da(this, r2, true), h2 = i(t2) ? t2.split(" ") : t2, d2 = n2 ? { listener: e2, once: n2 } : { listener: e2 };
-      h2.forEach((t3) => {
-        t3 && (o2 = a2[t3], o2 ? -1 === o2.findIndex((t4) => t4.listener === e2) && o2.push(d2) : a2[t3] = [d2], Zo[t3] && Ho.checkHas(this, t3, "on"));
-      });
-    }
-    off(t2, e2, s2) {
-      if (t2) {
-        const r2 = i(t2) ? t2.split(" ") : t2;
-        if (e2) {
-          let t3, i2, n2;
-          s2 && (t3 = "boolean" == typeof s2 ? s2 : "once" !== s2 && s2.capture);
-          const o2 = da(this, t3);
-          r2.forEach((t4) => {
-            t4 && (i2 = o2[t4], i2 && (n2 = i2.findIndex((t5) => t5.listener === e2), n2 > -1 && i2.splice(n2, 1), i2.length || delete o2[t4], Zo[t4] && Ho.checkHas(this, t4, "off")));
-          });
-        } else {
-          const { __bubbleMap: t3, __captureMap: e3 } = this;
-          r2.forEach((s3) => {
-            t3 && delete t3[s3], e3 && delete e3[s3];
-          });
-        }
-      } else this.__bubbleMap = this.__captureMap = void 0;
-    }
-    on_(t2, e2, s2, r2) {
-      return e2 ? this.on(t2, s2 ? e2 = e2.bind(s2) : e2, r2) : l(t2) && t2.forEach((t3) => this.on(t3[0], t3[2] ? t3[1] = t3[1].bind(t3[2]) : t3[1], t3[3])), { type: t2, current: this, listener: e2, options: r2 };
-    }
-    off_(t2) {
-      if (!t2) return;
-      const e2 = l(t2) ? t2 : [t2];
-      e2.forEach((t3) => {
-        t3 && (t3.listener ? t3.current.off(t3.type, t3.listener, t3.options) : l(t3.type) && t3.type.forEach((e3) => t3.current.off(e3[0], e3[1], e3[3])));
-      }), e2.length = 0;
-    }
-    once(t2, e2, s2, r2) {
-      if (!e2) return l(t2) && t2.forEach((t3) => this.once(t3[0], t3[1], t3[2], t3[3]));
-      d(s2) ? e2 = e2.bind(s2) : r2 = s2, this.on(t2, e2, { once: true, capture: r2 });
-    }
-    emit(t2, e2, s2) {
-      !e2 && pe$2.has(t2) && (e2 = pe$2.get(t2, { type: t2, target: this, current: this }));
-      const r2 = da(this, s2)[t2];
-      if (r2) {
-        let i2;
-        for (let n2 = 0, o2 = r2.length; n2 < o2 && !((i2 = r2[n2]) && (i2.listener(e2), i2.once && (this.off(t2, i2.listener, s2), n2--, o2--), e2 && e2.isStopNow)); n2++) ;
-      }
-      this.syncEventer && this.syncEventer.emitEvent(e2, s2);
-    }
-    emitEvent(t2, e2) {
-      t2.current = this, this.emit(t2.type, t2, e2);
-    }
-    hasEvent(t2, e2) {
-      if (this.syncEventer && this.syncEventer.hasEvent(t2, e2)) return true;
-      const { __bubbleMap: r2, __captureMap: i2 } = this, n2 = r2 && r2[t2], o2 = i2 && i2[t2];
-      return !!(s(e2) ? n2 || o2 : e2 ? o2 : n2);
-    }
-    destroy() {
-      this.__captureMap = this.__bubbleMap = this.syncEventer = null;
-    }
-  }
-  function da(t2, e2, s2) {
-    if (e2) {
-      const { __captureMap: e3 } = t2;
-      return e3 || (s2 ? t2.__captureMap = {} : ha);
-    }
-    {
-      const { __bubbleMap: e3 } = t2;
-      return e3 || (s2 ? t2.__bubbleMap = {} : ha);
-    }
-  }
-  const { on: ca, on_: ua, off: _a, off_: pa, once: fa, emit: ga, emitEvent: ya, hasEvent: ma, destroy: xa } = la.prototype, wa = { on: ca, on_: ua, off: _a, off_: pa, once: fa, emit: ga, emitEvent: ya, hasEvent: ma, destroyEventer: xa }, ba = ee$2.get("setAttr"), Ba = { __setAttr(t2, e2, r2) {
-    if (this.leaferIsCreated) {
-      const i2 = this.__.__getInput(t2);
-      if (!r2 || n(e2) || s(e2) || (ba.warn(this.innerName, t2, e2), e2 = void 0), d(e2) || i2 !== e2) {
-        if (this.__realSetAttr(t2, e2), this.isLeafer) {
-          this.emitEvent(new Uo(Uo.LEAFER_CHANGE, this, t2, i2, e2));
-          const s3 = aa[t2];
-          s3 && (this.emitEvent(new sa(s3, this)), this.emitEvent(new sa(sa.TRANSFORM, this)));
-        }
-        this.emitPropertyEvent(Uo.CHANGE, t2, i2, e2);
-        const s2 = jo[t2];
-        return s2 && this.emitPropertyEvent(s2, t2, i2, e2), true;
-      }
-      return false;
-    }
-    return this.__realSetAttr(t2, e2), true;
-  }, emitPropertyEvent(t2, e2, s2, r2) {
-    const i2 = new Uo(t2, this, e2, s2, r2);
-    this.isLeafer || this.hasEvent(t2) && this.emitEvent(i2), this.leafer.emitEvent(i2);
-  }, __realSetAttr(t2, e2) {
-    const r2 = this.__;
-    r2[t2] = e2, this.__proxyData && this.setProxyAttr(t2, e2), r2.normalStyle && (this.lockNormalStyle || s(r2.normalStyle[t2]) || (r2.normalStyle[t2] = e2));
-  }, __getAttr(t2) {
-    return this.__proxyData ? this.getProxyAttr(t2) : this.__.__get(t2);
-  } }, { setLayout: va, multiplyParent: ka, translateInner: Ca, defaultWorld: Oa } = q$1, { toPoint: Ta, tempPoint: Pa } = bt$3, Sa = { __updateWorldMatrix() {
-    const { parent: t2, __layout: e2, __world: s2, __scrollWorld: r2, __: i2 } = this;
-    ka(this.__local || e2, t2 ? t2.__scrollWorld || t2.__world : Oa, s2, !!e2.affectScaleOrRotation, i2), r2 && Ca(Object.assign(r2, s2), i2.scrollX, i2.scrollY);
-  }, __updateLocalMatrix() {
-    if (this.__local) {
-      const t2 = this.__layout, e2 = this.__local, s2 = this.__;
-      t2.affectScaleOrRotation && (t2.scaleChanged && (t2.resized || (t2.resized = "scale")) || t2.rotationChanged) && (va(e2, s2, null, null, t2.affectRotation), t2.scaleChanged = t2.rotationChanged = void 0), e2.e = s2.x + s2.offsetX, e2.f = s2.y + s2.offsetY, (s2.around || s2.origin) && (Ta(s2.around || s2.origin, t2.boxBounds, Pa), Ca(e2, -Pa.x, -Pa.y, !s2.around));
-    }
-    this.__layout.matrixChanged = void 0;
-  } }, { updateMatrix: La, updateAllMatrix: Ra } = co, { updateBounds: Ea } = vo, { toOuterOf: Ia, copyAndSpread: Ma, copy: Aa } = zt$2, { toBounds: Wa } = Ai$1, Na = { __updateWorldBounds() {
-    const { __layout: t2, __world: e2 } = this;
-    Ia(t2.renderBounds, e2, e2), t2.resized && ("inner" === t2.resized && this.__onUpdateSize(), this.__hasLocalEvent && Ho.emitLocal(this), t2.resized = void 0), this.__hasWorldEvent && Ho.emitWorld(this);
-  }, __updateLocalBounds() {
-    const t2 = this.__layout;
-    t2.boxChanged && (this.__.__pathInputed || this.__updatePath(), this.__updateRenderPath(), this.__updateBoxBounds(), t2.resized = "inner"), t2.localBoxChanged && (this.__local && this.__updateLocalBoxBounds(), t2.localBoxChanged = void 0, t2.strokeSpread && (t2.strokeChanged = true), t2.renderSpread && (t2.renderChanged = true), this.parent && this.parent.__layout.boxChange()), t2.boxChanged = void 0, t2.strokeChanged && (t2.strokeSpread = this.__updateStrokeSpread(), t2.strokeSpread ? (t2.strokeBounds === t2.boxBounds && t2.spreadStroke(), this.__updateStrokeBounds(), this.__updateLocalStrokeBounds()) : t2.spreadStrokeCancel(), t2.strokeChanged = void 0, (t2.renderSpread || t2.strokeSpread !== t2.strokeBoxSpread) && (t2.renderChanged = true), this.parent && this.parent.__layout.strokeChange(), t2.resized = "inner"), t2.renderChanged && (t2.renderSpread = this.__updateRenderSpread(), t2.renderSpread ? (t2.renderBounds !== t2.boxBounds && t2.renderBounds !== t2.strokeBounds || t2.spreadRender(), this.__updateRenderBounds(), this.__updateLocalRenderBounds()) : t2.spreadRenderCancel(), t2.renderChanged = void 0, this.parent && this.parent.__layout.renderChange()), t2.resized || (t2.resized = "local"), t2.boundsChanged = void 0;
-  }, __updateLocalBoxBounds() {
-    this.__hasMotionPath && this.__updateMotionPath(), this.__hasAutoLayout && this.__updateAutoLayout(), Ia(this.__layout.boxBounds, this.__local, this.__local);
-  }, __updateLocalStrokeBounds() {
-    Ia(this.__layout.strokeBounds, this.__localMatrix, this.__layout.localStrokeBounds);
-  }, __updateLocalRenderBounds() {
-    Ia(this.__layout.renderBounds, this.__localMatrix, this.__layout.localRenderBounds);
-  }, __updateBoxBounds(t2, e2) {
-    const s2 = this.__layout.boxBounds, r2 = this.__;
-    r2.__usePathBox ? Wa(r2.path, s2) : (s2.x = 0, s2.y = 0, s2.width = r2.width, s2.height = r2.height);
-  }, __updateAutoLayout() {
-    this.__layout.matrixChanged = true, this.isBranch ? (this.__extraUpdate(), this.__.flow ? (this.__layout.boxChanged && this.__updateFlowLayout(), Ra(this), Ea(this, this), this.__.__autoSide && this.__updateBoxBounds(true)) : (Ra(this), Ea(this, this))) : La(this);
-  }, __updateNaturalSize() {
-    const { __: t2, __layout: e2 } = this;
-    t2.__naturalWidth = e2.boxBounds.width, t2.__naturalHeight = e2.boxBounds.height;
-  }, __updateStrokeBounds(t2) {
-    const e2 = this.__layout;
-    Ma(e2.strokeBounds, e2.boxBounds, e2.strokeBoxSpread);
-  }, __updateRenderBounds(t2) {
-    const e2 = this.__layout, { renderSpread: s2 } = e2;
-    o(s2) && s2 <= 0 ? Aa(e2.renderBounds, e2.strokeBounds) : Ma(e2.renderBounds, e2.boxBounds, s2);
-  } }, Ya = { __render(t2, e2) {
-    if (e2.shape) return this.__renderShape(t2, e2);
-    if ((!e2.cellList || e2.cellList.has(this)) && this.__worldOpacity) {
-      const s2 = this.__;
-      if (s2.bright && !e2.topRendering) return e2.topList.add(this);
-      if (t2.setWorld(this.__nowWorld = this.__getNowWorld(e2)), t2.opacity = e2.dimOpacity && !s2.dimskip ? s2.opacity * e2.dimOpacity : s2.opacity, this.__.__single) {
-        if ("path" === s2.eraser) return this.__renderEraser(t2, e2);
-        const r2 = t2.getSameCanvas(true, true);
-        this.__draw(r2, e2, t2), co.copyCanvasByWorld(this, t2, r2, this.__nowWorld, s2.__blendMode, true), r2.recycle(this.__nowWorld);
-      } else this.__draw(t2, e2);
-      ee$2.showBounds && ee$2.drawBounds(this, t2, e2);
-    }
-  }, __renderShape(t2, e2) {
-    this.__worldOpacity && (t2.setWorld(this.__nowWorld = this.__getNowWorld(e2)), this.__drawShape(t2, e2));
-  }, __clip(t2, e2) {
-    this.__worldOpacity && (t2.setWorld(this.__nowWorld = this.__getNowWorld(e2)), this.__drawRenderPath(t2), t2.clipUI(this));
-  }, __updateWorldOpacity() {
-    this.__worldOpacity = this.__.visible ? this.parent ? this.parent.__worldOpacity * this.__.opacity : this.__.opacity : 0, this.__layout.opacityChanged && (this.__layout.opacityChanged = false);
-  } }, { excludeRenderBounds: Da } = xo, { hasSize: Xa } = zt$2, za = { __updateChange() {
-    const { __layout: t2 } = this;
-    t2.childrenSortChanged && (this.__updateSortChildren(), t2.childrenSortChanged = false), this.__.__checkSingle();
-  }, __render(t2, e2) {
-    const s2 = this.__nowWorld = this.__getNowWorld(e2);
-    if (this.__worldOpacity && Xa(s2)) {
-      const r2 = this.__;
-      if (r2.__useDim) if (r2.dim) e2.dimOpacity = true === r2.dim ? 0.2 : r2.dim;
-      else {
-        if (r2.bright && !e2.topRendering) return e2.topList.add(this);
-        r2.dimskip && e2.dimOpacity && (e2.dimOpacity = 0);
-      }
-      if (r2.__single && !this.isBranchLeaf) {
-        if ("path" === r2.eraser) return this.__renderEraser(t2, e2);
-        const i2 = t2.getSameCanvas(false, true);
-        this.__renderBranch(i2, e2), t2.opacity = e2.dimOpacity ? r2.opacity * e2.dimOpacity : r2.opacity, t2.copyWorldByReset(i2, s2, s2, r2.__blendMode, true), i2.recycle(s2);
-      } else this.__renderBranch(t2, e2);
-    }
-  }, __renderBranch(t2, e2) {
-    if (this.__hasMask) this.__renderMask(t2, e2);
-    else {
-      let s2;
-      const { children: r2 } = this;
-      for (let i2 = 0, n2 = r2.length; i2 < n2; i2++) s2 = r2[i2], Da(s2, e2) || (s2.__.complex ? s2.__renderComplex(t2, e2) : s2.__render(t2, e2));
-    }
-  }, __clip(t2, e2) {
-    if (this.__worldOpacity) {
-      const { children: s2 } = this;
-      for (let r2 = 0, i2 = s2.length; r2 < i2; r2++) Da(s2[r2], e2) || s2[r2].__clip(t2, e2);
-    }
-  } }, Fa = {}, { LEAF: Ua, create: ja } = g$1, { stintSet: Va } = _$2, { toInnerPoint: Ha, toOuterPoint: Ga, multiplyParent: qa } = q$1, { toOuterOf: Qa } = zt$2, { copy: Ja, move: Za } = ot$2, { moveLocal: $a, zoomOfLocal: Ka, rotateOfLocal: th, skewOfLocal: eh, moveWorld: sh, zoomOfWorld: rh, rotateOfWorld: ih, skewOfWorld: nh, transform: oh, transformWorld: ah, setTransform: hh, getFlipTransform: lh, getLocalOrigin: dh, getRelativeWorld: ch, drop: uh } = co;
-  let _h = class {
-    get tag() {
-      return this.__tag;
-    }
-    set tag(t2) {
-    }
-    get __tag() {
-      return "Leaf";
-    }
-    get innerName() {
-      return this.__.name || this.tag + this.innerId;
-    }
-    get __DataProcessor() {
-      return f;
-    }
-    get __LayoutProcessor() {
-      return Do;
-    }
-    get leaferIsCreated() {
-      return this.leafer && this.leafer.created;
-    }
-    get leaferIsReady() {
-      return this.leafer && this.leafer.ready;
-    }
-    get isLeafer() {
-      return false;
-    }
-    get isBranch() {
-      return false;
-    }
-    get isBranchLeaf() {
-      return false;
-    }
-    get __localMatrix() {
-      return this.__local || this.__layout;
-    }
-    get __localBoxBounds() {
-      return this.__local || this.__layout;
-    }
-    get worldTransform() {
-      return this.__layout.getTransform("world");
-    }
-    get localTransform() {
-      return this.__layout.getTransform("local");
-    }
-    get scrollWorldTransform() {
-      return this.updateLayout(), this.__scrollWorld || this.__world;
-    }
-    get boxBounds() {
-      return this.getBounds("box", "inner");
-    }
-    get renderBounds() {
-      return this.getBounds("render", "inner");
-    }
-    get worldBoxBounds() {
-      return this.getBounds("box");
-    }
-    get worldStrokeBounds() {
-      return this.getBounds("stroke");
-    }
-    get worldRenderBounds() {
-      return this.getBounds("render");
-    }
-    get worldOpacity() {
-      return this.updateLayout(), this.__worldOpacity;
-    }
-    get __worldFlipped() {
-      return this.__world.scaleX < 0 || this.__world.scaleY < 0;
-    }
-    get __onlyHitMask() {
-      return this.__hasMask && !this.__.hitChildren;
-    }
-    get __ignoreHitWorld() {
-      return (this.__hasMask || this.__hasEraser) && this.__.hitChildren;
-    }
-    get __inLazyBounds() {
-      return this.leaferIsCreated && this.leafer.lazyBounds.hit(this.__world);
-    }
-    get pathInputed() {
-      return this.__.__pathInputed;
-    }
-    set event(t2) {
-      this.on(t2);
-    }
-    constructor(t2) {
-      this.innerId = ja(Ua), this.reset(t2), this.__bubbleMap && this.__emitLifeEvent(zo.CREATED);
-    }
-    reset(t2) {
-      this.leafer && this.leafer.forceRender(this.__world), 0 !== t2 && (this.__world = { a: 1, b: 0, c: 0, d: 1, e: 0, f: 0, x: 0, y: 0, width: 0, height: 0, scaleX: 1, scaleY: 1 }, null !== t2 && (this.__local = { a: 1, b: 0, c: 0, d: 1, e: 0, f: 0, x: 0, y: 0, width: 0, height: 0 })), this.__worldOpacity = 1, this.__ = new this.__DataProcessor(this), this.__layout = new this.__LayoutProcessor(this), this.__level && this.resetCustom(), t2 && (t2.__ && (t2 = t2.toJSON()), t2.children ? this.set(t2) : Object.assign(this, t2));
-    }
-    resetCustom() {
-      this.__hasMask = this.__hasEraser = null, this.forceUpdate();
-    }
-    waitParent(t2, e2) {
-      e2 && (t2 = t2.bind(e2)), this.parent ? t2() : this.on(zo.ADD, t2, "once");
-    }
-    waitLeafer(t2, e2) {
-      e2 && (t2 = t2.bind(e2)), this.leafer ? t2() : this.on(zo.MOUNTED, t2, "once");
-    }
-    nextRender(t2, e2, s2) {
-      this.leafer ? this.leafer.nextRender(t2, e2, s2) : this.waitLeafer(() => this.leafer.nextRender(t2, e2, s2));
-    }
-    removeNextRender(t2) {
-      this.nextRender(t2, null, "off");
-    }
-    __bindLeafer(t2) {
-      if (this.isLeafer && null !== t2 && (t2 = this), this.leafer && !t2 && this.leafer.leafs--, this.leafer = t2, t2 ? (t2.leafs++, this.__level = this.parent ? this.parent.__level + 1 : 1, this.animation && this.__runAnimation("in"), this.__bubbleMap && this.__emitLifeEvent(zo.MOUNTED)) : this.__emitLifeEvent(zo.UNMOUNTED), this.isBranch) {
-        const { children: e2 } = this;
-        for (let s2 = 0, r2 = e2.length; s2 < r2; s2++) e2[s2].__bindLeafer(t2);
-      }
-    }
-    set(t2, e2) {
-    }
-    get(t2) {
-    }
-    setAttr(t2, e2) {
-      this[t2] = e2;
-    }
-    getAttr(t2) {
-      return this[t2];
-    }
-    getComputedAttr(t2) {
-      return this.__[t2];
-    }
-    toJSON(t2) {
-      return t2 && this.__layout.update(), this.__.__getInputData(null, t2);
-    }
-    toString(t2) {
-      return JSON.stringify(this.toJSON(t2));
-    }
-    toSVG() {
-    }
-    __SVG(t2) {
-    }
-    toHTML() {
-    }
-    __setAttr(t2, e2) {
-      return true;
-    }
-    __getAttr(t2) {
-    }
-    setProxyAttr(t2, e2) {
-    }
-    getProxyAttr(t2) {
-    }
-    find(t2, e2) {
-    }
-    findTag(t2) {
-    }
-    findOne(t2, e2) {
-    }
-    findId(t2) {
-    }
-    focus(t2) {
-    }
-    updateState() {
-    }
-    updateLayout() {
-      this.__layout.update();
-    }
-    forceUpdate(t2) {
-      s(t2) ? t2 = "width" : "surface" === t2 && (t2 = "blendMode");
-      const e2 = this.__.__getInput(t2);
-      this.__[t2] = s(e2) ? null : void 0, this[t2] = e2;
-    }
-    forceRender(t2, e2) {
-      this.forceUpdate("surface");
-    }
-    __extraUpdate() {
-      this.leaferIsReady && this.leafer.layouter.addExtra(this);
-    }
-    __updateWorldMatrix() {
-    }
-    __updateLocalMatrix() {
-    }
-    __updateWorldBounds() {
-    }
-    __updateLocalBounds() {
-    }
-    __updateLocalBoxBounds() {
-    }
-    __updateLocalStrokeBounds() {
-    }
-    __updateLocalRenderBounds() {
-    }
-    __updateBoxBounds(t2, e2) {
-    }
-    __updateContentBounds() {
-    }
-    __updateStrokeBounds(t2) {
-    }
-    __updateRenderBounds(t2) {
-    }
-    __updateAutoLayout() {
-    }
-    __updateFlowLayout() {
-    }
-    __updateNaturalSize() {
-    }
-    __updateStrokeSpread() {
-      return 0;
-    }
-    __updateRenderSpread() {
-      return 0;
-    }
-    __onUpdateSize() {
-    }
-    __updateEraser(t2) {
-      this.__hasEraser = !!t2 || this.children.some((t3) => t3.__.eraser);
-    }
-    __renderEraser(t2, e2) {
-      t2.save(), this.__clip(t2, e2);
-      const { renderBounds: s2 } = this.__layout;
-      t2.clearRect(s2.x, s2.y, s2.width, s2.height), t2.restore();
-    }
-    __updateMask(t2) {
-      this.__hasMask = this.children.some((t3) => t3.__.mask && t3.__.visible && t3.__.opacity);
-    }
-    __renderMask(t2, e2) {
-    }
-    __getNowWorld(t2) {
-      if (t2.matrix) {
-        this.__cameraWorld || (this.__cameraWorld = {});
-        const e2 = this.__cameraWorld, s2 = this.__world;
-        return qa(s2, t2.matrix, e2, void 0, s2), Qa(this.__layout.renderBounds, e2, e2), Va(e2, "half", s2.half), Va(e2, "ignorePixelSnap", s2.ignorePixelSnap), e2;
-      }
-      return this.__world;
-    }
-    getClampRenderScale() {
-      let { scaleX: t2 } = this.__nowWorld || this.__world;
-      return t2 < 0 && (t2 = -t2), t2 > 1 ? t2 : 1;
-    }
-    getRenderScaleData(t2, e2) {
-      let { scaleX: s2, scaleY: r2 } = en.patternLocked ? this.__world : this.__nowWorld;
-      return t2 && (s2 < 0 && (s2 = -s2), r2 < 0 && (r2 = -r2)), (true === e2 || "zoom-in" === e2 && s2 > 1 && r2 > 1) && (s2 = r2 = 1), Fa.scaleX = s2, Fa.scaleY = r2, Fa;
-    }
-    getTransform(t2) {
-      return this.__layout.getTransform(t2 || "local");
-    }
-    getBounds(t2, e2) {
-      return this.__layout.getBounds(t2, e2);
-    }
-    getLayoutBounds(t2, e2, s2) {
-      return this.__layout.getLayoutBounds(t2, e2, s2);
-    }
-    getLayoutPoints(t2, e2) {
-      return this.__layout.getLayoutPoints(t2, e2);
-    }
-    getWorldBounds(t2, e2, s2) {
-      const r2 = e2 ? ch(this, e2) : this.worldTransform, i2 = s2 ? t2 : {};
-      return Qa(t2, r2, i2), i2;
-    }
-    worldToLocal(t2, e2, s2, r2) {
-      this.parent ? this.parent.worldToInner(t2, e2, s2, r2) : e2 && Ja(e2, t2);
-    }
-    localToWorld(t2, e2, s2, r2) {
-      this.parent ? this.parent.innerToWorld(t2, e2, s2, r2) : e2 && Ja(e2, t2);
-    }
-    worldToInner(t2, e2, s2, r2) {
-      r2 && (r2.innerToWorld(t2, e2, s2), t2 = e2 || t2), Ha(this.scrollWorldTransform, t2, e2, s2);
-    }
-    innerToWorld(t2, e2, s2, r2) {
-      Ga(this.scrollWorldTransform, t2, e2, s2), r2 && r2.worldToInner(e2 || t2, null, s2);
-    }
-    getBoxPoint(t2, e2, s2, r2) {
-      return this.getBoxPointByInner(this.getInnerPoint(t2, e2, s2, r2), null, null, true);
-    }
-    getBoxPointByInner(t2, e2, s2, r2) {
-      const i2 = r2 ? t2 : Object.assign({}, t2), { x: n2, y: o2 } = this.boxBounds;
-      return Za(i2, -n2, -o2), i2;
-    }
-    getInnerPoint(t2, e2, s2, r2) {
-      const i2 = r2 ? t2 : {};
-      return this.worldToInner(t2, i2, s2, e2), i2;
-    }
-    getInnerPointByBox(t2, e2, s2, r2) {
-      const i2 = r2 ? t2 : Object.assign({}, t2), { x: n2, y: o2 } = this.boxBounds;
-      return Za(i2, n2, o2), i2;
-    }
-    getInnerPointByLocal(t2, e2, s2, r2) {
-      return this.getInnerPoint(t2, this.parent, s2, r2);
-    }
-    getLocalPoint(t2, e2, s2, r2) {
-      const i2 = r2 ? t2 : {};
-      return this.worldToLocal(t2, i2, s2, e2), i2;
-    }
-    getLocalPointByInner(t2, e2, s2, r2) {
-      return this.getWorldPoint(t2, this.parent, s2, r2);
-    }
-    getPagePoint(t2, e2, s2, r2) {
-      return (this.leafer ? this.leafer.zoomLayer : this).getInnerPoint(t2, e2, s2, r2);
-    }
-    getWorldPoint(t2, e2, s2, r2) {
-      const i2 = r2 ? t2 : {};
-      return this.innerToWorld(t2, i2, s2, e2), i2;
-    }
-    getWorldPointByBox(t2, e2, s2, r2) {
-      return this.getWorldPoint(this.getInnerPointByBox(t2, null, null, r2), e2, s2, true);
-    }
-    getWorldPointByLocal(t2, e2, s2, r2) {
-      const i2 = r2 ? t2 : {};
-      return this.localToWorld(t2, i2, s2, e2), i2;
-    }
-    getWorldPointByPage(t2, e2, s2, r2) {
-      return (this.leafer ? this.leafer.zoomLayer : this).getWorldPoint(t2, e2, s2, r2);
-    }
-    setTransform(t2, e2, s2) {
-      hh(this, t2, e2, s2);
-    }
-    transform(t2, e2, s2) {
-      oh(this, t2, e2, s2);
-    }
-    move(t2, e2, s2) {
-      $a(this, t2, e2, s2);
-    }
-    moveInner(t2, e2, s2) {
-      sh(this, t2, e2, true, s2);
-    }
-    scaleOf(t2, e2, s2, r2, i2) {
-      Ka(this, dh(this, t2), e2, s2, r2, i2);
-    }
-    rotateOf(t2, e2, s2) {
-      th(this, dh(this, t2), e2, s2);
-    }
-    skewOf(t2, e2, s2, r2, i2) {
-      eh(this, dh(this, t2), e2, s2, r2, i2);
-    }
-    transformWorld(t2, e2, s2) {
-      ah(this, t2, e2, s2);
-    }
-    moveWorld(t2, e2, s2) {
-      sh(this, t2, e2, false, s2);
-    }
-    scaleOfWorld(t2, e2, s2, r2, i2) {
-      rh(this, t2, e2, s2, r2, i2);
-    }
-    rotateOfWorld(t2, e2) {
-      ih(this, t2, e2);
-    }
-    skewOfWorld(t2, e2, s2, r2, i2) {
-      nh(this, t2, e2, s2, r2, i2);
-    }
-    flip(t2, e2) {
-      oh(this, lh(this, t2), false, e2);
-    }
-    scaleResize(t2, e2 = t2, s2) {
-      this.scaleX *= t2, this.scaleY *= e2;
-    }
-    __scaleResize(t2, e2) {
-    }
-    resizeWidth(t2) {
-    }
-    resizeHeight(t2) {
-    }
-    hit(t2, e2) {
-      return true;
-    }
-    __hitWorld(t2, e2) {
-      return true;
-    }
-    __hit(t2, e2) {
-      return true;
-    }
-    __hitFill(t2) {
-      return true;
-    }
-    __hitStroke(t2, e2) {
-      return true;
-    }
-    __hitPixel(t2) {
-      return true;
-    }
-    __drawHitPath(t2) {
-    }
-    __updateHitCanvas() {
-    }
-    __render(t2, e2) {
-    }
-    __renderComplex(t2, e2) {
-    }
-    __drawFast(t2, e2) {
-    }
-    __draw(t2, e2, s2) {
-    }
-    __clip(t2, e2) {
-    }
-    __renderShape(t2, e2) {
-    }
-    __drawShape(t2, e2) {
-    }
-    __updateWorldOpacity() {
-    }
-    __updateChange() {
-    }
-    __drawPath(t2) {
-    }
-    __drawRenderPath(t2) {
-    }
-    __updatePath() {
-    }
-    __updateRenderPath() {
-    }
-    getMotionPathData() {
-      return he$2.need("path");
-    }
-    getMotionPoint(t2) {
-      return he$2.need("path");
-    }
-    getMotionTotal() {
-      return 0;
-    }
-    __updateMotionPath() {
-    }
-    __runAnimation(t2, e2) {
-    }
-    __updateSortChildren() {
-    }
-    add(t2, e2) {
-    }
-    remove(t2, e2) {
-      this.parent && this.parent.remove(this, e2);
-    }
-    dropTo(t2, e2, s2) {
-      uh(this, t2, e2, s2);
-    }
-    on(t2, e2, s2) {
-    }
-    off(t2, e2, s2) {
-    }
-    on_(t2, e2, s2, r2) {
-    }
-    off_(t2) {
-    }
-    once(t2, e2, s2, r2) {
-    }
-    emit(t2, e2, s2) {
-    }
-    emitEvent(t2, e2) {
-    }
-    hasEvent(t2, e2) {
-      return false;
-    }
-    static changeAttr(t2, e2, s2) {
-      s2 ? this.addAttr(t2, e2, s2) : Un(this.prototype, t2, e2);
-    }
-    static addAttr(t2, e2, s2, r2) {
-      s2 || (s2 = bn), s2(e2, r2)(this.prototype, t2);
-    }
-    __emitLifeEvent(t2) {
-      this.hasEvent(t2) && this.emitEvent(new zo(t2, this, this.parent));
-    }
-    destroy() {
-      this.destroyed || (this.parent && this.remove(), this.children && this.clear(), this.__emitLifeEvent(zo.DESTROY), this.__.destroy(), this.__layout.destroy(), this.destroyEventer(), this.destroyed = true);
-    }
-  };
-  _h = ye$2([Jn(Ba), Jn(Sa), Jn(Na), Jn(wa), Jn(Ya)], _h);
-  const { setListWithFn: ph } = zt$2, { sort: fh } = vo, { localBoxBounds: gh, localStrokeBounds: yh, localRenderBounds: mh, maskLocalBoxBounds: xh, maskLocalStrokeBounds: wh, maskLocalRenderBounds: bh } = xo, Bh = new ee$2("Branch");
-  let vh = class extends _h {
-    __updateStrokeSpread() {
-      const { children: t2 } = this;
-      for (let e2 = 0, s2 = t2.length; e2 < s2; e2++) if (t2[e2].__layout.strokeSpread) return 1;
-      return 0;
-    }
-    __updateRenderSpread() {
-      const { children: t2 } = this;
-      for (let e2 = 0, s2 = t2.length; e2 < s2; e2++) if (t2[e2].__layout.renderSpread) return 1;
-      return 0;
-    }
-    __updateBoxBounds(t2, e2) {
-      ph(e2 || this.__layout.boxBounds, this.children, this.__hasMask ? xh : gh);
-    }
-    __updateStrokeBounds(t2) {
-      ph(t2 || this.__layout.strokeBounds, this.children, this.__hasMask ? wh : yh);
-    }
-    __updateRenderBounds(t2) {
-      ph(t2 || this.__layout.renderBounds, this.children, this.__hasMask ? bh : mh);
-    }
-    __updateSortChildren() {
-      let t2;
-      const { children: e2 } = this;
-      if (e2.length > 1) {
-        for (let s2 = 0, r2 = e2.length; s2 < r2; s2++) e2[s2].__tempNumber = s2, e2[s2].__.zIndex && (t2 = true);
-        e2.sort(fh), this.__layout.affectChildrenSort = t2;
-      }
-    }
-    add(t2, e2) {
-      if (t2 === this || t2.destroyed) return Bh.warn("add self or destroyed");
-      const r2 = s(e2);
-      if (!t2.__) {
-        if (l(t2)) return t2.forEach((t3) => {
-          this.add(t3, e2), r2 || e2++;
-        });
-        if (!(t2 = ce$2.get(t2.tag, t2))) return;
-      }
-      t2.parent && t2.parent.remove(t2), t2.parent = this, r2 ? this.children.push(t2) : this.children.splice(e2, 0, t2), t2.isBranch && (this.__.__childBranchNumber = (this.__.__childBranchNumber || 0) + 1);
-      const i2 = t2.__layout;
-      i2.boxChanged || i2.boxChange(), i2.matrixChanged || i2.matrixChange(), t2.__bubbleMap && t2.__emitLifeEvent(zo.ADD), this.leafer && (t2.__bindLeafer(this.leafer), this.leafer.created && this.__emitChildEvent(zo.ADD, t2)), this.__layout.affectChildrenSort && this.__layout.childrenSortChange();
-    }
-    addMany(...t2) {
-      this.add(t2);
-    }
-    remove(t2, e2) {
-      t2 ? t2.__ ? t2.animationOut ? t2.__runAnimation("out", () => this.__remove(t2, e2)) : this.__remove(t2, e2) : this.find(t2).forEach((t3) => this.remove(t3, e2)) : s(t2) && super.remove(null, e2);
-    }
-    removeAll(t2) {
-      const { children: e2 } = this;
-      e2.length && (this.children = [], this.__preRemove(), this.__.__childBranchNumber = 0, e2.forEach((e3) => {
-        this.__realRemoveChild(e3), t2 && e3.destroy();
-      }));
-    }
-    clear() {
-      this.removeAll(true);
-    }
-    __remove(t2, e2) {
-      const s2 = this.children.indexOf(t2);
-      s2 > -1 && (this.children.splice(s2, 1), t2.isBranch && (this.__.__childBranchNumber = (this.__.__childBranchNumber || 1) - 1), this.__preRemove(), this.__realRemoveChild(t2), e2 && t2.destroy());
-    }
-    __preRemove() {
-      this.__hasMask && this.__updateMask(), this.__hasEraser && this.__updateEraser(), this.__layout.boxChange(), this.__layout.affectChildrenSort && this.__layout.childrenSortChange();
-    }
-    __realRemoveChild(t2) {
-      t2.__emitLifeEvent(zo.REMOVE), t2.parent = null, this.leafer && (t2.__bindLeafer(null), this.leafer.created && (this.__emitChildEvent(zo.REMOVE, t2), this.leafer.hitCanvasManager && this.leafer.hitCanvasManager.clear()));
-    }
-    __emitChildEvent(t2, e2) {
-      const s2 = new zo(t2, e2, this);
-      this.hasEvent(t2) && !this.isLeafer && this.emitEvent(s2), this.leafer.emitEvent(s2);
-    }
-  };
-  vh = ye$2([Jn(za)], vh);
-  class kh {
-    get length() {
-      return this.list.length;
-    }
-    constructor(t2) {
-      this.reset(), t2 && (l(t2) ? this.addList(t2) : this.add(t2));
-    }
-    has(t2) {
-      return t2 && !s(this.keys[t2.innerId]);
-    }
-    indexAt(t2) {
-      return this.list[t2];
-    }
-    indexOf(t2) {
-      const e2 = this.keys[t2.innerId];
-      return s(e2) ? -1 : e2;
-    }
-    add(t2) {
-      const { list: e2, keys: r2 } = this;
-      s(r2[t2.innerId]) && (e2.push(t2), r2[t2.innerId] = e2.length - 1);
-    }
-    addAt(t2, e2 = 0) {
-      const { keys: r2 } = this;
-      if (s(r2[t2.innerId])) {
-        const { list: s2 } = this;
-        for (let t3 = e2, i2 = s2.length; t3 < i2; t3++) r2[s2[t3].innerId]++;
-        0 === e2 ? s2.unshift(t2) : (e2 > s2.length && (e2 = s2.length), s2.splice(e2, 0, t2)), r2[t2.innerId] = e2;
-      }
-    }
-    addList(t2) {
-      for (let e2 = 0; e2 < t2.length; e2++) this.add(t2[e2]);
-    }
-    remove(t2) {
-      const { list: e2 } = this;
-      let r2;
-      for (let i2 = 0, n2 = e2.length; i2 < n2; i2++) s(r2) ? e2[i2].innerId === t2.innerId && (r2 = i2, delete this.keys[t2.innerId]) : this.keys[e2[i2].innerId] = i2 - 1;
-      s(r2) || e2.splice(r2, 1);
-    }
-    sort(t2) {
-      const { list: e2 } = this;
-      t2 ? e2.sort((t3, e3) => e3.__level - t3.__level) : e2.sort((t3, e3) => t3.__level - e3.__level);
-    }
-    forEach(t2) {
-      this.list.forEach(t2);
-    }
-    clone() {
-      const t2 = new kh();
-      return t2.list = [...this.list], t2.keys = Object.assign({}, this.keys), t2;
-    }
-    update() {
-      this.keys = {};
-      const { list: t2, keys: e2 } = this;
-      for (let s2 = 0, r2 = t2.length; s2 < r2; s2++) e2[t2[s2].innerId] = s2;
-    }
-    reset() {
-      this.list = [], this.keys = {};
-    }
-    destroy() {
-      this.reset();
-    }
-  }
-  class Ch {
-    get length() {
-      return this._length;
-    }
-    constructor(t2) {
-      this._length = 0, this.reset(), t2 && (l(t2) ? this.addList(t2) : this.add(t2));
-    }
-    has(t2) {
-      return !s(this.keys[t2.innerId]);
-    }
-    without(t2) {
-      return s(this.keys[t2.innerId]);
-    }
-    sort(t2) {
-      const { levels: e2 } = this;
-      t2 ? e2.sort((t3, e3) => e3 - t3) : e2.sort((t3, e3) => t3 - e3);
-    }
-    addList(t2) {
-      t2.forEach((t3) => {
-        this.add(t3);
-      });
-    }
-    add(t2) {
-      const { keys: e2, levelMap: s2 } = this;
-      e2[t2.innerId] || (e2[t2.innerId] = 1, s2[t2.__level] ? s2[t2.__level].push(t2) : (s2[t2.__level] = [t2], this.levels.push(t2.__level)), this._length++);
-    }
-    forEach(t2) {
-      let e2;
-      this.levels.forEach((s2) => {
-        e2 = this.levelMap[s2];
-        for (let s3 = 0, r2 = e2.length; s3 < r2; s3++) t2(e2[s3]);
-      });
-    }
-    reset() {
-      this.levelMap = {}, this.keys = {}, this.levels = [], this._length = 0;
-    }
-    destroy() {
-      this.levelMap = null;
-    }
-  }
-  const Oh = "2.0.2";
-  function St$2(t2, e2, i2, s2) {
-    var o2, r2 = arguments.length, a2 = r2 < 3 ? e2 : null === s2 ? s2 = Object.getOwnPropertyDescriptor(e2, i2) : s2;
-    if ("object" == typeof Reflect && "function" == typeof Reflect.decorate) a2 = Reflect.decorate(t2, e2, i2, s2);
-    else for (var n2 = t2.length - 1; n2 >= 0; n2--) (o2 = t2[n2]) && (a2 = (r2 < 3 ? o2(a2) : r2 > 3 ? o2(e2, i2, a2) : o2(e2, i2)) || a2);
-    return r2 > 3 && a2 && Object.defineProperty(e2, i2, a2), a2;
-  }
-  function mt$2(t2) {
-    return un(t2, (t3) => _n({ set(e2) {
-      this.__setAttr(t3, e2), e2 && (this.__.__useEffect = true), this.__layout.renderChanged || this.__layout.renderChange();
-    } }));
-  }
-  function Rt$2(t2) {
-    return un(t2, (t3) => _n({ set(e2) {
-      this.__setAttr(t3, e2), this.__layout.boxChanged || this.__layout.boxChange(), this.__updateSize();
-    } }));
-  }
-  function kt$2() {
-    return (e2, i2) => {
-      const s2 = "_" + i2;
-      ln(e2, i2, { set(t2) {
-        this.isLeafer && (this[s2] = t2);
-      }, get() {
-        return this.isApp ? this.tree.zoomLayer : this.isLeafer ? this[s2] || this : this.leafer && this.leafer.zoomLayer;
-      } });
-    };
-  }
-  function Bt$2(e2) {
-    return (i2, o2) => {
-      ln(i2, o2, cn(o2, e2));
-    };
-  }
-  "function" == typeof SuppressedError && SuppressedError;
-  const At$2 = {}, Ct$2 = { hasTransparent: function(t2) {
-    if (!t2 || 7 === t2.length || 4 === t2.length) return false;
-    if ("transparent" === t2) return true;
-    const e2 = t2[0];
-    if ("#" === e2) switch (t2.length) {
-      case 5:
-        return "f" !== t2[4] && "F" !== t2[4];
-      case 9:
-        return "f" !== t2[7] && "F" !== t2[7] || "f" !== t2[8] && "F" !== t2[8];
-    }
-    else if (("r" === e2 || "h" === e2) && "a" === t2[3]) {
-      const e3 = t2.lastIndexOf(",");
-      if (e3 > -1) return parseFloat(t2.slice(e3 + 1)) < 1;
-    }
-    return false;
-  } }, bt$2 = qt$2, Pt$2 = {}, Ft$2 = {}, Wt$2 = {}, Et$2 = {}, Tt$2 = {}, Dt$2 = { apply() {
-    he$2.need("filter");
-  } }, It$2 = {}, Lt$2 = { setStyleName: () => he$2.need("state"), set: () => he$2.need("state") }, zt$1 = { list: {}, register(t2, e2) {
-    zt$1.list[t2] = e2;
-  }, get: (t2) => zt$1.list[t2] }, { parse: Mt$2, objectToCanvasData: Ot$2 } = sr, { stintSet: Nt$2 } = _$2, { hasTransparent: Vt$2 } = Ct$2, Ht$2 = { originPaint: {} }, Yt$2 = ee$2.get("UIData");
-  let Ut$2 = class Ut extends f {
-    get scale() {
-      const { scaleX: t2, scaleY: e2 } = this;
-      return t2 !== e2 ? { x: t2, y: e2 } : t2;
-    }
-    get __strokeWidth() {
-      return this.__getRealStrokeWidth();
-    }
-    get __maxStrokeWidth() {
-      const t2 = this;
-      return t2.__hasMultiStrokeStyle ? Math.max(t2.__hasMultiStrokeStyle, t2.strokeWidth) : t2.strokeWidth;
-    }
-    get __hasMultiPaint() {
-      const t2 = this;
-      return t2.fill && this.__useStroke || t2.__isFills && t2.fill.length > 1 || t2.__isStrokes && t2.stroke.length > 1 || t2.__useEffect;
-    }
-    get __clipAfterFill() {
-      const t2 = this;
-      return t2.cornerRadius || t2.innerShadow || t2.__pathInputed;
-    }
-    get __hasSurface() {
-      return this.fill || this.stroke;
-    }
-    get __autoWidth() {
-      return null == this._width;
-    }
-    get __autoHeight() {
-      return null == this._height;
-    }
-    get __autoSide() {
-      return null == this._width || null == this._height;
-    }
-    get __autoSize() {
-      return null == this._width && null == this._height;
-    }
-    setVisible(t2) {
-      this._visible = t2;
-      const { leafer: e2 } = this.__leaf;
-      e2 && (e2.watcher.hasVisible = true);
-    }
-    setWidth(t2) {
-      t2 < 0 ? (this._width = -t2, this.__leaf.scaleX *= -1, Yt$2.warn("width < 0, instead -scaleX ", this)) : this._width = t2;
-    }
-    setHeight(t2) {
-      t2 < 0 ? (this._height = -t2, this.__leaf.scaleY *= -1, Yt$2.warn("height < 0, instead -scaleY", this)) : this._height = t2;
-    }
-    setFill(t2) {
-      this.__naturalWidth && this.__removeNaturalSize(), i(t2) || !t2 ? (Nt$2(this, "__isTransparentFill", Vt$2(t2)), this.__isFills && this.__removePaint("fill", true), this._fill = t2) : d(t2) && this.__setPaint("fill", t2);
-    }
-    setStroke(t2) {
-      i(t2) || !t2 ? (Nt$2(this, "__isTransparentStroke", Vt$2(t2)), this.__isStrokes && this.__removePaint("stroke", true), this._stroke = t2) : d(t2) && this.__setPaint("stroke", t2);
-    }
-    setPath(t2) {
-      const e2 = i(t2);
-      e2 || t2 && d(t2[0]) ? (this.__setInput("path", t2), this._path = e2 ? Mt$2(t2) : Ot$2(t2)) : (this.__input && this.__removeInput("path"), this._path = t2);
-    }
-    setShadow(t2) {
-      Xt$2(this, "shadow", t2);
-    }
-    setInnerShadow(t2) {
-      Xt$2(this, "innerShadow", t2);
-    }
-    setFilter(t2) {
-      Xt$2(this, "filter", t2);
-    }
-    __computePaint() {
-      const { fill: t2, stroke: e2 } = this.__input;
-      t2 && Ft$2.compute("fill", this.__leaf), e2 && Ft$2.compute("stroke", this.__leaf), this.__needComputePaint = void 0;
-    }
-    __getRealStrokeWidth(t2) {
-      let { strokeWidth: e2, strokeWidthFixed: i2 } = this;
-      if (t2 && (t2.strokeWidth && (e2 = t2.strokeWidth), s(t2.strokeWidthFixed) || (i2 = t2.strokeWidthFixed)), i2) {
-        const t3 = this.__leaf.getClampRenderScale();
-        return t3 > 1 ? e2 / t3 : e2;
-      }
-      return e2;
-    }
-    __setPaint(t2, e2) {
-      this.__setInput(t2, e2);
-      const i2 = this.__leaf.__layout;
-      i2.boxChanged || i2.boxChange(), l(e2) && !e2.length ? this.__removePaint(t2) : "fill" === t2 ? (this.__isFills = true, this._fill || (this._fill = Ht$2)) : (this.__isStrokes = true, this._stroke || (this._stroke = Ht$2));
-    }
-    __removePaint(t2, e2) {
-      e2 && this.__removeInput(t2), Wt$2.recycleImage(t2, this), "fill" === t2 ? (Nt$2(this, "__isAlphaPixelFill", void 0), this._fill = this.__isFills = void 0) : (Nt$2(this, "__isAlphaPixelStroke", void 0), Nt$2(this, "__hasMultiStrokeStyle", void 0), this._stroke = this.__isStrokes = void 0);
-    }
-  };
-  function Xt$2(t2, e2, i2) {
-    t2.__setInput(e2, i2), l(i2) ? (i2.some((t3) => false === t3.visible) && (i2 = i2.filter((t3) => false !== t3.visible)), i2.length || (i2 = void 0)) : i2 = i2 && false !== i2.visible ? [i2] : void 0, t2["_" + e2] = i2;
-  }
-  let jt$2 = class jt extends Ut$2 {
-  };
-  let Jt$1 = class Jt extends jt$2 {
-    get __boxStroke() {
-      return !this.__pathInputed;
-    }
-    get __drawAfterFill() {
-      return this.__single || this.__clipAfterFill;
-    }
-    get __clipAfterFill() {
-      const t2 = this;
-      return "show" !== t2.overflow && t2.__leaf.children.length && (t2.__leaf.isOverflow || super.__clipAfterFill);
-    }
-  };
-  let qt$1 = class qt extends jt$2 {
-    __getInputData(t2, e2) {
-      const i2 = super.__getInputData(t2, e2);
-      return Re$2.forEach((t3) => delete i2[t3]), i2;
-    }
-  };
-  let Gt$1 = class Gt extends Jt$1 {
-  };
-  let $t$1 = class $t extends Ut$2 {
-    get __usePathBox() {
-      return this.points || this.__pathInputed;
-    }
-  };
-  let Kt$2 = class Kt extends Ut$2 {
-    get __boxStroke() {
-      return !this.__pathInputed;
-    }
-  };
-  let Qt$1 = class Qt extends Ut$2 {
-    get __boxStroke() {
-      return !this.__pathInputed;
-    }
-  };
-  let Zt$1 = class Zt extends $t$1 {
-  };
-  let te$1 = class te extends Ut$2 {
-  };
-  let ee$1 = class ee extends Ut$2 {
-    get __pathInputed() {
-      return 2;
-    }
-  };
-  let ie$1 = class ie extends jt$2 {
-  };
-  const se$1 = { thin: 100, "extra-light": 200, light: 300, normal: 400, medium: 500, "semi-bold": 600, bold: 700, "extra-bold": 800, black: 900 };
-  let oe$1 = class oe extends Ut$2 {
-    get __useNaturalRatio() {
-      return false;
-    }
-    setFontWeight(t2) {
-      i(t2) ? (this.__setInput("fontWeight", t2), t2 = se$1[t2] || 400) : this.__input && this.__removeInput("fontWeight"), this._fontWeight = t2;
-    }
-    setBoxStyle(t2) {
-      let e2 = this.__leaf, i2 = e2.__box;
-      if (t2) {
-        const { boxStyle: s2 } = this;
-        if (i2) for (let t3 in s2) i2[t3] = void 0;
-        else i2 = e2.__box = ce$2.get("Rect", 0);
-        const o2 = e2.__layout, r2 = i2.__layout;
-        s2 || (i2.parent = e2, i2.__world = e2.__world, r2.boxBounds = o2.boxBounds), i2.set(t2), r2.strokeChanged && o2.strokeChange();
-      } else i2 && (e2.__box = i2.parent = null, i2.destroy());
-      this._boxStyle = t2;
-    }
-    __getInputData(t2, e2) {
-      const i2 = super.__getInputData(t2, e2);
-      return i2.textEditing && delete i2.textEditing, i2;
-    }
-  };
-  let re$1 = class re extends Kt$2 {
-    get __urlType() {
-      return "image";
-    }
-    setUrl(t2) {
-      this.__setImageFill(t2), this._url = t2;
-    }
-    __setImageFill(t2) {
-      this.fill = t2 ? { type: this.__urlType, mode: "stretch", url: t2 } : void 0;
-    }
-    __getData() {
-      const t2 = super.__getData();
-      return t2.url && delete t2.fill, t2;
-    }
-    __getInputData(t2, e2) {
-      const i2 = super.__getInputData(t2, e2);
-      return i2.url && delete i2.fill, i2;
-    }
-  };
-  let ae$1 = class ae extends Kt$2 {
-    get __isCanvas() {
-      return true;
-    }
-    get __drawAfterFill() {
-      return true;
-    }
-    __getInputData(t2, e2) {
-      const i2 = super.__getInputData(t2, e2);
-      return i2.url = this.__leaf.canvas.toDataURL("image/png"), i2;
-    }
-  };
-  const { max: ne$1, add: _e$1 } = v$1, he$1 = { __updateStrokeSpread() {
-    let t2 = 0, e2 = 0;
-    const i2 = this.__, { strokeAlign: s2, __maxStrokeWidth: o2 } = i2, r2 = this.__box;
-    if ((i2.stroke || "all" === i2.hitStroke) && o2 && "inside" !== s2 && (e2 = t2 = "center" === s2 ? o2 / 2 : o2, !i2.__boxStroke)) {
-      const e3 = i2.__isLinePath ? 0 : 10 * t2, s3 = "none" === i2.strokeCap ? 0 : o2;
-      t2 += Math.max(e3, s3);
-    }
-    return i2.__useArrow && (t2 += 5 * o2), r2 && (t2 = ne$1(t2, r2.__layout.strokeSpread = r2.__updateStrokeSpread()), e2 = Math.max(e2, r2.__layout.strokeBoxSpread)), this.__layout.strokeBoxSpread = e2, t2;
-  }, __updateRenderSpread() {
-    let t2 = 0;
-    const { shadow: e2, innerShadow: i2, blur: s2, backgroundBlur: o2, filter: r2, renderSpread: a2 } = this.__, { strokeSpread: n2 } = this.__layout, _2 = this.__box;
-    e2 && (t2 = Tt$2.getShadowRenderSpread(this, e2)), s2 && (t2 = ne$1(t2, s2)), r2 && (t2 = _e$1(t2, Dt$2.getSpread(r2))), a2 && (t2 = _e$1(t2, a2)), n2 && (t2 = _e$1(t2, n2));
-    let h2 = t2;
-    return i2 && (h2 = ne$1(h2, Tt$2.getInnerShadowSpread(this, i2))), o2 && (h2 = ne$1(h2, o2)), this.__layout.renderShapeSpread = h2, _2 ? ne$1(_2.__updateRenderSpread(), t2) : t2;
-  } }, { stintSet: de$1 } = _$2, le$1 = { __updateChange() {
-    const t2 = this.__;
-    if (t2.__useStroke) {
-      const e2 = t2.__useStroke = !(!t2.stroke || !t2.strokeWidth);
-      de$1(this.__world, "half", e2 && "center" === t2.strokeAlign && t2.strokeWidth % 2), de$1(t2, "__fillAfterStroke", e2 && "outside" === t2.strokeAlign && t2.fill && !t2.__isTransparentFill);
-    }
-    if (t2.__useEffect) {
-      const { shadow: e2, fill: i2, stroke: s2 } = t2, o2 = t2.innerShadow || t2.blur || t2.backgroundBlur || t2.filter;
-      de$1(t2, "__isFastShadow", e2 && !o2 && e2.length < 2 && !e2[0].spread && !Tt$2.isTransformShadow(e2[0]) && i2 && !t2.__isTransparentFill && !(l(i2) && i2.length > 1) && (this.useFastShadow || !s2 || s2 && "inside" === t2.strokeAlign)), t2.__useEffect = !(!e2 && !o2);
-    }
-    t2.__checkSingle(), de$1(t2, "__complex", t2.__isFills || t2.__isStrokes || t2.cornerRadius || t2.__useEffect);
-  }, __drawFast(t2, e2) {
-    pe$1(this, t2, e2);
-  }, __draw(t2, e2, i2) {
-    const s2 = this.__;
-    if (s2.__complex) {
-      s2.__needComputePaint && s2.__computePaint();
-      const { fill: o2, stroke: r2, __drawAfterFill: a2, __fillAfterStroke: n2, __isFastShadow: _2 } = s2;
-      if (this.__drawRenderPath(t2), s2.__useEffect && !_2) {
-        const _3 = Ft$2.shape(this, t2, e2);
-        this.__nowWorld = this.__getNowWorld(e2);
-        const { shadow: h2, innerShadow: d2, filter: l2 } = s2;
-        h2 && Tt$2.shadow(this, t2, _3), n2 && (s2.__isStrokes ? Ft$2.strokes(r2, this, t2, e2) : Ft$2.stroke(r2, this, t2, e2)), o2 && (s2.__isFills ? Ft$2.fills(o2, this, t2, e2) : Ft$2.fill(o2, this, t2, e2)), a2 && this.__drawAfterFill(t2, e2), d2 && Tt$2.innerShadow(this, t2, _3), r2 && !n2 && (s2.__isStrokes ? Ft$2.strokes(r2, this, t2, e2) : Ft$2.stroke(r2, this, t2, e2)), l2 && Dt$2.apply(l2, this, this.__nowWorld, t2, i2, _3), _3.worldCanvas && _3.worldCanvas.recycle(), _3.canvas.recycle();
-      } else {
-        if (n2 && (s2.__isStrokes ? Ft$2.strokes(r2, this, t2, e2) : Ft$2.stroke(r2, this, t2, e2)), _2) {
-          const e3 = s2.shadow[0], { scaleX: i3, scaleY: o3 } = this.getRenderScaleData(true, e3.scaleFixed);
-          t2.save(), t2.setWorldShadow(e3.x * i3, e3.y * o3, e3.blur * i3, Ct$2.string(e3.color));
-        }
-        o2 && (s2.__isFills ? Ft$2.fills(o2, this, t2, e2) : Ft$2.fill(o2, this, t2, e2)), _2 && t2.restore(), a2 && this.__drawAfterFill(t2, e2), r2 && !n2 && (s2.__isStrokes ? Ft$2.strokes(r2, this, t2, e2) : Ft$2.stroke(r2, this, t2, e2));
-      }
-    } else s2.__pathForRender ? pe$1(this, t2, e2) : this.__drawFast(t2, e2);
-  }, __drawShape(t2, e2) {
-    this.__drawRenderPath(t2);
-    const i2 = this.__, { fill: s2, stroke: o2 } = i2;
-    s2 && !e2.ignoreFill && (i2.__isAlphaPixelFill ? Ft$2.fills(s2, this, t2, e2) : Ft$2.fill("#000000", this, t2, e2)), i2.__isCanvas && this.__drawAfterFill(t2, e2), o2 && !e2.ignoreStroke && (i2.__isAlphaPixelStroke ? Ft$2.strokes(o2, this, t2, e2) : Ft$2.stroke("#000000", this, t2, e2));
-  }, __drawAfterFill(t2, e2) {
-    this.__.__clipAfterFill ? (t2.save(), t2.clipUI(this), this.__drawContent(t2, e2), t2.restore()) : this.__drawContent(t2, e2);
-  } };
-  function pe$1(t2, e2, i2) {
-    const { fill: s2, stroke: o2, __drawAfterFill: r2, __fillAfterStroke: a2 } = t2.__;
-    t2.__drawRenderPath(e2), a2 && Ft$2.stroke(o2, t2, e2, i2), s2 && Ft$2.fill(s2, t2, e2, i2), r2 && t2.__drawAfterFill(e2, i2), o2 && !a2 && Ft$2.stroke(o2, t2, e2, i2);
-  }
-  const ue$1 = { __drawFast(t2, e2) {
-    let { x: i2, y: s2, width: o2, height: r2 } = this.__layout.boxBounds;
-    const { fill: a2, stroke: n2, __drawAfterFill: _2 } = this.__;
-    if (a2 && (t2.fillStyle = a2, t2.fillRect(i2, s2, o2, r2)), _2 && this.__drawAfterFill(t2, e2), n2) {
-      const { strokeAlign: a3, __strokeWidth: _3 } = this.__;
-      if (!_3) return;
-      t2.setStroke(n2, _3, this.__);
-      const h2 = _3 / 2;
-      switch (a3) {
-        case "center":
-          t2.strokeRect(0, 0, o2, r2);
-          break;
-        case "inside":
-          o2 -= _3, r2 -= _3, o2 < 0 || r2 < 0 ? (t2.save(), this.__clip(t2, e2), t2.strokeRect(i2 + h2, s2 + h2, o2, r2), t2.restore()) : t2.strokeRect(i2 + h2, s2 + h2, o2, r2);
-          break;
-        case "outside":
-          t2.strokeRect(i2 - h2, s2 - h2, o2 + _3, r2 + _3);
-      }
-    }
-  } };
-  var ce$1;
-  let ge$1 = ce$1 = class extends _h {
-    get app() {
-      return this.leafer && this.leafer.app;
-    }
-    get isFrame() {
-      return false;
-    }
-    set scale(t2) {
-      I$2.assignScale(this, t2);
-    }
-    get scale() {
-      return this.__.scale;
-    }
-    get isAutoWidth() {
-      const t2 = this.__;
-      return t2.__autoWidth || t2.autoWidth;
-    }
-    get isAutoHeight() {
-      const t2 = this.__;
-      return t2.__autoHeight || t2.autoHeight;
-    }
-    get pen() {
-      const { path: t2 } = this.__;
-      return ji$1.set(this.path = t2 || []), t2 || this.__drawPathByBox(ji$1), ji$1;
-    }
-    reset(t2) {
-    }
-    set(t2, e2) {
-      t2 && Object.assign(this, t2);
-    }
-    get(t2) {
-      return i(t2) ? this.__.__getInput(t2) : this.__.__getInputData(t2);
-    }
-    createProxyData() {
-    }
-    find(t2, e2) {
-      return he$2.need("find");
-    }
-    findTag(t2) {
-      return this.find({ tag: t2 });
-    }
-    findOne(t2, e2) {
-      return he$2.need("find");
-    }
-    findId(t2) {
-      return this.findOne({ id: t2 });
-    }
-    getPath(t2, e2) {
-      this.__layout.update();
-      let i2 = e2 ? this.__.__pathForRender : this.__.path;
-      return i2 || (ji$1.set(i2 = []), this.__drawPathByBox(ji$1, !e2)), t2 ? sr.toCanvasData(i2, true) : i2;
-    }
-    getPathString(t2, e2, i2) {
-      return sr.stringify(this.getPath(t2, e2), i2);
-    }
-    load() {
-      this.__.__computePaint();
-    }
-    __onUpdateSize() {
-      if (this.__.__input) {
-        const t2 = this.__;
-        !t2.lazy || this.__inLazyBounds || It$2.running ? t2.__computePaint() : t2.__needComputePaint = true;
-      }
-    }
-    __updateRenderPath() {
-      const t2 = this.__;
-      t2.path ? (t2.__pathForRender = t2.cornerRadius ? Fi$1.smooth(t2.path, t2.cornerRadius, t2.cornerSmoothing) : t2.path, t2.__useArrow && Pt$2.addArrows(this)) : t2.__pathForRender && (t2.__pathForRender = void 0);
-    }
-    __drawRenderPath(t2) {
-      t2.beginPath(), this.__drawPathByData(t2, this.__.__pathForRender);
-    }
-    __drawPath(t2) {
-      t2.beginPath(), this.__drawPathByData(t2, this.__.path, true);
-    }
-    __drawPathByData(t2, e2, i2) {
-      e2 ? ri$2.drawPathByData(t2, e2) : this.__drawPathByBox(t2, i2);
-    }
-    __drawPathByBox(t2, e2) {
-      const { x: i2, y: s2, width: o$1, height: r2 } = this.__layout.boxBounds;
-      if (this.__.cornerRadius && !e2) {
-        const { cornerRadius: e3 } = this.__;
-        t2.roundRect(i2, s2, o$1, r2, o(e3) ? [e3] : e3);
-      } else t2.rect(i2, s2, o$1, r2);
-      t2.closePath();
-    }
-    drawImagePlaceholder(t2, e2, i2) {
-      Ft$2.fill(this.__.placeholderColor, this, e2, i2);
-    }
-    animate(t2, e2, i2, s2) {
-      return this.set(t2), he$2.need("animate");
-    }
-    killAnimate(t2, e2) {
-    }
-    export(t2, e2) {
-      return he$2.need("export");
-    }
-    syncExport(t2, e2) {
-      return he$2.need("export");
-    }
-    clone(t2) {
-      const e2 = _$2.clone(this.toJSON());
-      return t2 && Object.assign(e2, t2), ce$1.one(e2);
-    }
-    static one(t2, e2, i2, s2, o2) {
-      return ce$2.get(t2.tag || this.prototype.__tag, t2, e2, i2, s2, o2);
-    }
-    static registerUI() {
-      Zn()(this);
-    }
-    static registerData(t2) {
-      zn(t2)(this.prototype);
-    }
-    static setEditConfig(t2) {
-    }
-    static setEditOuter(t2) {
-    }
-    static setEditInner(t2) {
-    }
-    destroy() {
-      this.fill = this.stroke = null, this.__animate && this.killAnimate(), super.destroy();
-    }
-  };
-  St$2([zn(Ut$2)], ge$1.prototype, "__", void 0), St$2([kt$2()], ge$1.prototype, "zoomLayer", void 0), St$2([fn("")], ge$1.prototype, "id", void 0), St$2([fn("")], ge$1.prototype, "name", void 0), St$2([fn("")], ge$1.prototype, "className", void 0), St$2([Ln("pass-through")], ge$1.prototype, "blendMode", void 0), St$2([En(1)], ge$1.prototype, "opacity", void 0), St$2([In(true)], ge$1.prototype, "visible", void 0), St$2([Ln(false)], ge$1.prototype, "locked", void 0), St$2([Rn(false)], ge$1.prototype, "dim", void 0), St$2([Rn(false)], ge$1.prototype, "dimskip", void 0), St$2([Wn(0)], ge$1.prototype, "zIndex", void 0), St$2([Nn(false)], ge$1.prototype, "mask", void 0), St$2([Yn(false)], ge$1.prototype, "eraser", void 0), St$2([gn(0, true)], ge$1.prototype, "x", void 0), St$2([gn(0, true)], ge$1.prototype, "y", void 0), St$2([bn(100, true)], ge$1.prototype, "width", void 0), St$2([bn(100, true)], ge$1.prototype, "height", void 0), St$2([xn(1, true)], ge$1.prototype, "scaleX", void 0), St$2([xn(1, true)], ge$1.prototype, "scaleY", void 0), St$2([wn(0, true)], ge$1.prototype, "rotation", void 0), St$2([wn(0, true)], ge$1.prototype, "skewX", void 0), St$2([wn(0, true)], ge$1.prototype, "skewY", void 0), St$2([gn(0, true)], ge$1.prototype, "offsetX", void 0), St$2([gn(0, true)], ge$1.prototype, "offsetY", void 0), St$2([yn(0, true)], ge$1.prototype, "scrollX", void 0), St$2([yn(0, true)], ge$1.prototype, "scrollY", void 0), St$2([mn()], ge$1.prototype, "origin", void 0), St$2([mn()], ge$1.prototype, "around", void 0), St$2([fn(false)], ge$1.prototype, "lazy", void 0), St$2([Bn(1)], ge$1.prototype, "pixelRatio", void 0), St$2([Sn(0)], ge$1.prototype, "renderSpread", void 0), St$2([kn()], ge$1.prototype, "path", void 0), St$2([Cn()], ge$1.prototype, "windingRule", void 0), St$2([Cn(true)], ge$1.prototype, "closed", void 0), St$2([bn(0)], ge$1.prototype, "padding", void 0), St$2([bn(false)], ge$1.prototype, "lockRatio", void 0), St$2([bn()], ge$1.prototype, "widthRange", void 0), St$2([bn()], ge$1.prototype, "heightRange", void 0), St$2([fn(false)], ge$1.prototype, "draggable", void 0), St$2([fn()], ge$1.prototype, "dragBounds", void 0), St$2([fn("auto")], ge$1.prototype, "dragBoundsType", void 0), St$2([fn(false)], ge$1.prototype, "editable", void 0), St$2([Dn(true)], ge$1.prototype, "hittable", void 0), St$2([Dn("path")], ge$1.prototype, "hitFill", void 0), St$2([Pn("path")], ge$1.prototype, "hitStroke", void 0), St$2([Dn(false)], ge$1.prototype, "hitBox", void 0), St$2([Dn(true)], ge$1.prototype, "hitChildren", void 0), St$2([Dn(true)], ge$1.prototype, "hitSelf", void 0), St$2([Dn()], ge$1.prototype, "hitRadius", void 0), St$2([Xn("")], ge$1.prototype, "cursor", void 0), St$2([Ln()], ge$1.prototype, "fill", void 0), St$2([Pn(void 0, true)], ge$1.prototype, "stroke", void 0), St$2([Pn("inside")], ge$1.prototype, "strokeAlign", void 0), St$2([Pn(1, true)], ge$1.prototype, "strokeWidth", void 0), St$2([Pn(false)], ge$1.prototype, "strokeWidthFixed", void 0), St$2([Pn("none")], ge$1.prototype, "strokeCap", void 0), St$2([Pn("miter")], ge$1.prototype, "strokeJoin", void 0), St$2([Pn()], ge$1.prototype, "dashPattern", void 0), St$2([Pn(0)], ge$1.prototype, "dashOffset", void 0), St$2([Pn(10)], ge$1.prototype, "miterLimit", void 0), St$2([Cn(0)], ge$1.prototype, "cornerRadius", void 0), St$2([Cn()], ge$1.prototype, "cornerSmoothing", void 0), St$2([mt$2()], ge$1.prototype, "shadow", void 0), St$2([mt$2()], ge$1.prototype, "innerShadow", void 0), St$2([mt$2()], ge$1.prototype, "blur", void 0), St$2([mt$2()], ge$1.prototype, "backgroundBlur", void 0), St$2([mt$2()], ge$1.prototype, "grayscale", void 0), St$2([mt$2()], ge$1.prototype, "filter", void 0), St$2([Ln()], ge$1.prototype, "placeholderColor", void 0), St$2([fn(100)], ge$1.prototype, "placeholderDelay", void 0), St$2([fn({})], ge$1.prototype, "data", void 0), St$2([Gn(_h.prototype.reset)], ge$1.prototype, "reset", null), ge$1 = ce$1 = St$2([Jn(he$1), Jn(le$1), qn()], ge$1);
-  let ye$1 = class ye extends ge$1 {
-    get __tag() {
-      return "Group";
-    }
-    get isBranch() {
-      return true;
-    }
-    reset(t2) {
-      this.__setBranch(), super.reset(t2);
-    }
-    __setBranch() {
-      this.children || (this.children = []);
-    }
-    set(t2, e2) {
-      if (t2) if (t2.children) {
-        const { children: i2 } = t2;
-        delete t2.children, this.children ? this.clear() : this.__setBranch(), super.set(t2, e2), i2.forEach((t3) => this.add(t3)), t2.children = i2;
-      } else super.set(t2, e2);
-    }
-    toJSON(t2) {
-      const e2 = super.toJSON(t2);
-      if (!this.childlessJSON) {
-        const i2 = e2.children = [];
-        this.children.forEach((e3) => e3.skipJSON || i2.push(e3.toJSON(t2)));
-      }
-      return e2;
-    }
-    pick(t2, e2) {
-    }
-    addAt(t2, e2) {
-      this.add(t2, e2);
-    }
-    addAfter(t2, e2) {
-      this.add(t2, this.children.indexOf(e2) + 1);
-    }
-    addBefore(t2, e2) {
-      this.add(t2, this.children.indexOf(e2));
-    }
-    add(t2, e2) {
-    }
-    addMany(...t2) {
-    }
-    remove(t2, e2) {
-    }
-    removeAll(t2) {
-    }
-    clear() {
-    }
-  };
-  var ve$1;
-  St$2([zn(jt$2)], ye$1.prototype, "__", void 0), St$2([bn(0)], ye$1.prototype, "width", void 0), St$2([bn(0)], ye$1.prototype, "height", void 0), ye$1 = St$2([Jn(vh), Zn()], ye$1);
-  const fe$1 = ee$2.get("Leafer");
-  let we$1 = ve$1 = class extends ye$1 {
-    get __tag() {
-      return "Leafer";
-    }
-    get isApp() {
-      return false;
-    }
-    get app() {
-      return this.parent || this;
-    }
-    get isLeafer() {
-      return true;
-    }
-    get imageReady() {
-      return this.viewReady && Ki$1.isComplete;
-    }
-    get layoutLocked() {
-      return !this.layouter.running;
-    }
-    get view() {
-      return this.canvas && this.canvas.view;
-    }
-    get FPS() {
-      return this.renderer ? this.renderer.FPS : 60;
-    }
-    get cursorPoint() {
-      return this.interaction && this.interaction.hoverData || { x: this.width / 2, y: this.height / 2 };
-    }
-    get clientBounds() {
-      return this.canvas && this.canvas.getClientBounds(true) || D$2();
-    }
-    constructor(t2, e2) {
-      super(e2), this.config = { start: true, hittable: true, smooth: true, lazySpeard: 100 }, this.leafs = 0, this.__eventIds = [], this.__controllers = [], this.__readyWait = [], this.__viewReadyWait = [], this.__viewCompletedWait = [], this.__nextRenderWait = [], this.userConfig = t2, t2 && (t2.view || t2.width) && this.init(t2), ve$1.list.add(this);
-    }
-    init(t2, e2) {
-      if (this.canvas) return;
-      let i2;
-      const { config: s2 } = this;
-      this.__setLeafer(this), e2 && (this.parentApp = e2, this.__bindApp(e2), i2 = e2.running), t2 && (this.parent = e2, this.initType(t2.type), this.parent = void 0, _$2.assign(s2, t2));
-      const o2 = this.canvas = le$2.canvas(s2);
-      this.__controllers.push(this.renderer = le$2.renderer(this, o2, s2), this.watcher = le$2.watcher(this, s2), this.layouter = le$2.layouter(this, s2)), this.isApp && this.__setApp(), this.__checkAutoLayout(), e2 || (this.selector = le$2.selector(this), this.interaction = le$2.interaction(this, o2, this.selector, s2), this.interaction && (this.__controllers.unshift(this.interaction), this.hitCanvasManager = le$2.hitCanvasManager()), this.canvasManager = new ge$2(), i2 = s2.start), this.hittable = s2.hittable, this.fill = s2.fill, this.canvasManager.add(o2), this.__listenEvents(), i2 && (this.__startTimer = setTimeout(this.start.bind(this))), So.run(this.__initWait), this.onInit();
-    }
-    onInit() {
-    }
-    initType(t2) {
-    }
-    set(t2, e2) {
-      this.waitInit(() => {
-        super.set(t2, e2);
-      });
-    }
-    start() {
-      clearTimeout(this.__startTimer), !this.running && this.canvas && (this.running = true, this.ready ? this.emitLeafer(sa.RESTART) : this.emitLeafer(sa.START), this.__controllers.forEach((t2) => t2.start()), this.isApp || this.renderer.render());
-    }
-    stop() {
-      clearTimeout(this.__startTimer), this.running && this.canvas && (this.__controllers.forEach((t2) => t2.stop()), this.running = false, this.emitLeafer(sa.STOP));
-    }
-    unlockLayout(t2 = true) {
-      this.layouter.start(), t2 && this.updateLayout();
-    }
-    lockLayout(t2 = true) {
-      t2 && this.updateLayout(), this.layouter.stop();
-    }
-    resize(t2) {
-      const e2 = _$2.copyAttrs({}, t2, Re$2);
-      Object.keys(e2).forEach((t3) => this[t3] = e2[t3]);
-    }
-    forceRender(t2, e2) {
-      const { renderer: i2 } = this;
-      i2 && (i2.addBlock(t2 ? new Vt$3(t2) : this.canvas.bounds), this.viewReady && (e2 ? i2.render() : i2.update()));
-    }
-    requestRender(t2 = false) {
-      this.renderer && this.renderer.update(t2);
-    }
-    updateCursor(t2) {
-      const e2 = this.interaction;
-      e2 && (t2 ? e2.setCursor(t2) : e2.updateCursor());
-    }
-    updateLazyBounds() {
-      this.lazyBounds = this.canvas.bounds.clone().spread(this.config.lazySpeard);
-    }
-    __doResize(t2) {
-      const { canvas: e2 } = this;
-      if (!e2 || e2.isSameSize(t2)) return;
-      const i2 = _$2.copyAttrs({}, this.canvas, Re$2);
-      e2.resize(t2), this.updateLazyBounds(), this.__onResize(new $o(t2, i2));
-    }
-    __onResize(t2) {
-      this.emitEvent(t2), _$2.copyAttrs(this.__, t2, Re$2), setTimeout(() => {
-        this.canvasManager && this.canvasManager.clearRecycled();
-      }, 0);
-    }
-    __setApp() {
-    }
-    __bindApp(t2) {
-      this.selector = t2.selector, this.interaction = t2.interaction, this.canvasManager = t2.canvasManager, this.hitCanvasManager = t2.hitCanvasManager;
-    }
-    __setLeafer(t2) {
-      this.leafer = t2, this.__level = 1;
-    }
-    __checkAutoLayout() {
-      const { config: t2, parentApp: e2 } = this;
-      e2 || (t2.width && t2.height || (this.autoLayout = new Gt$2(t2)), this.canvas.startAutoLayout(this.autoLayout, this.__onResize.bind(this)));
-    }
-    __setAttr(t2, e2) {
-      return this.canvas && (Re$2.includes(t2) ? this.__changeCanvasSize(t2, e2) : "fill" === t2 ? this.__changeFill(e2) : "hittable" === t2 ? this.parent || (this.canvas.hittable = e2) : "zIndex" === t2 ? (this.canvas.zIndex = e2, setTimeout(() => this.parent && this.parent.__updateSortChildren())) : "mode" === t2 && this.emit(sa.UPDATE_MODE, { mode: e2 })), super.__setAttr(t2, e2);
-    }
-    __getAttr(t2) {
-      return this.canvas && Re$2.includes(t2) ? this.canvas[t2] : super.__getAttr(t2);
-    }
-    __changeCanvasSize(t2, e2) {
-      const { config: i2, canvas: s2 } = this, o2 = _$2.copyAttrs({}, s2, Re$2);
-      o2[t2] = i2[t2] = e2, i2.width && i2.height ? s2.stopAutoLayout() : this.__checkAutoLayout(), this.__doResize(o2);
-    }
-    __changeFill(t2) {
-      this.config.fill = t2, this.canvas.allowBackgroundColor ? this.canvas.backgroundColor = t2 : this.forceRender();
-    }
-    __onCreated() {
-      this.created = true;
-    }
-    __onReady() {
-      this.ready = true, this.emitLeafer(sa.BEFORE_READY), this.emitLeafer(sa.READY), this.emitLeafer(sa.AFTER_READY), So.run(this.__readyWait);
-    }
-    __onViewReady() {
-      this.viewReady || (this.viewReady = true, this.emitLeafer(sa.VIEW_READY), So.run(this.__viewReadyWait));
-    }
-    __onLayoutEnd() {
-      const { grow: t2, width: e2, height: i2 } = this.config;
-      if (t2) {
-        let { width: s2, height: o2, pixelRatio: r2 } = this;
-        const a2 = "box" === t2 ? this.worldBoxBounds : this.__world;
-        e2 || (s2 = Math.max(1, a2.x + a2.width)), i2 || (o2 = Math.max(1, a2.y + a2.height)), this.__doResize({ width: s2, height: o2, pixelRatio: r2 });
-      }
-      this.ready || this.__onReady();
-    }
-    __onNextRender() {
-      if (this.viewReady) {
-        So.run(this.__nextRenderWait);
-        const { imageReady: t2 } = this;
-        t2 && !this.viewCompleted && this.__checkViewCompleted(), t2 || (this.viewCompleted = false, this.requestRender());
-      } else this.requestRender();
-    }
-    __checkViewCompleted(t2 = true) {
-      this.nextRender(() => {
-        this.imageReady && (t2 && this.emitLeafer(sa.VIEW_COMPLETED), So.run(this.__viewCompletedWait), this.viewCompleted = true);
-      });
-    }
-    __onWatchData() {
-      this.watcher.childrenChanged && this.interaction && this.nextRender(() => this.interaction.updateCursor());
-    }
-    waitInit(t2, e2) {
-      e2 && (t2 = t2.bind(e2)), this.__initWait || (this.__initWait = []), this.canvas ? t2() : this.__initWait.push(t2);
-    }
-    waitReady(t2, e2) {
-      e2 && (t2 = t2.bind(e2)), this.ready ? t2() : this.__readyWait.push(t2);
-    }
-    waitViewReady(t2, e2) {
-      e2 && (t2 = t2.bind(e2)), this.viewReady ? t2() : this.__viewReadyWait.push(t2);
-    }
-    waitViewCompleted(t2, e2) {
-      e2 && (t2 = t2.bind(e2)), this.__viewCompletedWait.push(t2), this.viewCompleted ? this.__checkViewCompleted(false) : this.running || this.start();
-    }
-    nextRender(t2, e2, i2) {
-      e2 && (t2 = t2.bind(e2));
-      const s2 = this.__nextRenderWait;
-      if (i2) {
-        for (let e3 = 0; e3 < s2.length; e3++) if (s2[e3] === t2) {
-          s2.splice(e3, 1);
-          break;
-        }
-      } else s2.push(t2);
-      this.requestRender();
-    }
-    zoom(t2, e2, i2, s2) {
-      return he$2.need("view");
-    }
-    getValidMove(t2, e2, i2) {
-      return { x: t2, y: e2 };
-    }
-    getValidScale(t2) {
-      return t2;
-    }
-    getWorldPointByClient(t2, e2) {
-      return this.interaction && this.interaction.getLocal(t2, e2);
-    }
-    getPagePointByClient(t2, e2) {
-      return this.getPagePoint(this.getWorldPointByClient(t2, e2));
-    }
-    getClientPointByWorld(t2) {
-      const { x: e2, y: i2 } = this.clientBounds;
-      return { x: e2 + t2.x, y: i2 + t2.y };
-    }
-    updateClientBounds() {
-      this.canvas && this.canvas.updateClientBounds();
-    }
-    receiveEvent(t2) {
-    }
-    emitLeafer(t2) {
-      this.emitEvent(new sa(t2, this));
-    }
-    __listenEvents() {
-      const t2 = ne$2.start("FirstCreate " + this.innerName);
-      this.once([[sa.START, () => ne$2.end(t2)], [ta.START, this.updateLazyBounds, this], [ea.START, this.__onCreated, this], [ea.END, this.__onViewReady, this]]), this.__eventIds.push(this.on_([[Ko.DATA, this.__onWatchData, this], [ta.END, this.__onLayoutEnd, this], [ea.NEXT, this.__onNextRender, this]]));
-    }
-    __removeListenEvents() {
-      this.off_(this.__eventIds);
-    }
-    destroy(t2) {
-      const e2 = () => {
-        if (!this.destroyed) {
-          ve$1.list.remove(this);
-          try {
-            this.stop(), this.emitLeafer(sa.END), this.__removeListenEvents(), this.__controllers.forEach((t3) => !(this.parent && t3 === this.interaction) && t3.destroy()), this.__controllers.length = 0, this.parent || (this.selector && this.selector.destroy(), this.hitCanvasManager && this.hitCanvasManager.destroy(), this.canvasManager && this.canvasManager.destroy()), this.canvas && this.canvas.destroy(), this.config.view = this.parentApp = null, this.userConfig && (this.userConfig.view = null), super.destroy(), setTimeout(() => {
-              en.clearRecycled();
-            }, 100);
-          } catch (t3) {
-            fe$1.error(t3);
-          }
-        }
-      };
-      t2 ? e2() : setTimeout(e2);
-    }
-  };
-  we$1.list = new kh(), St$2([zn(qt$1)], we$1.prototype, "__", void 0), St$2([bn()], we$1.prototype, "pixelRatio", void 0), St$2([fn("normal")], we$1.prototype, "mode", void 0), we$1 = ve$1 = St$2([Zn()], we$1);
-  let xe$1 = class xe extends ge$1 {
-    get __tag() {
-      return "Rect";
-    }
-  };
-  St$2([zn(Kt$2)], xe$1.prototype, "__", void 0), xe$1 = St$2([Jn(ue$1), qn(), Zn()], xe$1);
-  const { add: Se$1, includes: me$1, scroll: Re$1 } = zt$2, ke$1 = xe$1.prototype, Be$1 = ye$1.prototype;
-  let Ae$1 = class Ae extends ye$1 {
-    get __tag() {
-      return "Box";
-    }
-    get isBranchLeaf() {
-      return true;
-    }
-    constructor(t2) {
-      super(t2), this.__layout.renderChanged || this.__layout.renderChange();
-    }
-    __updateStrokeSpread() {
-      return 0;
-    }
-    __updateRectRenderSpread() {
-      return 0;
-    }
-    __updateRenderSpread() {
-      return this.__updateRectRenderSpread() || -1;
-    }
-    __updateRectBoxBounds() {
-    }
-    __updateBoxBounds(t2) {
-      if (this.children.length && !this.pathInputed) {
-        const t3 = this.__;
-        if (t3.__autoSide) {
-          t3.__hasSurface && this.__extraUpdate(), super.__updateBoxBounds();
-          const { boxBounds: e2 } = this.__layout;
-          t3.__autoSize || (t3.__autoWidth ? (e2.width += e2.x, e2.x = 0, e2.height = t3.height, e2.y = 0) : (e2.height += e2.y, e2.y = 0, e2.width = t3.width, e2.x = 0)), this.__updateNaturalSize();
-        } else this.__updateRectBoxBounds();
-      } else this.__updateRectBoxBounds();
-    }
-    __updateStrokeBounds() {
-    }
-    __updateRenderBounds() {
-      let t2, e2;
-      if (this.children.length) {
-        const i2 = this.__, s2 = this.__layout, { renderBounds: o2, boxBounds: r2 } = s2, { overflow: a2 } = i2, n2 = s2.childrenRenderBounds || (s2.childrenRenderBounds = D$2());
-        super.__updateRenderBounds(n2), (e2 = a2 && a2.includes("scroll")) && (Se$1(n2, r2), Re$1(n2, i2)), this.__updateRectRenderBounds(), t2 = !me$1(r2, n2), t2 && "show" === a2 && Se$1(o2, n2);
-      } else this.__updateRectRenderBounds();
-      _$2.stintSet(this, "isOverflow", t2), this.__checkScroll(e2);
-    }
-    __updateRectRenderBounds() {
-    }
-    __checkScroll(t2) {
-    }
-    __updateRectChange() {
-    }
-    __updateChange() {
-      super.__updateChange(), this.__updateRectChange();
-    }
-    __renderRect(t2, e2) {
-    }
-    __renderGroup(t2, e2) {
-    }
-    __render(t2, e2) {
-      this.__.__drawAfterFill ? this.__renderRect(t2, e2) : (this.__renderRect(t2, e2), this.children.length && this.__renderGroup(t2, e2)), this.hasScroller && this.scroller.__render(t2, e2);
-    }
-    __drawContent(t2, e2) {
-      this.__renderGroup(t2, e2), (this.__.__useStroke || this.__.__useEffect) && (t2.setWorld(this.__nowWorld), this.__drawRenderPath(t2));
-    }
-  };
-  St$2([zn(Jt$1)], Ae$1.prototype, "__", void 0), St$2([bn(100)], Ae$1.prototype, "width", void 0), St$2([bn(100)], Ae$1.prototype, "height", void 0), St$2([fn(false)], Ae$1.prototype, "resizeChildren", void 0), St$2([Sn("show")], Ae$1.prototype, "overflow", void 0), St$2([Gn(ke$1.__updateStrokeSpread)], Ae$1.prototype, "__updateStrokeSpread", null), St$2([Gn(ke$1.__updateRenderSpread)], Ae$1.prototype, "__updateRectRenderSpread", null), St$2([Gn(ke$1.__updateBoxBounds)], Ae$1.prototype, "__updateRectBoxBounds", null), St$2([Gn(ke$1.__updateStrokeBounds)], Ae$1.prototype, "__updateStrokeBounds", null), St$2([Gn(ke$1.__updateRenderBounds)], Ae$1.prototype, "__updateRectRenderBounds", null), St$2([Gn(ke$1.__updateChange)], Ae$1.prototype, "__updateRectChange", null), St$2([Gn(ke$1.__render)], Ae$1.prototype, "__renderRect", null), St$2([Gn(Be$1.__render)], Ae$1.prototype, "__renderGroup", null), Ae$1 = St$2([qn(), Zn()], Ae$1);
-  let Ce$1 = class Ce extends Ae$1 {
-    get __tag() {
-      return "Frame";
-    }
-    get isFrame() {
-      return true;
-    }
-  };
-  St$2([zn(Gt$1)], Ce$1.prototype, "__", void 0), St$2([Ln("#FFFFFF")], Ce$1.prototype, "fill", void 0), St$2([Sn("hide")], Ce$1.prototype, "overflow", void 0), Ce$1 = St$2([Zn()], Ce$1);
-  const { moveTo: be$1, closePath: Pe$1, ellipse: Fe$1 } = Cr;
-  let We$1 = class We extends ge$1 {
-    get __tag() {
-      return "Ellipse";
-    }
-    __updatePath() {
-      const { width: t2, height: e2, innerRadius: i2, startAngle: s2, endAngle: o2 } = this.__, r2 = t2 / 2, a2 = e2 / 2, n2 = this.__.path = [];
-      let _2;
-      i2 ? s2 || o2 ? (i2 < 1 ? Fe$1(n2, r2, a2, r2 * i2, a2 * i2, 0, s2, o2, false) : _2 = true, Fe$1(n2, r2, a2, r2, a2, 0, o2, s2, true)) : (i2 < 1 && (Fe$1(n2, r2, a2, r2 * i2, a2 * i2), be$1(n2, t2, a2)), Fe$1(n2, r2, a2, r2, a2, 0, 360, 0, true)) : s2 || o2 ? (be$1(n2, r2, a2), Fe$1(n2, r2, a2, r2, a2, 0, s2, o2, false)) : Fe$1(n2, r2, a2, r2, a2), _2 || Pe$1(n2), $t$2.ellipseToCurve && (this.__.path = this.getPath(true));
-    }
-  };
-  St$2([zn(Qt$1)], We$1.prototype, "__", void 0), St$2([Cn(0)], We$1.prototype, "innerRadius", void 0), St$2([Cn(0)], We$1.prototype, "startAngle", void 0), St$2([Cn(0)], We$1.prototype, "endAngle", void 0), We$1 = St$2([Zn()], We$1);
-  const { sin: Ee$1, cos: Te$1, PI: De$1 } = Math, { moveTo: Ie$1, lineTo: Le$1, closePath: ze$1, drawPoints: Me$1 } = Cr;
-  let Oe$1 = class Oe extends ge$1 {
-    get __tag() {
-      return "Polygon";
-    }
-    __updatePath() {
-      const t2 = this.__, e2 = t2.path = [];
-      if (t2.points) Me$1(e2, t2.points, t2.curve, true);
-      else {
-        const { width: i2, height: s2, sides: o2 } = t2, r2 = i2 / 2, a2 = s2 / 2;
-        Ie$1(e2, r2, 0);
-        for (let t3 = 1; t3 < o2; t3++) Le$1(e2, r2 + r2 * Ee$1(2 * t3 * De$1 / o2), a2 - a2 * Te$1(2 * t3 * De$1 / o2));
-        ze$1(e2);
-      }
-    }
-  };
-  St$2([zn(Zt$1)], Oe$1.prototype, "__", void 0), St$2([Cn(3)], Oe$1.prototype, "sides", void 0), St$2([Cn()], Oe$1.prototype, "points", void 0), St$2([Cn(0)], Oe$1.prototype, "curve", void 0), Oe$1 = St$2([qn(), Zn()], Oe$1);
-  const { sin: Ne$1, cos: Ve$1, PI: He$1 } = Math, { moveTo: Ye$1, lineTo: Ue$1, closePath: Xe$1 } = Cr;
-  let je$1 = class je extends ge$1 {
-    get __tag() {
-      return "Star";
-    }
-    __updatePath() {
-      const { width: t2, height: e2, corners: i2, innerRadius: s2 } = this.__, o2 = t2 / 2, r2 = e2 / 2, a2 = this.__.path = [];
-      Ye$1(a2, o2, 0);
-      for (let t3 = 1; t3 < 2 * i2; t3++) Ue$1(a2, o2 + (t3 % 2 == 0 ? o2 : o2 * s2) * Ne$1(t3 * He$1 / i2), r2 - (t3 % 2 == 0 ? r2 : r2 * s2) * Ve$1(t3 * He$1 / i2));
-      Xe$1(a2);
-    }
-  };
-  St$2([zn(te$1)], je$1.prototype, "__", void 0), St$2([Cn(5)], je$1.prototype, "corners", void 0), St$2([Cn(0.382)], je$1.prototype, "innerRadius", void 0), je$1 = St$2([Zn()], je$1);
-  const { moveTo: Je$1, lineTo: qe$1, drawPoints: Ge$1 } = Cr, { rotate: $e$1, getAngle: Ke$1, getDistance: Qe$1, defaultPoint: Ze$1 } = ot$2;
-  let ti$1 = class ti extends ge$1 {
-    get __tag() {
-      return "Line";
-    }
-    get toPoint() {
-      const { width: t2, rotation: e2 } = this.__, i2 = Y$2();
-      return t2 && (i2.x = t2), e2 && $e$1(i2, e2), i2;
-    }
-    set toPoint(t2) {
-      this.width = Qe$1(Ze$1, t2), this.rotation = Ke$1(Ze$1, t2), this.height && (this.height = 0);
-    }
-    __updatePath() {
-      const t2 = this.__, e2 = t2.path = [];
-      t2.points ? Ge$1(e2, t2.points, t2.curve, t2.closed) : (Je$1(e2, 0, 0), qe$1(e2, this.width, 0));
-    }
-  };
-  St$2([zn($t$1)], ti$1.prototype, "__", void 0), St$2([On("center")], ti$1.prototype, "strokeAlign", void 0), St$2([bn(0)], ti$1.prototype, "height", void 0), St$2([Cn()], ti$1.prototype, "points", void 0), St$2([Cn(0)], ti$1.prototype, "curve", void 0), St$2([Cn(false)], ti$1.prototype, "closed", void 0), ti$1 = St$2([Zn()], ti$1);
-  let ei$1 = class ei extends xe$1 {
-    get __tag() {
-      return "Image";
-    }
-    get ready() {
-      const { image: t2 } = this;
-      return t2 && t2.ready;
-    }
-    get image() {
-      const { fill: t2 } = this.__;
-      return l(t2) && t2[0].image;
-    }
-  };
-  St$2([zn(re$1)], ei$1.prototype, "__", void 0), St$2([bn("")], ei$1.prototype, "url", void 0), ei$1 = St$2([Zn()], ei$1);
-  const ii$1 = ei$1;
-  let si$1 = class si extends xe$1 {
-    get __tag() {
-      return "Canvas";
-    }
-    get context() {
-      return this.canvas.context;
-    }
-    get ready() {
-      return !this.url;
-    }
-    constructor(t2) {
-      super(t2), this.canvas = le$2.canvas(this.__), t2 && t2.url && this.drawImage(t2.url);
-    }
-    drawImage(t2) {
-      new on({ url: t2 }).load((t3) => {
-        this.context.drawImage(t3.view, 0, 0), this.url = void 0, this.paint(), this.emitEvent(new Vo(Vo.LOADED, { image: t3 }));
-      });
-    }
-    draw(t2, e2, i2, s2) {
-      const o$1 = new pt$2(t2.worldTransform).invert(), r2 = new pt$2();
-      e2 && r2.translate(e2.x, e2.y), i2 && (o(i2) ? r2.scale(i2) : r2.scale(i2.x, i2.y)), s2 && r2.rotate(s2), o$1.multiplyParent(r2), t2.__render(this.canvas, { matrix: o$1.withScale() }), this.paint();
-    }
-    paint() {
-      this.forceRender();
-    }
-    __drawContent(t2, e2) {
-      const { width: i2, height: s2 } = this.__, { view: o2 } = this.canvas;
-      t2.drawImage(o2, 0, 0, o2.width, o2.height, 0, 0, i2, s2);
-    }
-    __updateSize() {
-      const { canvas: t2 } = this;
-      if (t2) {
-        const { smooth: e2, safeResize: i2 } = this.__;
-        t2.resize(this.__, i2), t2.smooth !== e2 && (t2.smooth = e2);
-      }
-    }
-    destroy() {
-      this.canvas && (this.canvas.destroy(), this.canvas = null), super.destroy();
-    }
-  };
-  St$2([zn(ae$1)], si$1.prototype, "__", void 0), St$2([Rt$2(100)], si$1.prototype, "width", void 0), St$2([Rt$2(100)], si$1.prototype, "height", void 0), St$2([Rt$2(1)], si$1.prototype, "pixelRatio", void 0), St$2([Rt$2(true)], si$1.prototype, "smooth", void 0), St$2([fn(false)], si$1.prototype, "safeResize", void 0), St$2([Rt$2()], si$1.prototype, "contextSettings", void 0), si$1 = St$2([Zn()], si$1);
-  const { copyAndSpread: oi$1, includes: ri$1, spread: ai$1, setList: ni$1 } = zt$2, { stintSet: _i$1 } = _$2;
-  let hi$1 = class hi extends ge$1 {
-    get __tag() {
-      return "Text";
-    }
-    get textDrawData() {
-      return this.updateLayout(), this.__.__textDrawData;
-    }
-    __updateTextDrawData() {
-      const t2 = this.__, { lineHeight: e2, letterSpacing: i2, fontFamily: s2, fontSize: o2, fontWeight: r2, italic: a2, textCase: n2, textOverflow: _2, padding: h2, width: d2, height: l2 } = t2;
-      t2.__lineHeight = bt$2.number(e2, o2), t2.__letterSpacing = bt$2.number(i2, o2), t2.__baseLine = t2.__lineHeight - (t2.__lineHeight - 0.7 * o2) / 2, t2.__font = `${a2 ? "italic " : ""}${"small-caps" === n2 ? "small-caps " : ""}${"normal" !== r2 ? r2 + " " : ""}${o2 || 12}px ${s2 || "caption"}`, _i$1(t2, "__padding", h2 && I$2.fourNumber(h2)), _i$1(t2, "__clipText", "show" !== _2 && !t2.__autoSize), _i$1(t2, "__isCharMode", d2 || l2 || t2.__letterSpacing || "none" !== n2), t2.__textDrawData = At$2.getDrawData((t2.__isPlacehold = t2.placeholder && "" === t2.text) ? t2.placeholder : t2.text, this.__);
-    }
-    __updateBoxBounds() {
-      const t2 = this.__, e2 = this.__layout, { fontSize: i2, italic: s2, padding: o2, __autoWidth: r2, __autoHeight: a2 } = t2;
-      this.__updateTextDrawData();
-      const { bounds: _2 } = t2.__textDrawData, h2 = e2.boxBounds;
-      if (e2.contentBounds = _2, t2.__lineHeight < i2 && ai$1(_2, i2 / 2), r2 || a2) {
-        if (h2.x = r2 ? _2.x : 0, h2.y = a2 ? _2.y : 0, h2.width = r2 ? _2.width : t2.width, h2.height = a2 ? _2.height : t2.height, o2) {
-          const [e3, i3, s3, o3] = t2.__padding;
-          r2 && (h2.x -= o3, h2.width += i3 + o3), a2 && (h2.y -= e3, h2.height += s3 + e3);
-        }
-        this.__updateNaturalSize();
-      } else super.__updateBoxBounds();
-      s2 && (h2.width += 0.16 * i2), _$2.stintSet(this, "isOverflow", !ri$1(h2, _2)), this.isOverflow ? (ni$1(t2.__textBoxBounds = {}, [h2, _2]), e2.renderChanged = true) : t2.__textBoxBounds = h2;
-    }
-    __updateRenderSpread() {
-      let t2 = super.__updateRenderSpread();
-      return t2 || (t2 = this.isOverflow ? 1 : 0), t2;
-    }
-    __updateRenderBounds() {
-      const { renderBounds: t2, renderSpread: e2 } = this.__layout;
-      oi$1(t2, this.__.__textBoxBounds, e2), this.__box && (this.__box.__layout.renderBounds = t2);
-    }
-    __updateChange() {
-      super.__updateChange();
-      const t2 = this.__box;
-      t2 && (t2.__onUpdateSize(), t2.__updateChange());
-    }
-    __drawRenderPath(t2) {
-      t2.font = this.__.__font;
-    }
-    __draw(t2, e2, i2) {
-      const s2 = this.__box;
-      s2 && (s2.__nowWorld = this.__nowWorld, s2.__draw(t2, e2, i2)), this.textEditing && !e2.exporting || super.__draw(t2, e2, i2);
-    }
-    __drawShape(t2, e2) {
-      e2.shape && this.__box && this.__box.__drawShape(t2, e2), super.__drawShape(t2, e2);
-    }
-    destroy() {
-      this.boxStyle && (this.boxStyle = null), super.destroy();
-    }
-  };
-  St$2([zn(oe$1)], hi$1.prototype, "__", void 0), St$2([bn(0)], hi$1.prototype, "width", void 0), St$2([bn(0)], hi$1.prototype, "height", void 0), St$2([Ln()], hi$1.prototype, "boxStyle", void 0), St$2([fn(false)], hi$1.prototype, "resizeFontSize", void 0), St$2([Ln("#000000")], hi$1.prototype, "fill", void 0), St$2([On("outside")], hi$1.prototype, "strokeAlign", void 0), St$2([Dn("all")], hi$1.prototype, "hitFill", void 0), St$2([bn("")], hi$1.prototype, "text", void 0), St$2([bn("")], hi$1.prototype, "placeholder", void 0), St$2([bn("caption")], hi$1.prototype, "fontFamily", void 0), St$2([bn(12)], hi$1.prototype, "fontSize", void 0), St$2([bn("normal")], hi$1.prototype, "fontWeight", void 0), St$2([bn(false)], hi$1.prototype, "italic", void 0), St$2([bn("none")], hi$1.prototype, "textCase", void 0), St$2([bn("none")], hi$1.prototype, "textDecoration", void 0), St$2([bn(0)], hi$1.prototype, "letterSpacing", void 0), St$2([bn({ type: "percent", value: 1.5 })], hi$1.prototype, "lineHeight", void 0), St$2([bn(0)], hi$1.prototype, "paraIndent", void 0), St$2([bn(0)], hi$1.prototype, "paraSpacing", void 0), St$2([bn("x")], hi$1.prototype, "writingMode", void 0), St$2([bn("left")], hi$1.prototype, "textAlign", void 0), St$2([bn("top")], hi$1.prototype, "verticalAlign", void 0), St$2([bn(true)], hi$1.prototype, "autoSizeAlign", void 0), St$2([bn("normal")], hi$1.prototype, "textWrap", void 0), St$2([bn("show")], hi$1.prototype, "textOverflow", void 0), St$2([Ln(false)], hi$1.prototype, "textEditing", void 0), hi$1 = St$2([Zn()], hi$1);
-  let di$1 = class di extends ge$1 {
-    get __tag() {
-      return "Path";
-    }
-  };
-  St$2([zn(ee$1)], di$1.prototype, "__", void 0), St$2([On("center")], di$1.prototype, "strokeAlign", void 0), di$1 = St$2([Zn()], di$1);
-  let li$1 = class li extends ye$1 {
-    get __tag() {
-      return "Pen";
-    }
-    setStyle(t2) {
-      const e2 = this.pathElement = new di$1(t2);
-      return this.pathStyle = t2, this.__path = e2.path || (e2.path = []), this.add(e2), this;
-    }
-    beginPath() {
-      return this;
-    }
-    moveTo(t2, e2) {
-      return this;
-    }
-    lineTo(t2, e2) {
-      return this;
-    }
-    bezierCurveTo(t2, e2, i2, s2, o2, r2) {
-      return this;
-    }
-    quadraticCurveTo(t2, e2, i2, s2) {
-      return this;
-    }
-    closePath() {
-      return this;
-    }
-    rect(t2, e2, i2, s2) {
-      return this;
-    }
-    roundRect(t2, e2, i2, s2, o2) {
-      return this;
-    }
-    ellipse(t2, e2, i2, s2, o2, r2, a2, n2) {
-      return this;
-    }
-    arc(t2, e2, i2, s2, o2, r2) {
-      return this;
-    }
-    arcTo(t2, e2, i2, s2, o2) {
-      return this;
-    }
-    drawEllipse(t2, e2, i2, s2, o2, r2, a2, n2) {
-      return this;
-    }
-    drawArc(t2, e2, i2, s2, o2, r2) {
-      return this;
-    }
-    drawPoints(t2, e2, i2) {
-      return this;
-    }
-    clearPath() {
-      return this;
-    }
-    paint() {
-      this.pathElement.__layout.boxChanged || this.pathElement.forceUpdate("path");
-    }
-  };
-  St$2([zn(ie$1)], li$1.prototype, "__", void 0), St$2([(e2, i2) => {
-    ln(e2, i2, { get() {
-      return this.__path;
-    } });
-  }], li$1.prototype, "path", void 0), li$1 = St$2([Jn(Fr, ["set", "path", "paint"]), Zn()], li$1);
   function I$1(t2, e2, i2, s2) {
     var a2, n2 = arguments.length, r2 = n2 < 3 ? e2 : null === s2 ? s2 = Object.getOwnPropertyDescriptor(e2, i2) : s2;
     if ("object" == typeof Reflect && "function" == typeof Reflect.decorate) r2 = Reflect.decorate(t2, e2, i2, s2);
@@ -9310,7 +9606,7 @@ var LiteGraphTSMigration = (function(exports) {
       pe$2.changeName(t2, e2);
     }
   };
-  const { min: U, max: j$2, abs: X$1 } = Math, { float: Y$1, sign: z$1 } = I$2, { minX: G$1, maxX: Z$2, minY: q, maxY: J$1 } = zt$2, Q = new Vt$3(), $ = new Vt$3(), tt$1 = { limitMove(t2, e2) {
+  const { min: U, max: j$2, abs: X$1 } = Math, { float: Y$1, sign: z$1 } = I$4, { minX: G$1, maxX: Z$2, minY: q, maxY: J$1 } = zt$2, Q = new Vt$3(), $ = new Vt$3(), tt$1 = { limitMove(t2, e2) {
     const { dragBounds: i2, dragBoundsType: s2 } = t2;
     i2 && et$1.getValidMove(t2.__localBoxBounds, et$1.getDragBounds(t2), s2, e2, true), et$1.axisMove(t2, e2);
   }, limitScaleOf(t2, e2, i2, s2) {
@@ -10661,7 +10957,7 @@ var LiteGraphTSMigration = (function(exports) {
       this.preventDefaultWheel(t2);
       const e2 = _t$1.getBase(t2);
       Object.assign(e2, this.getLocal(t2));
-      const i2 = t2.scale / this.lastGestureScale, s2 = (t2.rotation - this.lastGestureRotation) / Math.PI * 180 * (I$2.within(this.config.wheel.rotateSpeed, 0, 1) / 4 + 0.1);
+      const i2 = t2.scale / this.lastGestureScale, s2 = (t2.rotation - this.lastGestureRotation) / Math.PI * 180 * (I$4.within(this.config.wheel.rotateSpeed, 0, 1) / 4 + 0.1);
       this.zoom(Object.assign(Object.assign({}, e2), { scale: i2 * i2 })), this.rotate(Object.assign(Object.assign({}, e2), { rotation: s2 })), this.lastGestureScale = t2.scale, this.lastGestureRotation = t2.rotation;
     }
     onGestureend(t2) {
@@ -10670,7 +10966,7 @@ var LiteGraphTSMigration = (function(exports) {
     setCursor(t2) {
       super.setCursor(t2);
       const e2 = [];
-      this.eachCursor(t2, e2), d(e2[e2.length - 1]) && e2.push("default"), this.canvas.view.style.cursor = e2.map((t3) => d(t3) ? `url(${t3.url}) ${t3.x || 0} ${t3.y || 0}` : t3).join(",");
+      this.eachCursor(t2, e2), d$1(e2[e2.length - 1]) && e2.push("default"), this.canvas.view.style.cursor = e2.map((t3) => d$1(t3) ? `url(${t3.url}) ${t3.x || 0} ${t3.y || 0}` : t3).join(",");
     }
     eachCursor(t2, e2, i$1 = 0) {
       if (i$1++, l(t2)) t2.forEach((t3) => this.eachCursor(t3, e2, i$1));
@@ -10688,11 +10984,11 @@ var LiteGraphTSMigration = (function(exports) {
   }
   function Et(t2, e2, i2, s2, n2) {
     const o2 = i2.__;
-    d(t2) ? Ft$2.drawStrokesStyle(t2, e2, false, i2, s2, n2) : (s2.setStroke(t2, o2.__strokeWidth * e2, o2), s2.stroke()), o2.__useArrow && Ft$2.strokeArrow(t2, i2, s2, n2);
+    d$1(t2) ? Ft$2.drawStrokesStyle(t2, e2, false, i2, s2, n2) : (s2.setStroke(t2, o2.__strokeWidth * e2, o2), s2.stroke()), o2.__useArrow && Ft$2.strokeArrow(t2, i2, s2, n2);
   }
   function Pt(t2, e2, i2, s2, n2) {
     const o2 = i2.__;
-    d(t2) ? Ft$2.drawStrokesStyle(t2, e2, true, i2, s2, n2) : (s2.setStroke(t2, o2.__strokeWidth * e2, o2), Ft$2.drawTextStroke(i2, s2, n2));
+    d$1(t2) ? Ft$2.drawStrokesStyle(t2, e2, true, i2, s2, n2) : (s2.setStroke(t2, o2.__strokeWidth * e2, o2), Ft$2.drawTextStroke(i2, s2, n2));
   }
   function Rt(t2, e2, i2, s2, n2) {
     const o2 = s2.getSameCanvas(true, true);
@@ -10702,7 +10998,7 @@ var LiteGraphTSMigration = (function(exports) {
   let zt;
   const { stintSet: jt } = _$2, { hasTransparent: Ut } = Ct$2;
   function Gt(t2, e2, i$1) {
-    if (!d(e2) || false === e2.visible || 0 === e2.opacity) return;
+    if (!d$1(e2) || false === e2.visible || 0 === e2.opacity) return;
     let n2;
     const { boxBounds: o2 } = i$1.__layout, { type: a2 } = e2;
     switch (a2) {
@@ -10837,7 +11133,7 @@ var LiteGraphTSMigration = (function(exports) {
       let n3;
       if ($t$2.fullImageShadow) n3 = h2;
       else {
-        const t3 = a2.renderShapeSpread ? Mt(o2, v$1.swapAndScale(a2.renderShapeSpread, g2, w2)) : o2;
+        const t3 = a2.renderShapeSpread ? Mt(o2, v$3.swapAndScale(a2.renderShapeSpread, g2, w2)) : o2;
         n3 = It(t3, h2);
       }
       u2 = o2.getFitMatrix(n3);
@@ -10876,17 +11172,17 @@ var LiteGraphTSMigration = (function(exports) {
     const { leafer: i2 } = t2;
     i2 && i2.viewReady && (i2.renderer.ignore = e2);
   }
-  const { get: Jt, translate: te } = q$1, ee = new Vt$3(), ie = {}, se = {};
+  const { get: Jt, translate: te } = q$2, ee = new Vt$3(), ie = {}, se = {};
   function ne(t2, e2, i$1, n2) {
     const o2 = i(t2) || n2 ? (n2 ? i$1 - n2 * e2 : i$1 % e2) / ((n2 || Math.floor(i$1 / e2)) - 1) : t2;
     return "auto" === t2 && o2 < 0 ? 0 : o2;
   }
-  let oe = {}, re = X$2();
-  const { get: ae, set: he, rotateOfOuter: le, translate: ce, scaleOfOuter: de, multiplyParent: ue, scale: fe, rotate: pe, skew: ge } = q$1;
+  let oe = {}, re = X$4();
+  const { get: ae, set: he, rotateOfOuter: le, translate: ce, scaleOfOuter: de, multiplyParent: ue, scale: fe, rotate: pe, skew: ge } = q$2;
   function we(t2, e2, i2, s2, n2, o2, r2, a2) {
     r2 && pe(t2, r2), a2 && ge(t2, a2.x, a2.y), n2 && fe(t2, n2, o2), ce(t2, e2.x + i2, e2.y + s2);
   }
-  const { get: _e, scale: me, copy: ve } = q$1, { getFloorScale: ye } = I$2, { abs: xe } = Math;
+  const { get: _e, scale: me, copy: ve } = q$2, { getFloorScale: ye } = I$4, { abs: xe } = Math;
   const be = { image: function(t2, e2, i2, s2, n2) {
     let o2, r2;
     const a2 = en.get(i2, i2.type);
@@ -10943,30 +11239,30 @@ var LiteGraphTSMigration = (function(exports) {
     t2.data = Wt$2.getPatternData(i2, s2, e2);
   }, getPatternData: function(t2, e2, i$1) {
     t2.padding && (e2 = ee.set(e2).shrink(t2.padding)), "strench" === t2.mode && (t2.mode = "stretch");
-    const { width: n2, height: o$1 } = i$1, { mode: r2, align: a2, offset: h2, scale: l2, size: c2, rotation: d$1, skew: u2, clipSize: f2, repeat: p2, gap: g2, interlace: w2 } = t2, _2 = e2.width === n2 && e2.height === o$1, m2 = { mode: r2 }, v2 = "center" !== a2 && (d$1 || 0) % 180 == 90;
+    const { width: n2, height: o$1 } = i$1, { mode: r2, align: a2, offset: h2, scale: l2, size: c2, rotation: d2, skew: u2, clipSize: f2, repeat: p2, gap: g2, interlace: w2 } = t2, _2 = e2.width === n2 && e2.height === o$1, m2 = { mode: r2 }, v2 = "center" !== a2 && (d2 || 0) % 180 == 90;
     let y2, x2;
-    switch (zt$2.set(se, 0, 0, v2 ? o$1 : n2, v2 ? n2 : o$1), r2 && "cover" !== r2 && "fit" !== r2 ? ((l2 || c2) && (I$2.getScaleData(l2, c2, i$1, ie), y2 = ie.scaleX, x2 = ie.scaleY), (a2 || g2 || p2) && (y2 && zt$2.scale(se, y2, x2, true), a2 && kt$3.toPoint(a2, se, e2, se, true, true))) : _2 && !d$1 || (y2 = x2 = zt$2.getFitScale(e2, se, "fit" !== r2), zt$2.put(e2, i$1, a2, y2, false, se), zt$2.scale(se, y2, x2, true)), h2 && ot$2.move(se, h2), r2) {
+    switch (zt$2.set(se, 0, 0, v2 ? o$1 : n2, v2 ? n2 : o$1), r2 && "cover" !== r2 && "fit" !== r2 ? ((l2 || c2) && (I$4.getScaleData(l2, c2, i$1, ie), y2 = ie.scaleX, x2 = ie.scaleY), (a2 || g2 || p2) && (y2 && zt$2.scale(se, y2, x2, true), a2 && kt$3.toPoint(a2, se, e2, se, true, true))) : _2 && !d2 || (y2 = x2 = zt$2.getFitScale(e2, se, "fit" !== r2), zt$2.put(e2, i$1, a2, y2, false, se), zt$2.scale(se, y2, x2, true)), h2 && ot$2.move(se, h2), r2) {
       case "stretch":
         _2 ? y2 && (y2 = x2 = void 0) : (y2 = e2.width / n2, x2 = e2.height / o$1, Wt$2.stretchMode(m2, e2, y2, x2));
         break;
       case "normal":
       case "clip":
-        if (se.x || se.y || y2 || f2 || d$1 || u2) {
+        if (se.x || se.y || y2 || f2 || d2 || u2) {
           let t3, i3;
-          f2 && (t3 = e2.width / f2.width, i3 = e2.height / f2.height), Wt$2.clipMode(m2, e2, se.x, se.y, y2, x2, d$1, u2, t3, i3), t3 && (y2 = y2 ? y2 * t3 : t3, x2 = x2 ? x2 * i3 : i3);
+          f2 && (t3 = e2.width / f2.width, i3 = e2.height / f2.height), Wt$2.clipMode(m2, e2, se.x, se.y, y2, x2, d2, u2, t3, i3), t3 && (y2 = y2 ? y2 * t3 : t3, x2 = x2 ? x2 * i3 : i3);
         }
         break;
       case "repeat":
-        (!_2 || y2 || d$1 || u2) && Wt$2.repeatMode(m2, e2, n2, o$1, se.x, se.y, y2, x2, d$1, u2, a2, t2.freeTransform), p2 || (m2.repeat = "repeat");
-        const i2 = d(p2);
+        (!_2 || y2 || d2 || u2) && Wt$2.repeatMode(m2, e2, n2, o$1, se.x, se.y, y2, x2, d2, u2, a2, t2.freeTransform), p2 || (m2.repeat = "repeat");
+        const i2 = d$1(p2);
         (g2 || i2) && (m2.gap = (function(t3, e3, i3, s2, n3) {
           let o2, r3;
-          d(t3) ? (o2 = t3.x, r3 = t3.y) : o2 = r3 = t3;
+          d$1(t3) ? (o2 = t3.x, r3 = t3.y) : o2 = r3 = t3;
           return { x: ne(o2, i3, n3.width, e3 && e3.x), y: ne(r3, s2, n3.height, e3 && e3.y) };
         })(g2, i2 && p2, se.width, se.height, e2));
         break;
       default:
-        y2 && Wt$2.fillOrFitMode(m2, e2, se.x, se.y, y2, x2, d$1);
+        y2 && Wt$2.fillOrFitMode(m2, e2, se.x, se.y, y2, x2, d2);
     }
     return m2.transform || (e2.x || e2.y) && te(m2.transform = Jt(), e2.x, e2.y), y2 && (m2.scaleX = y2, m2.scaleY = x2), p2 && (m2.repeat = i(p2) ? "x" === p2 ? "repeat-x" : "repeat-y" : "repeat"), w2 && (m2.interlace = o(w2) || "percent" === w2.type ? { type: "x", offset: w2 } : w2), m2;
   }, stretchMode: function(t2, e2, i2, s2) {
@@ -11004,7 +11300,7 @@ var LiteGraphTSMigration = (function(exports) {
       h2 && (t2.isTransparent = true);
     }
   }
-  const { getAngle: Ee, getDistance: Pe } = ot$2, { get: Re, rotateOfOuter: Me, scaleOfOuter: Ce } = q$1, { toPoint: Ae } = bt$3, Oe = {}, De = {};
+  const { getAngle: Ee, getDistance: Pe } = ot$2, { get: Re, rotateOfOuter: Me, scaleOfOuter: Ce } = q$2, { toPoint: Ae } = bt$3, Oe = {}, De = {};
   function We(t2, e2, i2, s2, n2) {
     let o2;
     const { width: r2, height: a2 } = t2;
@@ -11278,7 +11574,7 @@ var LiteGraphTSMigration = (function(exports) {
     })(l2, e2, n2, r2), "none" !== e2.textDecoration && (function(t3, e3) {
       let i2, s2 = 0;
       const { fontSize: n3, textDecoration: o3 } = e3;
-      switch (t3.decorationHeight = n3 / 11, d(o3) ? (i2 = o3.type, o3.color && (t3.decorationColor = Ct$2.string(o3.color)), o3.offset && (s2 = Math.min(0.3 * n3, Math.max(o3.offset, 0.15 * -n3)))) : i2 = o3, i2) {
+      switch (t3.decorationHeight = n3 / 11, d$1(o3) ? (i2 = o3.type, o3.color && (t3.decorationColor = Ct$2.string(o3.color)), o3.offset && (s2 = Math.min(0.3 * n3, Math.max(o3.offset, 0.15 * -n3)))) : i2 = o3, i2) {
         case "under":
           t3.decorationY = [0.15 * n3 + s2];
           break;
@@ -11364,7 +11660,7 @@ var LiteGraphTSMigration = (function(exports) {
     Export: It$2,
     FileHelper: Gi$1,
     Filter: Dt$2,
-    FourNumberHelper: v$1,
+    FourNumberHelper: v$3,
     get Frame() {
       return Ce$1;
     },
@@ -11380,7 +11676,7 @@ var LiteGraphTSMigration = (function(exports) {
     ImageData: re$1,
     ImageEvent: Vo,
     ImageManager: en,
-    IncrementId: g$1,
+    IncrementId: g$2,
     Interaction: Tt,
     InteractionBase: Mt$1,
     InteractionHelper: _t$1,
@@ -11418,9 +11714,9 @@ var LiteGraphTSMigration = (function(exports) {
       return ti$1;
     },
     LineData: $t$1,
-    MathHelper: I$2,
+    MathHelper: I$4,
     Matrix: pt$2,
-    MatrixHelper: q$1,
+    MatrixHelper: q$2,
     get MoveEvent() {
       return ot$1;
     },
@@ -11429,9 +11725,9 @@ var LiteGraphTSMigration = (function(exports) {
     MyPointerEvent: st$1,
     MyTouchEvent: gt$1,
     NeedConvertToCanvasCommandMap: Ne$2,
-    OneRadian: A$2,
-    PI2: W$2,
-    PI_2: N$3,
+    OneRadian: A$4,
+    PI2: W$4,
+    PI_2: N$4,
     Paint: Ft$2,
     PaintGradient: Et$2,
     PaintImage: Wt$2,
@@ -11547,18 +11843,18 @@ var LiteGraphTSMigration = (function(exports) {
     emptyData: e,
     eraserType: Yn,
     extraPropertyEventMap: jo,
-    getBoundsData: D$2,
+    getBoundsData: D$4,
     getDescriptor: dn,
-    getMatrixData: X$2,
-    getPointData: Y$2,
+    getMatrixData: X$4,
+    getPointData: Y$4,
     hitType: Dn,
     isArray: l,
     isData: c,
-    isEmptyData: u,
+    isEmptyData: u$1,
     isFinite: n,
     isNull: r,
     isNumber: o,
-    isObject: d,
+    isObject: d$1,
     isString: i,
     isUndefined: s,
     layoutProcessor: Fn,
@@ -12975,16 +13271,16 @@ var LiteGraphTSMigration = (function(exports) {
     return null;
   }
   function b$1(t2, e2) {
-    d(e2) || (e2 = void 0), _$1(t2, e2, "in");
+    d$1(e2) || (e2 = void 0), _$1(t2, e2, "in");
   }
   function v(t2, e2) {
     const { normalStyle: n2 } = t2;
-    d(e2) || (e2 = void 0), n2 && (e2 || (e2 = n2), _$1(t2, e2, "out"));
+    d$1(e2) || (e2 = void 0), n2 && (e2 || (e2 = n2), _$1(t2, e2, "out"));
   }
   const A$1 = {};
   function _$1(t2, e2, i2) {
     const { normalStyle: l2 } = t2;
-    e2 || (e2 = A$1), e2.scale && (I$2.assignScale(e2, e2.scale), delete e2.scale), e2 !== A$1 && Lt$2.canAnimate || (i2 = null);
+    e2 || (e2 = A$1), e2.scale && (I$4.assignScale(e2, e2.scale), delete e2.scale), e2 !== A$1 && Lt$2.canAnimate || (i2 = null);
     let a2 = !!i2 && (function(t3, e3, n2) {
       let s2 = "in" === t3 ? "transition" : "transitionOut";
       "out" === t3 && r(n2[s2]) && r(e3[s2]) && (s2 = "transition");
@@ -13762,9 +14058,13 @@ var LiteGraphTSMigration = (function(exports) {
       this.syncPosition();
     }
     syncPosition() {
-      var _a3, _b2;
+      var _a3, _b2, _c2, _d2, _e2;
       this.root.x = toFiniteNumber$2((_a3 = this.node.pos) == null ? void 0 : _a3[0]);
-      this.root.y = toFiniteNumber$2((_b2 = this.node.pos) == null ? void 0 : _b2[1]);
+      const collapsed = Boolean(
+        (_b2 = this.node.flags) == null ? void 0 : _b2.collapsed
+      );
+      const collapsedOffset = collapsed ? toFiniteNumber$2((_d2 = (_c2 = this.getShellState()) == null ? void 0 : _c2.layout) == null ? void 0 : _d2.height, 30) : 0;
+      this.root.y = toFiniteNumber$2((_e2 = this.node.pos) == null ? void 0 : _e2[1]) - collapsedOffset;
     }
     destroy() {
       this.root.destroy();
@@ -13908,19 +14208,19 @@ var LiteGraphTSMigration = (function(exports) {
       return [toFiniteNumber$2(point.x), toFiniteNumber$2(point.y)];
     }
     getPortAnchor(kind, slotIndex) {
-      var _a3, _b2, _c2, _d2;
+      var _a3, _b2;
       const layout = this.resolvePortLayout(kind, slotIndex);
       if (layout) {
         if (layout.space === "world") {
           return [layout.x, layout.y];
         }
         return [
-          toFiniteNumber$2((_a3 = this.node.pos) == null ? void 0 : _a3[0]) + layout.x,
-          toFiniteNumber$2((_b2 = this.node.pos) == null ? void 0 : _b2[1]) + layout.y
+          toFiniteNumber$2(this.root.x) + layout.x,
+          toFiniteNumber$2(this.root.y) + layout.y
         ];
       }
       const fallbackPoint = toPoint(
-        (_d2 = (_c2 = this.node).getConnectionPos) == null ? void 0 : _d2.call(_c2, kind === "input", slotIndex)
+        (_b2 = (_a3 = this.node).getConnectionPos) == null ? void 0 : _b2.call(_a3, kind === "input", slotIndex)
       );
       return fallbackPoint || null;
     }
@@ -14638,7 +14938,7 @@ var LiteGraphTSMigration = (function(exports) {
   }, reset() {
     const { state: t2 } = j;
     t2.type = "none", t2.typeCount = 0, t2.startTime = 0, t2.totalData = null;
-  } }, j = z, { abs: R, max: X } = Math, { sign: Y, within: A } = I$2, S = { getMove(t2, e2) {
+  } }, j = z, { abs: R, max: X } = Math, { sign: Y, within: A } = I$4, S = { getMove(t2, e2) {
     let { moveSpeed: a2 } = e2, { deltaX: o2, deltaY: n2 } = t2;
     t2.shiftKey && !o2 && (o2 = n2, n2 = 0);
     const i2 = R(o2), s2 = R(n2);
@@ -14748,7 +15048,7 @@ var LiteGraphTSMigration = (function(exports) {
     let n2 = z.getData(e2), { moving: i2, zooming: s2, rotating: r2 } = this.transformer;
     if (o2) {
       if (!this.transformer.transforming) {
-        switch (z.detect(n2, d(o2) ? o2 : {})) {
+        switch (z.detect(n2, d$1(o2) ? o2 : {})) {
           case "move":
             i2 = true;
             break;
@@ -25928,6 +26228,12 @@ var LiteGraphTSMigration = (function(exports) {
   const registry = defaultAssembly.registry;
   const runtime = defaultAssembly.runtime;
   const liteGraphMigrationBundle = defaultAssembly;
+  const leaferInGlobal = globalThis;
+  leaferInGlobal.LeaferIN = leaferInGlobal.LeaferIN || {};
+  leaferInGlobal.LeaferIN.flow = {
+    ...leaferInGlobal.LeaferIN.flow || {},
+    Flow: m$1
+  };
   exports.CONTEXT_MENU_CLOSE_ALL_DIFF_ID = CONTEXT_MENU_CLOSE_ALL_DIFF_ID;
   exports.ContextMenu = ContextMenu;
   exports.CurveEditor = CurveEditor;

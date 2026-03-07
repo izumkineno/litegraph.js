@@ -8,7 +8,7 @@ html,body {
 body {
 	background-color: #333;
 	color: #EEE;
-	font: 14px Tahoma;
+	font: 14px/1.4 "Noto Sans SC", "Microsoft YaHei", "PingFang SC", "Helvetica Neue", Arial, sans-serif;
 }
 
 h1 {
@@ -243,6 +243,7 @@ textarea {
 
 .selector {
 	font-size: 1.8em;
+	font-family: "Noto Sans SC", "Microsoft YaHei", "PingFang SC", "Helvetica Neue", Arial, sans-serif;
 }
 
 
@@ -251,6 +252,7 @@ textarea {
 	background-color: black;
 	border: 0;
 	font-size: 1em;
+	font-family: inherit;
 }
 
 .graphcanvas{

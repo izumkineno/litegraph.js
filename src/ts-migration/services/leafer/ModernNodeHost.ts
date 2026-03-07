@@ -280,7 +280,13 @@ export class ModernNodeHost implements NodeViewHost {
 
     syncPosition(): void {
         this.root.x = toFiniteNumber(this.node.pos?.[0]);
-        this.root.y = toFiniteNumber(this.node.pos?.[1]);
+        const collapsed = Boolean(
+            (this.node as { flags?: { collapsed?: boolean } }).flags?.collapsed
+        );
+        const collapsedOffset = collapsed
+            ? toFiniteNumber(this.getShellState()?.layout?.height, 30)
+            : 0;
+        this.root.y = toFiniteNumber(this.node.pos?.[1]) - collapsedOffset;
     }
 
     destroy(): void {
@@ -484,8 +490,8 @@ export class ModernNodeHost implements NodeViewHost {
             }
 
             return [
-                toFiniteNumber(this.node.pos?.[0]) + layout.x,
-                toFiniteNumber(this.node.pos?.[1]) + layout.y,
+                toFiniteNumber(this.root.x) + layout.x,
+                toFiniteNumber(this.root.y) + layout.y,
             ];
         }
 
