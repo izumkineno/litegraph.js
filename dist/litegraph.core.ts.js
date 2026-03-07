@@ -3750,6 +3750,133 @@ var LiteGraphTSMigration = (function(exports) {
     }
     return true;
   }
+  function toMutationKey$1(nodeId) {
+    return String(nodeId);
+  }
+  function toFiniteNumber(value) {
+    const numericValue = Number(value);
+    return Number.isFinite(numericValue) ? numericValue : 0;
+  }
+  function resolveMouseType(type) {
+    if (type === "down") {
+      return "mousedown";
+    }
+    if (type === "move") {
+      return "mousemove";
+    }
+    return "mouseup";
+  }
+  function resolveButtons(event2) {
+    return toFiniteNumber(event2.buttons);
+  }
+  function resolveButton(event2) {
+    const pointerEvent = event2;
+    if (pointerEvent.left) {
+      return 0;
+    }
+    if (pointerEvent.middle) {
+      return 1;
+    }
+    if (pointerEvent.right) {
+      return 2;
+    }
+    const buttons = resolveButtons(event2);
+    if (buttons & 1) {
+      return 0;
+    }
+    if (buttons & 4) {
+      return 1;
+    }
+    if (buttons & 2) {
+      return 2;
+    }
+    return 0;
+  }
+  function resolveWhich(button) {
+    return button + 1;
+  }
+  function buildLocalPosMap(event2, targets) {
+    const localPosByNodeId = /* @__PURE__ */ new Map();
+    for (let i2 = 0; i2 < targets.length; ++i2) {
+      const target = targets[i2];
+      const localPoint = event2.getInnerPoint(target.nodeRoot);
+      localPosByNodeId.set(toMutationKey$1(target.nodeId), [
+        toFiniteNumber(localPoint.x),
+        toFiniteNumber(localPoint.y)
+      ]);
+    }
+    return localPosByNodeId;
+  }
+  function createLegacyPointerEvent(options) {
+    const { event: event2, hostElement } = options;
+    const pagePoint = event2.getPagePoint();
+    const canvasX = toFiniteNumber(pagePoint.x);
+    const canvasY = toFiniteNumber(pagePoint.y);
+    const hostRect = hostElement.getBoundingClientRect();
+    const clientX = hostRect.left + canvasX;
+    const clientY = hostRect.top + canvasY;
+    const button = resolveButton(event2);
+    const buttons = resolveButtons(event2);
+    const localPosByNodeId = buildLocalPosMap(event2, options.targets || []);
+    const stop = () => {
+      var _a3;
+      (_a3 = event2.stop) == null ? void 0 : _a3.call(event2);
+    };
+    const stopNow = () => {
+      if (typeof event2.stopNow === "function") {
+        event2.stopNow();
+        return;
+      }
+      stop();
+    };
+    return {
+      __isLeaferLegacyPointerEvent: true,
+      type: resolveMouseType(options.type),
+      canvasX,
+      canvasY,
+      pageX: canvasX,
+      pageY: canvasY,
+      clientX,
+      clientY,
+      screenX: clientX,
+      screenY: clientY,
+      offsetX: canvasX,
+      offsetY: canvasY,
+      deltaX: toFiniteNumber(options.deltaX),
+      deltaY: toFiniteNumber(options.deltaY),
+      deltax: toFiniteNumber(options.deltaX),
+      deltay: toFiniteNumber(options.deltaY),
+      which: resolveWhich(button),
+      button,
+      buttons,
+      click_time: Math.max(0, toFiniteNumber(options.clickTime)),
+      dragging: Boolean(options.dragging),
+      shiftKey: Boolean(event2.shiftKey),
+      ctrlKey: Boolean(event2.ctrlKey),
+      altKey: Boolean(event2.altKey),
+      metaKey: Boolean(event2.metaKey),
+      isPrimary: true,
+      target: event2.target,
+      currentTarget: event2.current,
+      originalEvent: event2,
+      localPosByNodeId,
+      getLocalPos: (nodeId) => {
+        return localPosByNodeId.get(toMutationKey$1(nodeId)) || null;
+      },
+      preventDefault: () => {
+      },
+      stopPropagation: stop,
+      stopImmediatePropagation: stopNow
+    };
+  }
+  function isLegacyPointerEvent(value) {
+    return Boolean(
+      value && typeof value === "object" && value.__isLeaferLegacyPointerEvent
+    );
+  }
+  function getLegacyLocalPos(event2, nodeId, fallback) {
+    return event2.getLocalPos(nodeId) || fallback;
+  }
   function normalizeLinkKey(property) {
     if (typeof property === "symbol") {
       return null;
@@ -4006,6 +4133,266 @@ var LiteGraphTSMigration = (function(exports) {
       if (this.instrumentationState.refCount <= 0) {
         teardownGraphInstrumentation(this.instrumentationState);
       }
+    }
+  }
+  class HitTestService {
+    constructor(graph, sceneSyncController) {
+      this.graph = graph;
+      this.sceneSyncController = sceneSyncController;
+    }
+    hitLegacyNodeAt(canvasX, canvasY) {
+      if (typeof this.graph.getNodeOnPos !== "function") {
+        return null;
+      }
+      const node2 = this.graph.getNodeOnPos(canvasX, canvasY, void 0, 5);
+      if (!node2) {
+        return null;
+      }
+      const host = this.sceneSyncController.nodeHosts.get(node2.id);
+      if (!host) {
+        return null;
+      }
+      return { node: node2, host };
+    }
+    getLegacyHostForNode(node2) {
+      if (!node2) {
+        return null;
+      }
+      return this.sceneSyncController.nodeHosts.get(node2.id) || null;
+    }
+  }
+  class InteractionController {
+    constructor(graph, canvas, appHost, sceneSyncController) {
+      this.canvas = canvas;
+      this.appHost = appHost;
+      this.pointerDownAt = 0;
+      this.pointerIsDown = false;
+      this.lastPagePoint = null;
+      this.documentTrackingBound = false;
+      this.handleViewPointerDown = (event2) => {
+        const source = this.createPointerSource(event2);
+        const pagePoint = source.getPagePoint();
+        const hit = this.hitTestService.hitLegacyNodeAt(pagePoint.x, pagePoint.y);
+        const targets = this.collectTargets((hit == null ? void 0 : hit.host) || null);
+        if (!targets.length) {
+          return;
+        }
+        this.pointerIsDown = true;
+        this.pointerDownAt = Date.now();
+        this.lastPagePoint = {
+          x: Number(pagePoint.x) || 0,
+          y: Number(pagePoint.y) || 0
+        };
+        this.attachDocumentTracking();
+        const legacyEvent = createLegacyPointerEvent({
+          event: source,
+          type: "down",
+          hostElement: this.appHost.view,
+          targets,
+          clickTime: 0,
+          dragging: false,
+          deltaX: 0,
+          deltaY: 0
+        });
+        this.canvas.processMouseDown(legacyEvent);
+        this.stopEvent(event2);
+      };
+      this.handleViewPointerMove = (event2) => {
+        if (this.pointerIsDown) {
+          return;
+        }
+        this.dispatchPointerMove(event2);
+      };
+      this.handleDocumentPointerMove = (event2) => {
+        this.dispatchPointerMove(event2);
+      };
+      this.handleDocumentPointerUp = (event2) => {
+        const source = this.createPointerSource(event2);
+        const pagePoint = source.getPagePoint();
+        const hit = this.hitTestService.hitLegacyNodeAt(pagePoint.x, pagePoint.y);
+        const targets = this.collectTargets((hit == null ? void 0 : hit.host) || null);
+        const shouldDispatch = this.pointerIsDown || targets.length > 0 || Boolean(this.canvas.node_widget) || Boolean(this.canvas.node_over) || Boolean(this.canvas.node_capturing_input);
+        const deltaX2 = this.lastPagePoint ? (Number(pagePoint.x) || 0) - this.lastPagePoint.x : 0;
+        const deltaY = this.lastPagePoint ? (Number(pagePoint.y) || 0) - this.lastPagePoint.y : 0;
+        this.lastPagePoint = {
+          x: Number(pagePoint.x) || 0,
+          y: Number(pagePoint.y) || 0
+        };
+        if (shouldDispatch) {
+          const legacyEvent = createLegacyPointerEvent({
+            event: source,
+            type: "up",
+            hostElement: this.appHost.view,
+            targets,
+            clickTime: this.pointerDownAt ? Date.now() - this.pointerDownAt : 0,
+            dragging: this.pointerIsDown,
+            deltaX: deltaX2,
+            deltaY
+          });
+          this.canvas.processMouseUp(legacyEvent);
+          this.stopEvent(event2);
+        }
+        this.pointerIsDown = false;
+        this.pointerDownAt = 0;
+        this.detachDocumentTracking();
+      };
+      this.hitTestService = new HitTestService(graph, sceneSyncController);
+      this.view = this.appHost.view;
+      this.doc = this.view.ownerDocument || document;
+      this.view.addEventListener("pointerdown", this.handleViewPointerDown, true);
+      this.view.addEventListener("pointermove", this.handleViewPointerMove, true);
+    }
+    destroy() {
+      this.view.removeEventListener(
+        "pointerdown",
+        this.handleViewPointerDown,
+        true
+      );
+      this.view.removeEventListener(
+        "pointermove",
+        this.handleViewPointerMove,
+        true
+      );
+      this.detachDocumentTracking();
+      this.pointerIsDown = false;
+      this.pointerDownAt = 0;
+      this.lastPagePoint = null;
+    }
+    dispatchPointerMove(event2) {
+      const source = this.createPointerSource(event2);
+      const pagePoint = source.getPagePoint();
+      const hit = this.hitTestService.hitLegacyNodeAt(pagePoint.x, pagePoint.y);
+      const targets = this.collectTargets((hit == null ? void 0 : hit.host) || null);
+      const shouldDispatch = targets.length > 0 || Boolean(this.canvas.node_widget) || Boolean(this.canvas.node_over) || Boolean(this.canvas.node_capturing_input);
+      const deltaX2 = this.lastPagePoint ? (Number(pagePoint.x) || 0) - this.lastPagePoint.x : 0;
+      const deltaY = this.lastPagePoint ? (Number(pagePoint.y) || 0) - this.lastPagePoint.y : 0;
+      this.lastPagePoint = {
+        x: Number(pagePoint.x) || 0,
+        y: Number(pagePoint.y) || 0
+      };
+      if (!shouldDispatch) {
+        return;
+      }
+      const legacyEvent = createLegacyPointerEvent({
+        event: source,
+        type: "move",
+        hostElement: this.appHost.view,
+        targets,
+        clickTime: this.pointerDownAt ? Date.now() - this.pointerDownAt : 0,
+        dragging: this.pointerIsDown,
+        deltaX: deltaX2,
+        deltaY
+      });
+      this.canvas.processMouseMove(legacyEvent);
+      this.stopEvent(event2);
+    }
+    collectTargets(hitHost) {
+      var _a3;
+      const targets = /* @__PURE__ */ new Map();
+      const pushHost = (nodeId, host) => {
+        if (!host) {
+          return;
+        }
+        targets.set(String(nodeId), {
+          nodeId,
+          nodeRoot: host.eventRoot
+        });
+      };
+      if (hitHost) {
+        pushHost(hitHost.node.id, hitHost);
+      }
+      const hoveredNode = this.canvas.node_over;
+      if (hoveredNode) {
+        pushHost(
+          hoveredNode.id,
+          this.hitTestService.getLegacyHostForNode(hoveredNode)
+        );
+      }
+      const capturedNode = this.canvas.node_capturing_input;
+      if (capturedNode) {
+        pushHost(
+          capturedNode.id,
+          this.hitTestService.getLegacyHostForNode(capturedNode)
+        );
+      }
+      const widgetNode = (_a3 = this.canvas.node_widget) == null ? void 0 : _a3[0];
+      if (widgetNode) {
+        pushHost(
+          widgetNode.id,
+          this.hitTestService.getLegacyHostForNode(widgetNode)
+        );
+      }
+      return Array.from(targets.values());
+    }
+    createPointerSource(event2) {
+      const clientPoint = {
+        clientX: event2.clientX,
+        clientY: event2.clientY
+      };
+      const pagePoint = this.appHost.app.getPagePointByClient(clientPoint);
+      const worldPoint = this.appHost.app.getWorldPointByClient(clientPoint);
+      return {
+        altKey: event2.altKey,
+        ctrlKey: event2.ctrlKey,
+        shiftKey: event2.shiftKey,
+        metaKey: event2.metaKey,
+        buttons: event2.buttons,
+        target: event2.target,
+        current: event2.currentTarget,
+        time: Date.now(),
+        left: event2.button === 0 || Boolean(event2.buttons & 1),
+        middle: event2.button === 1 || Boolean(event2.buttons & 4),
+        right: event2.button === 2 || Boolean(event2.buttons & 2),
+        getPagePoint: () => pagePoint,
+        getInnerPoint: (relative) => {
+          if (!relative) {
+            return worldPoint;
+          }
+          return relative.getInnerPoint(worldPoint);
+        },
+        stop: () => {
+          event2.stopPropagation();
+        },
+        stopNow: () => {
+          event2.stopImmediatePropagation();
+        }
+      };
+    }
+    attachDocumentTracking() {
+      if (this.documentTrackingBound) {
+        return;
+      }
+      this.documentTrackingBound = true;
+      this.doc.addEventListener(
+        "pointermove",
+        this.handleDocumentPointerMove,
+        true
+      );
+      this.doc.addEventListener(
+        "pointerup",
+        this.handleDocumentPointerUp,
+        true
+      );
+    }
+    detachDocumentTracking() {
+      if (!this.documentTrackingBound) {
+        return;
+      }
+      this.documentTrackingBound = false;
+      this.doc.removeEventListener(
+        "pointermove",
+        this.handleDocumentPointerMove,
+        true
+      );
+      this.doc.removeEventListener(
+        "pointerup",
+        this.handleDocumentPointerUp,
+        true
+      );
+    }
+    stopEvent(event2) {
+      event2.stopPropagation();
+      event2.preventDefault();
     }
   }
   var t;
@@ -10657,10 +11044,10 @@ var LiteGraphTSMigration = (function(exports) {
     return 1 === n2 ? "rgb(" + o$1 + ")" : "rgba(" + o$1 + "," + n2 + ")";
   } };
   Object.assign(At$2, rs), Object.assign(Ct$2, as), Object.assign(Ft$2, Yt), Object.assign(Wt$2, be), Object.assign(Et$2, Ue), Object.assign(Tt$2, ei), Object.assign(le$2, { interaction: (t2, e2, i2, s2) => new Tt(t2, e2, i2, s2), hitCanvas: (t2, e2) => new et(t2, e2), hitCanvasManager: () => new At$1() }), it();
-  function createLayerGroup(name) {
+  function createLayerGroup(name, hittable = false) {
     return new ye$1({
       name,
-      hittable: false
+      hittable
     });
   }
   function createLeaferLayerRegistry(app) {
@@ -10673,6 +11060,8 @@ var LiteGraphTSMigration = (function(exports) {
     const skyRoot = createLayerGroup("litegraph-sky-root");
     const overlayWorld = createLayerGroup("litegraph-overlay-world");
     const overlayScreen = createLayerGroup("litegraph-overlay-screen");
+    treeRoot.hittable = true;
+    legacyNodeLayer.hittable = true;
     app.ground.add(groundRoot);
     app.tree.zoomLayer.add(treeRoot);
     treeRoot.add([
@@ -10842,16 +11231,28 @@ var LiteGraphTSMigration = (function(exports) {
       this.renderHost = renderHost;
       this.root = new ye$1({
         name: `litegraph-legacy-node:${String(node2.id)}`,
-        hittable: false
+        hittable: true,
+        data: {
+          litegraphNodeId: String(node2.id)
+        }
+      });
+      this.eventRoot = new ye$1({
+        name: `litegraph-legacy-node-event-root:${String(node2.id)}`,
+        hittable: false,
+        visible: false
       });
       this.surface = new si$1({
         name: `litegraph-legacy-node-surface:${String(node2.id)}`,
         width: 1,
         height: 1,
         pixelRatio: 1,
-        hittable: false
+        hittable: true,
+        data: {
+          litegraphNodeId: String(node2.id)
+        }
       });
-      this.root.add(this.surface);
+      this.surface.hitBox = true;
+      this.root.add([this.surface, this.eventRoot]);
       this.offscreenCanvas = document.createElement("canvas");
       this.offscreenCanvas.width = 1;
       this.offscreenCanvas.height = 1;
@@ -10881,6 +11282,8 @@ var LiteGraphTSMigration = (function(exports) {
       this.surface.y = 0;
       this.surface.width = bounds.width;
       this.surface.height = bounds.height;
+      this.eventRoot.x = bounds.contentOffsetX;
+      this.eventRoot.y = bounds.contentOffsetY;
       const surfaceContext = this.surface.context;
       surfaceContext.setTransform(1, 0, 0, 1, 0, 0);
       surfaceContext.clearRect(0, 0, bounds.width, bounds.height);
@@ -11752,6 +12155,7 @@ var LiteGraphTSMigration = (function(exports) {
       this.leaferAppHost = null;
       this.graphMutationBus = null;
       this.sceneSyncController = null;
+      this.interactionController = null;
       this.frame = 0;
       this.last_draw_time = 0;
       this.render_time = 0;
@@ -11998,6 +12402,10 @@ var LiteGraphTSMigration = (function(exports) {
       console.info("LGraphCanvas: Leafer App shell initialized.");
     }
     destroySceneSyncBackbone() {
+      if (this.interactionController) {
+        this.interactionController.destroy();
+        this.interactionController = null;
+      }
       if (this.sceneSyncController) {
         this.sceneSyncController.destroy();
         this.sceneSyncController = null;
@@ -12019,6 +12427,12 @@ var LiteGraphTSMigration = (function(exports) {
         this.graphMutationBus,
         this.leaferAppHost,
         this
+      );
+      this.interactionController = new InteractionController(
+        graph,
+        this,
+        this.leaferAppHost,
+        this.sceneSyncController
       );
     }
     setCanvas(canvas, skip_events) {
@@ -12527,6 +12941,9 @@ var LiteGraphTSMigration = (function(exports) {
       this.last_mouseclick = 0;
     }
     processMouseDown(e2) {
+      if (isLegacyPointerEvent(e2)) {
+        return this.processLeaferLegacyMouseDown(e2);
+      }
       if (this.set_canvas_dirty_on_mouse_event) {
         this.dirty_canvas = true;
       }
@@ -12917,6 +13334,9 @@ var LiteGraphTSMigration = (function(exports) {
      * @method processMouseMove
      **/
     processMouseMove(e2) {
+      if (isLegacyPointerEvent(e2)) {
+        return this.processLeaferLegacyMouseMove(e2);
+      }
       if (this.autoresize) {
         this.resize();
       }
@@ -13107,6 +13527,9 @@ var LiteGraphTSMigration = (function(exports) {
      * @method processMouseUp
      **/
     processMouseUp(e2) {
+      if (isLegacyPointerEvent(e2)) {
+        return this.processLeaferLegacyMouseUp(e2);
+      }
       const is_primary = e2.isPrimary === void 0 || e2.isPrimary;
       if (!is_primary) {
         return false;
@@ -13328,6 +13751,186 @@ var LiteGraphTSMigration = (function(exports) {
       e2.stopPropagation();
       e2.preventDefault();
       return false;
+    }
+    processLeaferLegacyMouseDown(e2) {
+      var _a3, _b2;
+      if (this.set_canvas_dirty_on_mouse_event) {
+        this.dirty_canvas = true;
+      }
+      const graph = this.graphRef();
+      if (!graph) {
+        return;
+      }
+      const LiteGraph2 = this.getLiteGraphHost();
+      LGraphCanvasInput.active_canvas = this;
+      this.mouse[0] = e2.clientX;
+      this.mouse[1] = e2.clientY;
+      this.last_mouse[0] = e2.clientX;
+      this.last_mouse[1] = e2.clientY;
+      this.graph_mouse[0] = e2.canvasX;
+      this.graph_mouse[1] = e2.canvasY;
+      this.last_click_position = [this.mouse[0], this.mouse[1]];
+      this.pointer_is_double = e2.isPrimary && LiteGraph2.getTime() - this.last_mouseclick < 300;
+      this.pointer_is_down = true;
+      this.last_mouseclick = LiteGraph2.getTime();
+      this.last_mouse_dragging = true;
+      (_b2 = (_a3 = this.canvas) == null ? void 0 : _a3.focus) == null ? void 0 : _b2.call(_a3);
+      const node2 = graph.getNodeOnPos(e2.canvasX, e2.canvasY, void 0, 5);
+      this.updateLeaferNodeHover(node2, e2);
+      if (!node2) {
+        graph.change();
+        return false;
+      }
+      const widget = this.callProcessNodeWidgets(
+        node2,
+        this.graph_mouse,
+        e2
+      );
+      if (widget) {
+        this.node_widget = [node2, widget];
+        this.repaintLeaferNodeHost(node2);
+      } else {
+        this.node_widget = null;
+      }
+      if (!node2.is_selected) {
+        this.processNodeSelected(node2, e2);
+      }
+      const pos2 = this.getLeaferLocalPos(e2, node2);
+      if (node2.onMouseDown) {
+        node2.onMouseDown(e2, pos2, this);
+      }
+      this.repaintLeaferNodeHost(node2);
+      graph.change();
+      e2.stopPropagation();
+      return false;
+    }
+    processLeaferLegacyMouseMove(e2) {
+      if (this.autoresize) {
+        this.resize();
+      }
+      const graph = this.graphRef();
+      if (!graph) {
+        return;
+      }
+      LGraphCanvasInput.active_canvas = this;
+      this.mouse[0] = e2.clientX;
+      this.mouse[1] = e2.clientY;
+      this.graph_mouse[0] = e2.canvasX;
+      this.graph_mouse[1] = e2.canvasY;
+      this.last_mouse = [e2.clientX, e2.clientY];
+      if (this.block_click) {
+        return false;
+      }
+      if (this.node_widget) {
+        const widgetContext = this.node_widget;
+        this.callProcessNodeWidgets(
+          widgetContext[0],
+          this.graph_mouse,
+          e2,
+          widgetContext[1]
+        );
+        this.repaintLeaferNodeHost(widgetContext[0]);
+        this.dirty_canvas = true;
+      }
+      const node2 = graph.getNodeOnPos(e2.canvasX, e2.canvasY, void 0, 5);
+      this.updateLeaferNodeHover(node2, e2);
+      if (node2 == null ? void 0 : node2.onMouseMove) {
+        node2.onMouseMove(e2, this.getLeaferLocalPos(e2, node2), this);
+        this.repaintLeaferNodeHost(node2);
+      }
+      if (this.node_capturing_input && this.node_capturing_input !== node2) {
+        if (this.node_capturing_input.onMouseMove) {
+          this.node_capturing_input.onMouseMove(
+            e2,
+            this.getLeaferLocalPos(e2, this.node_capturing_input),
+            this
+          );
+        }
+        this.repaintLeaferNodeHost(this.node_capturing_input);
+      }
+      e2.stopPropagation();
+      return false;
+    }
+    processLeaferLegacyMouseUp(e2) {
+      var _a3;
+      const graph = this.graphRef();
+      if (!graph) {
+        return;
+      }
+      this.mouse[0] = e2.clientX;
+      this.mouse[1] = e2.clientY;
+      this.graph_mouse[0] = e2.canvasX;
+      this.graph_mouse[1] = e2.canvasY;
+      this.last_mouse_dragging = false;
+      this.last_click_position = null;
+      if (this.block_click) {
+        this.block_click = false;
+      }
+      if (this.node_widget) {
+        const widgetContext = this.node_widget;
+        this.callProcessNodeWidgets(
+          widgetContext[0],
+          this.graph_mouse,
+          e2
+        );
+        this.repaintLeaferNodeHost(widgetContext[0]);
+      }
+      this.node_widget = null;
+      const node2 = graph.getNodeOnPos(e2.canvasX, e2.canvasY, void 0, 5);
+      this.updateLeaferNodeHover(node2, e2);
+      if ((_a3 = this.node_over) == null ? void 0 : _a3.onMouseUp) {
+        this.node_over.onMouseUp(
+          e2,
+          this.getLeaferLocalPos(e2, this.node_over),
+          this
+        );
+        this.repaintLeaferNodeHost(this.node_over);
+      }
+      if (this.node_capturing_input && this.node_capturing_input.onMouseUp) {
+        this.node_capturing_input.onMouseUp(
+          e2,
+          this.getLeaferLocalPos(e2, this.node_capturing_input)
+        );
+        this.repaintLeaferNodeHost(this.node_capturing_input);
+      }
+      this.pointer_is_down = false;
+      this.pointer_is_double = false;
+      graph.change();
+      e2.stopPropagation();
+      return false;
+    }
+    getLeaferLocalPos(e2, node2) {
+      const fallback = [e2.canvasX - node2.pos[0], e2.canvasY - node2.pos[1]];
+      const localPos = getLegacyLocalPos(e2, node2.id, fallback);
+      return [localPos[0], localPos[1]];
+    }
+    repaintLeaferNodeHost(node2) {
+      var _a3, _b2;
+      if (!node2 || this.renderRuntime !== "leafer") {
+        return;
+      }
+      (_b2 = (_a3 = this.sceneSyncController) == null ? void 0 : _a3.nodeHosts.get(node2.id)) == null ? void 0 : _b2.repaint();
+    }
+    updateLeaferNodeHover(nextNode, e2) {
+      var _a3, _b2, _c2;
+      if (this.node_over && this.node_over !== nextNode) {
+        this.node_over.mouseOver = false;
+        (_b2 = (_a3 = this.node_over).onMouseLeave) == null ? void 0 : _b2.call(_a3, e2);
+        this.repaintLeaferNodeHost(this.node_over);
+        this.node_over = null;
+        this.dirty_canvas = true;
+      }
+      if (nextNode && !nextNode.mouseOver) {
+        nextNode.mouseOver = true;
+        this.node_over = nextNode;
+        (_c2 = nextNode.onMouseEnter) == null ? void 0 : _c2.call(nextNode, e2);
+        this.repaintLeaferNodeHost(nextNode);
+        this.dirty_canvas = true;
+        return;
+      }
+      if (nextNode) {
+        this.node_over = nextNode;
+      }
     }
     /**
      * Called when a mouse wheel event has to be processed

@@ -11,6 +11,7 @@ export class LegacyNodeHost {
     readonly node: LegacyNodePainterNodeLike;
     readonly renderHost: LegacyNodeRenderHost;
     readonly root: Group;
+    readonly eventRoot: Group;
     readonly surface: Canvas;
 
     private readonly offscreenCanvas: HTMLCanvasElement;
@@ -25,16 +26,28 @@ export class LegacyNodeHost {
         this.renderHost = renderHost;
         this.root = new Group({
             name: `litegraph-legacy-node:${String(node.id)}`,
+            hittable: true,
+            data: {
+                litegraphNodeId: String(node.id),
+            },
+        });
+        this.eventRoot = new Group({
+            name: `litegraph-legacy-node-event-root:${String(node.id)}`,
             hittable: false,
+            visible: false,
         });
         this.surface = new Canvas({
             name: `litegraph-legacy-node-surface:${String(node.id)}`,
             width: 1,
             height: 1,
             pixelRatio: 1,
-            hittable: false,
+            hittable: true,
+            data: {
+                litegraphNodeId: String(node.id),
+            },
         });
-        this.root.add(this.surface);
+        (this.surface as Canvas & { hitBox?: boolean }).hitBox = true;
+        this.root.add([this.surface, this.eventRoot]);
 
         this.offscreenCanvas = document.createElement("canvas");
         this.offscreenCanvas.width = 1;
@@ -69,6 +82,8 @@ export class LegacyNodeHost {
         this.surface.y = 0;
         this.surface.width = bounds.width;
         this.surface.height = bounds.height;
+        this.eventRoot.x = bounds.contentOffsetX;
+        this.eventRoot.y = bounds.contentOffsetY;
 
         const surfaceContext = this.surface.context as unknown as CanvasRenderingContext2D;
         surfaceContext.setTransform(1, 0, 0, 1, 0, 0);

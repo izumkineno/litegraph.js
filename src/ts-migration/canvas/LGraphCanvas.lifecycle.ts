@@ -5,6 +5,7 @@ import {
     GraphMutationBus,
     type GraphMutationGraphLike,
 } from "../services/leafer/GraphMutationBus";
+import { InteractionController } from "../services/leafer/InteractionController";
 import { LeaferAppHost } from "../services/leafer/LeaferAppHost";
 import { SceneSyncController } from "../services/leafer/SceneSyncController";
 import { DragAndScale } from "./DragAndScale";
@@ -243,6 +244,7 @@ export class LGraphCanvasLifecycle extends LGraphCanvasStatic {
     leaferAppHost: LeaferAppHost | null;
     graphMutationBus: GraphMutationBus | null;
     sceneSyncController: SceneSyncController | null;
+    interactionController: InteractionController | null;
 
     title_text_font: string;
     inner_text_font: string;
@@ -462,6 +464,7 @@ export class LGraphCanvasLifecycle extends LGraphCanvasStatic {
         this.leaferAppHost = null;
         this.graphMutationBus = null;
         this.sceneSyncController = null;
+        this.interactionController = null;
 
         this.frame = 0;
         this.last_draw_time = 0;
@@ -759,6 +762,11 @@ export class LGraphCanvasLifecycle extends LGraphCanvasStatic {
     }
 
     private destroySceneSyncBackbone(): void {
+        if (this.interactionController) {
+            this.interactionController.destroy();
+            this.interactionController = null;
+        }
+
         if (this.sceneSyncController) {
             this.sceneSyncController.destroy();
             this.sceneSyncController = null;
@@ -797,6 +805,22 @@ export class LGraphCanvasLifecycle extends LGraphCanvasStatic {
                     ctx: CanvasRenderingContext2D
                 ) => void;
             }
+        );
+        this.interactionController = new InteractionController(
+            graph,
+            this as unknown as {
+                graph: GraphMutationGraphLike | null;
+                leaferAppHost: LeaferAppHost | null;
+                sceneSyncController: SceneSyncController | null;
+                node_widget: [unknown, unknown] | null;
+                node_capturing_input: unknown;
+                node_over: unknown;
+                processMouseDown: (event: unknown) => boolean | undefined;
+                processMouseMove: (event: unknown) => boolean | undefined;
+                processMouseUp: (event: unknown) => boolean | undefined;
+            },
+            this.leaferAppHost,
+            this.sceneSyncController
         );
     }
 

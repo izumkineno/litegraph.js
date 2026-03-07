@@ -17,10 +17,10 @@ export interface LeaferLayerRegistry {
     readonly overlayScreen: Group;
 }
 
-function createLayerGroup(name: string): Group {
+function createLayerGroup(name: string, hittable = false): Group {
     return new Group({
         name,
-        hittable: false,
+        hittable,
     });
 }
 
@@ -34,6 +34,9 @@ export function createLeaferLayerRegistry(app: App): LeaferLayerRegistry {
     const skyRoot = createLayerGroup("litegraph-sky-root");
     const overlayWorld = createLayerGroup("litegraph-overlay-world");
     const overlayScreen = createLayerGroup("litegraph-overlay-screen");
+
+    treeRoot.hittable = true;
+    legacyNodeLayer.hittable = true;
 
     app.ground.add(groundRoot);
     app.tree.zoomLayer.add(treeRoot);

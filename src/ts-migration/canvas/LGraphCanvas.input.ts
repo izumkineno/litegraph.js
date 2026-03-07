@@ -2,6 +2,11 @@ import type { Vector2, Vector4 } from "../types/core-types";
 import { createClassHostResolver } from "../core/host-resolver";
 import type { LiteGraphConstantsShape } from "../core/litegraph.constants";
 import type { LGraphNodeCanvasCollab as LGraphNode } from "../models/LGraphNode.canvas-collab";
+import {
+    getLegacyLocalPos,
+    isLegacyPointerEvent,
+    type LegacyPointerEventLike,
+} from "../services/leafer/LegacyPointerEventAdapter";
 import { distance, isInsideRectangle, overlapBounding } from "../utils/math-geometry";
 import { LGraphCanvasLifecycle } from "./LGraphCanvas.lifecycle";
 
@@ -167,6 +172,9 @@ export class LGraphCanvasInput extends LGraphCanvasLifecycle {
     }
 
     processMouseDown(e: CanvasMouseEventLike): boolean | undefined {
+        if (isLegacyPointerEvent(e)) {
+            return this.processLeaferLegacyMouseDown(e);
+        }
         if (this.set_canvas_dirty_on_mouse_event) {
             this.dirty_canvas = true;
         }
@@ -634,6 +642,9 @@ export class LGraphCanvasInput extends LGraphCanvasLifecycle {
      * @method processMouseMove
      **/
     processMouseMove(e: CanvasMouseEventLike): boolean | undefined {
+        if (isLegacyPointerEvent(e)) {
+            return this.processLeaferLegacyMouseMove(e);
+        }
         if (this.autoresize) {
             (this as any).resize();
         }
@@ -863,6 +874,9 @@ export class LGraphCanvasInput extends LGraphCanvasLifecycle {
      * @method processMouseUp
      **/
     processMouseUp(e: CanvasMouseEventLike): boolean | undefined {
+        if (isLegacyPointerEvent(e)) {
+            return this.processLeaferLegacyMouseUp(e);
+        }
         const is_primary = e.isPrimary === undefined || e.isPrimary;
         if (!is_primary) {
             return false;
@@ -1121,6 +1135,231 @@ export class LGraphCanvasInput extends LGraphCanvasLifecycle {
         e.stopPropagation();
         e.preventDefault();
         return false;
+    }
+
+    private processLeaferLegacyMouseDown(
+        e: LegacyPointerEventLike
+    ): boolean | undefined {
+        if (this.set_canvas_dirty_on_mouse_event) {
+            this.dirty_canvas = true;
+        }
+
+        const graph = this.graphRef();
+        if (!graph) {
+            return;
+        }
+
+        const LiteGraph = this.getLiteGraphHost();
+        LGraphCanvasInput.active_canvas = this as any;
+
+        this.mouse[0] = e.clientX;
+        this.mouse[1] = e.clientY;
+        this.last_mouse[0] = e.clientX;
+        this.last_mouse[1] = e.clientY;
+        this.graph_mouse[0] = e.canvasX;
+        this.graph_mouse[1] = e.canvasY;
+        this.last_click_position = [this.mouse[0], this.mouse[1]];
+        this.pointer_is_double =
+            e.isPrimary && LiteGraph.getTime() - this.last_mouseclick < 300;
+        this.pointer_is_down = true;
+        this.last_mouseclick = LiteGraph.getTime();
+        this.last_mouse_dragging = true;
+
+        (this.canvas as HTMLCanvasElement | null)?.focus?.();
+
+        const node = graph.getNodeOnPos(e.canvasX, e.canvasY, undefined, 5);
+        this.updateLeaferNodeHover(node, e);
+        if (!node) {
+            graph.change();
+            return false;
+        }
+
+        const widget = this.callProcessNodeWidgets(
+            node,
+            this.graph_mouse,
+            e as unknown as Event
+        );
+        if (widget) {
+            this.node_widget = [node, widget] as any;
+            this.repaintLeaferNodeHost(node);
+        } else {
+            this.node_widget = null;
+        }
+
+        if (!node.is_selected) {
+            this.processNodeSelected(node, e as unknown as MouseEvent);
+        }
+
+        const pos = this.getLeaferLocalPos(e, node);
+        if (node.onMouseDown) {
+            node.onMouseDown(e, pos, this);
+        }
+
+        this.repaintLeaferNodeHost(node);
+        graph.change();
+        e.stopPropagation();
+        return false;
+    }
+
+    private processLeaferLegacyMouseMove(
+        e: LegacyPointerEventLike
+    ): boolean | undefined {
+        if (this.autoresize) {
+            (this as any).resize();
+        }
+
+        const graph = this.graphRef();
+        if (!graph) {
+            return;
+        }
+
+        LGraphCanvasInput.active_canvas = this as any;
+        this.mouse[0] = e.clientX;
+        this.mouse[1] = e.clientY;
+        this.graph_mouse[0] = e.canvasX;
+        this.graph_mouse[1] = e.canvasY;
+        this.last_mouse = [e.clientX, e.clientY];
+
+        if (this.block_click) {
+            return false;
+        }
+
+        if (this.node_widget) {
+            const widgetContext = this.node_widget as any[];
+            this.callProcessNodeWidgets(
+                widgetContext[0],
+                this.graph_mouse,
+                e as unknown as Event,
+                widgetContext[1]
+            );
+            this.repaintLeaferNodeHost(widgetContext[0]);
+            this.dirty_canvas = true;
+        }
+
+        const node = graph.getNodeOnPos(e.canvasX, e.canvasY, undefined, 5);
+        this.updateLeaferNodeHover(node, e);
+
+        if (node?.onMouseMove) {
+            node.onMouseMove(e, this.getLeaferLocalPos(e, node), this);
+            this.repaintLeaferNodeHost(node);
+        }
+
+        if (this.node_capturing_input && this.node_capturing_input !== node) {
+            if (this.node_capturing_input.onMouseMove) {
+                this.node_capturing_input.onMouseMove(
+                    e,
+                    this.getLeaferLocalPos(e, this.node_capturing_input),
+                    this
+                );
+            }
+            this.repaintLeaferNodeHost(this.node_capturing_input);
+        }
+
+        e.stopPropagation();
+        return false;
+    }
+
+    private processLeaferLegacyMouseUp(
+        e: LegacyPointerEventLike
+    ): boolean | undefined {
+        const graph = this.graphRef();
+        if (!graph) {
+            return;
+        }
+
+        this.mouse[0] = e.clientX;
+        this.mouse[1] = e.clientY;
+        this.graph_mouse[0] = e.canvasX;
+        this.graph_mouse[1] = e.canvasY;
+        this.last_mouse_dragging = false;
+        this.last_click_position = null;
+
+        if (this.block_click) {
+            this.block_click = false;
+        }
+
+        if (this.node_widget) {
+            const widgetContext = this.node_widget as any[];
+            this.callProcessNodeWidgets(
+                widgetContext[0],
+                this.graph_mouse,
+                e as unknown as Event
+            );
+            this.repaintLeaferNodeHost(widgetContext[0]);
+        }
+        this.node_widget = null;
+
+        const node = graph.getNodeOnPos(e.canvasX, e.canvasY, undefined, 5);
+        this.updateLeaferNodeHover(node, e);
+
+        if (this.node_over?.onMouseUp) {
+            this.node_over.onMouseUp(
+                e,
+                this.getLeaferLocalPos(e, this.node_over),
+                this
+            );
+            this.repaintLeaferNodeHost(this.node_over);
+        }
+
+        if (
+            this.node_capturing_input &&
+            this.node_capturing_input.onMouseUp
+        ) {
+            this.node_capturing_input.onMouseUp(
+                e,
+                this.getLeaferLocalPos(e, this.node_capturing_input)
+            );
+            this.repaintLeaferNodeHost(this.node_capturing_input);
+        }
+
+        this.pointer_is_down = false;
+        this.pointer_is_double = false;
+        graph.change();
+        e.stopPropagation();
+        return false;
+    }
+
+    private getLeaferLocalPos(
+        e: LegacyPointerEventLike,
+        node: { id: number | string; pos: Vector2 }
+    ): Vector2 {
+        const fallback = [e.canvasX - node.pos[0], e.canvasY - node.pos[1]] as const;
+        const localPos = getLegacyLocalPos(e, node.id, fallback);
+        return [localPos[0], localPos[1]];
+    }
+
+    private repaintLeaferNodeHost(node: { id: number | string } | null | undefined): void {
+        if (!node || this.renderRuntime !== "leafer") {
+            return;
+        }
+
+        this.sceneSyncController?.nodeHosts.get(node.id)?.repaint();
+    }
+
+    private updateLeaferNodeHover(
+        nextNode: any,
+        e: LegacyPointerEventLike
+    ): void {
+        if (this.node_over && this.node_over !== nextNode) {
+            this.node_over.mouseOver = false;
+            this.node_over.onMouseLeave?.(e);
+            this.repaintLeaferNodeHost(this.node_over);
+            this.node_over = null;
+            this.dirty_canvas = true;
+        }
+
+        if (nextNode && !nextNode.mouseOver) {
+            nextNode.mouseOver = true;
+            this.node_over = nextNode;
+            nextNode.onMouseEnter?.(e);
+            this.repaintLeaferNodeHost(nextNode);
+            this.dirty_canvas = true;
+            return;
+        }
+
+        if (nextNode) {
+            this.node_over = nextNode;
+        }
     }
 
     /**
