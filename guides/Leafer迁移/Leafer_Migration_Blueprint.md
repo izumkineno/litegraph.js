@@ -86,9 +86,11 @@
   - 新建 `LegacyPointerEventAdapter`，把 Leafer 事件降级成旧节点期望的 `canvasX`、`canvasY`、`which`、`click_time`、`dragging` 等契约。
   - 节点命中测试优先由 Leafer UI 命中结果决定，再补充 slot/widget 局部坐标换算。
   - 旧 `processMouseDown()` 不再直接绑原生 DOM 事件，而改造成兼容分发逻辑，内部调用 legacy 节点的 `onMouseDown` / `onMouseMove` / `onMouseUp`。
+  - 右键菜单链路允许继续走 DOM 浮层，但传给 legacy `ContextMenu` 的事件必须是原生 `MouseEvent` 兼容对象，并补挂 `canvasX / canvasY`。
 - **验收标准（Acceptance Criteria）**：
   - 旧节点的点击、按钮类 widget、slot 命中判断恢复可用。
   - 控制台中不再依赖原生 `MouseEvent.offsetX/Y` 作为唯一坐标来源。
+  - 右键菜单可正常打开，且菜单锚点与点击位置一致；不再出现 “Event passed to ContextMenu ... (Object)” 这类事件形态错误。
   - 仍可暂时不支持节点拖拽和复杂连接，但单击语义必须与旧节点内部 API 保持兼容。
 
 ## Phase 6: Hand Over Viewport Control
@@ -104,9 +106,11 @@
   - 废弃 `DragAndScale.mouseDrag()`、`changeScale()` 作为主实现，只保留必要的兼容数学工具或彻底删除。
   - 明确 wheel 策略是否需要保留“滚轮直接缩放”的旧行为；如需兼容，必须显式改写 viewport 默认配置。
   - 所有节点、连线、框选等世界空间元素统一挂在 `tree.zoomLayer` 或等价可缩放容器下。
+  - legacy 位图节点在缩放变化后允许触发节流后的重新栅格化；这属于兼容成本，不等价于恢复旧全图 render loop。
 - **验收标准（Acceptance Criteria）**：
   - 鼠标中键拖拽、滚轮缩放、触控板平移/缩放由 Leafer 侧接管。
   - 视口变化后，legacy 节点位图与 link 占位元素能同步跟随缩放和平移。
+  - 视口缩放后 legacy 位图不会长期保持旧分辨率；允许通过批量 host repaint 完成重栅格。
   - `DragAndScale` 即使保留文件，也不再承担生产路径里的主交互职责。
 
 ## Phase 7: Rebuild Drag, Selection, and Linking
@@ -123,6 +127,7 @@
   - 框选矩形改为 `sky.overlayWorld` 上的 `UI.Rect`，拖拽连线预览改为 `UI.Path`，不再通过前景 canvas 擦除重画。
   - `ConnectionController` 负责从输出端口开始创建预览线，移动时更新终点，释放时提交 `connect()` 或取消。
   - 事件冲突采用分层阻止策略：端口与 widget `stopNow()`，节点主体拖拽 `stop()`，背景仅处理未消费事件。
+  - `overlayScreen` 可继续保留为目标态预留层；右键菜单、search box、dialog 在本阶段仍允许走 DOM 浮层，不要求强行 Leafer 化。
 - **验收标准（Acceptance Criteria）**：
   - 节点可拖拽，多选与框选可用。
   - 从端口拖出临时线并连接到目标端口可用，取消连接不会留下脏 UI。

@@ -82,6 +82,30 @@ export interface CreateLegacyPointerEventOptions {
     readonly deltaY?: number;
 }
 
+export type NativeContextMenuEvent = MouseEvent &
+    Pick<
+        LegacyPointerEventLike,
+        | "canvasX"
+        | "canvasY"
+        | "offsetX"
+        | "offsetY"
+        | "which"
+        | "click_time"
+        | "dragging"
+        | "localPosByNodeId"
+        | "getLocalPos"
+        | "originalEvent"
+    >;
+
+export interface CreateNativeContextMenuEventOptions {
+    readonly event: LegacyPointerEventLike | LegacyPointerEventSource;
+    readonly hostElement: HTMLElement;
+    readonly nativeEvent?: MouseEvent | PointerEvent | null;
+    readonly targets?: readonly LegacyPointerTarget[];
+    readonly clickTime?: number;
+    readonly dragging?: boolean;
+}
+
 function toMutationKey(nodeId: GraphMutationNodeId): string {
     return String(nodeId);
 }
@@ -233,6 +257,109 @@ export function createLegacyPointerEvent(
         stopPropagation: stop,
         stopImmediatePropagation: stopNow,
     };
+}
+
+function defineContextMenuBridgeProps(
+    event: MouseEvent,
+    legacyEvent: LegacyPointerEventLike,
+    nativeEvent?: MouseEvent | PointerEvent | null
+): NativeContextMenuEvent {
+    Object.defineProperties(event, {
+        canvasX: {
+            configurable: true,
+            enumerable: true,
+            value: legacyEvent.canvasX,
+        },
+        canvasY: {
+            configurable: true,
+            enumerable: true,
+            value: legacyEvent.canvasY,
+        },
+        offsetX: {
+            configurable: true,
+            enumerable: true,
+            value: legacyEvent.offsetX,
+        },
+        offsetY: {
+            configurable: true,
+            enumerable: true,
+            value: legacyEvent.offsetY,
+        },
+        which: {
+            configurable: true,
+            enumerable: true,
+            value: legacyEvent.which,
+        },
+        click_time: {
+            configurable: true,
+            enumerable: true,
+            value: legacyEvent.click_time,
+        },
+        dragging: {
+            configurable: true,
+            enumerable: true,
+            value: legacyEvent.dragging,
+        },
+        localPosByNodeId: {
+            configurable: true,
+            enumerable: true,
+            value: legacyEvent.localPosByNodeId,
+        },
+        getLocalPos: {
+            configurable: true,
+            enumerable: false,
+            value: legacyEvent.getLocalPos,
+        },
+        originalEvent: {
+            configurable: true,
+            enumerable: false,
+            value: nativeEvent || legacyEvent.originalEvent,
+        },
+    });
+
+    return event as NativeContextMenuEvent;
+}
+
+export function createNativeContextMenuEvent(
+    options: CreateNativeContextMenuEventOptions
+): NativeContextMenuEvent {
+    const legacyEvent = isLegacyPointerEvent(options.event)
+        ? options.event
+        : createLegacyPointerEvent({
+              event: options.event,
+              type: "down",
+              hostElement: options.hostElement,
+              targets: options.targets,
+              clickTime: options.clickTime,
+              dragging: options.dragging,
+              deltaX: 0,
+              deltaY: 0,
+          });
+    const windowRef =
+        options.hostElement.ownerDocument?.defaultView || window;
+    const MouseEventCtor = windowRef.MouseEvent || MouseEvent;
+    const menuEvent = new MouseEventCtor("contextmenu", {
+        bubbles: true,
+        cancelable: true,
+        composed: true,
+        view: windowRef,
+        button: legacyEvent.button,
+        buttons: legacyEvent.buttons,
+        clientX: legacyEvent.clientX,
+        clientY: legacyEvent.clientY,
+        screenX: legacyEvent.screenX,
+        screenY: legacyEvent.screenY,
+        ctrlKey: legacyEvent.ctrlKey,
+        shiftKey: legacyEvent.shiftKey,
+        altKey: legacyEvent.altKey,
+        metaKey: legacyEvent.metaKey,
+    });
+
+    return defineContextMenuBridgeProps(
+        menuEvent,
+        legacyEvent,
+        options.nativeEvent
+    );
 }
 
 export function isLegacyPointerEvent(

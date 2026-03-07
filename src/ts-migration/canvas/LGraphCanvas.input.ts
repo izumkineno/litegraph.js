@@ -3,6 +3,7 @@ import { createClassHostResolver } from "../core/host-resolver";
 import type { LiteGraphConstantsShape } from "../core/litegraph.constants";
 import type { LGraphNodeCanvasCollab as LGraphNode } from "../models/LGraphNode.canvas-collab";
 import {
+    createNativeContextMenuEvent,
     getLegacyLocalPos,
     isLegacyPointerEvent,
     type LegacyPointerEventLike,
@@ -1163,7 +1164,11 @@ export class LGraphCanvasInput extends LGraphCanvasLifecycle {
         }
 
         const LiteGraph = this.getLiteGraphHost();
+        const ref_window = this.getCanvasWindow();
         LGraphCanvasInput.active_canvas = this as any;
+        const now = LiteGraph.getTime();
+        const is_double_click =
+            e.isPrimary && now - this.last_mouseclick < 300;
 
         this.mouse[0] = e.clientX;
         this.mouse[1] = e.clientY;
@@ -1172,42 +1177,143 @@ export class LGraphCanvasInput extends LGraphCanvasLifecycle {
         this.graph_mouse[0] = e.canvasX;
         this.graph_mouse[1] = e.canvasY;
         this.last_click_position = [this.mouse[0], this.mouse[1]];
-        this.pointer_is_double =
-            e.isPrimary && LiteGraph.getTime() - this.last_mouseclick < 300;
+        this.pointer_is_double = is_double_click;
         this.pointer_is_down = true;
-        this.last_mouseclick = LiteGraph.getTime();
+        this.last_mouseclick = now;
         this.last_mouse_dragging = true;
 
         (this.canvas as HTMLCanvasElement | null)?.focus?.();
+        LiteGraph.closeAllContextMenus(ref_window);
 
         const node = graph.getNodeOnPos(e.canvasX, e.canvasY, undefined, 5);
         this.updateLeaferNodeHover(node, e);
+        if (e.which === 3 || e.button === 2) {
+            if (this.allow_interaction && !this.read_only) {
+                if (node) {
+                    const selected_nodes = this.selectedNodesRef();
+                    if (
+                        Object.keys(selected_nodes).length &&
+                        (selected_nodes[String(node.id)] ||
+                            e.shiftKey ||
+                            e.ctrlKey ||
+                            e.metaKey)
+                    ) {
+                        if (!selected_nodes[String(node.id)]) {
+                            this.selectNodes([node], true);
+                        }
+                    } else {
+                        this.selectNodes([node]);
+                    }
+                    this.sceneSyncController?.repaintAllNodeHosts();
+                    this.repaintLeaferNodeHost(node);
+                }
+                const hostElement =
+                    this.leaferAppHost?.view ||
+                    (this.canvas as HTMLElement | null);
+                if (hostElement) {
+                    (this as any).processContextMenu(
+                        node,
+                        createNativeContextMenuEvent({
+                            event: e,
+                            hostElement,
+                        })
+                    );
+                } else {
+                    (this as any).processContextMenu(node, e);
+                }
+            }
+
+            this.pointer_is_down = false;
+            this.pointer_is_double = false;
+            graph.change();
+            e.stopPropagation();
+            return false;
+        }
+
         if (!node) {
             graph.change();
             return false;
         }
 
-        const widget = this.callProcessNodeWidgets(
-            node,
-            this.graph_mouse,
-            e as unknown as Event
-        );
-        if (widget) {
-            this.node_widget = [node, widget] as any;
-            this.repaintLeaferNodeHost(node);
-        } else {
-            this.node_widget = null;
+        let block_drag_node: boolean | undefined;
+
+        if (
+            (this.allow_interaction || node.flags?.allow_interaction) &&
+            !this.read_only
+        ) {
+            if (!this.live_mode && !node.flags?.pinned) {
+                this.bringToFront(node);
+            }
+
+            if (
+                this.allow_interaction &&
+                !node.flags?.collapsed &&
+                !this.live_mode &&
+                node.resizable !== false &&
+                this.isLeaferNodeResizeHandleHit(node, e.canvasX, e.canvasY)
+            ) {
+                graph.beforeChange?.();
+                this.resizing_node = node;
+                if (this.canvas) {
+                    this.canvas.style.cursor = "se-resize";
+                }
+                block_drag_node = true;
+            } else {
+                const pos = this.getLeaferLocalPos(e, node);
+                const widget = this.callProcessNodeWidgets(
+                    node,
+                    this.graph_mouse,
+                    e as unknown as Event
+                );
+                if (widget) {
+                    block_drag_node = true;
+                    this.node_widget = [node, widget] as any;
+                } else {
+                    this.node_widget = null;
+                }
+
+                const selected_nodes = this.selectedNodesRef();
+                if (
+                    this.allow_interaction &&
+                    is_double_click &&
+                    selected_nodes[String(node.id)]
+                ) {
+                    node.onDblClick?.(e, pos, this);
+                    this.processNodeDblClicked(node);
+                    block_drag_node = true;
+                }
+
+                if (node.onMouseDown?.(e, pos, this)) {
+                    block_drag_node = true;
+                } else if (node.subgraph && !node.skip_subgraph_button) {
+                    if (
+                        !node.flags?.collapsed &&
+                        pos[0] > node.size[0] - LiteGraph.NODE_TITLE_HEIGHT &&
+                        pos[1] < 0
+                    ) {
+                        setTimeout(() => {
+                            this.openSubgraph(node.subgraph);
+                        }, 10);
+                    }
+                }
+
+                if (this.live_mode) {
+                    block_drag_node = true;
+                }
+
+                if (!block_drag_node) {
+                    if (this.allow_dragnodes) {
+                        graph.beforeChange?.();
+                        this.node_dragged = node;
+                    }
+                    this.processNodeSelected(node, e as unknown as MouseEvent);
+                } else if (!node.is_selected) {
+                    this.processNodeSelected(node, e as unknown as MouseEvent);
+                }
+            }
         }
 
-        if (!node.is_selected) {
-            this.processNodeSelected(node, e as unknown as MouseEvent);
-        }
-
-        const pos = this.getLeaferLocalPos(e, node);
-        if (node.onMouseDown) {
-            node.onMouseDown(e, pos, this);
-        }
-
+        this.sceneSyncController?.repaintAllNodeHosts();
         this.repaintLeaferNodeHost(node);
         graph.change();
         e.stopPropagation();
@@ -1226,6 +1332,10 @@ export class LGraphCanvasInput extends LGraphCanvasLifecycle {
             return;
         }
 
+        const delta: Vector2 = [
+            e.canvasX - this.graph_mouse[0],
+            e.canvasY - this.graph_mouse[1],
+        ];
         LGraphCanvasInput.active_canvas = this as any;
         this.mouse[0] = e.clientX;
         this.mouse[1] = e.clientY;
@@ -1252,6 +1362,16 @@ export class LGraphCanvasInput extends LGraphCanvasLifecycle {
         const node = graph.getNodeOnPos(e.canvasX, e.canvasY, undefined, 5);
         this.updateLeaferNodeHover(node, e);
 
+        if (this.canvas) {
+            if (node && this.isLeaferNodeResizeHandleHit(node, e.canvasX, e.canvasY)) {
+                this.canvas.style.cursor = "se-resize";
+            } else if (node) {
+                this.canvas.style.cursor = "crosshair";
+            } else {
+                this.canvas.style.cursor = "";
+            }
+        }
+
         if (node?.onMouseMove) {
             node.onMouseMove(e, this.getLeaferLocalPos(e, node), this);
             this.repaintLeaferNodeHost(node);
@@ -1268,6 +1388,44 @@ export class LGraphCanvasInput extends LGraphCanvasLifecycle {
             this.repaintLeaferNodeHost(this.node_capturing_input);
         }
 
+        if (this.node_dragged && !this.live_mode) {
+            const selected_nodes = this.selectedNodesRef();
+            for (const key in selected_nodes) {
+                const draggedNode = selected_nodes[key];
+                draggedNode.pos[0] += delta[0];
+                draggedNode.pos[1] += delta[1];
+                if (!draggedNode.is_selected) {
+                    this.processNodeSelected(
+                        draggedNode,
+                        e as unknown as MouseEvent
+                    );
+                }
+                this.repaintLeaferNodeHost(draggedNode);
+                this.emitLeaferNodeMoved(draggedNode);
+            }
+
+            this.dirty_canvas = true;
+            this.dirty_bgcanvas = true;
+        }
+
+        if (this.resizing_node && !this.live_mode) {
+            const desired_size: Vector2 = [
+                e.canvasX - this.resizing_node.pos[0],
+                e.canvasY - this.resizing_node.pos[1],
+            ];
+            const min_size = this.resizing_node.computeSize();
+            desired_size[0] = Math.max(min_size[0], desired_size[0]);
+            desired_size[1] = Math.max(min_size[1], desired_size[1]);
+            this.resizing_node.setSize(desired_size);
+
+            if (this.canvas) {
+                this.canvas.style.cursor = "se-resize";
+            }
+            this.dirty_canvas = true;
+            this.dirty_bgcanvas = true;
+            this.emitLeaferNodeDirty(this.resizing_node, true);
+        }
+
         e.stopPropagation();
         return false;
     }
@@ -1279,6 +1437,7 @@ export class LGraphCanvasInput extends LGraphCanvasLifecycle {
         if (!graph) {
             return;
         }
+        const LiteGraph = this.getLiteGraphHost();
 
         this.mouse[0] = e.clientX;
         this.mouse[1] = e.clientY;
@@ -1305,7 +1464,42 @@ export class LGraphCanvasInput extends LGraphCanvasLifecycle {
         const node = graph.getNodeOnPos(e.canvasX, e.canvasY, undefined, 5);
         this.updateLeaferNodeHover(node, e);
 
-        if (this.node_over?.onMouseUp) {
+        if (this.resizing_node) {
+            this.dirty_canvas = true;
+            this.dirty_bgcanvas = true;
+            graph.afterChange?.(this.resizing_node);
+            this.emitLeaferNodeDirty(this.resizing_node, true);
+            this.resizing_node = null;
+        } else if (this.node_dragged) {
+            const node_dragged = this.node_dragged;
+            if (
+                node_dragged &&
+                e.click_time < 300 &&
+                isInsideRectangle(
+                    e.canvasX,
+                    e.canvasY,
+                    node_dragged.pos[0],
+                    node_dragged.pos[1] - LiteGraph.NODE_TITLE_HEIGHT,
+                    LiteGraph.NODE_TITLE_HEIGHT,
+                    LiteGraph.NODE_TITLE_HEIGHT
+                )
+            ) {
+                node_dragged.collapse();
+            }
+
+            this.dirty_canvas = true;
+            this.dirty_bgcanvas = true;
+            node_dragged.pos[0] = Math.round(node_dragged.pos[0]);
+            node_dragged.pos[1] = Math.round(node_dragged.pos[1]);
+            if (graph.config?.align_to_grid || this.align_to_grid) {
+                node_dragged.alignToGrid?.();
+            }
+            this.onNodeMoved?.(node_dragged);
+            graph.afterChange?.(node_dragged);
+            this.repaintLeaferNodeHost(node_dragged);
+            this.emitLeaferNodeMoved(node_dragged);
+            this.node_dragged = null;
+        } else if (this.node_over?.onMouseUp) {
             this.node_over.onMouseUp(
                 e,
                 this.getLeaferLocalPos(e, this.node_over),
@@ -1339,6 +1533,56 @@ export class LGraphCanvasInput extends LGraphCanvasLifecycle {
         const fallback = [e.canvasX - node.pos[0], e.canvasY - node.pos[1]] as const;
         const localPos = getLegacyLocalPos(e, node.id, fallback);
         return [localPos[0], localPos[1]];
+    }
+
+    private emitLeaferNodeMoved(
+        node: { id: number | string } | null | undefined
+    ): void {
+        if (!node || this.renderRuntime !== "leafer" || !this.graphMutationBus) {
+            return;
+        }
+
+        this.graphMutationBus.emit("node:moved", {
+            graph: this.graphRef(),
+            nodeId: node.id,
+            node,
+        });
+    }
+
+    private emitLeaferNodeDirty(
+        node: { id: number | string } | null | undefined,
+        dirtyBackground = false
+    ): void {
+        if (!node || this.renderRuntime !== "leafer" || !this.graphMutationBus) {
+            return;
+        }
+
+        this.graphMutationBus.emit("node:dirty", {
+            graph: this.graphRef(),
+            nodeId: node.id,
+            node,
+            dirtyForeground: true,
+            dirtyBackground,
+        });
+    }
+
+    private isLeaferNodeResizeHandleHit(
+        node: { pos: Vector2; size: Vector2; resizable?: boolean },
+        canvasX: number,
+        canvasY: number
+    ): boolean {
+        if (node.resizable === false) {
+            return false;
+        }
+
+        return isInsideRectangle(
+            canvasX,
+            canvasY,
+            node.pos[0] + node.size[0] - 5,
+            node.pos[1] + node.size[1] - 5,
+            10,
+            10
+        );
     }
 
     private repaintLeaferNodeHost(node: { id: number | string } | null | undefined): void {

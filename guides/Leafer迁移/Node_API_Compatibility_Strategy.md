@@ -148,6 +148,12 @@
 2. 不能明确判断时，默认回落到 `legacy`。
 3. 旧节点兼容性优先于新节点性能。
 
+注意：
+
+- `graphcanvas` 宿主运行时开关是 `renderRuntime: "legacy-canvas" | "leafer"`。
+- 节点级双轨判别是 `legacy | modern`。
+- 这两套枚举不是同一个概念，文档与代码里必须分开描述。
+
 ### 1.3 推荐判别顺序
 
 先看显式声明，再看约定方法，最后才回落默认值。
@@ -476,10 +482,16 @@ modern 节点主要负责：
 
 现代节点的 hover / press / selected / disabled，优先用 `@leafer-in/state` 表达，而不是复制旧节点的手工状态切换逻辑。
 
-当前仓库尚未安装该插件，因此策略上应明确两点：
+因此策略上应明确两点：
 
 1. 现代节点 API 设计应为 `@leafer-in/state` 预留接入点
 2. 第一批 modern 节点可以先走显式属性更新，之后再切到 state 插件
+
+当前状态修正：
+
+- `@leafer-in/state` 已安装并已在 Leafer 宿主初始化时加载。
+- 因此现代节点已具备使用 `hoverStyle / pressStyle / selectedStyle` 的基础条件。
+- 现阶段仍允许先用显式属性更新逐步迁移，不要求一次性把所有 modern 节点改成 state 风格。
 
 ### 3.6 不再允许的旧式能力
 
@@ -639,6 +651,11 @@ Leafer 的局部渲染机制应继续保留，建议：
 1. 固化 `buildUI() + updateUI() + getPortLayout()`
 2. 用一个简单节点验证 retained mode 路径
 3. 接入 `@leafer-in/state` 时再补状态样式能力
+
+当前进展修正：
+
+- 第一批 modern contract 已经在 `src/nodes_leafer/base.js` 中得到验证。
+- 这些节点通过 `renderRuntime = "modern"`、`buildUI()`、`updateUI()`、`getPortLayout()` 进入 modern host 路径。
 
 ### Phase 5: 统一连线与端口几何
 

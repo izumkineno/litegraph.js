@@ -3879,6 +3879,97 @@ var LiteGraphTSMigration = (function(exports) {
       stopImmediatePropagation: stopNow
     };
   }
+  function defineContextMenuBridgeProps(event2, legacyEvent, nativeEvent) {
+    Object.defineProperties(event2, {
+      canvasX: {
+        configurable: true,
+        enumerable: true,
+        value: legacyEvent.canvasX
+      },
+      canvasY: {
+        configurable: true,
+        enumerable: true,
+        value: legacyEvent.canvasY
+      },
+      offsetX: {
+        configurable: true,
+        enumerable: true,
+        value: legacyEvent.offsetX
+      },
+      offsetY: {
+        configurable: true,
+        enumerable: true,
+        value: legacyEvent.offsetY
+      },
+      which: {
+        configurable: true,
+        enumerable: true,
+        value: legacyEvent.which
+      },
+      click_time: {
+        configurable: true,
+        enumerable: true,
+        value: legacyEvent.click_time
+      },
+      dragging: {
+        configurable: true,
+        enumerable: true,
+        value: legacyEvent.dragging
+      },
+      localPosByNodeId: {
+        configurable: true,
+        enumerable: true,
+        value: legacyEvent.localPosByNodeId
+      },
+      getLocalPos: {
+        configurable: true,
+        enumerable: false,
+        value: legacyEvent.getLocalPos
+      },
+      originalEvent: {
+        configurable: true,
+        enumerable: false,
+        value: nativeEvent || legacyEvent.originalEvent
+      }
+    });
+    return event2;
+  }
+  function createNativeContextMenuEvent(options) {
+    var _a3;
+    const legacyEvent = isLegacyPointerEvent(options.event) ? options.event : createLegacyPointerEvent({
+      event: options.event,
+      type: "down",
+      hostElement: options.hostElement,
+      targets: options.targets,
+      clickTime: options.clickTime,
+      dragging: options.dragging,
+      deltaX: 0,
+      deltaY: 0
+    });
+    const windowRef = ((_a3 = options.hostElement.ownerDocument) == null ? void 0 : _a3.defaultView) || window;
+    const MouseEventCtor = windowRef.MouseEvent || MouseEvent;
+    const menuEvent = new MouseEventCtor("contextmenu", {
+      bubbles: true,
+      cancelable: true,
+      composed: true,
+      view: windowRef,
+      button: legacyEvent.button,
+      buttons: legacyEvent.buttons,
+      clientX: legacyEvent.clientX,
+      clientY: legacyEvent.clientY,
+      screenX: legacyEvent.screenX,
+      screenY: legacyEvent.screenY,
+      ctrlKey: legacyEvent.ctrlKey,
+      shiftKey: legacyEvent.shiftKey,
+      altKey: legacyEvent.altKey,
+      metaKey: legacyEvent.metaKey
+    });
+    return defineContextMenuBridgeProps(
+      menuEvent,
+      legacyEvent,
+      options.nativeEvent
+    );
+  }
   function isLegacyPointerEvent(value) {
     return Boolean(
       value && typeof value === "object" && value.__isLeaferLegacyPointerEvent
@@ -4549,7 +4640,7 @@ var LiteGraphTSMigration = (function(exports) {
     return "number" == typeof t2;
   }
   const a = /^-?\d+(?:\.\d+)?$/;
-  function h(t2) {
+  function h$1(t2) {
     return "string" == typeof t2 && a.test(t2) ? +t2 : t2;
   }
   const { isArray: l } = Array;
@@ -4562,12 +4653,12 @@ var LiteGraphTSMigration = (function(exports) {
   function u(t2) {
     return "{}" === JSON.stringify(t2);
   }
-  const _$1 = { default: (t2, e2) => (p(e2, t2), p(t2, e2), t2), assign(t2, e2, s2) {
+  const _$2 = { default: (t2, e2) => (p$1(e2, t2), p$1(t2, e2), t2), assign(t2, e2, s2) {
     let r2;
     Object.keys(e2).forEach((i2) => {
       var n2, o2;
-      if (r2 = e2[i2], (null == r2 ? void 0 : r2.constructor) === Object && (null === (n2 = t2[i2]) || void 0 === n2 ? void 0 : n2.constructor) === Object) return p(t2[i2], e2[i2], s2 && s2[i2]);
-      s2 && i2 in s2 ? (null === (o2 = s2[i2]) || void 0 === o2 ? void 0 : o2.constructor) === Object && p(t2[i2] = {}, e2[i2], s2[i2]) : t2[i2] = e2[i2];
+      if (r2 = e2[i2], (null == r2 ? void 0 : r2.constructor) === Object && (null === (n2 = t2[i2]) || void 0 === n2 ? void 0 : n2.constructor) === Object) return p$1(t2[i2], e2[i2], s2 && s2[i2]);
+      s2 && i2 in s2 ? (null === (o2 = s2[i2]) || void 0 === o2 ? void 0 : o2.constructor) === Object && p$1(t2[i2] = {}, e2[i2], s2[i2]) : t2[i2] = e2[i2];
     });
   }, copyAttrs: (t2, e2, r2) => (r2.forEach((r3) => {
     s(e2[r3]) || (t2[r3] = e2[r3]);
@@ -4577,7 +4668,7 @@ var LiteGraphTSMigration = (function(exports) {
     return e2;
   }, stintSet(t2, e2, s2) {
     s2 || (s2 = void 0), t2[e2] !== s2 && (t2[e2] = s2);
-  } }, { assign: p } = _$1;
+  } }, { assign: p$1 } = _$2;
   class f {
     get __useNaturalRatio() {
       return true;
@@ -4661,13 +4752,13 @@ var LiteGraphTSMigration = (function(exports) {
       this.__input = this.__middle = null;
     }
   }
-  const g = { RUNTIME: "runtime", LEAF: "leaf", TASK: "task", CNAVAS: "canvas", IMAGE: "image", types: {}, create(t2) {
+  const g$1 = { RUNTIME: "runtime", LEAF: "leaf", TASK: "task", CNAVAS: "canvas", IMAGE: "image", types: {}, create(t2) {
     const { types: e2 } = y;
     return e2[t2] ? e2[t2]++ : (e2[t2] = 1, 0);
-  } }, y = g;
-  let m, x$1, w$1;
-  const { max: b$1 } = Math, B$1 = [0, 0, 0, 0], v = { zero: [...B$1], tempFour: B$1, set: (t2, e2, s2, r2, i2) => (void 0 === s2 && (s2 = r2 = i2 = e2), t2[0] = e2, t2[1] = s2, t2[2] = r2, t2[3] = i2, t2), setTemp: (t2, e2, s2, r2) => k$1(B$1, t2, e2, s2, r2), toTempAB(t2, e2, s2) {
-    w$1 = s2 ? o(t2) ? e2 : t2 : [], o(t2) ? (m = O$1(t2), x$1 = e2) : o(e2) ? (m = t2, x$1 = O$1(e2)) : (m = t2, x$1 = e2), 4 !== m.length && (m = C$1(m)), 4 !== x$1.length && (x$1 = C$1(x$1));
+  } }, y = g$1;
+  let m$1, x$2, w$2;
+  const { max: b$2 } = Math, B$2 = [0, 0, 0, 0], v$1 = { zero: [...B$2], tempFour: B$2, set: (t2, e2, s2, r2, i2) => (void 0 === s2 && (s2 = r2 = i2 = e2), t2[0] = e2, t2[1] = s2, t2[2] = r2, t2[3] = i2, t2), setTemp: (t2, e2, s2, r2) => k$2(B$2, t2, e2, s2, r2), toTempAB(t2, e2, s2) {
+    w$2 = s2 ? o(t2) ? e2 : t2 : [], o(t2) ? (m$1 = O$2(t2), x$2 = e2) : o(e2) ? (m$1 = t2, x$2 = O$2(e2)) : (m$1 = t2, x$2 = e2), 4 !== m$1.length && (m$1 = C$2(m$1)), 4 !== x$2.length && (x$2 = C$2(x$2));
   }, get(t2, e2) {
     let r2;
     if (!o(t2)) switch (t2.length) {
@@ -4688,11 +4779,11 @@ var LiteGraphTSMigration = (function(exports) {
     }
     if (r2 || (r2 = [t2, t2, t2, t2]), !s(e2)) for (let t3 = 0; t3 < 4; t3++) r2[t3] > e2 && (r2[t3] = e2);
     return r2;
-  }, max: (t2, e2, s2) => o(t2) && o(e2) ? b$1(t2, e2) : (T$1(t2, e2, s2), k$1(w$1, b$1(m[0], x$1[0]), b$1(m[1], x$1[1]), b$1(m[2], x$1[2]), b$1(m[3], x$1[3]))), add: (t2, e2, s2) => o(t2) && o(e2) ? t2 + e2 : (T$1(t2, e2, s2), k$1(w$1, m[0] + x$1[0], m[1] + x$1[1], m[2] + x$1[2], m[3] + x$1[3])), swapAndScale(t2, e2, s2, r2) {
+  }, max: (t2, e2, s2) => o(t2) && o(e2) ? b$2(t2, e2) : (T$1(t2, e2, s2), k$2(w$2, b$2(m$1[0], x$2[0]), b$2(m$1[1], x$2[1]), b$2(m$1[2], x$2[2]), b$2(m$1[3], x$2[3]))), add: (t2, e2, s2) => o(t2) && o(e2) ? t2 + e2 : (T$1(t2, e2, s2), k$2(w$2, m$1[0] + x$2[0], m$1[1] + x$2[1], m$1[2] + x$2[2], m$1[3] + x$2[3])), swapAndScale(t2, e2, s2, r2) {
     if (o(t2)) return e2 === s2 ? t2 * e2 : [t2 * s2, t2 * e2];
-    const i2 = r2 ? t2 : [], [n2, a2, h2, l2] = 4 === t2.length ? t2 : C$1(t2);
-    return k$1(i2, h2 * s2, l2 * e2, n2 * s2, a2 * e2);
-  } }, { set: k$1, get: C$1, setTemp: O$1, toTempAB: T$1 } = v, { round: P$1, pow: S$1, max: L$1, floor: R$1, PI: E$1 } = Math, I$2 = { within: (t2, e2, r2) => (d(e2) && (r2 = e2.max, e2 = e2.min), !s(e2) && t2 < e2 && (t2 = e2), !s(r2) && t2 > r2 && (t2 = r2), t2), fourNumber: v.get, formatRotation: (t2, e2) => (t2 %= 360, e2 ? t2 < 0 && (t2 += 360) : (t2 > 180 && (t2 -= 360), t2 < -180 && (t2 += 360)), I$2.float(t2)), getGapRotation(t2, e2, s2 = 0) {
+    const i2 = r2 ? t2 : [], [n2, a2, h2, l2] = 4 === t2.length ? t2 : C$2(t2);
+    return k$2(i2, h2 * s2, l2 * e2, n2 * s2, a2 * e2);
+  } }, { set: k$2, get: C$2, setTemp: O$2, toTempAB: T$1 } = v$1, { round: P$2, pow: S$1, max: L$2, floor: R$1, PI: E$2 } = Math, I$2 = { within: (t2, e2, r2) => (d(e2) && (r2 = e2.max, e2 = e2.min), !s(e2) && t2 < e2 && (t2 = e2), !s(r2) && t2 > r2 && (t2 = r2), t2), fourNumber: v$1.get, formatRotation: (t2, e2) => (t2 %= 360, e2 ? t2 < 0 && (t2 += 360) : (t2 > 180 && (t2 -= 360), t2 < -180 && (t2 += 360)), I$2.float(t2)), getGapRotation(t2, e2, s2 = 0) {
     let r2 = t2 + s2;
     if (e2 > 1) {
       const t3 = Math.abs(r2 % e2);
@@ -4701,7 +4792,7 @@ var LiteGraphTSMigration = (function(exports) {
     return r2 - s2;
   }, float(t2, e2) {
     const r2 = s(e2) ? 1e12 : S$1(10, e2);
-    return -0 === (t2 = P$1(t2 * r2) / r2) ? 0 : t2;
+    return -0 === (t2 = P$2(t2 * r2) / r2) ? 0 : t2;
   }, sign: (t2) => t2 < 0 ? -1 : 1, getScaleData(t2, e2, s2, r2) {
     if (r2 || (r2 = {}), e2) {
       const t3 = (o(e2) ? e2 : e2.width || 0) / s2.width, i2 = (o(e2) ? e2 : e2.height || 0) / s2.height;
@@ -4710,21 +4801,21 @@ var LiteGraphTSMigration = (function(exports) {
     return r2;
   }, assignScale(t2, e2) {
     o(e2) ? t2.scaleX = t2.scaleY = e2 : (t2.scaleX = e2.x, t2.scaleY = e2.y);
-  }, getFloorScale: (t2, e2 = 1) => L$1(R$1(t2), e2) / t2, randInt: M$1, randColor: (t2) => `rgba(${M$1(255)},${M$1(255)},${M$1(255)},${t2 || 1})` };
+  }, getFloorScale: (t2, e2 = 1) => L$2(R$1(t2), e2) / t2, randInt: M$1, randColor: (t2) => `rgba(${M$1(255)},${M$1(255)},${M$1(255)},${t2 || 1})` };
   function M$1(t2) {
     return Math.round(Math.random() * t2);
   }
-  const A$1 = E$1 / 180, W$2 = 2 * E$1, N$2 = E$1 / 2;
+  const A$2 = E$2 / 180, W$2 = 2 * E$2, N$3 = E$2 / 2;
   function Y$2() {
     return { x: 0, y: 0 };
   }
-  function D$1() {
+  function D$2() {
     return { x: 0, y: 0, width: 0, height: 0 };
   }
   function X$2() {
     return { a: 1, b: 0, c: 0, d: 1, e: 0, f: 0 };
   }
-  const { sin: z$2, cos: F$2, acos: U$1, sqrt: j$2 } = Math, { float: V$2 } = I$2, H$1 = {};
+  const { sin: z$2, cos: F$3, acos: U$1, sqrt: j$3 } = Math, { float: V$2 } = I$2, H$2 = {};
   function G$2() {
     return Object.assign(Object.assign(Object.assign({}, { a: 1, b: 0, c: 0, d: 1, e: 0, f: 0 }), { x: 0, y: 0, width: 0, height: 0 }), { scaleX: 1, scaleY: 1, rotation: 0, skewX: 0, skewY: 0 });
   }
@@ -4741,21 +4832,21 @@ var LiteGraphTSMigration = (function(exports) {
   }, pixelScale(t2, e2, s2) {
     s2 || (s2 = t2), s2.a = t2.a * e2, s2.b = t2.b * e2, s2.c = t2.c * e2, s2.d = t2.d * e2, s2.e = t2.e * e2, s2.f = t2.f * e2;
   }, scaleOfOuter(t2, e2, s2, r2) {
-    Q$1.toInnerPoint(t2, e2, H$1), Q$1.scaleOfInner(t2, H$1, s2, r2);
+    Q$1.toInnerPoint(t2, e2, H$2), Q$1.scaleOfInner(t2, H$2, s2, r2);
   }, scaleOfInner(t2, e2, s2, r2 = s2) {
     Q$1.translateInner(t2, e2.x, e2.y), Q$1.scale(t2, s2, r2), Q$1.translateInner(t2, -e2.x, -e2.y);
   }, rotate(t2, e2) {
-    const { a: s2, b: r2, c: i2, d: n2 } = t2, o2 = F$2(e2 *= A$1), a2 = z$2(e2);
+    const { a: s2, b: r2, c: i2, d: n2 } = t2, o2 = F$3(e2 *= A$2), a2 = z$2(e2);
     t2.a = s2 * o2 - r2 * a2, t2.b = s2 * a2 + r2 * o2, t2.c = i2 * o2 - n2 * a2, t2.d = i2 * a2 + n2 * o2;
   }, rotateOfOuter(t2, e2, s2) {
-    Q$1.toInnerPoint(t2, e2, H$1), Q$1.rotateOfInner(t2, H$1, s2);
+    Q$1.toInnerPoint(t2, e2, H$2), Q$1.rotateOfInner(t2, H$2, s2);
   }, rotateOfInner(t2, e2, s2) {
     Q$1.translateInner(t2, e2.x, e2.y), Q$1.rotate(t2, s2), Q$1.translateInner(t2, -e2.x, -e2.y);
   }, skew(t2, e2, s2) {
     const { a: r2, b: i2, c: n2, d: o2 } = t2;
-    s2 && (s2 *= A$1, t2.a = r2 + n2 * s2, t2.b = i2 + o2 * s2), e2 && (e2 *= A$1, t2.c = n2 + r2 * e2, t2.d = o2 + i2 * e2);
+    s2 && (s2 *= A$2, t2.a = r2 + n2 * s2, t2.b = i2 + o2 * s2), e2 && (e2 *= A$2, t2.c = n2 + r2 * e2, t2.d = o2 + i2 * e2);
   }, skewOfOuter(t2, e2, s2, r2) {
-    Q$1.toInnerPoint(t2, e2, H$1), Q$1.skewOfInner(t2, H$1, s2, r2);
+    Q$1.toInnerPoint(t2, e2, H$2), Q$1.skewOfInner(t2, H$2, s2, r2);
   }, skewOfInner(t2, e2, s2, r2 = 0) {
     Q$1.translateInner(t2, e2.x, e2.y), Q$1.skew(t2, s2, r2), Q$1.translateInner(t2, -e2.x, -e2.y);
   }, multiply(t2, e2) {
@@ -4797,9 +4888,9 @@ var LiteGraphTSMigration = (function(exports) {
   }, setLayout(t2, e2, r2, i2, n2) {
     const { x: o2, y: a2, scaleX: h2, scaleY: l2 } = e2;
     if (s(n2) && (n2 = e2.rotation || e2.skewX || e2.skewY), n2) {
-      const { rotation: s2, skewX: r3, skewY: i3 } = e2, n3 = s2 * A$1, o3 = F$2(n3), a3 = z$2(n3);
+      const { rotation: s2, skewX: r3, skewY: i3 } = e2, n3 = s2 * A$2, o3 = F$3(n3), a3 = z$2(n3);
       if (r3 || i3) {
-        const e3 = r3 * A$1, s3 = i3 * A$1;
+        const e3 = r3 * A$2, s3 = i3 * A$2;
         t2.a = (o3 + s3 * -a3) * h2, t2.b = (a3 + s3 * o3) * h2, t2.c = (e3 * o3 - a3) * l2, t2.d = (o3 + e3 * a3) * l2;
       } else t2.a = o3 * h2, t2.b = a3 * h2, t2.c = -a3 * l2, t2.d = o3 * l2;
     } else t2.a = h2, t2.b = 0, t2.c = 0, t2.d = l2;
@@ -4810,23 +4901,23 @@ var LiteGraphTSMigration = (function(exports) {
     if (n2 || o2) {
       const t3 = i2 * a2 - n2 * o2;
       if (o2 && !r2) {
-        d2 = j$2(i2 * i2 + n2 * n2), c2 = t3 / d2;
+        d2 = j$3(i2 * i2 + n2 * n2), c2 = t3 / d2;
         const e4 = i2 / d2;
         u2 = n2 > 0 ? U$1(e4) : -U$1(e4);
       } else {
-        c2 = j$2(o2 * o2 + a2 * a2), d2 = t3 / c2;
+        c2 = j$3(o2 * o2 + a2 * a2), d2 = t3 / c2;
         const e4 = o2 / c2;
-        u2 = N$2 - (a2 > 0 ? U$1(-e4) : -U$1(e4));
+        u2 = N$3 - (a2 > 0 ? U$1(-e4) : -U$1(e4));
       }
-      const e3 = V$2(F$2(u2)), s3 = z$2(u2);
-      d2 = V$2(d2), c2 = V$2(c2), _2 = e3 ? V$2((o2 / c2 + s3) / e3 / A$1, 9) : 0, p2 = e3 ? V$2((n2 / d2 - s3) / e3 / A$1, 9) : 0, u2 = V$2(u2 / A$1);
+      const e3 = V$2(F$3(u2)), s3 = z$2(u2);
+      d2 = V$2(d2), c2 = V$2(c2), _2 = e3 ? V$2((o2 / c2 + s3) / e3 / A$2, 9) : 0, p2 = e3 ? V$2((n2 / d2 - s3) / e3 / A$2, 9) : 0, u2 = V$2(u2 / A$2);
     } else d2 = i2, c2 = a2, u2 = _2 = p2 = 0;
     return (e2 = s2 || e2) && (f2 += e2.x * i2 + e2.y * o2, g2 += e2.x * n2 + e2.y * a2, s2 || (f2 -= e2.x, g2 -= e2.y)), { x: f2, y: g2, scaleX: d2, scaleY: c2, rotation: u2, skewX: _2, skewY: p2 };
   }, withScale(t2, e2, s2 = e2) {
     const r2 = t2;
     if (!e2 || !s2) {
       const { a: r3, b: i2, c: n2, d: o2 } = t2;
-      i2 || n2 ? s2 = (r3 * o2 - i2 * n2) / (e2 = j$2(r3 * r3 + i2 * i2)) : (e2 = r3, s2 = o2);
+      i2 || n2 ? s2 = (r3 * o2 - i2 * n2) / (e2 = j$3(r3 * r3 + i2 * i2)) : (e2 = r3, s2 = o2);
     }
     return r2.scaleX = e2, r2.scaleY = s2, r2;
   }, reset(t2) {
@@ -4849,7 +4940,7 @@ var LiteGraphTSMigration = (function(exports) {
     t2.x += (t2.x - e2.x) * (s2 - 1), t2.y += (t2.y - e2.y) * (r2 - 1);
   }, rotate(t2, e2, s2) {
     s2 || (s2 = at$2.defaultPoint);
-    const r2 = tt$2(e2 *= A$1), i2 = K$2(e2), n2 = t2.x - s2.x, o2 = t2.y - s2.y;
+    const r2 = tt$2(e2 *= A$2), i2 = K$2(e2), n2 = t2.x - s2.x, o2 = t2.y - s2.y;
     t2.x = s2.x + n2 * r2 - o2 * i2, t2.y = s2.y + n2 * i2 + o2 * r2;
   }, tempToInnerOf(t2, e2) {
     const { tempPoint: s2 } = at$2;
@@ -4869,7 +4960,7 @@ var LiteGraphTSMigration = (function(exports) {
   }, getCenter: (t2, e2) => ({ x: t2.x + (e2.x - t2.x) / 2, y: t2.y + (e2.y - t2.y) / 2 }), getCenterX: (t2, e2) => t2 + (e2 - t2) / 2, getCenterY: (t2, e2) => t2 + (e2 - t2) / 2, getDistance: (t2, e2) => ht$2(t2.x, t2.y, e2.x, e2.y), getDistanceFrom(t2, e2, s2, r2) {
     const i2 = et$2(s2 - t2), n2 = et$2(r2 - e2);
     return st$2(i2 * i2 + n2 * n2);
-  }, getMinDistanceFrom: (t2, e2, s2, r2, i2, n2) => it$2(ht$2(t2, e2, s2, r2), ht$2(s2, r2, i2, n2)), getAngle: (t2, e2) => ct$2(t2, e2) / A$1, getRotation: (t2, e2, s2, r2) => (r2 || (r2 = e2), at$2.getRadianFrom(t2.x, t2.y, e2.x, e2.y, s2.x, s2.y, r2.x, r2.y) / A$1), getRadianFrom(t2, e2, r2, i2, n2, o2, a2, h2) {
+  }, getMinDistanceFrom: (t2, e2, s2, r2, i2, n2) => it$2(ht$2(t2, e2, s2, r2), ht$2(s2, r2, i2, n2)), getAngle: (t2, e2) => ct$2(t2, e2) / A$2, getRotation: (t2, e2, s2, r2) => (r2 || (r2 = e2), at$2.getRadianFrom(t2.x, t2.y, e2.x, e2.y, s2.x, s2.y, r2.x, r2.y) / A$2), getRadianFrom(t2, e2, r2, i2, n2, o2, a2, h2) {
     s(a2) && (a2 = r2, h2 = i2);
     const l2 = t2 - r2, d2 = e2 - i2, c2 = n2 - a2, u2 = o2 - h2;
     return Math.atan2(l2 * u2 - d2 * c2, l2 * c2 + d2 * u2);
@@ -5306,7 +5397,7 @@ var LiteGraphTSMigration = (function(exports) {
       e2 && t2.setTransform && (t2.setTransform(e2), e2 = void 0);
     } catch (t3) {
     }
-    s2 && _$1.stintSet(s2, "transform", e2);
+    s2 && _$2.stintSet(s2, "transform", e2);
   } } }, { image: Kt$3 } = $t$2, { randColor: te$2 } = I$2;
   let ee$2 = class ee2 {
     constructor(t2) {
@@ -5358,7 +5449,7 @@ var LiteGraphTSMigration = (function(exports) {
   }
   ee$2.filterList = [], ee$2.excludeList = [], ee$2.showWarn = true;
   const re$2 = ee$2, ie$2 = ee$2.get("RunTime"), ne$2 = { currentId: 0, currentName: "", idMap: {}, nameMap: {}, nameToIdMap: {}, start(t2, e2) {
-    const s2 = g.create(g.RUNTIME);
+    const s2 = g$1.create(g$1.RUNTIME);
     return oe$2.currentId = oe$2.idMap[s2] = e2 ? performance.now() : Date.now(), oe$2.currentName = oe$2.nameMap[s2] = t2, oe$2.nameToIdMap[t2] = s2, s2;
   }, end(t2, e2) {
     const s2 = oe$2.idMap[t2], r2 = oe$2.nameMap[t2], i2 = e2 ? (performance.now() - s2) / 1e3 : Date.now() - s2;
@@ -5618,7 +5709,7 @@ var LiteGraphTSMigration = (function(exports) {
       return this.view && this.parentView;
     }
     constructor(t2, e2) {
-      super(), this.size = {}, this.worldTransform = {}, t2 || (t2 = Le$2), this.manager = e2, this.innerId = g.create(g.CNAVAS);
+      super(), this.size = {}, this.worldTransform = {}, t2 || (t2 = Le$2), this.manager = e2, this.innerId = g$1.create(g$1.CNAVAS);
       const { width: s2, height: r2, pixelRatio: i2 } = t2;
       this.autoLayout = !s2 || !r2, this.size.pixelRatio = i2 || $t$2.devicePixelRatio, this.config = t2, this.init();
     }
@@ -5641,7 +5732,7 @@ var LiteGraphTSMigration = (function(exports) {
       let s2;
       this.context && !this.unreal && e2 && this.width && (s2 = this.getSameCanvas(), s2.copyWorld(this));
       const r2 = this.size;
-      _$1.copyAttrs(r2, t2, Re$2), Re$2.forEach((t3) => r2[t3] || (r2[t3] = 1)), this.bounds = new Vt$3(0, 0, this.width, this.height), this.updateViewSize(), this.updateClientBounds(), this.context && (this.smooth = this.config.smooth, !this.unreal && s2 && (this.clearWorld(s2.bounds), this.copyWorld(s2), s2.recycle()));
+      _$2.copyAttrs(r2, t2, Re$2), Re$2.forEach((t3) => r2[t3] || (r2[t3] = 1)), this.bounds = new Vt$3(0, 0, this.width, this.height), this.updateViewSize(), this.updateClientBounds(), this.context && (this.smooth = this.config.smooth, !this.unreal && s2 && (this.clearWorld(s2.bounds), this.copyWorld(s2), s2.recycle()));
     }
     updateViewSize() {
     }
@@ -5792,15 +5883,15 @@ var LiteGraphTSMigration = (function(exports) {
     const y2 = Ve$2(c2, u2), m2 = Ve$2(_2, p2);
     let x2 = g2 - f2;
     if (x2 < 0 && (x2 += W$2), y2 < 1e-12 || m2 < 1e-12 || x2 < 1e-12 || qe$2(x2 - Qe$2) < 1e-12) return t2 && t2.push(rs$1, r2, i2), h2 && ($e$2(h2, e2, s2), Ke$2(h2, r2, i2)), d2 && ts$1(d2, e2, s2), void (l2 && ts$1(l2, r2, i2));
-    const w2 = c2 * p2 - _2 * u2 < 0, b2 = w2 ? -1 : 1, B2 = a2 / je$2(x2 / 2), v2 = r2 + B2 * je$2(f2 + x2 / 2 + N$2 * b2), k2 = i2 + B2 * Ue$2(f2 + x2 / 2 + N$2 * b2);
-    return f2 -= N$2 * b2, g2 -= N$2 * b2, cs(t2, v2, k2, a2, a2, 0, f2 / A$1, g2 / A$1, w2, h2, l2, d2);
+    const w2 = c2 * p2 - _2 * u2 < 0, b2 = w2 ? -1 : 1, B2 = a2 / je$2(x2 / 2), v2 = r2 + B2 * je$2(f2 + x2 / 2 + N$3 * b2), k2 = i2 + B2 * Ue$2(f2 + x2 / 2 + N$3 * b2);
+    return f2 -= N$3 * b2, g2 -= N$3 * b2, cs(t2, v2, k2, a2, a2, 0, f2 / A$2, g2 / A$2, w2, h2, l2, d2);
   }, arc: (t2, e2, s2, r2, i2, n2, o2, a2, h2, l2) => cs(t2, e2, s2, r2, r2, 0, i2, n2, o2, a2, h2, l2), ellipse(t2, e2, s2, r2, i2, n2, o2, a2, h2, l2, d2, c2) {
-    const u2 = n2 * A$1, _2 = Ue$2(u2), p2 = je$2(u2);
-    let f2 = o2 * A$1, g2 = a2 * A$1;
+    const u2 = n2 * A$2, _2 = Ue$2(u2), p2 = je$2(u2);
+    let f2 = o2 * A$2, g2 = a2 * A$2;
     f2 > Qe$2 && (f2 -= W$2), g2 < 0 && (g2 += W$2);
     let y2 = g2 - f2;
     y2 < 0 ? y2 += W$2 : y2 > W$2 && (y2 -= W$2), h2 && (y2 -= W$2);
-    const m2 = Ge$2(qe$2(y2 / N$2)), x2 = y2 / m2, w2 = Ue$2(x2 / 4), b2 = 8 / 3 * w2 * w2 / Ue$2(x2 / 2);
+    const m2 = Ge$2(qe$2(y2 / N$3)), x2 = y2 / m2, w2 = Ue$2(x2 / 4), b2 = 8 / 3 * w2 * w2 / Ue$2(x2 / 2);
     g2 = f2 + x2;
     let B2, v2, k2, C2, O2, T2, P2, S2, L2 = je$2(f2), R2 = Ue$2(f2), E2 = k2 = p2 * r2 * L2 - _2 * i2 * R2, I2 = C2 = _2 * r2 * L2 + p2 * i2 * R2, M2 = e2 + k2, Y2 = s2 + C2;
     t2 && t2.push(t2.length ? rs$1 : ss$1, M2, Y2), l2 && $e$2(l2, M2, Y2), c2 && ts$1(c2, M2, Y2);
@@ -5829,7 +5920,7 @@ var LiteGraphTSMigration = (function(exports) {
     const n2 = 1 - t2;
     return 3 * n2 * n2 * (s2 - e2) + 6 * n2 * t2 * (r2 - s2) + 3 * t2 * t2 * (i2 - r2);
   } }, { getPointAndSet: ls, toTwoPointBounds: ds, ellipse: cs } = hs, { sin: us, cos: _s, sqrt: ps, atan2: fs } = Math, { ellipse: gs } = hs, ys = { ellipticalArc(t2, e2, s2, r2, i2, n2, o2, a2, h2, l2, d2) {
-    const c2 = (h2 - e2) / 2, u2 = (l2 - s2) / 2, _2 = n2 * A$1, p2 = us(_2), f2 = _s(_2), g2 = -f2 * c2 - p2 * u2, y2 = -f2 * u2 + p2 * c2, m2 = r2 * r2, x2 = i2 * i2, w2 = y2 * y2, b2 = g2 * g2, B2 = m2 * x2 - m2 * w2 - x2 * b2;
+    const c2 = (h2 - e2) / 2, u2 = (l2 - s2) / 2, _2 = n2 * A$2, p2 = us(_2), f2 = _s(_2), g2 = -f2 * c2 - p2 * u2, y2 = -f2 * u2 + p2 * c2, m2 = r2 * r2, x2 = i2 * i2, w2 = y2 * y2, b2 = g2 * g2, B2 = m2 * x2 - m2 * w2 - x2 * b2;
     let v2 = 0;
     if (B2 < 0) {
       const t3 = ps(1 - B2 / (m2 * x2));
@@ -5839,7 +5930,7 @@ var LiteGraphTSMigration = (function(exports) {
     let P2 = T2 - O2;
     0 === a2 && P2 > 0 ? P2 -= W$2 : 1 === a2 && P2 < 0 && (P2 += W$2);
     const S2 = e2 + c2 + f2 * k2 - p2 * C2, L2 = s2 + u2 + p2 * k2 + f2 * C2, R2 = P2 < 0 ? 1 : 0;
-    d2 || $t$2.ellipseToCurve ? gs(t2, S2, L2, r2, i2, n2, O2 / A$1, T2 / A$1, R2) : r2 !== i2 || n2 ? t2.push(Ae$2.G, S2, L2, r2, i2, n2, O2 / A$1, T2 / A$1, R2) : t2.push(Ae$2.O, S2, L2, r2, O2 / A$1, T2 / A$1, R2);
+    d2 || $t$2.ellipseToCurve ? gs(t2, S2, L2, r2, i2, n2, O2 / A$2, T2 / A$2, R2) : r2 !== i2 || n2 ? t2.push(Ae$2.G, S2, L2, r2, i2, n2, O2 / A$2, T2 / A$2, R2) : t2.push(Ae$2.O, S2, L2, r2, O2 / A$2, T2 / A$2, R2);
   } }, ms = { toCommand: (t2) => [], toNode: (t2) => [] }, { M: xs, m: ws, L: bs, l: Bs, H: vs, h: ks, V: Cs, v: Os, C: Ts, c: Ps, S: Ss, s: Ls, Q: Rs, q: Es, T: Is, t: Ms, A: As, a: Ws, Z: Ns, z: Ys, N: Ds, D: Xs, X: zs, G: Fs, F: Us, O: js, P: Vs, U: Hs } = Ae$2, { rect: Gs, roundRect: qs, arcTo: Qs, arc: Js, ellipse: Zs, quadraticCurveTo: $s } = hs, { ellipticalArc: Ks } = ys, tr = ee$2.get("PathConvert"), er = {}, sr = { current: { dot: 0 }, stringify(t2, e2) {
     let s2, r2, i2, n2 = 0, o2 = t2.length, a2 = "";
     for (; n2 < o2; ) {
@@ -6092,13 +6183,13 @@ var LiteGraphTSMigration = (function(exports) {
         t2.roundRect(e2[r2 + 1], e2[r2 + 2], e2[r2 + 3], e2[r2 + 4], e2[r2 + 5]), r2 += 6;
         break;
       case Zr:
-        t2.ellipse(e2[r2 + 1], e2[r2 + 2], e2[r2 + 3], e2[r2 + 4], e2[r2 + 5] * A$1, e2[r2 + 6] * A$1, e2[r2 + 7] * A$1, e2[r2 + 8]), r2 += 9;
+        t2.ellipse(e2[r2 + 1], e2[r2 + 2], e2[r2 + 3], e2[r2 + 4], e2[r2 + 5] * A$2, e2[r2 + 6] * A$2, e2[r2 + 7] * A$2, e2[r2 + 8]), r2 += 9;
         break;
       case $r:
         t2.ellipse(e2[r2 + 1], e2[r2 + 2], e2[r2 + 3], e2[r2 + 4], 0, 0, W$2, false), r2 += 5;
         break;
       case Kr:
-        t2.arc(e2[r2 + 1], e2[r2 + 2], e2[r2 + 3], e2[r2 + 4] * A$1, e2[r2 + 5] * A$1, e2[r2 + 6]), r2 += 7;
+        t2.arc(e2[r2 + 1], e2[r2 + 2], e2[r2 + 3], e2[r2 + 4] * A$2, e2[r2 + 5] * A$2, e2[r2 + 6]), r2 += 7;
         break;
       case ti$2:
         t2.arc(e2[r2 + 1], e2[r2 + 2], e2[r2 + 3], 0, W$2, false), r2 += 4;
@@ -6225,7 +6316,7 @@ var LiteGraphTSMigration = (function(exports) {
   const Qi$1 = ee$2.get("TaskProcessor");
   let Ji$1 = class Ji {
     constructor(t2) {
-      this.parallel = true, this.time = 1, this.id = g.create(g.TASK), this.task = t2;
+      this.parallel = true, this.time = 1, this.id = g$1.create(g$1.TASK), this.task = t2;
     }
     run() {
       return me$2(this, void 0, void 0, function* () {
@@ -6262,7 +6353,7 @@ var LiteGraphTSMigration = (function(exports) {
       return this.isComplete ? 1 : s2 / e2;
     }
     constructor(t2) {
-      this.config = { parallel: 6 }, this.list = [], this.running = false, this.isComplete = true, this.index = 0, this.delayNumber = 0, t2 && _$1.assign(this.config, t2), this.empty();
+      this.config = { parallel: 6 }, this.list = [], this.running = false, this.isComplete = true, this.index = 0, this.delayNumber = 0, t2 && _$2.assign(this.config, t2), this.empty();
     }
     add(t2, e2, r2) {
       let i2, n2, a2, h2;
@@ -6397,7 +6488,7 @@ var LiteGraphTSMigration = (function(exports) {
     return false;
   }, destroy() {
     this.clearRecycled(true);
-  } }, sn = en, { IMAGE: rn, create: nn } = g;
+  } }, sn = en, { IMAGE: rn, create: nn } = g$1;
   class on {
     get tag() {
       return "Image";
@@ -6596,7 +6687,7 @@ var LiteGraphTSMigration = (function(exports) {
     return un(t2, (t3) => ({ set(e2) {
       if (this.__setAttr(t3, e2)) {
         const t4 = this.__;
-        _$1.stintSet(t4, "__useDim", t4.dim || t4.bright || t4.dimskip), this.__layout.surfaceChange();
+        _$2.stintSet(t4, "__useDim", t4.dim || t4.bright || t4.dimskip), this.__layout.surfaceChange();
       }
     } }));
   }
@@ -6680,7 +6771,7 @@ var LiteGraphTSMigration = (function(exports) {
       const t3 = u(r2);
       a2.get = function() {
         const e3 = this[n2];
-        return null == e3 ? this[n2] = t3 ? {} : _$1.clone(r2) : e3;
+        return null == e3 ? this[n2] = t3 ? {} : _$2.clone(r2) : e3;
       };
     }
     const h2 = t2.isBranchLeaf;
@@ -7412,7 +7503,7 @@ var LiteGraphTSMigration = (function(exports) {
       const { children: s2 } = this;
       for (let r2 = 0, i2 = s2.length; r2 < i2; r2++) Da(s2[r2], e2) || s2[r2].__clip(t2, e2);
     }
-  } }, Fa = {}, { LEAF: Ua, create: ja } = g, { stintSet: Va } = _$1, { toInnerPoint: Ha, toOuterPoint: Ga, multiplyParent: qa } = q$1, { toOuterOf: Qa } = zt$2, { copy: Ja, move: Za } = ot$2, { moveLocal: $a, zoomOfLocal: Ka, rotateOfLocal: th, skewOfLocal: eh, moveWorld: sh, zoomOfWorld: rh, rotateOfWorld: ih, skewOfWorld: nh, transform: oh, transformWorld: ah, setTransform: hh, getFlipTransform: lh, getLocalOrigin: dh, getRelativeWorld: ch, drop: uh } = co;
+  } }, Fa = {}, { LEAF: Ua, create: ja } = g$1, { stintSet: Va } = _$2, { toInnerPoint: Ha, toOuterPoint: Ga, multiplyParent: qa } = q$1, { toOuterOf: Qa } = zt$2, { copy: Ja, move: Za } = ot$2, { moveLocal: $a, zoomOfLocal: Ka, rotateOfLocal: th, skewOfLocal: eh, moveWorld: sh, zoomOfWorld: rh, rotateOfWorld: ih, skewOfWorld: nh, transform: oh, transformWorld: ah, setTransform: hh, getFlipTransform: lh, getLocalOrigin: dh, getRelativeWorld: ch, drop: uh } = co;
   let _h = class {
     get tag() {
       return this.__tag;
@@ -8095,7 +8186,7 @@ var LiteGraphTSMigration = (function(exports) {
     he$2.need("filter");
   } }, It$2 = {}, Lt$2 = { setStyleName: () => he$2.need("state"), set: () => he$2.need("state") }, zt$1 = { list: {}, register(t2, e2) {
     zt$1.list[t2] = e2;
-  }, get: (t2) => zt$1.list[t2] }, { parse: Mt$2, objectToCanvasData: Ot$2 } = sr, { stintSet: Nt$2 } = _$1, { hasTransparent: Vt$2 } = Ct$2, Ht$2 = { originPaint: {} }, Yt$2 = ee$2.get("UIData");
+  }, get: (t2) => zt$1.list[t2] }, { parse: Mt$2, objectToCanvasData: Ot$2 } = sr, { stintSet: Nt$2 } = _$2, { hasTransparent: Vt$2 } = Ct$2, Ht$2 = { originPaint: {} }, Yt$2 = ee$2.get("UIData");
   let Ut$2 = class Ut extends f {
     get scale() {
       const { scaleX: t2, scaleY: e2 } = this;
@@ -8288,7 +8379,7 @@ var LiteGraphTSMigration = (function(exports) {
       return i2.url = this.__leaf.canvas.toDataURL("image/png"), i2;
     }
   };
-  const { max: ne$1, add: _e$1 } = v, he$1 = { __updateStrokeSpread() {
+  const { max: ne$1, add: _e$1 } = v$1, he$1 = { __updateStrokeSpread() {
     let t2 = 0, e2 = 0;
     const i2 = this.__, { strokeAlign: s2, __maxStrokeWidth: o2 } = i2, r2 = this.__box;
     if ((i2.stroke || "all" === i2.hitStroke) && o2 && "inside" !== s2 && (e2 = t2 = "center" === s2 ? o2 / 2 : o2, !i2.__boxStroke)) {
@@ -8302,7 +8393,7 @@ var LiteGraphTSMigration = (function(exports) {
     e2 && (t2 = Tt$2.getShadowRenderSpread(this, e2)), s2 && (t2 = ne$1(t2, s2)), r2 && (t2 = _e$1(t2, Dt$2.getSpread(r2))), a2 && (t2 = _e$1(t2, a2)), n2 && (t2 = _e$1(t2, n2));
     let h2 = t2;
     return i2 && (h2 = ne$1(h2, Tt$2.getInnerShadowSpread(this, i2))), o2 && (h2 = ne$1(h2, o2)), this.__layout.renderShapeSpread = h2, _2 ? ne$1(_2.__updateRenderSpread(), t2) : t2;
-  } }, { stintSet: de$1 } = _$1, le$1 = { __updateChange() {
+  } }, { stintSet: de$1 } = _$2, le$1 = { __updateChange() {
     const t2 = this.__;
     if (t2.__useStroke) {
       const e2 = t2.__useStroke = !(!t2.stroke || !t2.strokeWidth);
@@ -8465,7 +8556,7 @@ var LiteGraphTSMigration = (function(exports) {
       return he$2.need("export");
     }
     clone(t2) {
-      const e2 = _$1.clone(this.toJSON());
+      const e2 = _$2.clone(this.toJSON());
       return t2 && Object.assign(e2, t2), ce$1.one(e2);
     }
     static one(t2, e2, i2, s2, o2) {
@@ -8569,7 +8660,7 @@ var LiteGraphTSMigration = (function(exports) {
       return this.interaction && this.interaction.hoverData || { x: this.width / 2, y: this.height / 2 };
     }
     get clientBounds() {
-      return this.canvas && this.canvas.getClientBounds(true) || D$1();
+      return this.canvas && this.canvas.getClientBounds(true) || D$2();
     }
     constructor(t2, e2) {
       super(e2), this.config = { start: true, hittable: true, smooth: true, lazySpeard: 100 }, this.leafs = 0, this.__eventIds = [], this.__controllers = [], this.__readyWait = [], this.__viewReadyWait = [], this.__viewCompletedWait = [], this.__nextRenderWait = [], this.userConfig = t2, t2 && (t2.view || t2.width) && this.init(t2), ve$1.list.add(this);
@@ -8578,7 +8669,7 @@ var LiteGraphTSMigration = (function(exports) {
       if (this.canvas) return;
       let i2;
       const { config: s2 } = this;
-      this.__setLeafer(this), e2 && (this.parentApp = e2, this.__bindApp(e2), i2 = e2.running), t2 && (this.parent = e2, this.initType(t2.type), this.parent = void 0, _$1.assign(s2, t2));
+      this.__setLeafer(this), e2 && (this.parentApp = e2, this.__bindApp(e2), i2 = e2.running), t2 && (this.parent = e2, this.initType(t2.type), this.parent = void 0, _$2.assign(s2, t2));
       const o2 = this.canvas = le$2.canvas(s2);
       this.__controllers.push(this.renderer = le$2.renderer(this, o2, s2), this.watcher = le$2.watcher(this, s2), this.layouter = le$2.layouter(this, s2)), this.isApp && this.__setApp(), this.__checkAutoLayout(), e2 || (this.selector = le$2.selector(this), this.interaction = le$2.interaction(this, o2, this.selector, s2), this.interaction && (this.__controllers.unshift(this.interaction), this.hitCanvasManager = le$2.hitCanvasManager()), this.canvasManager = new ge$2(), i2 = s2.start), this.hittable = s2.hittable, this.fill = s2.fill, this.canvasManager.add(o2), this.__listenEvents(), i2 && (this.__startTimer = setTimeout(this.start.bind(this))), So.run(this.__initWait), this.onInit();
     }
@@ -8604,7 +8695,7 @@ var LiteGraphTSMigration = (function(exports) {
       t2 && this.updateLayout(), this.layouter.stop();
     }
     resize(t2) {
-      const e2 = _$1.copyAttrs({}, t2, Re$2);
+      const e2 = _$2.copyAttrs({}, t2, Re$2);
       Object.keys(e2).forEach((t3) => this[t3] = e2[t3]);
     }
     forceRender(t2, e2) {
@@ -8624,11 +8715,11 @@ var LiteGraphTSMigration = (function(exports) {
     __doResize(t2) {
       const { canvas: e2 } = this;
       if (!e2 || e2.isSameSize(t2)) return;
-      const i2 = _$1.copyAttrs({}, this.canvas, Re$2);
+      const i2 = _$2.copyAttrs({}, this.canvas, Re$2);
       e2.resize(t2), this.updateLazyBounds(), this.__onResize(new $o(t2, i2));
     }
     __onResize(t2) {
-      this.emitEvent(t2), _$1.copyAttrs(this.__, t2, Re$2), setTimeout(() => {
+      this.emitEvent(t2), _$2.copyAttrs(this.__, t2, Re$2), setTimeout(() => {
         this.canvasManager && this.canvasManager.clearRecycled();
       }, 0);
     }
@@ -8651,7 +8742,7 @@ var LiteGraphTSMigration = (function(exports) {
       return this.canvas && Re$2.includes(t2) ? this.canvas[t2] : super.__getAttr(t2);
     }
     __changeCanvasSize(t2, e2) {
-      const { config: i2, canvas: s2 } = this, o2 = _$1.copyAttrs({}, s2, Re$2);
+      const { config: i2, canvas: s2 } = this, o2 = _$2.copyAttrs({}, s2, Re$2);
       o2[t2] = i2[t2] = e2, i2.width && i2.height ? s2.stopAutoLayout() : this.__checkAutoLayout(), this.__doResize(o2);
     }
     __changeFill(t2) {
@@ -8807,10 +8898,10 @@ var LiteGraphTSMigration = (function(exports) {
     __updateRenderBounds() {
       let t2, e2;
       if (this.children.length) {
-        const i2 = this.__, s2 = this.__layout, { renderBounds: o2, boxBounds: r2 } = s2, { overflow: a2 } = i2, n2 = s2.childrenRenderBounds || (s2.childrenRenderBounds = D$1());
+        const i2 = this.__, s2 = this.__layout, { renderBounds: o2, boxBounds: r2 } = s2, { overflow: a2 } = i2, n2 = s2.childrenRenderBounds || (s2.childrenRenderBounds = D$2());
         super.__updateRenderBounds(n2), (e2 = a2 && a2.includes("scroll")) && (Se$1(n2, r2), Re$1(n2, i2)), this.__updateRectRenderBounds(), t2 = !me$1(r2, n2), t2 && "show" === a2 && Se$1(o2, n2);
       } else this.__updateRectRenderBounds();
-      _$1.stintSet(this, "isOverflow", t2), this.__checkScroll(e2);
+      _$2.stintSet(this, "isOverflow", t2), this.__checkScroll(e2);
     }
     __updateRectRenderBounds() {
     }
@@ -8958,7 +9049,7 @@ var LiteGraphTSMigration = (function(exports) {
     }
   };
   St$2([zn(ae$1)], si$1.prototype, "__", void 0), St$2([Rt$2(100)], si$1.prototype, "width", void 0), St$2([Rt$2(100)], si$1.prototype, "height", void 0), St$2([Rt$2(1)], si$1.prototype, "pixelRatio", void 0), St$2([Rt$2(true)], si$1.prototype, "smooth", void 0), St$2([fn(false)], si$1.prototype, "safeResize", void 0), St$2([Rt$2()], si$1.prototype, "contextSettings", void 0), si$1 = St$2([Zn()], si$1);
-  const { copyAndSpread: oi$1, includes: ri$1, spread: ai$1, setList: ni$1 } = zt$2, { stintSet: _i$1 } = _$1;
+  const { copyAndSpread: oi$1, includes: ri$1, spread: ai$1, setList: ni$1 } = zt$2, { stintSet: _i$1 } = _$2;
   let hi$1 = class hi extends ge$1 {
     get __tag() {
       return "Text";
@@ -8981,7 +9072,7 @@ var LiteGraphTSMigration = (function(exports) {
         }
         this.__updateNaturalSize();
       } else super.__updateBoxBounds();
-      s2 && (h2.width += 0.16 * i2), _$1.stintSet(this, "isOverflow", !ri$1(h2, _2)), this.isOverflow ? (ni$1(t2.__textBoxBounds = {}, [h2, _2]), e2.renderChanged = true) : t2.__textBoxBounds = h2;
+      s2 && (h2.width += 0.16 * i2), _$2.stintSet(this, "isOverflow", !ri$1(h2, _2)), this.isOverflow ? (ni$1(t2.__textBoxBounds = {}, [h2, _2]), e2.renderChanged = true) : t2.__textBoxBounds = h2;
     }
     __updateRenderSpread() {
       let t2 = super.__updateRenderSpread();
@@ -9086,7 +9177,7 @@ var LiteGraphTSMigration = (function(exports) {
     return n2 > 3 && r2 && Object.defineProperty(e2, i2, r2), r2;
   }
   "function" == typeof SuppressedError && SuppressedError;
-  let N$1 = class N extends we$1 {
+  let N$2 = class N extends we$1 {
     get __tag() {
       return "App";
     }
@@ -9161,17 +9252,17 @@ var LiteGraphTSMigration = (function(exports) {
     }
     __getChildConfig(t2) {
       const e2 = Object.assign({}, this.config);
-      return e2.hittable = e2.realCanvas = void 0, t2 && _$1.assign(e2, t2), this.autoLayout && _$1.copyAttrs(e2, this, Re$2), e2.view = this.realCanvas ? void 0 : this.view, e2.fill = void 0, e2;
+      return e2.hittable = e2.realCanvas = void 0, t2 && _$2.assign(e2, t2), this.autoLayout && _$2.copyAttrs(e2, this, Re$2), e2.view = this.realCanvas ? void 0 : this.view, e2.fill = void 0, e2;
     }
     __listenChildEvents(t2) {
       t2.once([[ta.END, this.__onReady, this], [ea.START, this.__onCreated, this], [ea.END, this.__onViewReady, this]]), this.realCanvas && this.__eventIds.push(t2.on_(ea.END, this.__onChildRenderEnd, this));
     }
   };
-  N$1 = I$1([Zn()], N$1);
-  const F$1 = {}, W$1 = { isHoldSpaceKey: () => W$1.isHold("Space"), isHold: (t2) => F$1[t2], isHoldKeys: (t2, e2) => e2 ? t2(e2) : void 0, setDownCode(t2) {
-    F$1[t2] || (F$1[t2] = true);
+  N$2 = I$1([Zn()], N$2);
+  const F$2 = {}, W$1 = { isHoldSpaceKey: () => W$1.isHold("Space"), isHold: (t2) => F$2[t2], isHoldKeys: (t2, e2) => e2 ? t2(e2) : void 0, setDownCode(t2) {
+    F$2[t2] || (F$2[t2] = true);
   }, setUpCode(t2) {
-    F$1[t2] = false;
+    F$2[t2] = false;
   } }, K$1 = { LEFT: 1, RIGHT: 2, MIDDLE: 4, defaultLeft(t2) {
     t2.buttons || (t2.buttons = 1);
   }, left: (t2) => 1 === t2.buttons, right: (t2) => 2 === t2.buttons, middle: (t2) => 4 === t2.buttons };
@@ -9219,7 +9310,7 @@ var LiteGraphTSMigration = (function(exports) {
       pe$2.changeName(t2, e2);
     }
   };
-  const { min: U, max: j$1, abs: X$1 } = Math, { float: Y$1, sign: z$1 } = I$2, { minX: G$1, maxX: Z$2, minY: q, maxY: J$1 } = zt$2, Q = new Vt$3(), $ = new Vt$3(), tt$1 = { limitMove(t2, e2) {
+  const { min: U, max: j$2, abs: X$1 } = Math, { float: Y$1, sign: z$1 } = I$2, { minX: G$1, maxX: Z$2, minY: q, maxY: J$1 } = zt$2, Q = new Vt$3(), $ = new Vt$3(), tt$1 = { limitMove(t2, e2) {
     const { dragBounds: i2, dragBoundsType: s2 } = t2;
     i2 && et$1.getValidMove(t2.__localBoxBounds, et$1.getDragBounds(t2), s2, e2, true), et$1.axisMove(t2, e2);
   }, limitScaleOf(t2, e2, i2, s2) {
@@ -9238,7 +9329,7 @@ var LiteGraphTSMigration = (function(exports) {
     r2 || (a2 = Object.assign({}, a2)), $.set(e2), Q.set(t2).scaleOf(s2, a2.x, a2.y);
     const h2 = (s2.x - t2.x) / t2.width, o2 = 1 - h2, d2 = (s2.y - t2.y) / t2.height, g2 = 1 - d2;
     let l2, c2, u2, p2, _2 = 1, m2 = 1;
-    return et$1.isInnerMode(t2, e2, i2, "width") ? (a2.x < 0 && Q.scaleOf(s2, _2 = 1 / a2.x, 1), u2 = Y$1(Q.minX - $.minX), p2 = Y$1($.maxX - Q.maxX), l2 = h2 && u2 > 0 ? 1 + u2 / (h2 * Q.width) : 1, c2 = o2 && p2 > 0 ? 1 + p2 / (o2 * Q.width) : 1, _2 *= j$1(l2, c2)) : (a2.x < 0 && ((Y$1(G$1(t2) - G$1(e2)) <= 0 || Y$1(Z$2(e2) - Z$2(t2)) <= 0) && Q.scaleOf(s2, _2 = 1 / a2.x, 1), Q.unsign()), u2 = Y$1($.minX - Q.minX), p2 = Y$1(Q.maxX - $.maxX), l2 = h2 && u2 > 0 ? 1 - u2 / (h2 * Q.width) : 1, c2 = o2 && p2 > 0 ? 1 - p2 / (o2 * Q.width) : 1, _2 *= U(l2, c2)), et$1.isInnerMode(t2, e2, i2, "height") ? (a2.y < 0 && Q.scaleOf(s2, 1, m2 = 1 / a2.y), u2 = Y$1(Q.minY - $.minY), p2 = Y$1($.maxY - Q.maxY), l2 = d2 && u2 > 0 ? 1 + u2 / (d2 * Q.height) : 1, c2 = g2 && p2 > 0 ? 1 + p2 / (g2 * Q.height) : 1, m2 *= j$1(l2, c2), n$1 && (l2 = j$1(X$1(_2), X$1(m2)), _2 = z$1(_2) * l2, m2 = z$1(m2) * l2)) : (a2.y < 0 && ((Y$1(q(t2) - q(e2)) <= 0 || Y$1(J$1(e2) - J$1(t2)) <= 0) && Q.scaleOf(s2, 1, m2 = 1 / a2.y), Q.unsign()), u2 = Y$1($.minY - Q.minY), p2 = Y$1(Q.maxY - $.maxY), l2 = d2 && u2 > 0 ? 1 - u2 / (d2 * Q.height) : 1, c2 = g2 && p2 > 0 ? 1 - p2 / (g2 * Q.height) : 1, m2 *= U(l2, c2)), a2.x *= n(_2) ? _2 : 1, a2.y *= n(m2) ? m2 : 1, a2;
+    return et$1.isInnerMode(t2, e2, i2, "width") ? (a2.x < 0 && Q.scaleOf(s2, _2 = 1 / a2.x, 1), u2 = Y$1(Q.minX - $.minX), p2 = Y$1($.maxX - Q.maxX), l2 = h2 && u2 > 0 ? 1 + u2 / (h2 * Q.width) : 1, c2 = o2 && p2 > 0 ? 1 + p2 / (o2 * Q.width) : 1, _2 *= j$2(l2, c2)) : (a2.x < 0 && ((Y$1(G$1(t2) - G$1(e2)) <= 0 || Y$1(Z$2(e2) - Z$2(t2)) <= 0) && Q.scaleOf(s2, _2 = 1 / a2.x, 1), Q.unsign()), u2 = Y$1($.minX - Q.minX), p2 = Y$1(Q.maxX - $.maxX), l2 = h2 && u2 > 0 ? 1 - u2 / (h2 * Q.width) : 1, c2 = o2 && p2 > 0 ? 1 - p2 / (o2 * Q.width) : 1, _2 *= U(l2, c2)), et$1.isInnerMode(t2, e2, i2, "height") ? (a2.y < 0 && Q.scaleOf(s2, 1, m2 = 1 / a2.y), u2 = Y$1(Q.minY - $.minY), p2 = Y$1($.maxY - Q.maxY), l2 = d2 && u2 > 0 ? 1 + u2 / (d2 * Q.height) : 1, c2 = g2 && p2 > 0 ? 1 + p2 / (g2 * Q.height) : 1, m2 *= j$2(l2, c2), n$1 && (l2 = j$2(X$1(_2), X$1(m2)), _2 = z$1(_2) * l2, m2 = z$1(m2) * l2)) : (a2.y < 0 && ((Y$1(q(t2) - q(e2)) <= 0 || Y$1(J$1(e2) - J$1(t2)) <= 0) && Q.scaleOf(s2, 1, m2 = 1 / a2.y), Q.unsign()), u2 = Y$1($.minY - Q.minY), p2 = Y$1(Q.maxY - $.maxY), l2 = d2 && u2 > 0 ? 1 - u2 / (d2 * Q.height) : 1, c2 = g2 && p2 > 0 ? 1 - p2 / (g2 * Q.height) : 1, m2 *= U(l2, c2)), a2.x *= n(_2) ? _2 : 1, a2.y *= n(m2) ? m2 : 1, a2;
   } }, et$1 = tt$1;
   let it$1 = class it extends V$1 {
   };
@@ -9482,7 +9573,7 @@ var LiteGraphTSMigration = (function(exports) {
       return this.p.hitRadius;
     }
     constructor(t2, e2, i2, s2) {
-      this.config = _$1.clone(Lt$1), this.tapCount = 0, this.downKeyMap = {}, this.target = t2, this.canvas = e2, this.selector = i2, this.defaultPath = new kh(t2), this.createTransformer(), this.dragger = new Dt$1(this), s2 && (this.config = _$1.default(s2, this.config)), this.__listenEvents();
+      this.config = _$2.clone(Lt$1), this.tapCount = 0, this.downKeyMap = {}, this.target = t2, this.canvas = e2, this.selector = i2, this.defaultPath = new kh(t2), this.createTransformer(), this.dragger = new Dt$1(this), s2 && (this.config = _$2.default(s2, this.config)), this.__listenEvents();
     }
     start() {
       this.running = true;
@@ -9961,7 +10052,7 @@ var LiteGraphTSMigration = (function(exports) {
     }
     emitResize(t2) {
       const e2 = {};
-      _$1.copyAttrs(e2, this, Re$2), this.resize(t2), this.resizeListener && !s(this.width) && this.resizeListener(new $o(t2, e2));
+      _$2.copyAttrs(e2, this, Re$2), this.resize(t2), this.resizeListener && !s(this.width) && this.resizeListener(new $o(t2, e2));
     }
     unrealCanvas() {
       if (!this.unreal && this.parentView) {
@@ -10029,7 +10120,7 @@ var LiteGraphTSMigration = (function(exports) {
       return this.__updatedList;
     }
     constructor(t2, e2) {
-      this.totalTimes = 0, this.config = {}, this.__updatedList = new kh(), this.target = t2, e2 && (this.config = _$1.default(e2, this.config)), this.__listenEvents();
+      this.totalTimes = 0, this.config = {}, this.__updatedList = new kh(), this.target = t2, e2 && (this.config = _$2.default(e2, this.config)), this.__listenEvents();
     }
     start() {
       this.disabled || (this.running = true);
@@ -10091,7 +10182,7 @@ var LiteGraphTSMigration = (function(exports) {
   const { updateAllMatrix: ut, updateAllChange: ft } = co, pt = ee$2.get("Layouter");
   class gt {
     constructor(t2, e2) {
-      this.totalTimes = 0, this.config = { usePartLayout: true }, this.__levelList = new Ch(), this.target = t2, e2 && (this.config = _$1.default(e2, this.config)), this.__listenEvents();
+      this.totalTimes = 0, this.config = { usePartLayout: true }, this.__levelList = new Ch(), this.target = t2, e2 && (this.config = _$2.default(e2, this.config)), this.__listenEvents();
     }
     start() {
       this.disabled || (this.running = true);
@@ -10187,7 +10278,7 @@ var LiteGraphTSMigration = (function(exports) {
       return !(this.canvas.allowBackgroundColor || !this.config.fill);
     }
     constructor(t2, e2, i2) {
-      this.FPS = 60, this.totalTimes = 0, this.times = 0, this.config = { usePartRender: true, ceilPartPixel: true, maxFPS: 120 }, this.frames = [], this.target = t2, this.canvas = e2, i2 && (this.config = _$1.default(i2, this.config)), this.__listenEvents();
+      this.FPS = 60, this.totalTimes = 0, this.times = 0, this.config = { usePartRender: true, ceilPartPixel: true, maxFPS: 120 }, this.frames = [], this.target = t2, this.canvas = e2, i2 && (this.config = _$2.default(i2, this.config)), this.__listenEvents();
     }
     start() {
       this.running = true, this.update(false);
@@ -10400,7 +10491,7 @@ var LiteGraphTSMigration = (function(exports) {
   }
   class bt {
     constructor(t2, e2) {
-      this.config = {}, e2 && (this.config = _$1.default(e2, this.config)), this.picker = new xt(this.target = t2, this), this.finder = le$2.finder && le$2.finder();
+      this.config = {}, e2 && (this.config = _$2.default(e2, this.config)), this.picker = new xt(this.target = t2, this), this.finder = le$2.finder && le$2.finder();
     }
     getByPoint(t2, e2, s2) {
       const { target: n2, picker: o2 } = this;
@@ -10609,7 +10700,7 @@ var LiteGraphTSMigration = (function(exports) {
   }
   const { getSpread: Mt, copyAndSpread: Ct, toOuterOf: At, getOuterOf: Ot, getByMove: Dt, move: Wt, getIntersectData: It } = zt$2, Ft = {};
   let zt;
-  const { stintSet: jt } = _$1, { hasTransparent: Ut } = Ct$2;
+  const { stintSet: jt } = _$2, { hasTransparent: Ut } = Ct$2;
   function Gt(t2, e2, i$1) {
     if (!d(e2) || false === e2.visible || 0 === e2.opacity) return;
     let n2;
@@ -10746,14 +10837,14 @@ var LiteGraphTSMigration = (function(exports) {
       let n3;
       if ($t$2.fullImageShadow) n3 = h2;
       else {
-        const t3 = a2.renderShapeSpread ? Mt(o2, v.swapAndScale(a2.renderShapeSpread, g2, w2)) : o2;
+        const t3 = a2.renderShapeSpread ? Mt(o2, v$1.swapAndScale(a2.renderShapeSpread, g2, w2)) : o2;
         n3 = It(t3, h2);
       }
       u2 = o2.getFitMatrix(n3);
       let { a: _2, d: m2 } = u2;
       u2.a < 1 && (p2 = e2.getSameCanvas(), t2.__renderShape(p2, s2), g2 *= _2, w2 *= m2), f2 = Ot(h2, u2), l2 = Dt(f2, -u2.e, -u2.f), c2 = Ot(r2, u2), Wt(c2, -u2.e, -u2.f);
-      const v$1 = s2.matrix;
-      v$1 ? (d2 = new pt$2(u2), d2.multiply(v$1), _2 *= v$1.scaleX, m2 *= v$1.scaleY) : d2 = u2, d2.withScale(_2, m2), s2 = Object.assign(Object.assign({}, s2), { matrix: d2 });
+      const v2 = s2.matrix;
+      v2 ? (d2 = new pt$2(u2), d2.multiply(v2), _2 *= v2.scaleX, m2 *= v2.scaleY) : d2 = u2, d2.withScale(_2, m2), s2 = Object.assign(Object.assign({}, s2), { matrix: d2 });
     }
     return t2.__renderShape(n2, s2), { canvas: n2, matrix: d2, fitMatrix: u2, bounds: l2, renderBounds: c2, worldCanvas: p2, shapeBounds: f2, scaleX: g2, scaleY: w2 };
   } };
@@ -11219,7 +11310,7 @@ var LiteGraphTSMigration = (function(exports) {
       return t;
     },
     get App() {
-      return N$1;
+      return N$2;
     },
     AroundHelper: bt$3,
     AutoBounds: Gt$2,
@@ -11245,7 +11336,7 @@ var LiteGraphTSMigration = (function(exports) {
     ColorConvert: Ct$2,
     Creator: le$2,
     Cursor: St$1,
-    DataHelper: _$1,
+    DataHelper: _$2,
     Debug: ee$2,
     get Direction4() {
       return mt$3;
@@ -11273,7 +11364,7 @@ var LiteGraphTSMigration = (function(exports) {
     Export: It$2,
     FileHelper: Gi$1,
     Filter: Dt$2,
-    FourNumberHelper: v,
+    FourNumberHelper: v$1,
     get Frame() {
       return Ce$1;
     },
@@ -11289,7 +11380,7 @@ var LiteGraphTSMigration = (function(exports) {
     ImageData: re$1,
     ImageEvent: Vo,
     ImageManager: en,
-    IncrementId: g,
+    IncrementId: g$1,
     Interaction: Tt,
     InteractionBase: Mt$1,
     InteractionHelper: _t$1,
@@ -11338,9 +11429,9 @@ var LiteGraphTSMigration = (function(exports) {
     MyPointerEvent: st$1,
     MyTouchEvent: gt$1,
     NeedConvertToCanvasCommandMap: Ne$2,
-    OneRadian: A$1,
+    OneRadian: A$2,
     PI2: W$2,
-    PI_2: N$2,
+    PI_2: N$3,
     Paint: Ft$2,
     PaintGradient: Et$2,
     PaintImage: Wt$2,
@@ -11456,7 +11547,7 @@ var LiteGraphTSMigration = (function(exports) {
     emptyData: e,
     eraserType: Yn,
     extraPropertyEventMap: jo,
-    getBoundsData: D$1,
+    getBoundsData: D$2,
     getDescriptor: dn,
     getMatrixData: X$2,
     getPointData: Y$2,
@@ -11494,7 +11585,7 @@ var LiteGraphTSMigration = (function(exports) {
     tempBounds: Ht$3,
     tempMatrix: ft$2,
     tempPoint: _t$2,
-    tryToNumber: h,
+    tryToNumber: h$1,
     useCanvas: it,
     useModule: Jn,
     version: Oh,
@@ -11770,6 +11861,12 @@ var LiteGraphTSMigration = (function(exports) {
       host && host.runtime === "legacy" && "eventRoot" in host && host.eventRoot
     );
   }
+  function isModernHost(host) {
+    return Boolean(host && host.runtime === "modern");
+  }
+  function sameModernPart(left, right) {
+    return (left == null ? void 0 : left.kind) === (right == null ? void 0 : right.kind) && (left == null ? void 0 : left.index) === (right == null ? void 0 : right.index) && (left == null ? void 0 : left.action) === (right == null ? void 0 : right.action);
+  }
   class InteractionController {
     constructor(graph, canvas, appHost, sceneSyncController) {
       this.canvas = canvas;
@@ -11781,8 +11878,17 @@ var LiteGraphTSMigration = (function(exports) {
       this.documentTrackingBound = false;
       this.session = null;
       this.dragTransactionNode = null;
+      this.hoveredModernHost = null;
+      this.hoveredModernPart = null;
+      this.lastTapNodeId = null;
+      this.lastTapPart = null;
+      this.lastTapAt = 0;
       this.handleViewPointerDown = (event2) => {
-        var _a3, _b2;
+        var _a3, _b2, _c2, _d2;
+        if (event2.button === 2) {
+          this.stopPropagationOnly(event2, true);
+          return;
+        }
         if (!this.shouldHandleLegacyPointerDown(event2)) {
           return;
         }
@@ -11832,6 +11938,11 @@ var LiteGraphTSMigration = (function(exports) {
         const selectedNodes = this.canvas.selected_nodes || {};
         const isAlreadySelected = Boolean(selectedNodes[String(hit.node.id)]);
         const legacyHost = isLegacyHost(hit.host) ? hit.host : null;
+        const modernHost = isModernHost(hit.host) ? hit.host : null;
+        const modernPart = modernHost ? modernHost.getInteractivePartAt(
+          normalizedGraphPoint.x,
+          normalizedGraphPoint.y
+        ) : null;
         if (legacyHost) {
           const targets = this.collectTargets(legacyHost);
           const legacyEvent = createLegacyPointerEvent({
@@ -11846,21 +11957,68 @@ var LiteGraphTSMigration = (function(exports) {
           });
           this.canvas.processMouseDown(legacyEvent);
           (_a3 = this.canvas.sceneSyncController) == null ? void 0 : _a3.repaintAllNodeHosts();
-        } else if (!isAlreadySelected || additiveSelection) {
+          this.session = {
+            kind: "legacy-press"
+          };
+          this.stopEvent(event2);
+          return;
+        }
+        if (modernHost) {
+          this.updateModernHover(modernHost, modernPart);
+        }
+        if (!isAlreadySelected || additiveSelection) {
           this.canvas.selectNodes([hit.node], additiveSelection);
           (_b2 = this.canvas.sceneSyncController) == null ? void 0 : _b2.repaintAllNodeHosts();
         }
-        if (!legacyHost && !this.canStartNodeDrag(hit.node)) {
+        if (modernHost) {
+          modernHost.updateInteractionState({
+            hovered: true,
+            pressed: true,
+            hoveredPart: modernPart,
+            pressedPart: modernPart,
+            dragging: false,
+            resizing: false
+          });
+          if ((modernPart == null ? void 0 : modernPart.kind) === "resize") {
+            this.dragTransactionNode = hit.node;
+            (_d2 = (_c2 = this.graphRef).beforeChange) == null ? void 0 : _d2.call(_c2, hit.node);
+            modernHost.beginResize(
+              normalizedGraphPoint.x,
+              normalizedGraphPoint.y
+            );
+            this.session = {
+              kind: "node-resize",
+              node: hit.node,
+              host: modernHost,
+              lastGraphPoint: normalizedGraphPoint
+            };
+            this.stopEvent(event2);
+            return;
+          }
+          if (modernPart && modernPart.kind !== "body" && modernPart.kind !== "header") {
+            this.session = {
+              kind: "modern-press",
+              node: hit.node,
+              host: modernHost,
+              part: modernPart
+            };
+            this.stopEvent(event2);
+            return;
+          }
+        }
+        if (!this.canStartNodeDrag(hit.node)) {
           this.session = {
             kind: "background-press",
             additive: additiveSelection,
             startGraphPoint: normalizedGraphPoint
           };
-        } else if ((!legacyHost || !this.hasLegacyInteractiveCapture()) && this.canStartNodeDrag(hit.node)) {
+        } else if (!this.hasLegacyInteractiveCapture() && this.canStartNodeDrag(hit.node)) {
           this.session = {
             kind: "node-press",
             node: hit.node,
-            legacyPointerUp: Boolean(legacyHost)
+            host: modernHost,
+            part: modernPart,
+            legacyPointerUp: false
           };
         } else {
           this.session = {
@@ -11868,6 +12026,11 @@ var LiteGraphTSMigration = (function(exports) {
           };
         }
         this.stopEvent(event2);
+      };
+      this.handleViewContextMenu = (event2) => {
+        this.dispatchContextMenu(event2);
+        event2.preventDefault();
+        event2.stopImmediatePropagation();
       };
       this.handleViewPointerMove = (event2) => {
         if (this.pointerIsDown) {
@@ -11879,7 +12042,7 @@ var LiteGraphTSMigration = (function(exports) {
         this.dispatchPointerMoveWhileDown(event2);
       };
       this.handleDocumentPointerUp = (event2) => {
-        var _a3, _b2, _c2, _d2, _e2, _f;
+        var _a3, _b2, _c2, _d2, _e2, _f, _g, _h2;
         if (!this.pointerIsDown && event2.button !== 0) {
           return;
         }
@@ -11915,13 +12078,28 @@ var LiteGraphTSMigration = (function(exports) {
             (_d2 = this.canvas.sceneSyncController) == null ? void 0 : _d2.repaintAllNodeHosts();
           }
           this.stopEvent(event2);
-        } else if (((_e2 = this.session) == null ? void 0 : _e2.kind) === "node-press") {
+        } else if (((_e2 = this.session) == null ? void 0 : _e2.kind) === "modern-press") {
+          this.finishModernPress(
+            this.session,
+            normalizedGraphPoint,
+            event2
+          );
+          this.stopEvent(event2);
+        } else if (((_f = this.session) == null ? void 0 : _f.kind) === "node-press") {
           if (this.session.legacyPointerUp) {
             this.dispatchLegacyPointerUp(source, normalizedPagePoint, event2);
           } else {
+            this.finishModernTap(
+              this.session,
+              normalizedGraphPoint,
+              event2
+            );
             this.stopEvent(event2);
           }
-        } else if (((_f = this.session) == null ? void 0 : _f.kind) === "node-drag") {
+        } else if (((_g = this.session) == null ? void 0 : _g.kind) === "node-resize") {
+          this.finishNodeResize(this.session);
+          this.stopEvent(event2);
+        } else if (((_h2 = this.session) == null ? void 0 : _h2.kind) === "node-drag") {
           this.finishNodeDrag(this.session);
           this.stopEvent(event2);
         } else {
@@ -11933,6 +12111,8 @@ var LiteGraphTSMigration = (function(exports) {
         this.pointerDownPagePoint = null;
         this.session = null;
         this.dragTransactionNode = null;
+        this.updateModernHover(null, null);
+        this.view.style.cursor = "";
         this.detachDocumentTracking();
       };
       this.graphRef = graph;
@@ -11960,8 +12140,10 @@ var LiteGraphTSMigration = (function(exports) {
       this.doc = this.view.ownerDocument || document;
       this.view.addEventListener("pointerdown", this.handleViewPointerDown, true);
       this.view.addEventListener("pointermove", this.handleViewPointerMove, true);
+      this.view.addEventListener("contextmenu", this.handleViewContextMenu, true);
     }
     destroy() {
+      var _a3;
       this.view.removeEventListener(
         "pointerdown",
         this.handleViewPointerDown,
@@ -11972,6 +12154,11 @@ var LiteGraphTSMigration = (function(exports) {
         this.handleViewPointerMove,
         true
       );
+      this.view.removeEventListener(
+        "contextmenu",
+        this.handleViewContextMenu,
+        true
+      );
       this.detachDocumentTracking();
       this.pointerIsDown = false;
       this.pointerDownAt = 0;
@@ -11979,20 +12166,34 @@ var LiteGraphTSMigration = (function(exports) {
       this.pointerDownPagePoint = null;
       this.session = null;
       this.dragTransactionNode = null;
+      (_a3 = this.hoveredModernHost) == null ? void 0 : _a3.clearPointerState();
+      this.hoveredModernHost = null;
+      this.hoveredModernPart = null;
+      this.lastTapNodeId = null;
+      this.lastTapPart = null;
+      this.lastTapAt = 0;
       this.connectionController.destroy();
       this.selectionController.destroy();
       this.overlayPrimitives.destroy();
     }
     dispatchHoverPointerMove(event2) {
-      if (!this.shouldHandleLegacyPointerMove(event2)) {
-        return;
-      }
       const source = this.createPointerSource(event2);
       const pagePoint = source.getPagePoint();
       const graphPoint = source.getInnerPoint();
       const hit = this.hitTestService.hitNodeAt(graphPoint.x, graphPoint.y);
+      const modernHost = isModernHost(hit == null ? void 0 : hit.host) ? hit.host : null;
+      const modernPart = modernHost ? modernHost.getInteractivePartAt(graphPoint.x, graphPoint.y) : null;
+      this.updateModernHover(modernHost, modernPart);
+      if (modernHost) {
+        this.view.style.cursor = this.resolveCursorForModernPart(modernPart);
+      } else if (!this.pointerIsDown) {
+        this.view.style.cursor = "";
+      }
+      if (!this.shouldHandleLegacyPointerMove(event2)) {
+        return;
+      }
       const targets = this.collectTargets(this.toLegacyHost((hit == null ? void 0 : hit.host) || null));
-      const shouldDispatch = targets.length > 0 || Boolean(this.canvas.node_widget) || Boolean(this.canvas.node_over) || Boolean(this.canvas.node_capturing_input);
+      const shouldDispatch = targets.length > 0 || Boolean(this.canvas.node_widget) || Boolean(this.canvas.node_over) || Boolean(this.canvas.node_capturing_input) || Boolean(this.canvas.node_dragged) || Boolean(this.canvas.resizing_node) || Boolean(this.canvas.connecting_node);
       const normalizedPagePoint = {
         x: toFiniteNumber$4(pagePoint.x),
         y: toFiniteNumber$4(pagePoint.y)
@@ -12017,7 +12218,7 @@ var LiteGraphTSMigration = (function(exports) {
       this.stopEvent(event2);
     }
     dispatchPointerMoveWhileDown(event2) {
-      var _a3, _b2;
+      var _a3, _b2, _c2, _d2, _e2;
       if (!this.pointerIsDown || !this.session) {
         return;
       }
@@ -12076,6 +12277,24 @@ var LiteGraphTSMigration = (function(exports) {
         );
         return;
       }
+      if (this.session.kind === "modern-press") {
+        const activePart = this.session.host.getInteractivePartAt(
+          normalizedGraphPoint.x,
+          normalizedGraphPoint.y
+        );
+        this.session.host.updateInteractionState({
+          hovered: true,
+          pressed: true,
+          hoveredPart: activePart,
+          pressedPart: this.session.part
+        });
+        this.lastPagePoint = normalizedPagePoint;
+        this.view.style.cursor = this.resolveCursorForModernPart(
+          this.session.part
+        );
+        this.stopEvent(event2);
+        return;
+      }
       if (this.session.kind === "node-press") {
         if (this.session.legacyPointerUp && this.hasLegacyInteractiveCapture()) {
           this.session = {
@@ -12088,6 +12307,18 @@ var LiteGraphTSMigration = (function(exports) {
           );
           return;
         }
+        if (this.session.host) {
+          const activePart = this.session.host.getInteractivePartAt(
+            normalizedGraphPoint.x,
+            normalizedGraphPoint.y
+          );
+          this.session.host.updateInteractionState({
+            hovered: true,
+            pressed: true,
+            hoveredPart: activePart,
+            pressedPart: this.session.part
+          });
+        }
         if (this.pointerDownPagePoint && getPointerDistance(
           this.pointerDownPagePoint,
           normalizedPagePoint
@@ -12099,12 +12330,47 @@ var LiteGraphTSMigration = (function(exports) {
             kind: "node-drag",
             node: this.session.node,
             dragNodes,
-            lastGraphPoint: normalizedGraphPoint
+            lastGraphPoint: normalizedGraphPoint,
+            host: this.session.host
           };
+          (_c2 = this.session.host) == null ? void 0 : _c2.updateInteractionState({
+            pressed: false,
+            dragging: true,
+            pressedPart: null,
+            hoveredPart: this.session.part
+          });
         } else {
           this.lastPagePoint = normalizedPagePoint;
           return;
         }
+      }
+      if (this.session.kind === "node-resize") {
+        const didResize = this.session.host.updateResize(
+          normalizedGraphPoint.x,
+          normalizedGraphPoint.y
+        );
+        this.session.host.updateInteractionState({
+          hovered: true,
+          pressed: true,
+          resizing: true,
+          hoveredPart: {
+            kind: "resize",
+            cursor: "se-resize"
+          },
+          pressedPart: {
+            kind: "resize",
+            cursor: "se-resize"
+          }
+        });
+        if (didResize) {
+          (_d2 = this.canvas.sceneSyncController) == null ? void 0 : _d2.repaintNodeHost(
+            this.session.node.id
+          );
+        }
+        this.lastPagePoint = normalizedPagePoint;
+        this.view.style.cursor = "se-resize";
+        this.stopEvent(event2);
+        return;
       }
       if (this.session.kind === "node-drag") {
         const deltaX2 = normalizedGraphPoint.x - this.session.lastGraphPoint.x;
@@ -12118,6 +12384,15 @@ var LiteGraphTSMigration = (function(exports) {
           }
           this.session.lastGraphPoint = normalizedGraphPoint;
         }
+        (_e2 = this.session.host) == null ? void 0 : _e2.updateInteractionState({
+          hovered: true,
+          pressed: false,
+          dragging: true,
+          hoveredPart: {
+            kind: "body"
+          },
+          pressedPart: null
+        });
         this.lastPagePoint = normalizedPagePoint;
         this.stopEvent(event2);
       }
@@ -12126,7 +12401,7 @@ var LiteGraphTSMigration = (function(exports) {
       const graphPoint = source.getInnerPoint();
       const hit = this.hitTestService.hitNodeAt(graphPoint.x, graphPoint.y);
       const targets = this.collectTargets(this.toLegacyHost((hit == null ? void 0 : hit.host) || null));
-      const shouldDispatch = targets.length > 0 || Boolean(this.canvas.node_widget) || Boolean(this.canvas.node_over) || Boolean(this.canvas.node_capturing_input);
+      const shouldDispatch = targets.length > 0 || Boolean(this.canvas.node_widget) || Boolean(this.canvas.node_over) || Boolean(this.canvas.node_capturing_input) || Boolean(this.canvas.node_dragged) || Boolean(this.canvas.resizing_node) || Boolean(this.canvas.connecting_node);
       const deltaX2 = this.lastPagePoint ? pagePoint.x - this.lastPagePoint.x : 0;
       const deltaY = this.lastPagePoint ? pagePoint.y - this.lastPagePoint.y : 0;
       this.lastPagePoint = pagePoint;
@@ -12150,7 +12425,7 @@ var LiteGraphTSMigration = (function(exports) {
       const graphPoint = source.getInnerPoint();
       const hit = this.hitTestService.hitNodeAt(graphPoint.x, graphPoint.y);
       const targets = this.collectTargets(this.toLegacyHost((hit == null ? void 0 : hit.host) || null));
-      const shouldDispatch = this.pointerIsDown || targets.length > 0 || Boolean(this.canvas.node_widget) || Boolean(this.canvas.node_over) || Boolean(this.canvas.node_capturing_input);
+      const shouldDispatch = this.pointerIsDown || targets.length > 0 || Boolean(this.canvas.node_widget) || Boolean(this.canvas.node_over) || Boolean(this.canvas.node_capturing_input) || Boolean(this.canvas.node_dragged) || Boolean(this.canvas.resizing_node) || Boolean(this.canvas.connecting_node);
       const deltaX2 = this.lastPagePoint ? pagePoint.x - this.lastPagePoint.x : 0;
       const deltaY = this.lastPagePoint ? pagePoint.y - this.lastPagePoint.y : 0;
       this.lastPagePoint = pagePoint;
@@ -12171,7 +12446,7 @@ var LiteGraphTSMigration = (function(exports) {
       this.stopEvent(event2);
     }
     finishNodeDrag(session) {
-      var _a3, _b2, _c2, _d2, _e2, _f, _g, _h2;
+      var _a3, _b2, _c2, _d2, _e2, _f, _g, _h2, _i2;
       for (let i2 = 0; i2 < session.dragNodes.length; ++i2) {
         const node2 = session.dragNodes[i2];
         node2.pos[0] = Math.round(node2.pos[0]);
@@ -12182,8 +12457,264 @@ var LiteGraphTSMigration = (function(exports) {
         this.emitNodeMoved(node2);
         (_d2 = (_c2 = this.canvas).onNodeMoved) == null ? void 0 : _d2.call(_c2, node2);
       }
-      (_f = (_e2 = this.graphRef).afterChange) == null ? void 0 : _f.call(_e2, this.dragTransactionNode || session.node);
-      (_h2 = (_g = this.graphRef).change) == null ? void 0 : _h2.call(_g);
+      (_e2 = session.host) == null ? void 0 : _e2.updateInteractionState({
+        dragging: false,
+        pressed: false,
+        resizing: false,
+        hovered: true,
+        hoveredPart: { kind: "body" },
+        pressedPart: null
+      });
+      (_g = (_f = this.graphRef).afterChange) == null ? void 0 : _g.call(_f, this.dragTransactionNode || session.node);
+      (_i2 = (_h2 = this.graphRef).change) == null ? void 0 : _i2.call(_h2);
+    }
+    finishNodeResize(session) {
+      var _a3, _b2, _c2, _d2, _e2, _f, _g, _h2, _i2;
+      session.host.endResize();
+      (_b2 = (_a3 = session.node).onResize) == null ? void 0 : _b2.call(_a3, session.node.size);
+      (_d2 = (_c2 = session.node).setDirtyCanvas) == null ? void 0 : _d2.call(_c2, true, true);
+      (_e2 = this.canvas.sceneSyncController) == null ? void 0 : _e2.repaintNodeHost(session.node.id);
+      (_g = (_f = this.graphRef).afterChange) == null ? void 0 : _g.call(_f, this.dragTransactionNode || session.node);
+      (_i2 = (_h2 = this.graphRef).change) == null ? void 0 : _i2.call(_h2);
+    }
+    finishModernPress(session, graphPoint, event2) {
+      var _a3, _b2, _c2, _d2, _e2, _f, _g, _h2, _i2, _j;
+      const releasePart = session.host.getInteractivePartAt(
+        graphPoint.x,
+        graphPoint.y
+      );
+      session.host.updateInteractionState({
+        hovered: true,
+        pressed: false,
+        hoveredPart: releasePart,
+        pressedPart: null
+      });
+      if (!sameModernPart(session.part, releasePart)) {
+        return;
+      }
+      if (session.part.kind === "collapse") {
+        (_b2 = (_a3 = this.graphRef).beforeChange) == null ? void 0 : _b2.call(_a3, session.node);
+        (_d2 = (_c2 = session.node).collapse) == null ? void 0 : _d2.call(_c2, false);
+        (_f = (_e2 = this.graphRef).afterChange) == null ? void 0 : _f.call(_e2, session.node);
+        (_h2 = (_g = this.graphRef).change) == null ? void 0 : _h2.call(_g);
+        (_i2 = this.canvas.sceneSyncController) == null ? void 0 : _i2.repaintNodeHost(session.node.id);
+        return;
+      }
+      if (session.part.kind === "widget") {
+        this.executeModernWidgetAction(
+          session.node,
+          session.host,
+          session.part,
+          event2
+        );
+        (_j = this.canvas.sceneSyncController) == null ? void 0 : _j.repaintNodeHost(session.node.id);
+      }
+    }
+    finishModernTap(session, graphPoint, event2) {
+      var _a3, _b2, _c2, _d2, _e2;
+      if (!session.host) {
+        return;
+      }
+      const releasePart = session.host.getInteractivePartAt(
+        graphPoint.x,
+        graphPoint.y
+      );
+      session.host.updateInteractionState({
+        hovered: true,
+        pressed: false,
+        hoveredPart: releasePart,
+        pressedPart: null,
+        dragging: false,
+        resizing: false
+      });
+      if (!releasePart || releasePart.kind !== "body" && releasePart.kind !== "header") {
+        return;
+      }
+      const now = Date.now();
+      const isDoubleTap = this.lastTapNodeId === session.node.id && sameModernPart(this.lastTapPart, releasePart) && now - this.lastTapAt < 320;
+      this.lastTapNodeId = session.node.id;
+      this.lastTapPart = releasePart;
+      this.lastTapAt = now;
+      if (!isDoubleTap) {
+        return;
+      }
+      const localPos = session.host.getLocalPoint(graphPoint.x, graphPoint.y);
+      (_b2 = (_a3 = session.node).onDblClick) == null ? void 0 : _b2.call(_a3, event2, localPos, this.canvas);
+      (_d2 = (_c2 = this.canvas).processNodeDblClicked) == null ? void 0 : _d2.call(_c2, session.node);
+      (_e2 = this.canvas.sceneSyncController) == null ? void 0 : _e2.repaintNodeHost(session.node.id);
+    }
+    executeModernWidgetAction(node2, host, part, event2) {
+      var _a3, _b2, _c2, _d2, _e2, _f;
+      const widgets = node2.widgets;
+      if (!Array.isArray(widgets) || part.index == null) {
+        return;
+      }
+      const widget = widgets[part.index];
+      if (!widget || widget.disabled) {
+        return;
+      }
+      const pagePoint = this.appHost.app.getPagePointByClient({
+        clientX: event2.clientX,
+        clientY: event2.clientY
+      });
+      const localPos = host.getLocalPoint(
+        toFiniteNumber$4(pagePoint.x),
+        toFiniteNumber$4(pagePoint.y)
+      );
+      const propertyName = (_a3 = widget.options) == null ? void 0 : _a3.property;
+      const applyValue = (nextValue) => {
+        var _a4, _b3, _c3, _d3;
+        const previousValue = widget.value;
+        widget.value = nextValue;
+        if (propertyName && ((_a4 = node2.properties) == null ? void 0 : _a4[propertyName]) !== void 0) {
+          (_b3 = node2.setProperty) == null ? void 0 : _b3.call(
+            node2,
+            propertyName,
+            nextValue
+          );
+        }
+        if (typeof widget.callback === "function") {
+          widget.callback(nextValue, this.canvas, node2, localPos, event2);
+        }
+        (_c3 = node2.onWidgetChanged) == null ? void 0 : _c3.call(node2, widget.name, nextValue, previousValue, widget);
+        if (node2.graph) {
+          node2.graph._version = toFiniteNumber$4(
+            node2.graph._version
+          ) + 1;
+        }
+        (_d3 = node2.setDirtyCanvas) == null ? void 0 : _d3.call(node2, true, true);
+      };
+      const openPropertyEditor = () => {
+        var _a4, _b3;
+        if (!propertyName) {
+          return;
+        }
+        (_b3 = (_a4 = this.canvas).showEditPropertyValue) == null ? void 0 : _b3.call(_a4, node2, propertyName, {
+          position: [event2.clientX, event2.clientY],
+          onclose: () => {
+            var _a5;
+            (_a5 = this.canvas.sceneSyncController) == null ? void 0 : _a5.repaintNodeHost(node2.id);
+          }
+        });
+      };
+      switch (widget.type) {
+        case "button":
+          if (typeof widget.callback === "function") {
+            setTimeout(() => {
+              widget.callback(widget, this.canvas, node2, localPos, event2);
+            }, 10);
+          }
+          widget.clicked = true;
+          (_b2 = node2.setDirtyCanvas) == null ? void 0 : _b2.call(node2, true, true);
+          return;
+        case "toggle":
+          applyValue(!widget.value);
+          return;
+        case "number": {
+          const step = toFiniteNumber$4((_c2 = widget.options) == null ? void 0 : _c2.step) || 1;
+          const min = (_d2 = widget.options) == null ? void 0 : _d2.min;
+          const max = (_e2 = widget.options) == null ? void 0 : _e2.max;
+          if (part.action === "decrement") {
+            let nextValue = toFiniteNumber$4(widget.value) - step;
+            if (min != null) {
+              nextValue = Math.max(toFiniteNumber$4(min), nextValue);
+            }
+            applyValue(nextValue);
+            return;
+          }
+          if (part.action === "increment") {
+            let nextValue = toFiniteNumber$4(widget.value) + step;
+            if (max != null) {
+              nextValue = Math.min(toFiniteNumber$4(max), nextValue);
+            }
+            applyValue(nextValue);
+            return;
+          }
+          openPropertyEditor();
+          return;
+        }
+        case "combo": {
+          let values = (_f = widget.options) == null ? void 0 : _f.values;
+          if (typeof values === "function") {
+            values = values(widget, node2);
+          }
+          if (!values) {
+            openPropertyEditor();
+            return;
+          }
+          const valuesList = Array.isArray(values) ? values : Object.keys(values);
+          if (!valuesList.length) {
+            return;
+          }
+          if (part.action === "increment" || part.action === "decrement") {
+            const currentIndex = Array.isArray(values) ? valuesList.indexOf(widget.value) : valuesList.indexOf(String(widget.value));
+            const delta2 = part.action === "increment" ? 1 : -1;
+            const nextIndex = Math.max(
+              0,
+              Math.min(valuesList.length - 1, currentIndex + delta2)
+            );
+            applyValue(
+              Array.isArray(values) ? valuesList[nextIndex] : nextIndex
+            );
+            return;
+          }
+          openPropertyEditor();
+          return;
+        }
+        case "text":
+        case "string":
+          openPropertyEditor();
+          return;
+        default:
+          if (propertyName) {
+            openPropertyEditor();
+          }
+      }
+    }
+    updateModernHover(host, part) {
+      var _a3, _b2;
+      if (this.hoveredModernHost && this.hoveredModernHost !== host) {
+        this.hoveredModernHost.updateInteractionState({
+          hovered: false,
+          pressed: false,
+          hoveredPart: null,
+          pressedPart: null,
+          dragging: false,
+          resizing: false
+        });
+      }
+      if (!host) {
+        this.hoveredModernHost = null;
+        this.hoveredModernPart = null;
+        return;
+      }
+      host.updateInteractionState({
+        hovered: true,
+        hoveredPart: part,
+        pressed: ((_a3 = this.session) == null ? void 0 : _a3.kind) === "modern-press" || ((_b2 = this.session) == null ? void 0 : _b2.kind) === "node-press"
+      });
+      this.hoveredModernHost = host;
+      this.hoveredModernPart = part;
+    }
+    resolveCursorForModernPart(part) {
+      if (!part) {
+        return "";
+      }
+      if (part.cursor) {
+        return part.cursor;
+      }
+      switch (part.kind) {
+        case "collapse":
+        case "widget":
+          return "pointer";
+        case "resize":
+          return "se-resize";
+        case "input-port":
+        case "output-port":
+          return "crosshair";
+        default:
+          return "";
+      }
     }
     emitNodeMoved(node2) {
       var _a3;
@@ -12257,6 +12788,26 @@ var LiteGraphTSMigration = (function(exports) {
           widgetHost
         );
       }
+      const draggedNode = this.canvas.node_dragged;
+      if (draggedNode) {
+        const draggedHost = this.toLegacyHost(
+          this.hitTestService.getHostForNode(draggedNode)
+        );
+        pushHost(
+          draggedNode.id,
+          draggedHost
+        );
+      }
+      const resizingNode = this.canvas.resizing_node;
+      if (resizingNode) {
+        const resizingHost = this.toLegacyHost(
+          this.hitTestService.getHostForNode(resizingNode)
+        );
+        pushHost(
+          resizingNode.id,
+          resizingHost
+        );
+      }
       return Array.from(targets.values());
     }
     toLegacyHost(host) {
@@ -12310,6 +12861,38 @@ var LiteGraphTSMigration = (function(exports) {
       const pos2 = rawPos;
       return [toFiniteNumber$4(pos2[0]), toFiniteNumber$4(pos2[1])];
     }
+    dispatchContextMenu(event2) {
+      var _a3, _b2, _c2, _d2, _e2, _f, _g;
+      const source = this.createPointerSource(event2);
+      const graphPoint = source.getInnerPoint();
+      const hit = this.hitTestService.hitNodeAt(graphPoint.x, graphPoint.y);
+      const node2 = (hit == null ? void 0 : hit.node) || null;
+      if (this.canvas.allow_interaction === false || this.canvas.read_only) {
+        return;
+      }
+      const refWindow = ((_b2 = (_a3 = this.canvas).getCanvasWindow) == null ? void 0 : _b2.call(_a3)) || ((_c2 = this.view.ownerDocument) == null ? void 0 : _c2.defaultView) || window;
+      const liteGraphHost = globalThis.LiteGraph;
+      (_d2 = liteGraphHost == null ? void 0 : liteGraphHost.closeAllContextMenus) == null ? void 0 : _d2.call(liteGraphHost, refWindow);
+      if (node2) {
+        const selectedNodes = this.canvas.selected_nodes || {};
+        if (Object.keys(selectedNodes).length && (selectedNodes[String(node2.id)] || event2.shiftKey || event2.ctrlKey || event2.metaKey)) {
+          if (!selectedNodes[String(node2.id)]) {
+            this.canvas.selectNodes([node2], true);
+          }
+        } else {
+          this.canvas.selectNodes([node2]);
+        }
+        (_e2 = this.canvas.sceneSyncController) == null ? void 0 : _e2.repaintAllNodeHosts();
+      }
+      const contextMenuEvent = createNativeContextMenuEvent({
+        event: source,
+        hostElement: this.appHost.view,
+        nativeEvent: event2,
+        targets: this.collectTargets(this.toLegacyHost((hit == null ? void 0 : hit.host) || null)),
+        dragging: false
+      });
+      (_g = (_f = this.canvas).processContextMenu) == null ? void 0 : _g.call(_f, node2, contextMenuEvent);
+    }
     attachDocumentTracking() {
       if (this.documentTrackingBound) {
         return;
@@ -12350,6 +12933,13 @@ var LiteGraphTSMigration = (function(exports) {
       }
       event2.preventDefault();
     }
+    stopPropagationOnly(event2, immediate = false) {
+      if (immediate) {
+        event2.stopImmediatePropagation();
+        return;
+      }
+      event2.stopPropagation();
+    }
     shouldHandleLegacyPointerDown(event2) {
       return event2.button === 0;
     }
@@ -12363,6 +12953,210 @@ var LiteGraphTSMigration = (function(exports) {
       return Boolean(event2.buttons & 1) && !(event2.buttons & -2);
     }
   }
+  function h(s2, i2) {
+    return un(s2, (t2) => _n({ set(e2) {
+      this.__setAttr(t2, e2), this.leaferIsReady ? i2 ? Lt$2.setStyleName(this, i2, e2) : Lt$2.set(this, e2) : this.__layout.stateStyleChanged = true;
+    } }));
+  }
+  function p(n2) {
+    return un(n2, (t2) => _n({ set(e2) {
+      this.__setAttr(t2, e2), this.__layout.stateStyleChanged = true;
+    } }));
+  }
+  function m(t2, e2) {
+    if (e2 && true !== e2) return e2;
+    if (!t2.button) {
+      let { parent: e3 } = t2;
+      for (let t3 = 0; t3 < 2; t3++) if (e3) {
+        if (e3.button) return e3;
+        e3 = e3.parent;
+      }
+    }
+    return null;
+  }
+  function b$1(t2, e2) {
+    d(e2) || (e2 = void 0), _$1(t2, e2, "in");
+  }
+  function v(t2, e2) {
+    const { normalStyle: n2 } = t2;
+    d(e2) || (e2 = void 0), n2 && (e2 || (e2 = n2), _$1(t2, e2, "out"));
+  }
+  const A$1 = {};
+  function _$1(t2, e2, i2) {
+    const { normalStyle: l2 } = t2;
+    e2 || (e2 = A$1), e2.scale && (I$2.assignScale(e2, e2.scale), delete e2.scale), e2 !== A$1 && Lt$2.canAnimate || (i2 = null);
+    let a2 = !!i2 && (function(t3, e3, n2) {
+      let s2 = "in" === t3 ? "transition" : "transitionOut";
+      "out" === t3 && r(n2[s2]) && r(e3[s2]) && (s2 = "transition");
+      return r(e3[s2]) ? n2[s2] : e3[s2];
+    })(i2, e2, t2);
+    const r$1 = a2 ? (function(t3, e3) {
+      const n2 = k$1(e3, t3), s2 = t3.animate();
+      s2 && k$1(n2, t3, s2.fromStyle);
+      return n2;
+    })(t2, e2) : void 0;
+    Lt$2.canAnimate && g(t2) && t2.killAnimate("transition"), l2 && t2.set(l2, "temp");
+    const c2 = g(t2);
+    if (c2) {
+      const { animation: n2 } = c2;
+      if (n2) {
+        const s2 = t2.animate(n2, void 0, "animation", true);
+        Object.assign(c2, s2.endingStyle), "in" !== i2 || e2.animation !== n2 ? s2.kill() : a2 = false, delete c2.animation;
+      }
+      t2.normalStyle = O$1(c2, t2), t2.set(c2, "temp");
+    } else t2.normalStyle = void 0;
+    if (a2) {
+      const e3 = O$1(r$1, t2);
+      t2.set(r$1, "temp"), t2.animate([r$1, e3], a2, "transition", true);
+    }
+    t2.__layout.stateStyleChanged = false;
+  }
+  function g(t2) {
+    let e2;
+    const s2 = {}, i2 = m(t2), o2 = i2 ? t2.state || i2.state : t2.state, l2 = o2 && t2.states[o2];
+    l2 && Lt$2.isState(o2, t2, i2) && (e2 = P$1(s2, l2));
+    const a2 = s2.selectedStyle || t2.selectedStyle;
+    a2 && Lt$2.isSelected(t2, i2) && (e2 = P$1(s2, a2));
+    const r2 = s2.placeholderStyle || t2.placeholderStyle;
+    if (r2 && Lt$2.isPlacehold(t2, i2) && (e2 = P$1(s2, r2)), Lt$2.isDisabled(t2, i2)) {
+      const n2 = s2.disabledStyle || t2.disabledStyle;
+      n2 && (e2 = P$1(s2, n2));
+    } else {
+      const o3 = s2.focusStyle || t2.focusStyle;
+      o3 && Lt$2.isFocus(t2, i2) && (e2 = P$1(s2, o3));
+      const l3 = s2.hoverStyle || t2.hoverStyle;
+      l3 && Lt$2.isHover(t2, i2) && (e2 = P$1(s2, l3));
+      const a3 = s2.pressStyle || t2.pressStyle;
+      a3 && Lt$2.isPress(t2, i2) && (e2 = P$1(s2, a3));
+    }
+    return e2 ? s2 : void 0;
+  }
+  function O$1(t2, e2, s2, i2) {
+    const o2 = s2 ? t2 : {}, l2 = s2 || t2;
+    for (let t3 in l2) i2 && Lt$2.animateExcludes[t3] || (o2[t3] = e2[t3]);
+    return o2;
+  }
+  function k$1(t2, e2, n2) {
+    return O$1(t2, e2, n2, true);
+  }
+  function P$1(t2, e2) {
+    return Object.assign(t2, e2), true;
+  }
+  function D$1(t2, e2) {
+    const n2 = t2[e2];
+    n2 && b$1(t2, n2), t2.button && j$1(t2.children, e2);
+  }
+  function E$1(t2, e2, n2) {
+    n2 || (n2 = t2.states[e2]), b$1(t2, n2), t2.button && j$1(t2.children, null, e2);
+  }
+  function j$1(t2, e2, s$1) {
+    if (!t2) return;
+    let i2, o2;
+    for (let a2 = 0, r2 = t2.length; a2 < r2; a2++) {
+      if (i2 = t2[a2], e2) {
+        switch (o2 = true, e2) {
+          case "hoverStyle":
+            Lt$2.isHover(i2) && (o2 = false);
+            break;
+          case "pressStyle":
+            Lt$2.isPress(i2) && (o2 = false);
+            break;
+          case "focusStyle":
+            Lt$2.isFocus(i2) && (o2 = false);
+        }
+        o2 && D$1(i2, e2);
+      } else s(s$1) || E$1(i2, s$1);
+      i2.isBranch && j$1(i2.children, e2, s$1);
+    }
+  }
+  function N$1(t2, e2) {
+    const n2 = t2[e2];
+    n2 && v(t2, n2), t2.button && C$1(t2.children, e2);
+  }
+  function x$1(t2, e2, n2) {
+    v(t2, n2), t2.button && C$1(t2.children, null, e2);
+  }
+  function C$1(t2, e2, n2) {
+    if (!t2) return;
+    let s$1;
+    for (let i2 = 0, o2 = t2.length; i2 < o2; i2++) s$1 = t2[i2], e2 ? N$1(s$1, e2) : s(n2) || x$1(s$1, n2), s$1.isBranch && C$1(s$1.children, e2, n2);
+  }
+  function F$1(t2, e2, n2) {
+    let s2;
+    const i2 = e2.leafer ? e2.leafer.interaction : null;
+    if (i2 && (s2 = i2[t2](e2), !s2 && n2)) {
+      const o2 = m(e2, n2);
+      o2 && (s2 = i2[t2](o2));
+    }
+    return s2;
+  }
+  function H$1(t2, e2, n2) {
+    let s2 = e2[t2];
+    if (!s2 && n2) {
+      const i2 = m(e2, n2);
+      i2 && (s2 = i2[t2]);
+    }
+    return s2;
+  }
+  he$2.add("state"), Lt$2.animateExcludes = { animation: 1, animationOut: 1, transition: 1, transitionOut: 1, states: 1, state: 1, placeholder: 1, normalStyle: 1, hoverStyle: 1, pressStyle: 1, focusStyle: 1, selectedStyle: 1, disabledStyle: 1, placeholderStyle: 1 }, Lt$2.isState = function(t2, e2, n2) {
+    return (function(t3, e3, n3) {
+      let s2 = e3.states[t3];
+      if (!s2 && n3) {
+        const i2 = m(e3, n3);
+        i2 && (s2 = i2.states[t3]);
+      }
+      return !!s2;
+    })(t2, e2, n2);
+  }, Lt$2.isSelected = function(t2, e2) {
+    return H$1("selected", t2, e2);
+  }, Lt$2.isDisabled = function(t2, e2) {
+    return H$1("disabled", t2, e2);
+  }, Lt$2.isFocus = function(t2, e2) {
+    return F$1("isFocus", t2, e2);
+  }, Lt$2.isHover = function(t2, e2) {
+    return F$1("isHover", t2, e2);
+  }, Lt$2.isPress = function(t2, e2) {
+    return F$1("isPress", t2, e2);
+  }, Lt$2.isPlacehold = function(t2, e2) {
+    return t2.__.__isPlacehold;
+  }, Lt$2.isDrag = function(t2, e2) {
+    return F$1("isDrag", t2, e2);
+  }, Lt$2.setStyleName = function(t2, e2, n2) {
+    n2 ? E$1(t2, e2, t2[e2]) : x$1(t2, e2, t2[e2]);
+  }, Lt$2.set = function(t2, e2) {
+    const n2 = t2.states[e2];
+    n2 ? E$1(t2, e2, n2) : x$1(t2, e2, n2);
+  }, Lt$2.getStyle = g, Lt$2.updateStyle = _$1, Lt$2.updateEventStyle = function(t2, e2) {
+    switch (e2) {
+      case it$1.ENTER:
+        D$1(t2, "hoverStyle");
+        break;
+      case it$1.LEAVE:
+        N$1(t2, "hoverStyle");
+        break;
+      case it$1.DOWN:
+        D$1(t2, "pressStyle");
+        break;
+      case it$1.UP:
+        N$1(t2, "pressStyle");
+    }
+  };
+  const w$1 = ge$1.prototype;
+  ge$1.addAttr("selected", false, h, "selectedStyle"), ge$1.addAttr("disabled", false, h, "disabledStyle"), ge$1.addAttr("states", {}, p), ge$1.addAttr("state", "", h), ge$1.addAttr("normalStyle", void 0, fn), ge$1.addAttr("hoverStyle", void 0, p), ge$1.addAttr("pressStyle", void 0, p), ge$1.addAttr("focusStyle", void 0, p), ge$1.addAttr("selectedStyle", void 0, p), ge$1.addAttr("disabledStyle", void 0, p), ge$1.addAttr("placeholderStyle", void 0, p), ge$1.addAttr("button", false, fn), w$1.set = function(t2, e2) {
+    t2 && (e2 ? "temp" === e2 ? (this.lockNormalStyle = true, Object.assign(this, t2), this.lockNormalStyle = false) : this.animate(t2, e2) : Object.assign(this, t2));
+  }, w$1.focus = function(t2 = true) {
+    this.waitLeafer(() => {
+      let { focusData: e2 } = this.app.interaction;
+      t2 ? (e2 && e2.focus(false), e2 = this) : e2 = null, this.app.interaction.focusData = e2, t2 ? D$1(this, "focusStyle") : N$1(this, "focusStyle");
+    });
+  }, w$1.updateState = function() {
+    Lt$2.updateStyle(this, void 0, "in");
+  };
+  const B$1 = hi$1.prototype, L$1 = "text";
+  ln(B$1, L$1, Object.assign(Object.assign({}, dn(B$1, L$1)), { set(t2) {
+    const e2 = this, n2 = e2.text;
+    e2.__setAttr(L$1, t2) && (vn(e2), e2.placeholderStyle && e2.placeholder && ("" === n2 || "" === t2) && (e2.__layout.stateStyleChanged = true));
+  } }));
   function createLayerGroup(name, hittable = false) {
     return new ye$1({
       name,
@@ -12371,16 +13165,14 @@ var LiteGraphTSMigration = (function(exports) {
   }
   function createLeaferLayerRegistry(app) {
     const groundRoot = createLayerGroup("litegraph-ground-root");
-    const treeRoot = createLayerGroup("litegraph-tree-root");
+    const treeRoot = createLayerGroup("litegraph-tree-root", true);
     const linkLayerBack = createLayerGroup("litegraph-link-layer-back");
-    const legacyNodeLayer = createLayerGroup("litegraph-legacy-node-layer");
-    const modernNodeLayer = createLayerGroup("litegraph-modern-node-layer");
+    const legacyNodeLayer = createLayerGroup("litegraph-legacy-node-layer", true);
+    const modernNodeLayer = createLayerGroup("litegraph-modern-node-layer", true);
     const linkLayerFront = createLayerGroup("litegraph-link-layer-front");
     const skyRoot = createLayerGroup("litegraph-sky-root");
     const overlayWorld = createLayerGroup("litegraph-overlay-world");
     const overlayScreen = createLayerGroup("litegraph-overlay-screen");
-    treeRoot.hittable = true;
-    legacyNodeLayer.hittable = true;
     app.ground.add(groundRoot);
     app.tree.zoomLayer.add(treeRoot);
     treeRoot.add([
@@ -12413,7 +13205,7 @@ var LiteGraphTSMigration = (function(exports) {
       var _a3;
       this.view = view;
       this.prepareView();
-      this.app = new N$1({
+      this.app = new N$2({
         view: this.view,
         fill: (_a3 = options.fill) != null ? _a3 : "transparent",
         pixelSnap: true,
@@ -12855,6 +13647,7 @@ var LiteGraphTSMigration = (function(exports) {
       context.bezierCurveTo(c1[0], c1[1], c2[0], c2[1], end[0], end[1]);
     }
   }
+  const MODERN_STATE_KEY = "__litegraphModernState";
   function toFiniteNumber$2(value, fallback = 0) {
     const numericValue = Number(value);
     return Number.isFinite(numericValue) ? numericValue : fallback;
@@ -12869,6 +13662,27 @@ var LiteGraphTSMigration = (function(exports) {
       return [toFiniteNumber$2(point.x), toFiniteNumber$2(point.y)];
     }
     return null;
+  }
+  function pointInsideRect(point, rect) {
+    if (!rect) {
+      return false;
+    }
+    return point[0] >= rect.x && point[0] <= rect.x + rect.width && point[1] >= rect.y && point[1] <= rect.y + rect.height;
+  }
+  function clonePartHit(hit) {
+    if (!hit) {
+      return null;
+    }
+    return {
+      kind: hit.kind,
+      index: hit.index,
+      action: hit.action,
+      cursor: hit.cursor,
+      bounds: hit.bounds || null
+    };
+  }
+  function samePart(left, right) {
+    return (left == null ? void 0 : left.kind) === (right == null ? void 0 : right.kind) && (left == null ? void 0 : left.index) === (right == null ? void 0 : right.index) && (left == null ? void 0 : left.action) === (right == null ? void 0 : right.action);
   }
   function createFallbackContent(node2) {
     var _a3, _b2;
@@ -12915,6 +13729,15 @@ var LiteGraphTSMigration = (function(exports) {
     constructor(node2) {
       this.runtime = "modern";
       this.content = null;
+      this.interactionState = {
+        hovered: false,
+        pressed: false,
+        dragging: false,
+        resizing: false,
+        hoveredPart: null,
+        pressedPart: null
+      };
+      this.resizeAnchor = null;
       this.node = node2;
       this.root = new ye$1({
         name: `litegraph-modern-node:${String(node2.id)}`,
@@ -12933,7 +13756,9 @@ var LiteGraphTSMigration = (function(exports) {
         this.content = toUI(built, this.node);
         this.root.add(this.content);
       }
+      this.root.selected = Boolean(this.node.is_selected);
       (_d2 = (_c2 = this.node).updateUI) == null ? void 0 : _d2.call(_c2, this.createContext());
+      this.applyInteractionState();
       this.syncPosition();
     }
     syncPosition() {
@@ -12943,6 +13768,144 @@ var LiteGraphTSMigration = (function(exports) {
     }
     destroy() {
       this.root.destroy();
+    }
+    getInteractionState() {
+      return this.interactionState;
+    }
+    updateInteractionState(patch) {
+      var _a3, _b2, _c2, _d2, _e2, _f, _g, _h2;
+      const nextHoveredPart = patch.hoveredPart === void 0 ? this.interactionState.hoveredPart : clonePartHit(patch.hoveredPart);
+      const nextPressedPart = patch.pressedPart === void 0 ? this.interactionState.pressedPart : clonePartHit(patch.pressedPart);
+      const changed = ((_a3 = patch.hovered) != null ? _a3 : this.interactionState.hovered) !== this.interactionState.hovered || ((_b2 = patch.pressed) != null ? _b2 : this.interactionState.pressed) !== this.interactionState.pressed || ((_c2 = patch.dragging) != null ? _c2 : this.interactionState.dragging) !== this.interactionState.dragging || ((_d2 = patch.resizing) != null ? _d2 : this.interactionState.resizing) !== this.interactionState.resizing || !samePart(nextHoveredPart, this.interactionState.hoveredPart) || !samePart(nextPressedPart, this.interactionState.pressedPart);
+      if (!changed) {
+        return;
+      }
+      this.interactionState.hovered = (_e2 = patch.hovered) != null ? _e2 : this.interactionState.hovered;
+      this.interactionState.pressed = (_f = patch.pressed) != null ? _f : this.interactionState.pressed;
+      this.interactionState.dragging = (_g = patch.dragging) != null ? _g : this.interactionState.dragging;
+      this.interactionState.resizing = (_h2 = patch.resizing) != null ? _h2 : this.interactionState.resizing;
+      this.interactionState.hoveredPart = nextHoveredPart;
+      this.interactionState.pressedPart = nextPressedPart;
+      this.applyInteractionState();
+    }
+    clearPointerState() {
+      this.updateInteractionState({
+        hovered: false,
+        pressed: false,
+        dragging: false,
+        resizing: false,
+        hoveredPart: null,
+        pressedPart: null
+      });
+    }
+    getInteractivePartAt(worldX, worldY) {
+      var _a3;
+      const localPoint = this.getLocalPoint(worldX, worldY);
+      const layout = (_a3 = this.getShellState()) == null ? void 0 : _a3.layout;
+      if (!layout) {
+        return this.hitFallbackPart(localPoint);
+      }
+      if (pointInsideRect(localPoint, layout.resize)) {
+        return {
+          kind: "resize",
+          cursor: "se-resize",
+          bounds: layout.resize || null
+        };
+      }
+      if (pointInsideRect(localPoint, layout.collapse)) {
+        return {
+          kind: "collapse",
+          cursor: "pointer",
+          bounds: layout.collapse || null
+        };
+      }
+      const widgetHit = this.hitWidgetPart(localPoint, layout.widgets);
+      if (widgetHit) {
+        return widgetHit;
+      }
+      const inputPortHit = this.hitPortPart(
+        localPoint,
+        "input-port",
+        layout.inputPorts
+      );
+      if (inputPortHit) {
+        return inputPortHit;
+      }
+      const outputPortHit = this.hitPortPart(
+        localPoint,
+        "output-port",
+        layout.outputPorts
+      );
+      if (outputPortHit) {
+        return outputPortHit;
+      }
+      if (pointInsideRect(localPoint, layout.header)) {
+        return {
+          kind: "header",
+          bounds: layout.header || null
+        };
+      }
+      if (pointInsideRect(localPoint, layout.body)) {
+        return {
+          kind: "body",
+          bounds: layout.body || null
+        };
+      }
+      return this.hitFallbackPart(localPoint);
+    }
+    beginResize(worldX, worldY) {
+      var _a3, _b2;
+      this.resizeAnchor = {
+        startWorldX: worldX,
+        startWorldY: worldY,
+        startWidth: Math.max(toFiniteNumber$2((_a3 = this.node.size) == null ? void 0 : _a3[0], 160), 80),
+        startHeight: Math.max(toFiniteNumber$2((_b2 = this.node.size) == null ? void 0 : _b2[1], 80), 60)
+      };
+      this.updateInteractionState({
+        resizing: true,
+        dragging: false,
+        pressed: true
+      });
+    }
+    updateResize(worldX, worldY) {
+      var _a3, _b2;
+      if (!this.resizeAnchor) {
+        return false;
+      }
+      const nextWidth = Math.max(
+        120,
+        Math.round(
+          this.resizeAnchor.startWidth + (worldX - this.resizeAnchor.startWorldX)
+        )
+      );
+      const nextHeight = Math.max(
+        60,
+        Math.round(
+          this.resizeAnchor.startHeight + (worldY - this.resizeAnchor.startWorldY)
+        )
+      );
+      if (nextWidth === toFiniteNumber$2((_a3 = this.node.size) == null ? void 0 : _a3[0]) && nextHeight === toFiniteNumber$2((_b2 = this.node.size) == null ? void 0 : _b2[1])) {
+        return false;
+      }
+      this.node.size[0] = nextWidth;
+      this.node.size[1] = nextHeight;
+      this.repaint();
+      return true;
+    }
+    endResize() {
+      this.resizeAnchor = null;
+      this.updateInteractionState({
+        resizing: false,
+        pressed: false,
+        pressedPart: null
+      });
+    }
+    getLocalPoint(worldX, worldY) {
+      const point = this.root.getInnerPoint({
+        x: worldX,
+        y: worldY
+      });
+      return [toFiniteNumber$2(point.x), toFiniteNumber$2(point.y)];
     }
     getPortAnchor(kind, slotIndex) {
       var _a3, _b2, _c2, _d2;
@@ -13014,6 +13977,7 @@ var LiteGraphTSMigration = (function(exports) {
         host: this,
         root: this.root,
         content: this.content,
+        interactionState: this.interactionState,
         leafer
       };
     }
@@ -13024,6 +13988,86 @@ var LiteGraphTSMigration = (function(exports) {
     resolvePortLayout(kind, slotIndex) {
       var _a3, _b2;
       return ((_b2 = (_a3 = this.node).getPortLayout) == null ? void 0 : _b2.call(_a3, kind, slotIndex, this.createContext())) || null;
+    }
+    getShellState() {
+      if (!this.content || typeof this.content !== "object") {
+        return null;
+      }
+      return this.content[MODERN_STATE_KEY] || null;
+    }
+    applyInteractionState() {
+      var _a3, _b2;
+      this.root.selected = Boolean(
+        this.node.is_selected
+      );
+      (_b2 = (_a3 = this.getShellState()) == null ? void 0 : _a3.applyInteractionState) == null ? void 0 : _b2.call(_a3, this.interactionState);
+    }
+    hitWidgetPart(point, widgets) {
+      if (!(widgets == null ? void 0 : widgets.length)) {
+        return null;
+      }
+      for (let i2 = 0; i2 < widgets.length; ++i2) {
+        const widget = widgets[i2];
+        if (widget.actionZones) {
+          const zoneEntries = Object.entries(widget.actionZones);
+          for (let zoneIndex = 0; zoneIndex < zoneEntries.length; ++zoneIndex) {
+            const [action, rect] = zoneEntries[zoneIndex];
+            if (pointInsideRect(point, rect)) {
+              return {
+                kind: "widget",
+                index: widget.index,
+                action,
+                cursor: "pointer",
+                bounds: rect
+              };
+            }
+          }
+        }
+        if (pointInsideRect(point, widget)) {
+          return {
+            kind: "widget",
+            index: widget.index,
+            action: widget.action || "activate",
+            cursor: "pointer",
+            bounds: widget
+          };
+        }
+      }
+      return null;
+    }
+    hitPortPart(point, kind, ports) {
+      if (!(ports == null ? void 0 : ports.length)) {
+        return null;
+      }
+      for (let i2 = 0; i2 < ports.length; ++i2) {
+        const port = ports[i2];
+        if (pointInsideRect(point, port)) {
+          return {
+            kind,
+            index: port.index,
+            cursor: "crosshair",
+            bounds: port
+          };
+        }
+      }
+      return null;
+    }
+    hitFallbackPart(point) {
+      var _a3, _b2;
+      const width2 = Math.max(toFiniteNumber$2((_a3 = this.node.size) == null ? void 0 : _a3[0], 120), 120);
+      const height = Math.max(toFiniteNumber$2((_b2 = this.node.size) == null ? void 0 : _b2[1], 60), 60);
+      if (point[0] < 0 || point[1] < 0 || point[0] > width2 || point[1] > height) {
+        return null;
+      }
+      return {
+        kind: point[1] <= 32 ? "header" : "body",
+        bounds: {
+          x: 0,
+          y: 0,
+          width: width2,
+          height
+        }
+      };
     }
   }
   function discriminateNodeRuntime(node2) {
@@ -13562,7 +14606,7 @@ var LiteGraphTSMigration = (function(exports) {
   }
   function M(t2, e2) {
     const a2 = { wheel: { preventDefault: true }, touch: { preventDefault: true }, pointer: { preventDefaultMenu: true } };
-    e2 && _$1.assign(a2, e2), _$1.assign(t2.config, a2, t2.userConfig);
+    e2 && _$2.assign(a2, e2), _$2.assign(t2.config, a2, t2.userConfig);
   }
   const b = ee$2.get("LeaferTypeCreator"), T = { list: {}, register(t2, e2) {
     x[t2] && b.repeat(t2), x[t2] = e2;
@@ -16272,7 +17316,7 @@ var LiteGraphTSMigration = (function(exports) {
       return false;
     }
     processLeaferLegacyMouseDown(e2) {
-      var _a3, _b2;
+      var _a3, _b2, _c2, _d2, _e2, _f, _g, _h2, _i2, _j, _k, _l, _m;
       if (this.set_canvas_dirty_on_mouse_event) {
         this.dirty_canvas = true;
       }
@@ -16281,7 +17325,10 @@ var LiteGraphTSMigration = (function(exports) {
         return;
       }
       const LiteGraph2 = this.getLiteGraphHost();
+      const ref_window2 = this.getCanvasWindow();
       LGraphCanvasInput.active_canvas = this;
+      const now = LiteGraph2.getTime();
+      const is_double_click = e2.isPrimary && now - this.last_mouseclick < 300;
       this.mouse[0] = e2.clientX;
       this.mouse[1] = e2.clientY;
       this.last_mouse[0] = e2.clientX;
@@ -16289,35 +17336,106 @@ var LiteGraphTSMigration = (function(exports) {
       this.graph_mouse[0] = e2.canvasX;
       this.graph_mouse[1] = e2.canvasY;
       this.last_click_position = [this.mouse[0], this.mouse[1]];
-      this.pointer_is_double = e2.isPrimary && LiteGraph2.getTime() - this.last_mouseclick < 300;
+      this.pointer_is_double = is_double_click;
       this.pointer_is_down = true;
-      this.last_mouseclick = LiteGraph2.getTime();
+      this.last_mouseclick = now;
       this.last_mouse_dragging = true;
       (_b2 = (_a3 = this.canvas) == null ? void 0 : _a3.focus) == null ? void 0 : _b2.call(_a3);
+      LiteGraph2.closeAllContextMenus(ref_window2);
       const node2 = graph.getNodeOnPos(e2.canvasX, e2.canvasY, void 0, 5);
       this.updateLeaferNodeHover(node2, e2);
+      if (e2.which === 3 || e2.button === 2) {
+        if (this.allow_interaction && !this.read_only) {
+          if (node2) {
+            const selected_nodes = this.selectedNodesRef();
+            if (Object.keys(selected_nodes).length && (selected_nodes[String(node2.id)] || e2.shiftKey || e2.ctrlKey || e2.metaKey)) {
+              if (!selected_nodes[String(node2.id)]) {
+                this.selectNodes([node2], true);
+              }
+            } else {
+              this.selectNodes([node2]);
+            }
+            (_c2 = this.sceneSyncController) == null ? void 0 : _c2.repaintAllNodeHosts();
+            this.repaintLeaferNodeHost(node2);
+          }
+          const hostElement = ((_d2 = this.leaferAppHost) == null ? void 0 : _d2.view) || this.canvas;
+          if (hostElement) {
+            this.processContextMenu(
+              node2,
+              createNativeContextMenuEvent({
+                event: e2,
+                hostElement
+              })
+            );
+          } else {
+            this.processContextMenu(node2, e2);
+          }
+        }
+        this.pointer_is_down = false;
+        this.pointer_is_double = false;
+        graph.change();
+        e2.stopPropagation();
+        return false;
+      }
       if (!node2) {
         graph.change();
         return false;
       }
-      const widget = this.callProcessNodeWidgets(
-        node2,
-        this.graph_mouse,
-        e2
-      );
-      if (widget) {
-        this.node_widget = [node2, widget];
-        this.repaintLeaferNodeHost(node2);
-      } else {
-        this.node_widget = null;
+      let block_drag_node;
+      if ((this.allow_interaction || ((_e2 = node2.flags) == null ? void 0 : _e2.allow_interaction)) && !this.read_only) {
+        if (!this.live_mode && !((_f = node2.flags) == null ? void 0 : _f.pinned)) {
+          this.bringToFront(node2);
+        }
+        if (this.allow_interaction && !((_g = node2.flags) == null ? void 0 : _g.collapsed) && !this.live_mode && node2.resizable !== false && this.isLeaferNodeResizeHandleHit(node2, e2.canvasX, e2.canvasY)) {
+          (_h2 = graph.beforeChange) == null ? void 0 : _h2.call(graph);
+          this.resizing_node = node2;
+          if (this.canvas) {
+            this.canvas.style.cursor = "se-resize";
+          }
+          block_drag_node = true;
+        } else {
+          const pos2 = this.getLeaferLocalPos(e2, node2);
+          const widget = this.callProcessNodeWidgets(
+            node2,
+            this.graph_mouse,
+            e2
+          );
+          if (widget) {
+            block_drag_node = true;
+            this.node_widget = [node2, widget];
+          } else {
+            this.node_widget = null;
+          }
+          const selected_nodes = this.selectedNodesRef();
+          if (this.allow_interaction && is_double_click && selected_nodes[String(node2.id)]) {
+            (_i2 = node2.onDblClick) == null ? void 0 : _i2.call(node2, e2, pos2, this);
+            this.processNodeDblClicked(node2);
+            block_drag_node = true;
+          }
+          if ((_j = node2.onMouseDown) == null ? void 0 : _j.call(node2, e2, pos2, this)) {
+            block_drag_node = true;
+          } else if (node2.subgraph && !node2.skip_subgraph_button) {
+            if (!((_k = node2.flags) == null ? void 0 : _k.collapsed) && pos2[0] > node2.size[0] - LiteGraph2.NODE_TITLE_HEIGHT && pos2[1] < 0) {
+              setTimeout(() => {
+                this.openSubgraph(node2.subgraph);
+              }, 10);
+            }
+          }
+          if (this.live_mode) {
+            block_drag_node = true;
+          }
+          if (!block_drag_node) {
+            if (this.allow_dragnodes) {
+              (_l = graph.beforeChange) == null ? void 0 : _l.call(graph);
+              this.node_dragged = node2;
+            }
+            this.processNodeSelected(node2, e2);
+          } else if (!node2.is_selected) {
+            this.processNodeSelected(node2, e2);
+          }
+        }
       }
-      if (!node2.is_selected) {
-        this.processNodeSelected(node2, e2);
-      }
-      const pos2 = this.getLeaferLocalPos(e2, node2);
-      if (node2.onMouseDown) {
-        node2.onMouseDown(e2, pos2, this);
-      }
+      (_m = this.sceneSyncController) == null ? void 0 : _m.repaintAllNodeHosts();
       this.repaintLeaferNodeHost(node2);
       graph.change();
       e2.stopPropagation();
@@ -16331,6 +17449,10 @@ var LiteGraphTSMigration = (function(exports) {
       if (!graph) {
         return;
       }
+      const delta2 = [
+        e2.canvasX - this.graph_mouse[0],
+        e2.canvasY - this.graph_mouse[1]
+      ];
       LGraphCanvasInput.active_canvas = this;
       this.mouse[0] = e2.clientX;
       this.mouse[1] = e2.clientY;
@@ -16353,6 +17475,15 @@ var LiteGraphTSMigration = (function(exports) {
       }
       const node2 = graph.getNodeOnPos(e2.canvasX, e2.canvasY, void 0, 5);
       this.updateLeaferNodeHover(node2, e2);
+      if (this.canvas) {
+        if (node2 && this.isLeaferNodeResizeHandleHit(node2, e2.canvasX, e2.canvasY)) {
+          this.canvas.style.cursor = "se-resize";
+        } else if (node2) {
+          this.canvas.style.cursor = "crosshair";
+        } else {
+          this.canvas.style.cursor = "";
+        }
+      }
       if (node2 == null ? void 0 : node2.onMouseMove) {
         node2.onMouseMove(e2, this.getLeaferLocalPos(e2, node2), this);
         this.repaintLeaferNodeHost(node2);
@@ -16367,15 +17498,50 @@ var LiteGraphTSMigration = (function(exports) {
         }
         this.repaintLeaferNodeHost(this.node_capturing_input);
       }
+      if (this.node_dragged && !this.live_mode) {
+        const selected_nodes = this.selectedNodesRef();
+        for (const key in selected_nodes) {
+          const draggedNode = selected_nodes[key];
+          draggedNode.pos[0] += delta2[0];
+          draggedNode.pos[1] += delta2[1];
+          if (!draggedNode.is_selected) {
+            this.processNodeSelected(
+              draggedNode,
+              e2
+            );
+          }
+          this.repaintLeaferNodeHost(draggedNode);
+          this.emitLeaferNodeMoved(draggedNode);
+        }
+        this.dirty_canvas = true;
+        this.dirty_bgcanvas = true;
+      }
+      if (this.resizing_node && !this.live_mode) {
+        const desired_size = [
+          e2.canvasX - this.resizing_node.pos[0],
+          e2.canvasY - this.resizing_node.pos[1]
+        ];
+        const min_size = this.resizing_node.computeSize();
+        desired_size[0] = Math.max(min_size[0], desired_size[0]);
+        desired_size[1] = Math.max(min_size[1], desired_size[1]);
+        this.resizing_node.setSize(desired_size);
+        if (this.canvas) {
+          this.canvas.style.cursor = "se-resize";
+        }
+        this.dirty_canvas = true;
+        this.dirty_bgcanvas = true;
+        this.emitLeaferNodeDirty(this.resizing_node, true);
+      }
       e2.stopPropagation();
       return false;
     }
     processLeaferLegacyMouseUp(e2) {
-      var _a3;
+      var _a3, _b2, _c2, _d2, _e2, _f;
       const graph = this.graphRef();
       if (!graph) {
         return;
       }
+      const LiteGraph2 = this.getLiteGraphHost();
       this.mouse[0] = e2.clientX;
       this.mouse[1] = e2.clientY;
       this.graph_mouse[0] = e2.canvasX;
@@ -16397,7 +17563,37 @@ var LiteGraphTSMigration = (function(exports) {
       this.node_widget = null;
       const node2 = graph.getNodeOnPos(e2.canvasX, e2.canvasY, void 0, 5);
       this.updateLeaferNodeHover(node2, e2);
-      if ((_a3 = this.node_over) == null ? void 0 : _a3.onMouseUp) {
+      if (this.resizing_node) {
+        this.dirty_canvas = true;
+        this.dirty_bgcanvas = true;
+        (_a3 = graph.afterChange) == null ? void 0 : _a3.call(graph, this.resizing_node);
+        this.emitLeaferNodeDirty(this.resizing_node, true);
+        this.resizing_node = null;
+      } else if (this.node_dragged) {
+        const node_dragged = this.node_dragged;
+        if (node_dragged && e2.click_time < 300 && isInsideRectangle$1(
+          e2.canvasX,
+          e2.canvasY,
+          node_dragged.pos[0],
+          node_dragged.pos[1] - LiteGraph2.NODE_TITLE_HEIGHT,
+          LiteGraph2.NODE_TITLE_HEIGHT,
+          LiteGraph2.NODE_TITLE_HEIGHT
+        )) {
+          node_dragged.collapse();
+        }
+        this.dirty_canvas = true;
+        this.dirty_bgcanvas = true;
+        node_dragged.pos[0] = Math.round(node_dragged.pos[0]);
+        node_dragged.pos[1] = Math.round(node_dragged.pos[1]);
+        if (((_b2 = graph.config) == null ? void 0 : _b2.align_to_grid) || this.align_to_grid) {
+          (_c2 = node_dragged.alignToGrid) == null ? void 0 : _c2.call(node_dragged);
+        }
+        (_d2 = this.onNodeMoved) == null ? void 0 : _d2.call(this, node_dragged);
+        (_e2 = graph.afterChange) == null ? void 0 : _e2.call(graph, node_dragged);
+        this.repaintLeaferNodeHost(node_dragged);
+        this.emitLeaferNodeMoved(node_dragged);
+        this.node_dragged = null;
+      } else if ((_f = this.node_over) == null ? void 0 : _f.onMouseUp) {
         this.node_over.onMouseUp(
           e2,
           this.getLeaferLocalPos(e2, this.node_over),
@@ -16422,6 +17618,41 @@ var LiteGraphTSMigration = (function(exports) {
       const fallback = [e2.canvasX - node2.pos[0], e2.canvasY - node2.pos[1]];
       const localPos = getLegacyLocalPos(e2, node2.id, fallback);
       return [localPos[0], localPos[1]];
+    }
+    emitLeaferNodeMoved(node2) {
+      if (!node2 || this.renderRuntime !== "leafer" || !this.graphMutationBus) {
+        return;
+      }
+      this.graphMutationBus.emit("node:moved", {
+        graph: this.graphRef(),
+        nodeId: node2.id,
+        node: node2
+      });
+    }
+    emitLeaferNodeDirty(node2, dirtyBackground = false) {
+      if (!node2 || this.renderRuntime !== "leafer" || !this.graphMutationBus) {
+        return;
+      }
+      this.graphMutationBus.emit("node:dirty", {
+        graph: this.graphRef(),
+        nodeId: node2.id,
+        node: node2,
+        dirtyForeground: true,
+        dirtyBackground
+      });
+    }
+    isLeaferNodeResizeHandleHit(node2, canvasX, canvasY) {
+      if (node2.resizable === false) {
+        return false;
+      }
+      return isInsideRectangle$1(
+        canvasX,
+        canvasY,
+        node2.pos[0] + node2.size[0] - 5,
+        node2.pos[1] + node2.size[1] - 5,
+        10,
+        10
+      );
     }
     repaintLeaferNodeHost(node2) {
       var _a3, _b2;

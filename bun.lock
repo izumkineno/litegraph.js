@@ -4,6 +4,7 @@
     "": {
       "name": "litegraph.js",
       "dependencies": {
+        "@leafer-in/state": "2.0.2",
         "@leafer-in/viewport": "2.0.2",
         "leafer-ui": "2.0.2",
       },
@@ -225,6 +226,8 @@
     "@jridgewell/trace-mapping": ["@jridgewell/trace-mapping@0.3.31", "", { "dependencies": { "@jridgewell/resolve-uri": "^3.1.0", "@jridgewell/sourcemap-codec": "^1.4.14" } }, "sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw=="],
 
     "@leafer-in/interface": ["@leafer-in/interface@2.0.2", "", { "peerDependencies": { "@leafer-ui/interface": "^2.0.2", "@leafer/interface": "^2.0.2" } }, "sha512-EhzBP0WQkfNkJfug9TNBfqPVW6OQ6CreGWRVSAXq1d6vsR/hbHDs7DfgbI31DwWkqz7wlm1n/KpwBIUjMc5q1A=="],
+
+    "@leafer-in/state": ["@leafer-in/state@2.0.2", "", { "peerDependencies": { "@leafer-in/interface": "^2.0.2", "@leafer-ui/core": "^2.0.2", "@leafer-ui/interface": "^2.0.2" } }, "sha512-cW5u2lCGgYsproVjjK68ta8UMlthsGoSjx1uiAguP5yitdzoQRFVYASF0TcAeTLwEHov3TTZ4ieV9diiX+Ozgg=="],
 
     "@leafer-in/viewport": ["@leafer-in/viewport@2.0.2", "", { "peerDependencies": { "@leafer-in/interface": "^2.0.2", "@leafer-ui/core": "^2.0.2", "@leafer-ui/interface": "^2.0.2" } }, "sha512-HC6GClkuS9gqkOTL83ZvBEX7w4173ZQwxwp2/NqsQcJE1Pxk8qC/ro8h0rsTOJ2ab2LmGPX4rlf6bv3aPVwF8A=="],
 

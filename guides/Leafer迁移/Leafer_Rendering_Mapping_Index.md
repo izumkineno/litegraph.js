@@ -55,12 +55,12 @@
 
 - 已存在：`leafer-ui@2.0.2`
 - 已存在：`@leafer-in/viewport@2.0.2`
-- 当前缺失：`@leafer-in/state`
+- 已存在：`@leafer-in/state@2.0.2`
 
 结论：
 
 - 第一批视口迁移可以直接优先使用 `@leafer-in/viewport`
-- 交互状态样式若要走官方方案，需要先补装 `@leafer-in/state`
+- 交互状态样式已经具备走官方 `@leafer-in/state` 的条件
 
 ---
 
@@ -281,6 +281,12 @@ App(view = graphHost)
   - 用于屏幕坐标元素
   - 例如：HUD、提示层、固定面板锚点
 
+当前实现说明：
+
+- `overlayWorld` 已用于世界空间交互图元，例如连线预览、框选框等。
+- `overlayScreen` 目前仍是预留层，不承载右键菜单、搜索框、dialog。
+- 右键菜单和其他屏幕浮层当前仍走 DOM `floating-ui-service`，这是现状，不是最终目标态。
+
 ### 3.3 Z-Index 管理原则
 
 跨 Leafer 引擎：
@@ -302,7 +308,7 @@ Leafer 内部：
 | `drawFrontCanvas()` | nodes | `tree.world.nodeLayer` |
 | `drawFrontCanvas()` | connection preview | `sky.overlayWorld` |
 | `drawFrontCanvas()` | dragging rectangle / selection visuals | `sky.overlayWorld` |
-| `drawFrontCanvas()` | tooltip / HUD / overlay | `sky.overlayScreen` |
+| `drawFrontCanvas()` | tooltip / HUD / overlay（目标态） | `sky.overlayScreen` |
 
 ### 3.5 交互状态插件策略
 
@@ -318,15 +324,14 @@ Leafer 内部：
 
 当前仓库状态：
 
-- `@leafer-in/state` 尚未安装
+- `@leafer-in/state` 已安装并已在 Leafer 宿主初始化时加载
 
-因此第一阶段可以先完成：
+因此当前阶段的合理策略是：
 
 - 结构层迁移
 - 视口迁移
-- 选择态和 hover 态用普通属性先落地
-
-第二阶段再统一切换到 state plugin。
+- legacy 节点继续保留兼容桥
+- modern 节点逐步切换到 state plugin 驱动的 hover / press / selected 样式
 
 ---
 

@@ -9,6 +9,11 @@
 3. 连线创建、重连与断开
 4. 框选
 
+补充说明：
+
+- 右键菜单不属于 4 条主编辑链路之一，但属于必须保真的兼容链路。
+- 因此本文在事件映射里会额外补充 `contextmenu` 的桥接规则。
+
 本规范不修改业务代码，只定义迁移时的行为契约、事件映射和冒泡策略。
 
 ---
@@ -214,6 +219,7 @@ e.canvasY = clientY_rel / this.ds.scale - this.ds.offset[1]
 | `mousedown` 命中 output/input slot | `connecting_* = ...` | `pointer.down` on PortProxy | `event.getPagePoint()` / `event.getInnerPoint(portProxy)` | 启动连接态，禁止冒泡 |
 | `mousemove` 拉临时连线 | `renderLink(...)` | `pointer.move` on app/tree while connecting | `event.getPagePoint()` | 只更新 overlayWorld 上的 preview Path |
 | `mouseup` 提交连线 | `connect() / connectByType()` | `pointer.up` | `event.getPagePoint()` | 通过 PortProxy 命中或几何查询完成连接 |
+| `contextmenu` 命中节点或空白区 | `processContextMenu(node, e)` | DOM `contextmenu` + Leafer hit-test | 菜单定位看 `clientX / clientY`；命中计算看 `canvasX / canvasY` | 传给 legacy menu 的必须是原生 `MouseEvent` 兼容对象，不能是 plain object |
 | `Ctrl + mousedown` 空白区 | `dragging_rectangle` | `drag.start` on bgHitRect | `dragEvent.getPageBounds()` | 启动框选态并显示 selectionRect |
 | `mousemove` 框选中 | `strokeRect(...)` | `drag` | `dragEvent.getPageBounds()` | 更新 selectionRect，不再重画前景 canvas |
 | `mouseup` 框选结束 | `overlapBounding(...)` | `drag.end` | `dragEvent.getPageBounds()` | 以 bounds 查询命中节点并更新 selection set |
@@ -235,6 +241,24 @@ e.canvasY = clientY_rel / this.ds.scale - this.ds.offset[1]
 3. 如果目标是 100% 保留旧行为，必须显式把 viewport 的 wheel 配置改成“滚轮直接缩放”
 
 `DragAndScale.ts` 可以保留为兼容参考，但不应继续作为 Leafer 运行时的第一真相。
+
+### 1.4 右键菜单专项规则
+
+右键菜单链路与普通 pointer 交互有一个额外约束：
+
+1. Leafer `pointer.down` 的右键分支只负责命中准备、选中同步和阻止错误冒泡。
+2. 真正打开 legacy `ContextMenu` 的事件，应来自宿主 DOM 的 `contextmenu`。
+3. 传给 legacy 菜单控制器的事件必须满足两组字段：
+   - `clientX / clientY`
+     用于菜单 DOM 浮层定位。
+   - `canvasX / canvasY`
+     用于 node / slot / group 命中。
+4. 因此菜单桥接事件不能是普通对象，必须是原生 `MouseEvent` 或 `PointerEvent`，并在其上补挂 legacy 所需字段。
+
+当前运行时结论：
+
+1. 右键菜单、search box、dialog 仍是 DOM 浮层，不属于 Leafer `overlayScreen`。
+2. `overlayScreen` 仍应保留为未来 Leafer 化屏幕层的目标结构，但当前不是菜单主路径。
 
 ---
 
@@ -300,6 +324,12 @@ sky
 
 - `overlayWorld` 使用图坐标表达临时图形
 - `overlayScreen` 使用屏幕坐标表达菜单、tooltip、搜索框
+
+现状修正：
+
+- 当前真正落地在 `overlayWorld` 的是世界空间临时交互图元。
+- 当前右键菜单 / search box / dialog 仍由 DOM `floating-ui-service` 挂载到 document，不在 Leafer `overlayScreen` 中。
+- 因此这里的 `overlayScreen` 应理解为目标态，而不是当前已完成实现。
 
 ### 2.3 `overlayWorld` 与 `zoomLayer` 的关系
 
@@ -507,7 +537,7 @@ tree
 
 sky
 ├─ overlayWorld         // connection preview / selection box
-└─ overlayScreen        // menu / tooltip
+└─ overlayScreen        // menu / tooltip（目标态；当前菜单仍走 DOM 浮层）
 ```
 
 ### 4.2 各层职责
@@ -583,6 +613,7 @@ sky
 3. 视口平移 / 缩放优先走官方 viewport 能力
 4. 旧 `canvasX / canvasY` 语义统一映射为 Leafer `page` 坐标
 5. 临时连线和框选框不再在 canvas 前景层中重绘，而是成为 `sky.overlayWorld` 中独立存在的 `UI.Path / UI.Rect`
-6. 所有冲突都通过 Leafer 的事件流和 `stop()` / `stopNow()` 解决，而不是再靠全局状态机硬拦
+6. legacy 右键菜单必须收到“原生事件壳 + legacy 坐标字段”的桥接事件，不能直接传 plain object
+7. 所有冲突都通过 Leafer 的事件流和 `stop()` / `stopNow()` 解决，而不是再靠全局状态机硬拦
 
-只要按这 6 条落地，交互层就能从“手工事件 + 手工擦除重画”稳定迁移到 Leafer 的保留模式交互架构。
+只要按这 7 条落地，交互层就能从“手工事件 + 手工擦除重画”稳定迁移到 Leafer 的保留模式交互架构。

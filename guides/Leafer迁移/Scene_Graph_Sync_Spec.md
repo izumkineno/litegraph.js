@@ -515,6 +515,48 @@ node.setDirtyCanvas(true)
 2. `setDirtyCanvas(false, true)` => 刷新 incident links
 3. `setDirtyCanvas(true, true)` => 两者都做
 
+### 4.6 执行态瞬态动画不属于 `node:dirty`
+
+当前运行时里还有一类刷新不来自结构变化，也不来自业务节点显式调用 `setDirtyCanvas()`：
+
+- `execute_triggered`
+- `action_triggered`
+
+这类字段是 legacy renderer 时代遗留下来的“短时视觉态”，例如执行闪烁、动作触发闪烁。
+
+因此同步层必须额外承担一条辅助刷新链路：
+
+1. 每次 flush 后收集仍处于瞬态动画中的 node 子集。
+2. 仅对这些 active node host 做局部 repaint。
+3. 动画态结束后停止该辅助 repaint。
+
+关键约束：
+
+1. 这不是 `node:dirty`，因为它没有新的业务 mutation。
+2. 这也不是全图 render loop 的回归，只能针对 active node 子集运行。
+3. Scene sync 文档必须承认这是一条“运行时视觉补帧”路径。
+
+### 4.7 视口缩放后的 legacy 位图重栅格
+
+legacy 节点本质上是位图宿主，而不是原生 retained shape。
+
+因此当 viewport scale 发生变化时，即使 node 自身没有结构变化，仍可能需要重画：
+
+1. 为了让文字和 widget 在新缩放比例下更清晰。
+2. 为了让超出逻辑 node bounds 的 legacy 绘制内容重新取得正确 bitmap 尺寸。
+3. 为了让 slot / incident link 的视觉对齐保持稳定。
+
+推荐规则：
+
+1. `ViewportController` 监听缩放变化。
+2. 缩放变化后，不触发全图 scene rebuild。
+3. 仅对 legacy host 执行节流后的批量 repaint。
+
+当前实现说明：
+
+- 这一条当前是“缩放驱动的 legacy host 批量重栅格”，属于必要兼容路径。
+- 后续可以再优化为“只重画可见 legacy host”或“只在 scale 跨阈值时重画”，但文档层面必须先承认这条辅助路径存在。
+
 ---
 
 ## 5. 连线路由（极度重要）

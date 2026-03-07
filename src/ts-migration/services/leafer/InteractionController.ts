@@ -8,10 +8,15 @@ import { ConnectionController } from "./ConnectionController";
 import { HitTestService } from "./HitTestService";
 import type { LeaferAppHost } from "./LeaferAppHost";
 import {
+    createNativeContextMenuEvent,
     createLegacyPointerEvent,
     type LegacyPointerEventSource,
     type LegacyPointerTarget,
 } from "./LegacyPointerEventAdapter";
+import {
+    ModernNodeHost,
+    type ModernNodePartHit,
+} from "./ModernNodeHost";
 import { NodePortAdapter, type NodePortNodeLike } from "./NodePortAdapter";
 import type { NodeViewHost } from "./NodeViewHost";
 import { OverlayPrimitives } from "./OverlayPrimitives";
@@ -27,18 +32,33 @@ interface InteractionCanvasHost {
     readonly node_widget: [unknown, unknown] | null;
     readonly node_capturing_input: unknown;
     readonly node_over: unknown;
+    readonly node_dragged?: unknown;
+    readonly resizing_node?: unknown;
+    readonly connecting_node?: unknown;
     readonly allow_dragnodes?: boolean;
+    readonly allow_interaction?: boolean;
     readonly read_only?: boolean;
     readonly align_to_grid?: boolean;
     readonly onNodeMoved?: ((node: GraphMutationNodeLike) => void) | null;
     processMouseDown: (event: unknown) => boolean | undefined;
     processMouseMove: (event: unknown) => boolean | undefined;
     processMouseUp: (event: unknown) => boolean | undefined;
+    processContextMenu?: (
+        node: GraphMutationNodeLike | null,
+        event: unknown
+    ) => void;
+    processNodeDblClicked?: (node: GraphMutationNodeLike) => void;
+    showEditPropertyValue?: (
+        node: GraphMutationNodeLike,
+        property: string,
+        options?: Record<string, unknown>
+    ) => unknown;
     selectNodes: (
         nodes?: GraphMutationNodeLike[],
         addToCurrentSelection?: boolean
     ) => void;
     deselectAllNodes: () => void;
+    getCanvasWindow?: () => Window;
 }
 
 interface InteractionGraphLike extends GraphMutationGraphLike {
@@ -69,6 +89,8 @@ type PointerSession =
     | {
           kind: "node-press";
           node: DraggableNodeLike;
+          host: ModernNodeHost | null;
+          part: ModernNodePartHit | null;
           legacyPointerUp: boolean;
       }
     | {
@@ -76,6 +98,19 @@ type PointerSession =
           node: DraggableNodeLike;
           dragNodes: DraggableNodeLike[];
           lastGraphPoint: PointLike;
+          host: ModernNodeHost | null;
+      }
+    | {
+          kind: "node-resize";
+          node: DraggableNodeLike;
+          host: ModernNodeHost;
+          lastGraphPoint: PointLike;
+      }
+    | {
+          kind: "modern-press";
+          node: DraggableNodeLike;
+          host: ModernNodeHost;
+          part: ModernNodePartHit;
       }
     | {
           kind: "background-press";
@@ -121,6 +156,23 @@ function isLegacyHost(
     );
 }
 
+function isModernHost(
+    host: NodeViewHost | null | undefined
+): host is ModernNodeHost {
+    return Boolean(host && host.runtime === "modern");
+}
+
+function sameModernPart(
+    left: ModernNodePartHit | null | undefined,
+    right: ModernNodePartHit | null | undefined
+): boolean {
+    return (
+        left?.kind === right?.kind &&
+        left?.index === right?.index &&
+        left?.action === right?.action
+    );
+}
+
 export class InteractionController {
     private readonly hitTestService: HitTestService;
     private readonly nodePortAdapter: NodePortAdapter;
@@ -137,6 +189,11 @@ export class InteractionController {
     private documentTrackingBound = false;
     private session: PointerSession | null = null;
     private dragTransactionNode: GraphMutationNodeLike | null = null;
+    private hoveredModernHost: ModernNodeHost | null = null;
+    private hoveredModernPart: ModernNodePartHit | null = null;
+    private lastTapNodeId: GraphMutationNodeId | null = null;
+    private lastTapPart: ModernNodePartHit | null = null;
+    private lastTapAt = 0;
 
     constructor(
         graph: GraphMutationGraphLike,
@@ -174,6 +231,7 @@ export class InteractionController {
 
         this.view.addEventListener("pointerdown", this.handleViewPointerDown, true);
         this.view.addEventListener("pointermove", this.handleViewPointerMove, true);
+        this.view.addEventListener("contextmenu", this.handleViewContextMenu, true);
     }
 
     destroy(): void {
@@ -187,6 +245,11 @@ export class InteractionController {
             this.handleViewPointerMove,
             true
         );
+        this.view.removeEventListener(
+            "contextmenu",
+            this.handleViewContextMenu,
+            true
+        );
         this.detachDocumentTracking();
         this.pointerIsDown = false;
         this.pointerDownAt = 0;
@@ -194,12 +257,23 @@ export class InteractionController {
         this.pointerDownPagePoint = null;
         this.session = null;
         this.dragTransactionNode = null;
+        this.hoveredModernHost?.clearPointerState();
+        this.hoveredModernHost = null;
+        this.hoveredModernPart = null;
+        this.lastTapNodeId = null;
+        this.lastTapPart = null;
+        this.lastTapAt = 0;
         this.connectionController.destroy();
         this.selectionController.destroy();
         this.overlayPrimitives.destroy();
     }
 
     private readonly handleViewPointerDown = (event: PointerEvent): void => {
+        if (event.button === 2) {
+            this.stopPropagationOnly(event, true);
+            return;
+        }
+
         if (!this.shouldHandleLegacyPointerDown(event)) {
             return;
         }
@@ -254,6 +328,13 @@ export class InteractionController {
         const selectedNodes = this.canvas.selected_nodes || {};
         const isAlreadySelected = Boolean(selectedNodes[String(hit.node.id)]);
         const legacyHost = isLegacyHost(hit.host) ? hit.host : null;
+        const modernHost = isModernHost(hit.host) ? hit.host : null;
+        const modernPart = modernHost
+            ? modernHost.getInteractivePartAt(
+                  normalizedGraphPoint.x,
+                  normalizedGraphPoint.y
+              )
+            : null;
 
         if (legacyHost) {
             const targets = this.collectTargets(legacyHost);
@@ -270,25 +351,81 @@ export class InteractionController {
 
             this.canvas.processMouseDown(legacyEvent);
             this.canvas.sceneSyncController?.repaintAllNodeHosts();
-        } else if (!isAlreadySelected || additiveSelection) {
+            this.session = {
+                kind: "legacy-press",
+            };
+            this.stopEvent(event);
+            return;
+        }
+
+        if (modernHost) {
+            this.updateModernHover(modernHost, modernPart);
+        }
+
+        if (!isAlreadySelected || additiveSelection) {
             this.canvas.selectNodes([hit.node], additiveSelection);
             this.canvas.sceneSyncController?.repaintAllNodeHosts();
         }
 
-        if (!legacyHost && !this.canStartNodeDrag(hit.node)) {
+        if (modernHost) {
+            modernHost.updateInteractionState({
+                hovered: true,
+                pressed: true,
+                hoveredPart: modernPart,
+                pressedPart: modernPart,
+                dragging: false,
+                resizing: false,
+            });
+
+            if (modernPart?.kind === "resize") {
+                this.dragTransactionNode = hit.node;
+                this.graphRef.beforeChange?.(hit.node);
+                modernHost.beginResize(
+                    normalizedGraphPoint.x,
+                    normalizedGraphPoint.y
+                );
+                this.session = {
+                    kind: "node-resize",
+                    node: hit.node as DraggableNodeLike,
+                    host: modernHost,
+                    lastGraphPoint: normalizedGraphPoint,
+                };
+                this.stopEvent(event);
+                return;
+            }
+
+            if (
+                modernPart &&
+                modernPart.kind !== "body" &&
+                modernPart.kind !== "header"
+            ) {
+                this.session = {
+                    kind: "modern-press",
+                    node: hit.node as DraggableNodeLike,
+                    host: modernHost,
+                    part: modernPart,
+                };
+                this.stopEvent(event);
+                return;
+            }
+        }
+
+        if (!this.canStartNodeDrag(hit.node)) {
             this.session = {
                 kind: "background-press",
                 additive: additiveSelection,
                 startGraphPoint: normalizedGraphPoint,
             };
         } else if (
-            (!legacyHost || !this.hasLegacyInteractiveCapture()) &&
+            !this.hasLegacyInteractiveCapture() &&
             this.canStartNodeDrag(hit.node)
         ) {
             this.session = {
                 kind: "node-press",
                 node: hit.node as DraggableNodeLike,
-                legacyPointerUp: Boolean(legacyHost),
+                host: modernHost,
+                part: modernPart,
+                legacyPointerUp: false,
             };
         } else {
             this.session = {
@@ -297,6 +434,12 @@ export class InteractionController {
         }
 
         this.stopEvent(event);
+    };
+
+    private readonly handleViewContextMenu = (event: MouseEvent): void => {
+        this.dispatchContextMenu(event);
+        event.preventDefault();
+        event.stopImmediatePropagation();
     };
 
     private readonly handleViewPointerMove = (event: PointerEvent): void => {
@@ -349,12 +492,27 @@ export class InteractionController {
                 this.canvas.sceneSyncController?.repaintAllNodeHosts();
             }
             this.stopEvent(event);
+        } else if (this.session?.kind === "modern-press") {
+            this.finishModernPress(
+                this.session,
+                normalizedGraphPoint,
+                event
+            );
+            this.stopEvent(event);
         } else if (this.session?.kind === "node-press") {
             if (this.session.legacyPointerUp) {
                 this.dispatchLegacyPointerUp(source, normalizedPagePoint, event);
             } else {
+                this.finishModernTap(
+                    this.session,
+                    normalizedGraphPoint,
+                    event
+                );
                 this.stopEvent(event);
             }
+        } else if (this.session?.kind === "node-resize") {
+            this.finishNodeResize(this.session);
+            this.stopEvent(event);
         } else if (this.session?.kind === "node-drag") {
             this.finishNodeDrag(this.session);
             this.stopEvent(event);
@@ -368,24 +526,42 @@ export class InteractionController {
         this.pointerDownPagePoint = null;
         this.session = null;
         this.dragTransactionNode = null;
+        this.updateModernHover(null, null);
+        this.view.style.cursor = "";
         this.detachDocumentTracking();
     };
 
     private dispatchHoverPointerMove(event: PointerEvent): void {
-        if (!this.shouldHandleLegacyPointerMove(event)) {
-            return;
-        }
-
         const source = this.createPointerSource(event);
         const pagePoint = source.getPagePoint();
         const graphPoint = source.getInnerPoint();
         const hit = this.hitTestService.hitNodeAt(graphPoint.x, graphPoint.y);
+        const modernHost = isModernHost(hit?.host) ? hit.host : null;
+        const modernPart = modernHost
+            ? modernHost.getInteractivePartAt(graphPoint.x, graphPoint.y)
+            : null;
+
+        this.updateModernHover(modernHost, modernPart);
+
+        if (modernHost) {
+            this.view.style.cursor = this.resolveCursorForModernPart(modernPart);
+        } else if (!this.pointerIsDown) {
+            this.view.style.cursor = "";
+        }
+
+        if (!this.shouldHandleLegacyPointerMove(event)) {
+            return;
+        }
+
         const targets = this.collectTargets(this.toLegacyHost(hit?.host || null));
         const shouldDispatch =
             targets.length > 0 ||
             Boolean(this.canvas.node_widget) ||
             Boolean(this.canvas.node_over) ||
-            Boolean(this.canvas.node_capturing_input);
+            Boolean(this.canvas.node_capturing_input) ||
+            Boolean(this.canvas.node_dragged) ||
+            Boolean(this.canvas.resizing_node) ||
+            Boolean(this.canvas.connecting_node);
 
         const normalizedPagePoint = {
             x: toFiniteNumber(pagePoint.x),
@@ -486,6 +662,25 @@ export class InteractionController {
             return;
         }
 
+        if (this.session.kind === "modern-press") {
+            const activePart = this.session.host.getInteractivePartAt(
+                normalizedGraphPoint.x,
+                normalizedGraphPoint.y
+            );
+            this.session.host.updateInteractionState({
+                hovered: true,
+                pressed: true,
+                hoveredPart: activePart,
+                pressedPart: this.session.part,
+            });
+            this.lastPagePoint = normalizedPagePoint;
+            this.view.style.cursor = this.resolveCursorForModernPart(
+                this.session.part
+            );
+            this.stopEvent(event);
+            return;
+        }
+
         if (this.session.kind === "node-press") {
             if (this.session.legacyPointerUp && this.hasLegacyInteractiveCapture()) {
                 this.session = {
@@ -497,6 +692,19 @@ export class InteractionController {
                     event
                 );
                 return;
+            }
+
+            if (this.session.host) {
+                const activePart = this.session.host.getInteractivePartAt(
+                    normalizedGraphPoint.x,
+                    normalizedGraphPoint.y
+                );
+                this.session.host.updateInteractionState({
+                    hovered: true,
+                    pressed: true,
+                    hoveredPart: activePart,
+                    pressedPart: this.session.part,
+                });
             }
 
             if (
@@ -514,11 +722,47 @@ export class InteractionController {
                     node: this.session.node,
                     dragNodes,
                     lastGraphPoint: normalizedGraphPoint,
+                    host: this.session.host,
                 };
+                this.session.host?.updateInteractionState({
+                    pressed: false,
+                    dragging: true,
+                    pressedPart: null,
+                    hoveredPart: this.session.part,
+                });
             } else {
                 this.lastPagePoint = normalizedPagePoint;
                 return;
             }
+        }
+
+        if (this.session.kind === "node-resize") {
+            const didResize = this.session.host.updateResize(
+                normalizedGraphPoint.x,
+                normalizedGraphPoint.y
+            );
+            this.session.host.updateInteractionState({
+                hovered: true,
+                pressed: true,
+                resizing: true,
+                hoveredPart: {
+                    kind: "resize",
+                    cursor: "se-resize",
+                },
+                pressedPart: {
+                    kind: "resize",
+                    cursor: "se-resize",
+                },
+            });
+            if (didResize) {
+                this.canvas.sceneSyncController?.repaintNodeHost(
+                    this.session.node.id
+                );
+            }
+            this.lastPagePoint = normalizedPagePoint;
+            this.view.style.cursor = "se-resize";
+            this.stopEvent(event);
+            return;
         }
 
         if (this.session.kind === "node-drag") {
@@ -535,6 +779,15 @@ export class InteractionController {
                 }
                 this.session.lastGraphPoint = normalizedGraphPoint;
             }
+            this.session.host?.updateInteractionState({
+                hovered: true,
+                pressed: false,
+                dragging: true,
+                hoveredPart: {
+                    kind: "body",
+                },
+                pressedPart: null,
+            });
             this.lastPagePoint = normalizedPagePoint;
             this.stopEvent(event);
         }
@@ -552,7 +805,10 @@ export class InteractionController {
             targets.length > 0 ||
             Boolean(this.canvas.node_widget) ||
             Boolean(this.canvas.node_over) ||
-            Boolean(this.canvas.node_capturing_input);
+            Boolean(this.canvas.node_capturing_input) ||
+            Boolean(this.canvas.node_dragged) ||
+            Boolean(this.canvas.resizing_node) ||
+            Boolean(this.canvas.connecting_node);
 
         const deltaX = this.lastPagePoint
             ? pagePoint.x - this.lastPagePoint.x
@@ -594,7 +850,10 @@ export class InteractionController {
             targets.length > 0 ||
             Boolean(this.canvas.node_widget) ||
             Boolean(this.canvas.node_over) ||
-            Boolean(this.canvas.node_capturing_input);
+            Boolean(this.canvas.node_capturing_input) ||
+            Boolean(this.canvas.node_dragged) ||
+            Boolean(this.canvas.resizing_node) ||
+            Boolean(this.canvas.connecting_node);
         const deltaX = this.lastPagePoint
             ? pagePoint.x - this.lastPagePoint.x
             : 0;
@@ -636,8 +895,366 @@ export class InteractionController {
             this.canvas.onNodeMoved?.(node);
         }
 
+        session.host?.updateInteractionState({
+            dragging: false,
+            pressed: false,
+            resizing: false,
+            hovered: true,
+            hoveredPart: { kind: "body" },
+            pressedPart: null,
+        });
         this.graphRef.afterChange?.(this.dragTransactionNode || session.node);
         this.graphRef.change?.();
+    }
+
+    private finishNodeResize(
+        session: Extract<PointerSession, { kind: "node-resize" }>
+    ): void {
+        session.host.endResize();
+        (session.node as {
+            onResize?: (size: [number, number] | Float32Array) => void;
+            setDirtyCanvas?: (
+                dirtyForeground: boolean,
+                dirtyBackground?: boolean
+            ) => void;
+        }).onResize?.(session.node.size);
+        (session.node as {
+            setDirtyCanvas?: (
+                dirtyForeground: boolean,
+                dirtyBackground?: boolean
+            ) => void;
+        }).setDirtyCanvas?.(true, true);
+        this.canvas.sceneSyncController?.repaintNodeHost(session.node.id);
+        this.graphRef.afterChange?.(this.dragTransactionNode || session.node);
+        this.graphRef.change?.();
+    }
+
+    private finishModernPress(
+        session: Extract<PointerSession, { kind: "modern-press" }>,
+        graphPoint: PointLike,
+        event: PointerEvent
+    ): void {
+        const releasePart = session.host.getInteractivePartAt(
+            graphPoint.x,
+            graphPoint.y
+        );
+        session.host.updateInteractionState({
+            hovered: true,
+            pressed: false,
+            hoveredPart: releasePart,
+            pressedPart: null,
+        });
+
+        if (!sameModernPart(session.part, releasePart)) {
+            return;
+        }
+
+        if (session.part.kind === "collapse") {
+            this.graphRef.beforeChange?.(session.node);
+            (
+                session.node as { collapse?: (force?: boolean) => void }
+            ).collapse?.(false);
+            this.graphRef.afterChange?.(session.node);
+            this.graphRef.change?.();
+            this.canvas.sceneSyncController?.repaintNodeHost(session.node.id);
+            return;
+        }
+
+        if (session.part.kind === "widget") {
+            this.executeModernWidgetAction(
+                session.node,
+                session.host,
+                session.part,
+                event
+            );
+            this.canvas.sceneSyncController?.repaintNodeHost(session.node.id);
+        }
+    }
+
+    private finishModernTap(
+        session: Extract<PointerSession, { kind: "node-press" }>,
+        graphPoint: PointLike,
+        event: PointerEvent
+    ): void {
+        if (!session.host) {
+            return;
+        }
+
+        const releasePart = session.host.getInteractivePartAt(
+            graphPoint.x,
+            graphPoint.y
+        );
+        session.host.updateInteractionState({
+            hovered: true,
+            pressed: false,
+            hoveredPart: releasePart,
+            pressedPart: null,
+            dragging: false,
+            resizing: false,
+        });
+
+        if (
+            !releasePart ||
+            (releasePart.kind !== "body" && releasePart.kind !== "header")
+        ) {
+            return;
+        }
+
+        const now = Date.now();
+        const isDoubleTap =
+            this.lastTapNodeId === session.node.id &&
+            sameModernPart(this.lastTapPart, releasePart) &&
+            now - this.lastTapAt < 320;
+
+        this.lastTapNodeId = session.node.id;
+        this.lastTapPart = releasePart;
+        this.lastTapAt = now;
+
+        if (!isDoubleTap) {
+            return;
+        }
+
+        const localPos = session.host.getLocalPoint(graphPoint.x, graphPoint.y);
+        (
+            session.node as {
+                onDblClick?: (
+                    event: PointerEvent,
+                    pos: readonly [number, number],
+                    graphcanvas: InteractionCanvasHost
+                ) => void;
+            }
+        ).onDblClick?.(event, localPos, this.canvas);
+        this.canvas.processNodeDblClicked?.(session.node);
+        this.canvas.sceneSyncController?.repaintNodeHost(session.node.id);
+    }
+
+    private executeModernWidgetAction(
+        node: GraphMutationNodeLike,
+        host: ModernNodeHost,
+        part: ModernNodePartHit,
+        event: PointerEvent
+    ): void {
+        const widgets = (node as { widgets?: Array<any> }).widgets;
+        if (!Array.isArray(widgets) || part.index == null) {
+            return;
+        }
+
+        const widget = widgets[part.index];
+        if (!widget || widget.disabled) {
+            return;
+        }
+
+        const pagePoint = this.appHost.app.getPagePointByClient({
+            clientX: event.clientX,
+            clientY: event.clientY,
+        });
+        const localPos = host.getLocalPoint(
+            toFiniteNumber(pagePoint.x),
+            toFiniteNumber(pagePoint.y)
+        );
+        const propertyName = widget.options?.property as string | undefined;
+        const applyValue = (nextValue: unknown): void => {
+            const previousValue = widget.value;
+            widget.value = nextValue;
+            if (
+                propertyName &&
+                (node as { properties?: Record<string, unknown> }).properties?.[
+                    propertyName
+                ] !== undefined
+            ) {
+                (node as { setProperty?: (name: string, value: unknown) => void }).setProperty?.(
+                    propertyName,
+                    nextValue
+                );
+            }
+            if (typeof widget.callback === "function") {
+                widget.callback(nextValue, this.canvas, node, localPos, event);
+            }
+            (
+                node as {
+                    onWidgetChanged?: (
+                        name: string,
+                        value: unknown,
+                        previousValue: unknown,
+                        widgetData: unknown
+                    ) => void;
+                    graph?: { _version?: number };
+                }
+            ).onWidgetChanged?.(widget.name, nextValue, previousValue, widget);
+            if ((node as { graph?: { _version?: number } }).graph) {
+                (node as { graph?: { _version?: number } }).graph!._version =
+                    toFiniteNumber(
+                        (node as { graph?: { _version?: number } }).graph!._version
+                    ) + 1;
+            }
+            (
+                node as {
+                    setDirtyCanvas?: (
+                        dirtyForeground: boolean,
+                        dirtyBackground?: boolean
+                    ) => void;
+                }
+            ).setDirtyCanvas?.(true, true);
+        };
+
+        const openPropertyEditor = (): void => {
+            if (!propertyName) {
+                return;
+            }
+            this.canvas.showEditPropertyValue?.(node, propertyName, {
+                position: [event.clientX, event.clientY],
+                onclose: () => {
+                    this.canvas.sceneSyncController?.repaintNodeHost(node.id);
+                },
+            });
+        };
+
+        switch (widget.type) {
+            case "button":
+                if (typeof widget.callback === "function") {
+                    setTimeout(() => {
+                        widget.callback(widget, this.canvas, node, localPos, event);
+                    }, 10);
+                }
+                widget.clicked = true;
+                (
+                    node as {
+                        setDirtyCanvas?: (
+                            dirtyForeground: boolean,
+                            dirtyBackground?: boolean
+                        ) => void;
+                    }
+                ).setDirtyCanvas?.(true, true);
+                return;
+            case "toggle":
+                applyValue(!widget.value);
+                return;
+            case "number": {
+                const step = toFiniteNumber(widget.options?.step, 1) || 1;
+                const min = widget.options?.min;
+                const max = widget.options?.max;
+                if (part.action === "decrement") {
+                    let nextValue = toFiniteNumber(widget.value) - step;
+                    if (min != null) {
+                        nextValue = Math.max(toFiniteNumber(min), nextValue);
+                    }
+                    applyValue(nextValue);
+                    return;
+                }
+                if (part.action === "increment") {
+                    let nextValue = toFiniteNumber(widget.value) + step;
+                    if (max != null) {
+                        nextValue = Math.min(toFiniteNumber(max), nextValue);
+                    }
+                    applyValue(nextValue);
+                    return;
+                }
+                openPropertyEditor();
+                return;
+            }
+            case "combo": {
+                let values = widget.options?.values;
+                if (typeof values === "function") {
+                    values = values(widget, node);
+                }
+                if (!values) {
+                    openPropertyEditor();
+                    return;
+                }
+                const valuesList = Array.isArray(values)
+                    ? values
+                    : Object.keys(values);
+                if (!valuesList.length) {
+                    return;
+                }
+                if (
+                    part.action === "increment" ||
+                    part.action === "decrement"
+                ) {
+                    const currentIndex = Array.isArray(values)
+                        ? valuesList.indexOf(widget.value)
+                        : valuesList.indexOf(String(widget.value));
+                    const delta = part.action === "increment" ? 1 : -1;
+                    const nextIndex = Math.max(
+                        0,
+                        Math.min(valuesList.length - 1, currentIndex + delta)
+                    );
+                    applyValue(
+                        Array.isArray(values)
+                            ? valuesList[nextIndex]
+                            : nextIndex
+                    );
+                    return;
+                }
+                openPropertyEditor();
+                return;
+            }
+            case "text":
+            case "string":
+                openPropertyEditor();
+                return;
+            default:
+                if (propertyName) {
+                    openPropertyEditor();
+                }
+        }
+    }
+
+    private updateModernHover(
+        host: ModernNodeHost | null,
+        part: ModernNodePartHit | null
+    ): void {
+        if (this.hoveredModernHost && this.hoveredModernHost !== host) {
+            this.hoveredModernHost.updateInteractionState({
+                hovered: false,
+                pressed: false,
+                hoveredPart: null,
+                pressedPart: null,
+                dragging: false,
+                resizing: false,
+            });
+        }
+
+        if (!host) {
+            this.hoveredModernHost = null;
+            this.hoveredModernPart = null;
+            return;
+        }
+
+        host.updateInteractionState({
+            hovered: true,
+            hoveredPart: part,
+            pressed:
+                this.session?.kind === "modern-press" ||
+                this.session?.kind === "node-press",
+        });
+        this.hoveredModernHost = host;
+        this.hoveredModernPart = part;
+    }
+
+    private resolveCursorForModernPart(
+        part: ModernNodePartHit | null
+    ): string {
+        if (!part) {
+            return "";
+        }
+
+        if (part.cursor) {
+            return part.cursor;
+        }
+
+        switch (part.kind) {
+            case "collapse":
+            case "widget":
+                return "pointer";
+            case "resize":
+                return "se-resize";
+            case "input-port":
+            case "output-port":
+                return "crosshair";
+            default:
+                return "";
+        }
     }
 
     private emitNodeMoved(node: DraggableNodeLike): void {
@@ -739,6 +1356,32 @@ export class InteractionController {
             );
         }
 
+        const draggedNode = this.canvas.node_dragged as
+            | GraphMutationNodeLike
+            | undefined;
+        if (draggedNode) {
+            const draggedHost = this.toLegacyHost(
+                this.hitTestService.getHostForNode(draggedNode)
+            );
+            pushHost(
+                draggedNode.id,
+                draggedHost
+            );
+        }
+
+        const resizingNode = this.canvas.resizing_node as
+            | GraphMutationNodeLike
+            | undefined;
+        if (resizingNode) {
+            const resizingHost = this.toLegacyHost(
+                this.hitTestService.getHostForNode(resizingNode)
+            );
+            pushHost(
+                resizingNode.id,
+                resizingHost
+            );
+        }
+
         return Array.from(targets.values());
     }
 
@@ -748,7 +1391,9 @@ export class InteractionController {
         return isLegacyHost(host) ? host : null;
     }
 
-    private createPointerSource(event: PointerEvent): LegacyPointerEventSource {
+    private createPointerSource(
+        event: MouseEvent | PointerEvent
+    ): LegacyPointerEventSource {
         const clientPoint = {
             clientX: event.clientX,
             clientY: event.clientY,
@@ -802,6 +1447,56 @@ export class InteractionController {
         return [toFiniteNumber(pos[0]), toFiniteNumber(pos[1])];
     }
 
+    private dispatchContextMenu(event: MouseEvent | PointerEvent): void {
+        const source = this.createPointerSource(event);
+        const graphPoint = source.getInnerPoint();
+        const hit = this.hitTestService.hitNodeAt(graphPoint.x, graphPoint.y);
+        const node = hit?.node || null;
+
+        if (this.canvas.allow_interaction === false || this.canvas.read_only) {
+            return;
+        }
+
+        const refWindow =
+            this.canvas.getCanvasWindow?.() ||
+            this.view.ownerDocument?.defaultView ||
+            window;
+        const liteGraphHost = (globalThis as typeof globalThis & {
+            LiteGraph?: {
+                closeAllContextMenus?: (refWindow?: Window) => void;
+            };
+        }).LiteGraph;
+        liteGraphHost?.closeAllContextMenus?.(refWindow);
+
+        if (node) {
+            const selectedNodes = this.canvas.selected_nodes || {};
+            if (
+                Object.keys(selectedNodes).length &&
+                (selectedNodes[String(node.id)] ||
+                    event.shiftKey ||
+                    event.ctrlKey ||
+                    event.metaKey)
+            ) {
+                if (!selectedNodes[String(node.id)]) {
+                    this.canvas.selectNodes([node], true);
+                }
+            } else {
+                this.canvas.selectNodes([node]);
+            }
+            this.canvas.sceneSyncController?.repaintAllNodeHosts();
+        }
+
+        const contextMenuEvent = createNativeContextMenuEvent({
+            event: source,
+            hostElement: this.appHost.view,
+            nativeEvent: event,
+            targets: this.collectTargets(this.toLegacyHost(hit?.host || null)),
+            dragging: false,
+        });
+
+        this.canvas.processContextMenu?.(node, contextMenuEvent);
+    }
+
     private attachDocumentTracking(): void {
         if (this.documentTrackingBound) {
             return;
@@ -843,6 +1538,17 @@ export class InteractionController {
             event.stopPropagation();
         }
         event.preventDefault();
+    }
+
+    private stopPropagationOnly(
+        event: MouseEvent | PointerEvent,
+        immediate = false
+    ): void {
+        if (immediate) {
+            event.stopImmediatePropagation();
+            return;
+        }
+        event.stopPropagation();
     }
 
     private shouldHandleLegacyPointerDown(event: PointerEvent): boolean {
