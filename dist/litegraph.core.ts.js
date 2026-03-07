@@ -12340,6 +12340,7 @@ var LiteGraphTSMigration = (function(exports) {
   const DEFAULT_NODE_TITLE_HEIGHT = 30;
   const DEFAULT_NODE_WIDTH = 140;
   const DEFAULT_NODE_HEIGHT = 80;
+  const DEFAULT_OVERFLOW_MARGIN = 32;
   function getLegacyConstants(renderHost) {
     const maybeConstants = renderHost.constants;
     return typeof maybeConstants === "function" ? maybeConstants.call(renderHost) : {};
@@ -12368,24 +12369,58 @@ var LiteGraphTSMigration = (function(exports) {
   }
   class LegacyNodePainter {
     static measure(node2, renderHost, context) {
-      var _a3, _b2, _c2, _d2;
+      var _a3, _b2, _c2, _d2, _e2, _f, _g;
       const padding = DEFAULT_PADDING;
       const titleHeight = getNodeTitleHeight(renderHost);
-      const width2 = Math.max(
+      let width2 = Math.max(
         DEFAULT_NODE_WIDTH,
         getCollapsedWidth(node2, renderHost, context)
       );
-      const bodyHeight = Math.max(
+      let bodyHeight = Math.max(
         ((_a3 = node2.flags) == null ? void 0 : _a3.collapsed) ? titleHeight : Number((_b2 = node2.size) == null ? void 0 : _b2[1]) || DEFAULT_NODE_HEIGHT,
         titleHeight
       );
+      const computedSize = !((_c2 = node2.flags) == null ? void 0 : _c2.collapsed) && typeof node2.computeSize === "function" ? node2.computeSize() : null;
+      if (computedSize) {
+        width2 = Math.max(width2, Number(computedSize[0]) || 0);
+        bodyHeight = Math.max(bodyHeight, Number(computedSize[1]) || 0);
+      }
+      const defaultLeft = (Number((_d2 = node2.pos) == null ? void 0 : _d2[0]) || 0) - padding;
+      const defaultTop = (Number((_e2 = node2.pos) == null ? void 0 : _e2[1]) || 0) - titleHeight - padding;
+      const defaultRight = defaultLeft + width2 + padding * 2;
+      const defaultBottom = defaultTop + bodyHeight + titleHeight + padding * 2;
+      let left = defaultLeft;
+      let top = defaultTop;
+      let right = defaultRight;
+      let bottom = defaultBottom;
+      if (typeof node2.getBounding === "function") {
+        const bounding = node2.getBounding(void 0, true);
+        const boundLeft = Number(bounding[0]);
+        const boundTop = Number(bounding[1]);
+        const boundWidth = Number(bounding[2]);
+        const boundHeight = Number(bounding[3]);
+        if (Number.isFinite(boundLeft) && Number.isFinite(boundTop) && Number.isFinite(boundWidth) && Number.isFinite(boundHeight)) {
+          left = Math.min(left, boundLeft);
+          top = Math.min(top, boundTop);
+          right = Math.max(right, boundLeft + boundWidth);
+          bottom = Math.max(bottom, boundTop + boundHeight);
+        }
+      }
+      left -= DEFAULT_OVERFLOW_MARGIN;
+      top -= DEFAULT_OVERFLOW_MARGIN;
+      right += DEFAULT_OVERFLOW_MARGIN;
+      bottom += DEFAULT_OVERFLOW_MARGIN;
+      const normalizedLeft = Math.floor(left);
+      const normalizedTop = Math.floor(top);
+      const contentOffsetX = (Number((_f = node2.pos) == null ? void 0 : _f[0]) || 0) - normalizedLeft;
+      const contentOffsetY = (Number((_g = node2.pos) == null ? void 0 : _g[1]) || 0) - normalizedTop;
       return {
-        x: Math.floor((Number((_c2 = node2.pos) == null ? void 0 : _c2[0]) || 0) - padding),
-        y: Math.floor((Number((_d2 = node2.pos) == null ? void 0 : _d2[1]) || 0) - titleHeight - padding),
-        width: Math.ceil(width2 + padding * 2),
-        height: Math.ceil(bodyHeight + titleHeight + padding * 2),
-        contentOffsetX: padding,
-        contentOffsetY: titleHeight + padding,
+        x: normalizedLeft,
+        y: normalizedTop,
+        width: Math.ceil(right - left),
+        height: Math.ceil(bottom - top),
+        contentOffsetX,
+        contentOffsetY,
         padding,
         titleHeight
       };
@@ -19916,6 +19951,19 @@ var LiteGraphTSMigration = (function(exports) {
       const nodesById = this._nodes_by_id;
       return nodesById[String(id)] || null;
     }
+    requestLeaferExecutionRender() {
+      const canvasList = this.list_of_graphcanvas;
+      if (!(canvasList == null ? void 0 : canvasList.length)) {
+        return;
+      }
+      for (let i2 = 0; i2 < canvasList.length; ++i2) {
+        const canvas = canvasList[i2];
+        if ((canvas == null ? void 0 : canvas.renderRuntime) !== "leafer" || typeof canvas.requestRuntimeRender !== "function") {
+          continue;
+        }
+        canvas.requestRuntimeRender(true);
+      }
+    }
     /**
      * Run N steps (cycles) of the graph
      * @method runStep
@@ -19994,6 +20042,7 @@ var LiteGraphTSMigration = (function(exports) {
       this.iteration += 1;
       this.elapsed_time = (now - this.last_update_time) * 1e-3;
       this.last_update_time = now;
+      this.requestLeaferExecutionRender();
       this.nodes_executing = [];
       this.nodes_actioning = [];
       this.nodes_executedAction = [];

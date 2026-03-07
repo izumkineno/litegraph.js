@@ -38,6 +38,11 @@ interface GraphLinkLike {
     target_id: number | string;
 }
 
+interface GraphCanvasExecutionLike {
+    renderRuntime?: "legacy-canvas" | "leafer";
+    requestRuntimeRender?: (forceNodeRepaint?: boolean) => void;
+}
+
 type GraphNodeExecutionBase = Pick<
     LGraphNode,
     "id" | "mode" | "onExecute" | "doExecute" | "getInputNode" | "pos" | "size"
@@ -70,6 +75,26 @@ export class LGraphExecution extends LGraph {
             GraphNodeExecutionLike
         >;
         return nodesById[String(id)] || null;
+    }
+
+    private requestLeaferExecutionRender(): void {
+        const canvasList =
+            this.list_of_graphcanvas as GraphCanvasExecutionLike[] | null;
+        if (!canvasList?.length) {
+            return;
+        }
+
+        for (let i = 0; i < canvasList.length; ++i) {
+            const canvas = canvasList[i];
+            if (
+                canvas?.renderRuntime !== "leafer" ||
+                typeof canvas.requestRuntimeRender !== "function"
+            ) {
+                continue;
+            }
+
+            canvas.requestRuntimeRender(true);
+        }
     }
 
     /**
@@ -178,6 +203,7 @@ export class LGraphExecution extends LGraph {
         this.iteration += 1;
         this.elapsed_time = (now - this.last_update_time) * 0.001;
         this.last_update_time = now;
+        this.requestLeaferExecutionRender();
         this.nodes_executing = [];
         this.nodes_actioning = [];
         this.nodes_executedAction = [];

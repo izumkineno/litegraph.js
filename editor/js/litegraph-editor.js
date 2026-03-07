@@ -63,6 +63,9 @@ function Editor(container_id, options) {
     );
     graphcanvas.background_image = "imgs/grid.png";
     graph.onAfterExecute = function() {
+        if (graphcanvas.renderRuntime === "leafer") {
+            return;
+        }
         if (graphcanvas.requestRuntimeRender) {
             graphcanvas.requestRuntimeRender();
         } else if (graphcanvas.renderRuntime !== "leafer") {

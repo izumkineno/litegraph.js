@@ -7,6 +7,11 @@ export interface LegacyNodePainterNodeLike {
         [key: string]: unknown;
     };
     getTitle?: () => string;
+    getBounding?: (
+        out?: Float32Array | [number, number, number, number],
+        computeOuter?: boolean
+    ) => Float32Array | [number, number, number, number];
+    computeSize?: () => [number, number] | Float32Array;
     [key: string]: unknown;
 }
 
@@ -36,6 +41,7 @@ const DEFAULT_PADDING = 8;
 const DEFAULT_NODE_TITLE_HEIGHT = 30;
 const DEFAULT_NODE_WIDTH = 140;
 const DEFAULT_NODE_HEIGHT = 80;
+const DEFAULT_OVERFLOW_MARGIN = 32;
 
 function getLegacyConstants(renderHost: LegacyNodeRenderHost): Record<string, unknown> {
     const maybeConstants = (renderHost as {
@@ -85,24 +91,73 @@ export class LegacyNodePainter {
     ): LegacyNodePaintBounds {
         const padding = DEFAULT_PADDING;
         const titleHeight = getNodeTitleHeight(renderHost);
-        const width = Math.max(
+        let width = Math.max(
             DEFAULT_NODE_WIDTH,
             getCollapsedWidth(node, renderHost, context)
         );
-        const bodyHeight = Math.max(
+        let bodyHeight = Math.max(
             node.flags?.collapsed
                 ? titleHeight
                 : Number(node.size?.[1]) || DEFAULT_NODE_HEIGHT,
             titleHeight
         );
+        const computedSize =
+            !node.flags?.collapsed && typeof node.computeSize === "function"
+                ? node.computeSize()
+                : null;
+        if (computedSize) {
+            width = Math.max(width, Number(computedSize[0]) || 0);
+            bodyHeight = Math.max(bodyHeight, Number(computedSize[1]) || 0);
+        }
+
+        const defaultLeft = (Number(node.pos?.[0]) || 0) - padding;
+        const defaultTop =
+            (Number(node.pos?.[1]) || 0) - titleHeight - padding;
+        const defaultRight = defaultLeft + width + padding * 2;
+        const defaultBottom =
+            defaultTop + bodyHeight + titleHeight + padding * 2;
+
+        let left = defaultLeft;
+        let top = defaultTop;
+        let right = defaultRight;
+        let bottom = defaultBottom;
+
+        if (typeof node.getBounding === "function") {
+            const bounding = node.getBounding(undefined, true);
+            const boundLeft = Number(bounding[0]);
+            const boundTop = Number(bounding[1]);
+            const boundWidth = Number(bounding[2]);
+            const boundHeight = Number(bounding[3]);
+            if (
+                Number.isFinite(boundLeft) &&
+                Number.isFinite(boundTop) &&
+                Number.isFinite(boundWidth) &&
+                Number.isFinite(boundHeight)
+            ) {
+                left = Math.min(left, boundLeft);
+                top = Math.min(top, boundTop);
+                right = Math.max(right, boundLeft + boundWidth);
+                bottom = Math.max(bottom, boundTop + boundHeight);
+            }
+        }
+
+        left -= DEFAULT_OVERFLOW_MARGIN;
+        top -= DEFAULT_OVERFLOW_MARGIN;
+        right += DEFAULT_OVERFLOW_MARGIN;
+        bottom += DEFAULT_OVERFLOW_MARGIN;
+
+        const normalizedLeft = Math.floor(left);
+        const normalizedTop = Math.floor(top);
+        const contentOffsetX = (Number(node.pos?.[0]) || 0) - normalizedLeft;
+        const contentOffsetY = (Number(node.pos?.[1]) || 0) - normalizedTop;
 
         return {
-            x: Math.floor((Number(node.pos?.[0]) || 0) - padding),
-            y: Math.floor((Number(node.pos?.[1]) || 0) - titleHeight - padding),
-            width: Math.ceil(width + padding * 2),
-            height: Math.ceil(bodyHeight + titleHeight + padding * 2),
-            contentOffsetX: padding,
-            contentOffsetY: titleHeight + padding,
+            x: normalizedLeft,
+            y: normalizedTop,
+            width: Math.ceil(right - left),
+            height: Math.ceil(bottom - top),
+            contentOffsetX,
+            contentOffsetY,
             padding,
             titleHeight,
         };
