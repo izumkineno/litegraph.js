@@ -89,6 +89,9 @@ export class LGraphCanvasRender extends LGraphCanvasInput {
      * @method draw
      **/
     draw(force_canvas?: boolean, force_bgcanvas?: boolean): void {
+        if (this.renderRuntime === "leafer") {
+            return;
+        }
         if (!this.canvas || this.canvas.width == 0 || this.canvas.height == 0) {
             return;
         }

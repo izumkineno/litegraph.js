@@ -36,7 +36,10 @@ interface LGraphCanvasOptions {
     skip_events?: boolean;
     autoresize?: boolean;
     viewport?: Vector4 | null;
+    renderRuntime?: RenderRuntime;
 }
+
+type RenderRuntime = "legacy-canvas" | "leafer";
 
 interface GraphLike {
     _subgraph_node?: unknown;
@@ -221,6 +224,7 @@ const resolveCanvasLifecycleHost = createClassHostResolver(defaultLifecycleHost,
  */
 export class LGraphCanvasLifecycle extends LGraphCanvasStatic {
     options: LGraphCanvasOptions;
+    renderRuntime: RenderRuntime;
     graph: GraphLike | null;
 
     background_image: string;
@@ -324,6 +328,8 @@ export class LGraphCanvasLifecycle extends LGraphCanvasStatic {
     _graph_stack: GraphLike[] | null;
     _events_binded: boolean;
     is_rendering: boolean;
+    _render_loop_disabled_notice_emitted: boolean;
+    _dirty_signal_notice_emitted: boolean;
 
     _mousedown_callback: CanvasPointerListener | null;
     _mousewheel_callback: CanvasPointerListener | null;
@@ -341,11 +347,17 @@ export class LGraphCanvasLifecycle extends LGraphCanvasStatic {
         options?: LGraphCanvasOptions
     ) {
         super();
-        this.options = options || {};
+        this.options = {
+            renderRuntime: "leafer",
+            ...(options || {}),
+        };
+        this.renderRuntime = this.options.renderRuntime || "leafer";
         this.graph = null;
         this._graph_stack = null;
         this._events_binded = false;
         this.is_rendering = false;
+        this._render_loop_disabled_notice_emitted = false;
+        this._dirty_signal_notice_emitted = false;
 
         this.background_image = LGraphCanvasLifecycle.DEFAULT_BACKGROUND_IMAGE;
         let targetCanvas = canvas || null;
@@ -993,7 +1005,32 @@ export class LGraphCanvasLifecycle extends LGraphCanvasStatic {
         }
     }
 
+    notifyDirtySignal(fgcanvas?: boolean, bgcanvas?: boolean): void {
+        this.setDirty(Boolean(fgcanvas), Boolean(bgcanvas));
+        if (
+            this.renderRuntime !== "leafer" ||
+            this._dirty_signal_notice_emitted
+        ) {
+            return;
+        }
+
+        console.info(
+            "LGraphCanvas: received legacy dirty signal while renderRuntime='leafer'; skipping legacy canvas redraw scheduling."
+        );
+        this._dirty_signal_notice_emitted = true;
+    }
+
     startRendering(): void {
+        if (this.renderRuntime === "leafer") {
+            this.is_rendering = false;
+            if (!this._render_loop_disabled_notice_emitted) {
+                console.info(
+                    "LGraphCanvas: legacy render loop disabled because renderRuntime='leafer'."
+                );
+                this._render_loop_disabled_notice_emitted = true;
+            }
+            return;
+        }
         if (this.is_rendering) {
             return;
         }

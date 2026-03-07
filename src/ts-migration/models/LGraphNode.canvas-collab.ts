@@ -10,7 +10,14 @@ import { LGraphNodeConnectGeometry } from "./LGraphNode.connect-geometry";
 interface LGraphNodeCanvasCollabHost
     extends Pick<LiteGraphConstantsShape, "CANVAS_GRID_SIZE" | "node_images_path"> {}
 
-type LGraphNodeCanvasLike = GraphCanvasCapturePort<LGraphNodeCanvasCollab>;
+type LGraphNodeCanvasLike = GraphCanvasCapturePort<LGraphNodeCanvasCollab> & {
+    renderRuntime?: "legacy-canvas" | "leafer";
+    notifyDirtySignal?: (
+        dirty_foreground?: boolean,
+        dirty_background?: boolean
+    ) => void;
+    setDirty?: (dirty_foreground: boolean, dirty_background?: boolean) => void;
+};
 
 interface LGraphNodeCanvasCollabGraphLike {
     _version: number;
@@ -48,6 +55,39 @@ export class LGraphNodeCanvasCollab extends LGraphNodeConnectGeometry {
 
     private canvasGraphRef(): LGraphNodeCanvasCollabGraphLike | null {
         return (this.graph as unknown as LGraphNodeCanvasCollabGraphLike) || null;
+    }
+
+    private routeDirtySignalToLeaferRuntime(
+        dirty_foreground: boolean,
+        dirty_background?: boolean
+    ): boolean {
+        const graph = this.canvasGraphRef();
+        const canvasList = graph?.list_of_graphcanvas;
+        if (!canvasList || !canvasList.length) {
+            return false;
+        }
+
+        for (let i = 0; i < canvasList.length; ++i) {
+            if (canvasList[i]?.renderRuntime !== "leafer") {
+                return false;
+            }
+        }
+
+        for (let i = 0; i < canvasList.length; ++i) {
+            const canvas = canvasList[i];
+            if (!canvas) {
+                continue;
+            }
+
+            if (canvas.notifyDirtySignal) {
+                canvas.notifyDirtySignal(dirty_foreground, dirty_background);
+                continue;
+            }
+
+            canvas.setDirty?.(dirty_foreground, dirty_background);
+        }
+
+        return true;
     }
 
     /* Force align to grid */
@@ -96,6 +136,14 @@ export class LGraphNodeCanvasCollab extends LGraphNodeConnectGeometry {
             anyThis.graph ||
             null;
         if (!graph) {
+            return;
+        }
+        if (
+            this.routeDirtySignalToLeaferRuntime(
+                dirty_foreground,
+                dirty_background
+            )
+        ) {
             return;
         }
         graph.sendActionToCanvas("setDirty", [

@@ -23,6 +23,7 @@ const resolveIOEventsHost = createClassHostResolver(defaultIOEventsHost, {
 });
 
 type GraphNodeEventBase = Pick<LGraphNode, "id" | "mode">;
+type GraphCanvasRenderRuntime = "legacy-canvas" | "leafer";
 
 interface GraphNodeEventLike extends GraphNodeEventBase {
     constructor: Function;
@@ -40,6 +41,12 @@ interface GraphNodeEventLike extends GraphNodeEventBase {
 
 interface GraphCanvasEventLike {
     live_mode?: boolean;
+    renderRuntime?: GraphCanvasRenderRuntime;
+    notifyDirtySignal?: (
+        dirty_foreground?: boolean,
+        dirty_background?: boolean
+    ) => void;
+    setDirty?: (dirty_foreground: boolean, dirty_background?: boolean) => void;
     [key: string]: unknown;
 }
 
@@ -156,6 +163,25 @@ export class LGraphIOEvents extends LGraphStructure {
 
         for (let i = 0; i < canvasList.length; ++i) {
             const canvas = canvasList[i];
+            if (action == "setDirty" && canvas.renderRuntime === "leafer") {
+                const [dirtyForeground, dirtyBackground] = Array.isArray(params)
+                    ? (params as [boolean | undefined, boolean | undefined])
+                    : [undefined, undefined];
+
+                if (canvas.notifyDirtySignal) {
+                    canvas.notifyDirtySignal(dirtyForeground, dirtyBackground);
+                    continue;
+                }
+
+                if (canvas.setDirty) {
+                    canvas.setDirty(
+                        Boolean(dirtyForeground),
+                        Boolean(dirtyBackground)
+                    );
+                    continue;
+                }
+            }
+
             if (canvas[action]) {
                 (canvas[action] as (...args: unknown[]) => void).apply(
                     canvas,
