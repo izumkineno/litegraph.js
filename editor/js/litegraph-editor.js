@@ -4,7 +4,7 @@ function Editor(container_id, options) {
 
     //fill container
     var html = "<div class='header'><div class='tools tools-left'></div><div class='tools tools-right'></div></div>";
-    html += "<div class='content'><div class='editor-area'><canvas class='graphcanvas' width='1000' height='500' tabindex=10></canvas></div></div>";
+    html += "<div class='content'><div class='editor-area'><div class='graphview'><canvas class='graphcanvas' width='1000' height='500' tabindex=10></canvas></div></div></div>";
     html += "<div class='footer'><div class='tools tools-left'></div><div class='tools tools-right'></div></div>";
 
     var root = document.createElement("div");
@@ -16,6 +16,7 @@ function Editor(container_id, options) {
     this.content = root.querySelector(".content");
     this.footer = root.querySelector(".footer");
 
+    var graphview = this.graphview = root.querySelector(".graphview");
     var canvas = this.canvas = root.querySelector(".graphcanvas");
 
     //create graph
@@ -82,6 +83,9 @@ function Editor(container_id, options) {
         parent.appendChild(root);
     }
 
+    if (graphview && graphcanvas.leaferAppHost && graphcanvas.leaferAppHost.resize) {
+        graphcanvas.leaferAppHost.resize();
+    }
     graphcanvas.resize();
     //graphcanvas.draw(true,true);
     if (LiteGraph.EditorBenchmark) {

@@ -1,6 +1,7 @@
 import type { Vector2, Vector4 } from "../types/core-types";
 import { createClassHostResolver } from "../core/host-resolver";
 import type { LiteGraphConstantsShape } from "../core/litegraph.constants";
+import { LeaferAppHost } from "../services/leafer/LeaferAppHost";
 import { DragAndScale } from "./DragAndScale";
 import { LGraphCanvas as LGraphCanvasStatic } from "./LGraphCanvas.static";
 
@@ -230,9 +231,11 @@ export class LGraphCanvasLifecycle extends LGraphCanvasStatic {
     background_image: string;
     ds: DragAndScale;
     canvas: CanvasLike | null;
+    canvasHostElement: HTMLElement | null;
     bgcanvas: CanvasLike | null;
     ctx: CanvasRenderingContext2D | null;
     bgctx: CanvasRenderingContext2D | null;
+    leaferAppHost: LeaferAppHost | null;
 
     title_text_font: string;
     inner_text_font: string;
@@ -330,6 +333,7 @@ export class LGraphCanvasLifecycle extends LGraphCanvasStatic {
     is_rendering: boolean;
     _render_loop_disabled_notice_emitted: boolean;
     _dirty_signal_notice_emitted: boolean;
+    _legacy_canvas_context_warning_emitted: boolean;
 
     _mousedown_callback: CanvasPointerListener | null;
     _mousewheel_callback: CanvasPointerListener | null;
@@ -342,7 +346,7 @@ export class LGraphCanvasLifecycle extends LGraphCanvasStatic {
     _ondrop_callback: CanvasPointerListener | null;
 
     constructor(
-        canvas?: HTMLCanvasElement | string | null,
+        canvas?: HTMLElement | string | null,
         graph?: GraphLike | null,
         options?: LGraphCanvasOptions
     ) {
@@ -358,6 +362,7 @@ export class LGraphCanvasLifecycle extends LGraphCanvasStatic {
         this.is_rendering = false;
         this._render_loop_disabled_notice_emitted = false;
         this._dirty_signal_notice_emitted = false;
+        this._legacy_canvas_context_warning_emitted = false;
 
         this.background_image = LGraphCanvasLifecycle.DEFAULT_BACKGROUND_IMAGE;
         let targetCanvas = canvas || null;
@@ -443,9 +448,11 @@ export class LGraphCanvasLifecycle extends LGraphCanvasStatic {
         this.viewport = this.options.viewport || null;
 
         this.canvas = null;
+        this.canvasHostElement = null;
         this.bgcanvas = null;
         this.ctx = null;
         this.bgctx = null;
+        this.leaferAppHost = null;
 
         this.frame = 0;
         this.last_draw_time = 0;
@@ -603,8 +610,138 @@ export class LGraphCanvasLifecycle extends LGraphCanvasStatic {
         return this.graph;
     }
 
+    private isCanvasElement(
+        element: HTMLElement | null | undefined
+    ): element is HTMLCanvasElement {
+        return !!element && element.localName === "canvas";
+    }
+
+    private prepareLeaferHostView(view: HTMLElement): void {
+        view.classList.add("graphview", "lgraph-leafer-host", "lgraphcanvas");
+        if (!view.style.position) {
+            view.style.position = "relative";
+        }
+        if (!view.style.width) {
+            view.style.width = "100%";
+        }
+        if (!view.style.height) {
+            view.style.height = "100%";
+        }
+        if (!view.style.overflow) {
+            view.style.overflow = "hidden";
+        }
+    }
+
+    private resolveLeaferHostView(target: HTMLElement): HTMLElement {
+        if (!this.isCanvasElement(target)) {
+            this.prepareLeaferHostView(target);
+            return target;
+        }
+
+        const existingView = target.closest(".graphview");
+        if (existingView instanceof HTMLElement) {
+            this.prepareLeaferHostView(existingView);
+            return existingView;
+        }
+
+        const parent = target.parentElement;
+        if (!parent) {
+            this.prepareLeaferHostView(target);
+            return target;
+        }
+
+        const wrapper = target.ownerDocument.createElement("div");
+        parent.insertBefore(wrapper, target);
+        wrapper.appendChild(target);
+        this.prepareLeaferHostView(wrapper);
+        return wrapper;
+    }
+
+    private resolveLegacyCanvasElement(
+        target: HTMLElement,
+        hostView: HTMLElement
+    ): CanvasLike {
+        if (this.isCanvasElement(target)) {
+            return target as CanvasLike;
+        }
+
+        const existingCanvas = hostView.querySelector("canvas");
+        if (existingCanvas instanceof HTMLCanvasElement) {
+            return existingCanvas as CanvasLike;
+        }
+
+        const canvas = hostView.ownerDocument.createElement("canvas") as CanvasLike;
+        canvas.className = "graphcanvas";
+        canvas.width = hostView.clientWidth || 1;
+        canvas.height = hostView.clientHeight || 1;
+        hostView.appendChild(canvas);
+        return canvas;
+    }
+
+    private hideLegacyCanvasForLeafer(target: HTMLElement): void {
+        if (!this.isCanvasElement(target)) {
+            return;
+        }
+
+        target.dataset.lgraphLegacyDisplay = target.style.display || "";
+        target.dataset.lgraphLegacyPointerEvents =
+            target.style.pointerEvents || "";
+        target.style.display = "none";
+        target.style.pointerEvents = "none";
+
+        if (!this._legacy_canvas_context_warning_emitted) {
+            console.warn(
+                "LGraphCanvas: legacy canvas context access is unavailable when renderRuntime='leafer'."
+            );
+            this._legacy_canvas_context_warning_emitted = true;
+        }
+    }
+
+    private restoreLegacyCanvasVisibility(): void {
+        if (!this.isCanvasElement(this.canvas)) {
+            return;
+        }
+
+        this.canvas.style.display = this.canvas.dataset.lgraphLegacyDisplay || "";
+        this.canvas.style.pointerEvents =
+            this.canvas.dataset.lgraphLegacyPointerEvents || "";
+        delete this.canvas.dataset.lgraphLegacyDisplay;
+        delete this.canvas.dataset.lgraphLegacyPointerEvents;
+    }
+
+    private destroyLeaferAppShell(): void {
+        if (!this.leaferAppHost) {
+            return;
+        }
+
+        this.leaferAppHost.destroy();
+        this.leaferAppHost = null;
+    }
+
+    private attachLeaferAppShell(target: HTMLElement): void {
+        const hostView = this.resolveLeaferHostView(target);
+        const legacyCanvas = this.resolveLegacyCanvasElement(target, hostView);
+
+        this.canvas = legacyCanvas;
+        this.canvasHostElement = hostView;
+        this.ds.element = hostView;
+        legacyCanvas.data = this;
+        legacyCanvas.tabIndex = 1;
+        hostView.tabIndex = 1;
+
+        this.hideLegacyCanvasForLeafer(legacyCanvas);
+        this.bgcanvas = null;
+        this.bgctx = null;
+        this.ctx = null;
+
+        this.destroyLeaferAppShell();
+        this.leaferAppHost = new LeaferAppHost(hostView);
+
+        console.info("LGraphCanvas: Leafer App shell initialized.");
+    }
+
     setCanvas(
-        canvas: HTMLCanvasElement | string | null | undefined,
+        canvas: HTMLElement | string | null | undefined,
         skip_events?: boolean
     ): void {
         let targetCanvas = canvas;
@@ -616,14 +753,17 @@ export class LGraphCanvasLifecycle extends LGraphCanvasStatic {
             ) {
                 targetCanvas = document.getElementById(
                     targetCanvas as unknown as string
-                ) as HTMLCanvasElement | null;
+                ) as HTMLElement | null;
                 if (!targetCanvas) {
                     throw "Error creating LiteGraph canvas: Canvas not found";
                 }
             }
         }
 
-        if (targetCanvas === this.canvas) {
+        if (
+            (targetCanvas === this.canvas || targetCanvas === this.canvasHostElement) &&
+            !(this.renderRuntime === "leafer" && !this.leaferAppHost)
+        ) {
             return;
         }
 
@@ -631,13 +771,34 @@ export class LGraphCanvasLifecycle extends LGraphCanvasStatic {
             if (!skip_events) {
                 this.unbindEvents();
             }
+            this.restoreLegacyCanvasVisibility();
+            this.destroyLeaferAppShell();
         }
 
-        this.canvas = (targetCanvas as CanvasLike) || null;
-        this.ds.element = (targetCanvas as HTMLElement) || null;
         if (!targetCanvas) {
+            this.canvas = null;
+            this.canvasHostElement = null;
+            this.ds.element = null;
+            this.bgcanvas = null;
+            this.ctx = null;
+            this.bgctx = null;
             return;
         }
+
+        if (this.renderRuntime === "leafer") {
+            if (!skip_events && this._events_binded) {
+                this.unbindEvents();
+            }
+            this.attachLeaferAppShell(targetCanvas as HTMLElement);
+            return;
+        }
+
+        this.restoreLegacyCanvasVisibility();
+        this.destroyLeaferAppShell();
+
+        this.canvas = (targetCanvas as CanvasLike) || null;
+        this.canvasHostElement = (targetCanvas as HTMLElement) || null;
+        this.ds.element = (targetCanvas as HTMLElement) || null;
 
         const canvasRef = targetCanvas as CanvasLike;
         canvasRef.className += " lgraphcanvas";

@@ -157,6 +157,18 @@
     height: 100%;
 }
 
+.litegraph-editor .graphview {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+}
+
+.litegraph-editor .graphview > .graphcanvas {
+    width: 100%;
+    height: 100%;
+}
+
 /* METER *********************/
 
 .litegraph-editor .loadmeter {
