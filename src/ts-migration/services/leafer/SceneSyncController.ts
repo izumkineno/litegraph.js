@@ -1,4 +1,4 @@
-import { Group } from "leafer-ui";
+import { Path } from "leafer-ui";
 
 import type { LeaferAppHost } from "./LeaferAppHost";
 import {
@@ -12,9 +12,10 @@ import {
 import { LegacyNodeHost } from "./LegacyNodeHost";
 import type { LegacyNodeRenderHost } from "./LegacyNodePainter";
 import { discriminateNodeRuntime } from "./NodeRuntimeDiscriminator";
+import { NodePortAdapter, type NodePortNodeLike } from "./NodePortAdapter";
 
 export type NodeHost = LegacyNodeHost;
-export type LinkView = Group;
+export type LinkView = Path;
 export type SceneSyncRenderHost = LegacyNodeRenderHost;
 
 interface DirtyCapableNode extends GraphMutationNodeLike {
@@ -28,16 +29,16 @@ function toMutationKey(id: GraphMutationNodeId | GraphMutationLinkId): string {
     return String(id);
 }
 
-function createPlaceholderGroup(
-    name: string,
-    kind: "link-view"
-): Group {
-    return new Group({
+function createLinkView(name: string): Path {
+    return new Path({
         name,
         hittable: false,
-        visible: false,
+        visible: true,
+        stroke: "#9A9",
+        strokeWidth: 3,
+        fill: "none",
         data: {
-            litegraphPlaceholderKind: kind,
+            litegraphPlaceholderKind: "link-view",
         },
     });
 }
@@ -49,10 +50,12 @@ export class SceneSyncController {
 
     private readonly unsubscribers: Array<() => void> = [];
     private readonly nodesById = new Map<GraphMutationNodeId, GraphMutationNodeLike>();
+    private readonly linksById = new Map<GraphMutationLinkId, GraphMutationLinkLike>();
     private readonly dirtyBridgeUninstallers = new Map<
         GraphMutationNodeId,
         () => void
     >();
+    private readonly nodePortAdapter: NodePortAdapter;
 
     constructor(
         private readonly graph: GraphMutationGraphLike,
@@ -60,6 +63,13 @@ export class SceneSyncController {
         private readonly appHost: LeaferAppHost,
         private readonly renderHost: SceneSyncRenderHost
     ) {
+        this.nodePortAdapter = new NodePortAdapter(
+            graph as GraphMutationGraphLike & {
+                _nodes?: NodePortNodeLike[];
+                getNodeById?: (id: GraphMutationNodeId) => NodePortNodeLike | null;
+            }
+        );
+
         this.unsubscribers.push(
             this.bus.on("graph:clear", () => {
                 this.clearScene();
@@ -72,6 +82,9 @@ export class SceneSyncController {
             }),
             this.bus.on("node:dirty", ({ nodeId, node }) => {
                 this.handleNodeDirty(nodeId, node);
+            }),
+            this.bus.on("node:moved", ({ nodeId, node }) => {
+                this.syncNodeMoved(nodeId, node);
             }),
             this.bus.on("link:add", ({ linkId, link }) => {
                 this.ensureLinkView(linkId, link);
@@ -90,6 +103,34 @@ export class SceneSyncController {
         }
         this.unsubscribers.length = 0;
         this.clearScene();
+    }
+
+    repaintNodeHost(nodeId: GraphMutationNodeId): void {
+        this.nodeHosts.get(nodeId)?.repaint();
+    }
+
+    repaintNodeHosts(nodeIds: readonly GraphMutationNodeId[]): void {
+        for (let i = 0; i < nodeIds.length; ++i) {
+            this.repaintNodeHost(nodeIds[i]);
+        }
+    }
+
+    repaintAllNodeHosts(): void {
+        for (const host of this.nodeHosts.values()) {
+            host.repaint();
+        }
+    }
+
+    syncNodeMoved(
+        nodeId: GraphMutationNodeId,
+        node?: GraphMutationNodeLike
+    ): void {
+        if (node) {
+            this.nodesById.set(nodeId, node);
+        }
+
+        this.nodeHosts.get(nodeId)?.syncPosition();
+        this.updateIncidentLinks(nodeId);
     }
 
     private hydrateFromGraph(): void {
@@ -120,6 +161,7 @@ export class SceneSyncController {
         this.linkViews.clear();
         this.linksByNodeId.clear();
         this.nodesById.clear();
+        this.linksById.clear();
         this.dirtyBridgeUninstallers.clear();
     }
 
@@ -131,13 +173,15 @@ export class SceneSyncController {
         this.installNodeDirtyBridge(node);
 
         if (existingHost) {
+            existingHost.syncPosition();
+            this.updateIncidentLinks(nodeId);
             return existingHost;
         }
 
         const runtime = discriminateNodeRuntime(node);
         if (runtime !== "legacy") {
             throw new Error(
-                `SceneSyncController: unsupported node runtime '${runtime}' during Phase 4.`
+                `SceneSyncController: unsupported node runtime '${runtime}' during Phase 7.`
             );
         }
 
@@ -150,6 +194,8 @@ export class SceneSyncController {
         );
         this.appHost.legacyNodeLayer.add(nodeHost.root);
         this.nodeHosts.set(nodeId, nodeHost);
+        nodeHost.syncPosition();
+        this.updateIncidentLinks(nodeId);
 
         return nodeHost;
     }
@@ -158,8 +204,7 @@ export class SceneSyncController {
         const incidentLinks = Array.from(this.linksByNodeId.get(nodeId) || []);
         for (let i = 0; i < incidentLinks.length; ++i) {
             const linkId = incidentLinks[i];
-            const link = this.graph.links[toMutationKey(linkId)];
-            this.removeLinkView(linkId, link);
+            this.removeLinkView(linkId);
         }
 
         const nodeHost = this.nodeHosts.get(nodeId);
@@ -180,6 +225,8 @@ export class SceneSyncController {
     ): LinkView {
         const existingView = this.linkViews.get(linkId);
         if (existingView) {
+            this.linksById.set(linkId, link);
+            this.syncLinkView(linkId, link, existingView);
             return existingView;
         }
 
@@ -196,34 +243,37 @@ export class SceneSyncController {
             this.ensureTrackedNodeId(link.target_id);
         }
 
-        const linkView = createPlaceholderGroup(
-            `litegraph-link-view:${toMutationKey(linkId)}`,
-            "link-view"
+        const linkView = createLinkView(
+            `litegraph-link-view:${toMutationKey(linkId)}`
         );
         this.appHost.linkLayerBack.add(linkView);
         this.linkViews.set(linkId, linkView);
+        this.linksById.set(linkId, link);
         this.trackLinkOnNode(link.origin_id, linkId);
         this.trackLinkOnNode(link.target_id, linkId);
+        this.syncLinkView(linkId, link, linkView);
 
         return linkView;
     }
 
     private removeLinkView(
         linkId: GraphMutationLinkId,
-        link?: GraphMutationLinkLike
+        providedLink?: GraphMutationLinkLike
     ): void {
+        const resolvedLink = providedLink || this.linksById.get(linkId);
         const linkView = this.linkViews.get(linkId);
         if (linkView) {
             linkView.destroy();
             this.linkViews.delete(linkId);
         }
 
-        if (!link) {
+        this.linksById.delete(linkId);
+        if (!resolvedLink) {
             return;
         }
 
-        this.linksByNodeId.get(link.origin_id)?.delete(linkId);
-        this.linksByNodeId.get(link.target_id)?.delete(linkId);
+        this.linksByNodeId.get(resolvedLink.origin_id)?.delete(linkId);
+        this.linksByNodeId.get(resolvedLink.target_id)?.delete(linkId);
     }
 
     private handleNodeDirty(
@@ -307,5 +357,43 @@ export class SceneSyncController {
             this.linksByNodeId.get(nodeId) || new Set<GraphMutationLinkId>();
         links.add(linkId);
         this.linksByNodeId.set(nodeId, links);
+    }
+
+    private updateIncidentLinks(nodeId: GraphMutationNodeId): void {
+        const incidentLinks = this.linksByNodeId.get(nodeId);
+        if (!incidentLinks?.size) {
+            return;
+        }
+
+        for (const linkId of Array.from(incidentLinks)) {
+            this.syncLinkView(linkId);
+        }
+    }
+
+    private syncLinkView(
+        linkId: GraphMutationLinkId,
+        providedLink?: GraphMutationLinkLike,
+        providedView?: LinkView
+    ): void {
+        const link = providedLink || this.linksById.get(linkId);
+        const view = providedView || this.linkViews.get(linkId);
+        if (!link || !view) {
+            return;
+        }
+
+        const layout = this.nodePortAdapter.getLinkLayout(link);
+        if (!layout) {
+            view.visible = false;
+            return;
+        }
+
+        view.path = this.nodePortAdapter.buildLinkPath(
+            layout.start,
+            layout.end,
+            layout.startDir,
+            layout.endDir
+        );
+        view.stroke = (link.color as string) || "#9A9";
+        view.visible = true;
     }
 }

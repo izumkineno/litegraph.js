@@ -45,6 +45,11 @@ export interface GraphMutationEventMap {
         dirtyForeground?: boolean;
         dirtyBackground?: boolean;
     };
+    "node:moved": {
+        graph: GraphMutationGraphLike;
+        nodeId: GraphMutationNodeId;
+        node: GraphMutationNodeLike;
+    };
     "link:add": {
         graph: GraphMutationGraphLike;
         linkId: GraphMutationLinkId;

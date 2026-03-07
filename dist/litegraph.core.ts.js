@@ -106,6 +106,75 @@ var LiteGraphTSMigration = (function(exports) {
   ];
   const LGRAPHCANVAS_STATIC_RESIZE_DIFF_ID = LITEGRAPH_COMPAT_DIFF_IDS.canvasStaticResize;
   const LGRAPHCANVAS_STATIC_SUBGRAPH_MENU_DIFF_ID = LITEGRAPH_COMPAT_DIFF_IDS.canvasStaticSubgraphMenu;
+  const LGRAPHCANVAS_STATIC_MISSING_APIS_DIFF_ID$1 = LITEGRAPH_COMPAT_DIFF_IDS.canvasStaticMissingApis;
+  function applyLGraphCanvasStaticCompatAliases$1(host) {
+    if (!host.onResizeNode && host.onMenuResizeNode) {
+      host.onResizeNode = host.onMenuResizeNode;
+    }
+    if (!host.onMenuResizeNode && host.onResizeNode) {
+      host.onMenuResizeNode = host.onResizeNode;
+    }
+    if (!host.onNodeToSubgraph && host.onMenuNodeToSubgraph) {
+      host.onNodeToSubgraph = host.onMenuNodeToSubgraph;
+    }
+    if (!host.onMenuNodeToSubgraph && host.onNodeToSubgraph) {
+      host.onMenuNodeToSubgraph = host.onNodeToSubgraph;
+    }
+  }
+  function applyLGraphCanvasStaticMissingApiGuards$1(host) {
+    const filled = [];
+    if (!host.getBoundaryNodes) {
+      host.getBoundaryNodes = () => ({
+        top: null,
+        right: null,
+        bottom: null,
+        left: null
+      });
+      filled.push("getBoundaryNodes");
+    }
+    if (!host.alignNodes) {
+      host.alignNodes = () => {
+      };
+      filled.push("alignNodes");
+    }
+    if (!host.onNodeAlign) {
+      host.onNodeAlign = () => {
+      };
+      filled.push("onNodeAlign");
+    }
+    if (!host.onGroupAlign) {
+      host.onGroupAlign = () => {
+      };
+      filled.push("onGroupAlign");
+    }
+    if (!host.getPropertyPrintableValue) {
+      host.getPropertyPrintableValue = (value) => String(value);
+      filled.push("getPropertyPrintableValue");
+    }
+    return {
+      diffId: LGRAPHCANVAS_STATIC_MISSING_APIS_DIFF_ID$1,
+      filled
+    };
+  }
+  function applyLGraphCanvasStaticCompat$2(host) {
+    applyLGraphCanvasStaticCompatAliases$1(host);
+    return applyLGraphCanvasStaticMissingApiGuards$1(host);
+  }
+  function hasRequiredLGraphCanvasStaticApis(host) {
+    return typeof host.onResizeNode === "function" && typeof host.onMenuResizeNode === "function" && typeof host.onNodeToSubgraph === "function" && typeof host.onMenuNodeToSubgraph === "function" && typeof host.getBoundaryNodes === "function" && typeof host.alignNodes === "function" && typeof host.onNodeAlign === "function" && typeof host.onGroupAlign === "function" && typeof host.getPropertyPrintableValue === "function";
+  }
+  function attachLiteGraphCommonJsExports$1(exportsTarget, globalScope) {
+    const liteGraph = globalScope.LiteGraph;
+    exportsTarget.LiteGraph = globalScope.LiteGraph;
+    exportsTarget.LGraph = globalScope.LGraph || (liteGraph == null ? void 0 : liteGraph.LGraph);
+    exportsTarget.LLink = globalScope.LLink || (liteGraph == null ? void 0 : liteGraph.LLink);
+    exportsTarget.LGraphNode = globalScope.LGraphNode || (liteGraph == null ? void 0 : liteGraph.LGraphNode);
+    exportsTarget.LGraphGroup = globalScope.LGraphGroup || (liteGraph == null ? void 0 : liteGraph.LGraphGroup);
+    exportsTarget.DragAndScale = globalScope.DragAndScale || (liteGraph == null ? void 0 : liteGraph.DragAndScale);
+    exportsTarget.LGraphCanvas = globalScope.LGraphCanvas || (liteGraph == null ? void 0 : liteGraph.LGraphCanvas);
+    exportsTarget.ContextMenu = globalScope.ContextMenu || (liteGraph == null ? void 0 : liteGraph.ContextMenu);
+    return exportsTarget;
+  }
   const LGRAPHCANVAS_STATIC_MISSING_APIS_DIFF_ID = LITEGRAPH_COMPAT_DIFF_IDS.canvasStaticMissingApis;
   function applyLGraphCanvasStaticCompatAliases(host) {
     if (!host.onResizeNode && host.onMenuResizeNode) {
@@ -160,24 +229,9 @@ var LiteGraphTSMigration = (function(exports) {
     applyLGraphCanvasStaticCompatAliases(host);
     return applyLGraphCanvasStaticMissingApiGuards(host);
   }
-  function hasRequiredLGraphCanvasStaticApis(host) {
-    return typeof host.onResizeNode === "function" && typeof host.onMenuResizeNode === "function" && typeof host.onNodeToSubgraph === "function" && typeof host.onMenuNodeToSubgraph === "function" && typeof host.getBoundaryNodes === "function" && typeof host.alignNodes === "function" && typeof host.onNodeAlign === "function" && typeof host.onGroupAlign === "function" && typeof host.getPropertyPrintableValue === "function";
-  }
-  function attachLiteGraphCommonJsExports(exportsTarget, globalScope) {
-    const liteGraph = globalScope.LiteGraph;
-    exportsTarget.LiteGraph = globalScope.LiteGraph;
-    exportsTarget.LGraph = globalScope.LGraph || (liteGraph == null ? void 0 : liteGraph.LGraph);
-    exportsTarget.LLink = globalScope.LLink || (liteGraph == null ? void 0 : liteGraph.LLink);
-    exportsTarget.LGraphNode = globalScope.LGraphNode || (liteGraph == null ? void 0 : liteGraph.LGraphNode);
-    exportsTarget.LGraphGroup = globalScope.LGraphGroup || (liteGraph == null ? void 0 : liteGraph.LGraphGroup);
-    exportsTarget.DragAndScale = globalScope.DragAndScale || (liteGraph == null ? void 0 : liteGraph.DragAndScale);
-    exportsTarget.LGraphCanvas = globalScope.LGraphCanvas || (liteGraph == null ? void 0 : liteGraph.LGraphCanvas);
-    exportsTarget.ContextMenu = globalScope.ContextMenu || (liteGraph == null ? void 0 : liteGraph.ContextMenu);
-    return exportsTarget;
-  }
-  const GRID_SQUARE_SHAPE_DIFF_ID = LITEGRAPH_COMPAT_DIFF_IDS.constantsGridSquareAlias;
-  const GRID_SQUARE_SHAPE_DEFAULT = 6;
-  function resolveGridSquareShapeValue(host, fallbackValue = GRID_SQUARE_SHAPE_DEFAULT) {
+  const GRID_SQUARE_SHAPE_DIFF_ID$1 = LITEGRAPH_COMPAT_DIFF_IDS.constantsGridSquareAlias;
+  const GRID_SQUARE_SHAPE_DEFAULT$1 = 6;
+  function resolveGridSquareShapeValue$1(host, fallbackValue = GRID_SQUARE_SHAPE_DEFAULT$1) {
     if (typeof host.GRID_SHAPE === "number") {
       return { value: host.GRID_SHAPE, source: "GRID_SHAPE" };
     }
@@ -186,28 +240,24 @@ var LiteGraphTSMigration = (function(exports) {
     }
     return { value: fallbackValue, source: "fallback" };
   }
-  function applyGridSquareShapeAlias(host, fallbackValue = GRID_SQUARE_SHAPE_DEFAULT) {
+  function applyGridSquareShapeAlias$1(host, fallbackValue = GRID_SQUARE_SHAPE_DEFAULT$1) {
     const beforeGrid = host.GRID_SHAPE;
     const beforeSquare = host.SQUARE_SHAPE;
-    const resolved = resolveGridSquareShapeValue(host, fallbackValue);
+    const resolved = resolveGridSquareShapeValue$1(host, fallbackValue);
     host.GRID_SHAPE = resolved.value;
     host.SQUARE_SHAPE = resolved.value;
     return {
-      diffId: GRID_SQUARE_SHAPE_DIFF_ID,
+      diffId: GRID_SQUARE_SHAPE_DIFF_ID$1,
       value: resolved.value,
       source: resolved.source,
       changed: beforeGrid !== host.GRID_SHAPE || beforeSquare !== host.SQUARE_SHAPE
     };
   }
-  function isGridSquareShapeAliasSynced(host) {
-    return typeof host.GRID_SHAPE === "number" && typeof host.SQUARE_SHAPE === "number" && host.GRID_SHAPE === host.SQUARE_SHAPE;
-  }
-  const LGRAPHGROUP_SERIALIZATION_DIFF_ID = LITEGRAPH_COMPAT_DIFF_IDS.serializationGroupFontField;
-  function normalizeSerializedLGraphGroup(group, defaultFontSize = 24) {
+  function normalizeSerializedLGraphGroup$1(group, defaultFontSize = 24) {
     const anyGroup = group;
-    let fontSize = parseNumber(anyGroup.font_size);
+    let fontSize = parseNumber$1(anyGroup.font_size);
     if (fontSize == null) {
-      fontSize = parseNumber(anyGroup.font);
+      fontSize = parseNumber$1(anyGroup.font);
     }
     if (fontSize == null) {
       fontSize = defaultFontSize;
@@ -219,30 +269,10 @@ var LiteGraphTSMigration = (function(exports) {
       font_size: fontSize
     };
   }
-  function denormalizeSerializedLGraphGroup(group) {
-    return {
-      title: group.title,
-      bounding: group.bounding,
-      color: group.color,
-      font: String(group.font_size)
-    };
+  function parseSerializedLGraphGroupInput$1(input, defaultFontSize = 24) {
+    return normalizeSerializedLGraphGroup$1(input, defaultFontSize);
   }
-  function parseSerializedLGraphGroupInput(input, defaultFontSize = 24) {
-    return normalizeSerializedLGraphGroup(input, defaultFontSize);
-  }
-  function serializeLGraphGroupShape(shape, order = "runtime") {
-    const runtimeShape = {
-      title: shape.title,
-      bounding: shape.bounding,
-      color: shape.color,
-      font_size: shape.font_size
-    };
-    if (order === "runtime") {
-      return runtimeShape;
-    }
-    return denormalizeSerializedLGraphGroup(runtimeShape);
-  }
-  function parseNumber(v2) {
+  function parseNumber$1(v2) {
     if (typeof v2 === "number" && Number.isFinite(v2)) {
       return v2;
     }
@@ -254,11 +284,7 @@ var LiteGraphTSMigration = (function(exports) {
     }
     return null;
   }
-  const LGRAPH_ON_NODE_ADDED_DIFF_ID = LITEGRAPH_COMPAT_DIFF_IDS.graphHooksOnNodeAdded;
-  function hasGraphOnNodeAddedCompatHook(graph) {
-    return typeof graph.onNodeAdded === "function";
-  }
-  function invokeGraphOnNodeAddedCompatHook(graph, node2) {
+  function invokeGraphOnNodeAddedCompatHook$1(graph, node2) {
     const rawHook = graph.onNodeAdded;
     if (!rawHook) {
       return false;
@@ -266,14 +292,13 @@ var LiteGraphTSMigration = (function(exports) {
     rawHook(node2);
     return true;
   }
-  const LLINK_SERIALIZATION_DIFF_ID = LITEGRAPH_COMPAT_DIFF_IDS.serializationLinkTupleOrder;
-  function isSerializedLLinkDtsOrder(tuple) {
+  function isSerializedLLinkDtsOrder$1(tuple) {
     return typeof tuple[1] === "string";
   }
-  function normalizeSerializedLLinkTuple(tuple) {
+  function normalizeSerializedLLinkTuple$1(tuple) {
     var _a3, _b2, _c2, _d2, _e2, _f, _g, _h2, _i2, _j, _k, _l;
     const source = tuple;
-    if (isSerializedLLinkDtsOrder(source)) {
+    if (isSerializedLLinkDtsOrder$1(source)) {
       return [
         Number((_a3 = source[0]) != null ? _a3 : 0),
         Number((_b2 = source[2]) != null ? _b2 : 0),
@@ -292,23 +317,10 @@ var LiteGraphTSMigration = (function(exports) {
       String((_l = source[5]) != null ? _l : "")
     ];
   }
-  function denormalizeSerializedLLinkTuple(tuple, order = "runtime") {
-    if (order === "runtime") {
-      return [tuple[0], tuple[1], tuple[2], tuple[3], tuple[4], tuple[5]];
-    }
-    return [
-      tuple[0],
-      tuple[5],
-      tuple[1],
-      tuple[2],
-      tuple[3],
-      tuple[4]
-    ];
-  }
-  function parseSerializedLLinkInput(input) {
+  function parseSerializedLLinkInput$1(input) {
     var _a3, _b2, _c2, _d2, _e2, _f;
     if (Array.isArray(input)) {
-      const normalized = normalizeSerializedLLinkTuple(input);
+      const normalized = normalizeSerializedLLinkTuple$1(input);
       return {
         id: normalized[0],
         origin_id: normalized[1],
@@ -328,27 +340,15 @@ var LiteGraphTSMigration = (function(exports) {
       target_slot: Number((_f = shape.target_slot) != null ? _f : 0)
     };
   }
-  function serializeLLinkShape(shape, order = "runtime") {
-    var _a3, _b2, _c2, _d2, _e2, _f;
-    const runtimeTuple = [
-      Number((_a3 = shape.id) != null ? _a3 : 0),
-      Number((_b2 = shape.origin_id) != null ? _b2 : 0),
-      Number((_c2 = shape.origin_slot) != null ? _c2 : 0),
-      Number((_d2 = shape.target_id) != null ? _d2 : 0),
-      Number((_e2 = shape.target_slot) != null ? _e2 : 0),
-      String((_f = shape.type) != null ? _f : "")
-    ];
-    return denormalizeSerializedLLinkTuple(runtimeTuple, order);
-  }
-  const CONTEXT_MENU_CLOSE_ALL_DIFF_ID = LITEGRAPH_COMPAT_DIFF_IDS.uiCloseAllContextMenus;
-  function applyContextMenuCloseAllCompat$1(liteGraph, fallback) {
+  const CONTEXT_MENU_CLOSE_ALL_DIFF_ID$1 = LITEGRAPH_COMPAT_DIFF_IDS.uiCloseAllContextMenus;
+  function applyContextMenuCloseAllCompat$2(liteGraph, fallback) {
     var _a3;
     const beforeLiteGraph = liteGraph.closeAllContextMenus;
     const beforeContextMenu = (_a3 = liteGraph.ContextMenu) == null ? void 0 : _a3.closeAllContextMenus;
-    const resolved = resolveContextMenuCloseAll(liteGraph, fallback);
+    const resolved = resolveContextMenuCloseAll$1(liteGraph);
     if (!resolved.fn) {
       return {
-        diffId: CONTEXT_MENU_CLOSE_ALL_DIFF_ID,
+        diffId: CONTEXT_MENU_CLOSE_ALL_DIFF_ID$1,
         source: "none",
         changed: false,
         synced: false
@@ -359,29 +359,26 @@ var LiteGraphTSMigration = (function(exports) {
       liteGraph.ContextMenu = {};
     }
     liteGraph.ContextMenu.closeAllContextMenus = resolved.fn;
-    const synced = isContextMenuCloseAllCompatSynced(liteGraph);
+    const synced = isContextMenuCloseAllCompatSynced$1(liteGraph);
     return {
-      diffId: CONTEXT_MENU_CLOSE_ALL_DIFF_ID,
+      diffId: CONTEXT_MENU_CLOSE_ALL_DIFF_ID$1,
       source: resolved.source,
       resolved: resolved.fn,
       changed: beforeLiteGraph !== liteGraph.closeAllContextMenus || beforeContextMenu !== liteGraph.ContextMenu.closeAllContextMenus,
       synced
     };
   }
-  function isContextMenuCloseAllCompatSynced(liteGraph) {
+  function isContextMenuCloseAllCompatSynced$1(liteGraph) {
     var _a3;
     return !!(liteGraph.closeAllContextMenus && ((_a3 = liteGraph.ContextMenu) == null ? void 0 : _a3.closeAllContextMenus) && liteGraph.closeAllContextMenus === liteGraph.ContextMenu.closeAllContextMenus);
   }
-  function resolveContextMenuCloseAll(liteGraph, fallback) {
+  function resolveContextMenuCloseAll$1(liteGraph, fallback) {
     var _a3;
     if (liteGraph.closeAllContextMenus) {
       return { source: "LiteGraph", fn: liteGraph.closeAllContextMenus };
     }
     if ((_a3 = liteGraph.ContextMenu) == null ? void 0 : _a3.closeAllContextMenus) {
       return { source: "ContextMenu", fn: liteGraph.ContextMenu.closeAllContextMenus };
-    }
-    if (fallback) {
-      return { source: "fallback", fn: fallback };
     }
     return { source: "none" };
   }
@@ -418,7 +415,7 @@ var LiteGraphTSMigration = (function(exports) {
     },
     [LITEGRAPH_COMPAT_DIFF_IDS.uiCloseAllContextMenus]: (targets) => {
       if (targets.liteGraph) {
-        applyContextMenuCloseAllCompat(targets.liteGraph);
+        applyContextMenuCloseAllCompat$1(targets.liteGraph);
       }
     },
     [LITEGRAPH_COMPAT_DIFF_IDS.canvasStaticMissingApis]: (targets) => {
@@ -430,8 +427,8 @@ var LiteGraphTSMigration = (function(exports) {
   function isAssemblyCompatDiff(diff) {
     return diff.runtimeMode === "assembly";
   }
-  function applyLiteGraphConstantAliases(host, fallbackValue = GRID_SQUARE_SHAPE_DEFAULT) {
-    return applyGridSquareShapeAlias(host, fallbackValue).value;
+  function applyLiteGraphConstantAliases(host, fallbackValue = GRID_SQUARE_SHAPE_DEFAULT$1) {
+    return applyGridSquareShapeAlias$1(host, fallbackValue).value;
   }
   function applyLGraphCanvasStaticCompat(host) {
     applyLGraphCanvasStaticCompat$1(host);
@@ -452,8 +449,8 @@ var LiteGraphTSMigration = (function(exports) {
       };
     }
   }
-  function applyContextMenuCloseAllCompat(liteGraph) {
-    applyContextMenuCloseAllCompat$1(liteGraph);
+  function applyContextMenuCloseAllCompat$1(liteGraph) {
+    applyContextMenuCloseAllCompat$2(liteGraph);
   }
   function applyLiteGraphApiCompatAliases(targets) {
     for (const diff of LITEGRAPH_API_DIFF_MATRIX) {
@@ -470,8 +467,113 @@ var LiteGraphTSMigration = (function(exports) {
       canvasPrototype: bundle.LGraphCanvas.prototype
     });
   }
+  function attachLiteGraphCommonJsExports(exportsTarget, globalScope) {
+    const liteGraph = globalScope.LiteGraph;
+    exportsTarget.LiteGraph = globalScope.LiteGraph;
+    exportsTarget.LGraph = globalScope.LGraph || (liteGraph == null ? void 0 : liteGraph.LGraph);
+    exportsTarget.LLink = globalScope.LLink || (liteGraph == null ? void 0 : liteGraph.LLink);
+    exportsTarget.LGraphNode = globalScope.LGraphNode || (liteGraph == null ? void 0 : liteGraph.LGraphNode);
+    exportsTarget.LGraphGroup = globalScope.LGraphGroup || (liteGraph == null ? void 0 : liteGraph.LGraphGroup);
+    exportsTarget.DragAndScale = globalScope.DragAndScale || (liteGraph == null ? void 0 : liteGraph.DragAndScale);
+    exportsTarget.LGraphCanvas = globalScope.LGraphCanvas || (liteGraph == null ? void 0 : liteGraph.LGraphCanvas);
+    exportsTarget.ContextMenu = globalScope.ContextMenu || (liteGraph == null ? void 0 : liteGraph.ContextMenu);
+    return exportsTarget;
+  }
   function clamp(v2, a, b2) {
     return a > v2 ? a : b2 < v2 ? b2 : v2;
+  }
+  const defaultBridgeOptions$1 = {
+    exposeClamp: true,
+    installRequestAnimationFrameShim: true
+  };
+  function attachLiteGraphGlobalBridge$1(globalScope, runtime2, options) {
+    const resolved = { ...defaultBridgeOptions$1, ...options || {} };
+    const liteGraph = runtime2.LiteGraph;
+    globalScope.LiteGraph = liteGraph;
+    if (runtime2.LGraph) {
+      globalScope.LGraph = runtime2.LGraph;
+      liteGraph.LGraph = runtime2.LGraph;
+    }
+    if (runtime2.LLink) {
+      liteGraph.LLink = runtime2.LLink;
+    }
+    if (runtime2.LGraphNode) {
+      globalScope.LGraphNode = runtime2.LGraphNode;
+      liteGraph.LGraphNode = runtime2.LGraphNode;
+    }
+    if (runtime2.LGraphGroup) {
+      globalScope.LGraphGroup = runtime2.LGraphGroup;
+      liteGraph.LGraphGroup = runtime2.LGraphGroup;
+    }
+    if (runtime2.DragAndScale) {
+      liteGraph.DragAndScale = runtime2.DragAndScale;
+    }
+    if (runtime2.LGraphCanvas) {
+      globalScope.LGraphCanvas = runtime2.LGraphCanvas;
+      liteGraph.LGraphCanvas = runtime2.LGraphCanvas;
+    }
+    if (runtime2.ContextMenu) {
+      liteGraph.ContextMenu = runtime2.ContextMenu;
+    }
+    if (runtime2.CurveEditor) {
+      liteGraph.CurveEditor = runtime2.CurveEditor;
+    }
+    if (resolved.exposeClamp) {
+      globalScope.clamp = clamp;
+    }
+    if (resolved.installRequestAnimationFrameShim) {
+      installRequestAnimationFrameShim$1(globalScope);
+    }
+    return globalScope;
+  }
+  function installRequestAnimationFrameShim$1(globalScope) {
+    if (typeof window == "undefined") {
+      return;
+    }
+    if (globalScope.requestAnimationFrame) {
+      return;
+    }
+    globalScope.requestAnimationFrame = globalScope.webkitRequestAnimationFrame || globalScope.mozRequestAnimationFrame || function(callback) {
+      if (!globalScope.setTimeout) {
+        return 0;
+      }
+      return globalScope.setTimeout(callback, 1e3 / 60);
+    };
+  }
+  function resolveLiteGraphGlobalScope(input) {
+    if (input) {
+      return input;
+    }
+    return globalThis;
+  }
+  function attachLiteGraphAssemblyBridges(bundle, options = {}) {
+    const globalScope = resolveLiteGraphGlobalScope(options.globalScope);
+    if (options.attachToGlobal) {
+      const runtimeConstructors = {
+        LiteGraph: bundle.LiteGraph,
+        LGraph: bundle.LGraph,
+        LLink: bundle.LLink,
+        LGraphNode: bundle.LGraphNode,
+        LGraphGroup: bundle.LGraphGroup,
+        DragAndScale: bundle.DragAndScale,
+        LGraphCanvas: bundle.LGraphCanvas,
+        ContextMenu: bundle.ContextMenu,
+        CurveEditor: bundle.CurveEditor
+      };
+      attachLiteGraphGlobalBridge$1(
+        globalScope,
+        runtimeConstructors,
+        options.bridgeOptions
+      );
+    }
+    if (options.attachCommonJsExports) {
+      const exportsTarget = options.exportsTarget || globalScope.exports || {};
+      attachLiteGraphCommonJsExports(
+        exportsTarget,
+        globalScope
+      );
+    }
+    return globalScope;
   }
   const defaultBridgeOptions = {
     exposeClamp: true,
@@ -531,40 +633,32 @@ var LiteGraphTSMigration = (function(exports) {
       return globalScope.setTimeout(callback, 1e3 / 60);
     };
   }
-  function resolveLiteGraphGlobalScope(input) {
-    if (input) {
-      return input;
+  const GRID_SQUARE_SHAPE_DIFF_ID = LITEGRAPH_COMPAT_DIFF_IDS.constantsGridSquareAlias;
+  const GRID_SQUARE_SHAPE_DEFAULT = 6;
+  function resolveGridSquareShapeValue(host, fallbackValue = GRID_SQUARE_SHAPE_DEFAULT) {
+    if (typeof host.GRID_SHAPE === "number") {
+      return { value: host.GRID_SHAPE, source: "GRID_SHAPE" };
     }
-    return globalThis;
+    if (typeof host.SQUARE_SHAPE === "number") {
+      return { value: host.SQUARE_SHAPE, source: "SQUARE_SHAPE" };
+    }
+    return { value: fallbackValue, source: "fallback" };
   }
-  function attachLiteGraphAssemblyBridges(bundle, options = {}) {
-    const globalScope = resolveLiteGraphGlobalScope(options.globalScope);
-    if (options.attachToGlobal) {
-      const runtimeConstructors = {
-        LiteGraph: bundle.LiteGraph,
-        LGraph: bundle.LGraph,
-        LLink: bundle.LLink,
-        LGraphNode: bundle.LGraphNode,
-        LGraphGroup: bundle.LGraphGroup,
-        DragAndScale: bundle.DragAndScale,
-        LGraphCanvas: bundle.LGraphCanvas,
-        ContextMenu: bundle.ContextMenu,
-        CurveEditor: bundle.CurveEditor
-      };
-      attachLiteGraphGlobalBridge(
-        globalScope,
-        runtimeConstructors,
-        options.bridgeOptions
-      );
-    }
-    if (options.attachCommonJsExports) {
-      const exportsTarget = options.exportsTarget || globalScope.exports || {};
-      attachLiteGraphCommonJsExports(
-        exportsTarget,
-        globalScope
-      );
-    }
-    return globalScope;
+  function applyGridSquareShapeAlias(host, fallbackValue = GRID_SQUARE_SHAPE_DEFAULT) {
+    const beforeGrid = host.GRID_SHAPE;
+    const beforeSquare = host.SQUARE_SHAPE;
+    const resolved = resolveGridSquareShapeValue(host, fallbackValue);
+    host.GRID_SHAPE = resolved.value;
+    host.SQUARE_SHAPE = resolved.value;
+    return {
+      diffId: GRID_SQUARE_SHAPE_DIFF_ID,
+      value: resolved.value,
+      source: resolved.source,
+      changed: beforeGrid !== host.GRID_SHAPE || beforeSquare !== host.SQUARE_SHAPE
+    };
+  }
+  function isGridSquareShapeAliasSynced(host) {
+    return typeof host.GRID_SHAPE === "number" && typeof host.SQUARE_SHAPE === "number" && host.GRID_SHAPE === host.SQUARE_SHAPE;
   }
   function buildCanvasMenuOptions(canvas, menuClass) {
     let options = [];
@@ -3694,7 +3788,7 @@ var LiteGraphTSMigration = (function(exports) {
     refresh();
     return panel;
   }
-  function compareObjects(a, b2) {
+  function compareObjects$1(a, b2) {
     for (const i2 in a) {
       if (a[i2] != b2[i2]) {
         return false;
@@ -3702,18 +3796,18 @@ var LiteGraphTSMigration = (function(exports) {
     }
     return true;
   }
-  function distance(a, b2) {
+  function distance$2(a, b2) {
     return Math.sqrt(
       (b2[0] - a[0]) * (b2[0] - a[0]) + (b2[1] - a[1]) * (b2[1] - a[1])
     );
   }
-  function isInsideRectangle$1(x2, y2, left, top, width2, height) {
+  function isInsideRectangle$2(x2, y2, left, top, width2, height) {
     if (left < x2 && left + width2 > x2 && top < y2 && top + height > y2) {
       return true;
     }
     return false;
   }
-  function growBounding(bounding, x2, y2) {
+  function growBounding$1(bounding, x2, y2) {
     if (x2 < bounding[0]) {
       bounding[0] = x2;
     } else if (x2 > bounding[2]) {
@@ -3726,7 +3820,7 @@ var LiteGraphTSMigration = (function(exports) {
     }
     return bounding;
   }
-  function isInsideBounding(p2, bb) {
+  function isInsideBounding$1(p2, bb) {
     if (Array.isArray(bb[0])) {
       const corners = bb;
       if (p2[0] < corners[0][0] || p2[1] < corners[0][1] || p2[0] > corners[1][0] || p2[1] > corners[1][1]) {
@@ -3753,7 +3847,7 @@ var LiteGraphTSMigration = (function(exports) {
   function toMutationKey$1(nodeId) {
     return String(nodeId);
   }
-  function toFiniteNumber$1(value) {
+  function toFiniteNumber$4(value) {
     const numericValue = Number(value);
     return Number.isFinite(numericValue) ? numericValue : 0;
   }
@@ -3767,7 +3861,7 @@ var LiteGraphTSMigration = (function(exports) {
     return "mouseup";
   }
   function resolveButtons(event2) {
-    return toFiniteNumber$1(event2.buttons);
+    return toFiniteNumber$4(event2.buttons);
   }
   function resolveButton(event2) {
     const pointerEvent = event2;
@@ -3801,8 +3895,8 @@ var LiteGraphTSMigration = (function(exports) {
       const target = targets[i2];
       const localPoint = event2.getInnerPoint(target.nodeRoot);
       localPosByNodeId.set(toMutationKey$1(target.nodeId), [
-        toFiniteNumber$1(localPoint.x),
-        toFiniteNumber$1(localPoint.y)
+        toFiniteNumber$4(localPoint.x),
+        toFiniteNumber$4(localPoint.y)
       ]);
     }
     return localPosByNodeId;
@@ -3810,8 +3904,8 @@ var LiteGraphTSMigration = (function(exports) {
   function createLegacyPointerEvent(options) {
     const { event: event2, hostElement } = options;
     const pagePoint = event2.getPagePoint();
-    const canvasX = toFiniteNumber$1(pagePoint.x);
-    const canvasY = toFiniteNumber$1(pagePoint.y);
+    const canvasX = toFiniteNumber$4(pagePoint.x);
+    const canvasY = toFiniteNumber$4(pagePoint.y);
     const hostRect = hostElement.getBoundingClientRect();
     const clientX = hostRect.left + canvasX;
     const clientY = hostRect.top + canvasY;
@@ -3842,14 +3936,14 @@ var LiteGraphTSMigration = (function(exports) {
       screenY: clientY,
       offsetX: canvasX,
       offsetY: canvasY,
-      deltaX: toFiniteNumber$1(options.deltaX),
-      deltaY: toFiniteNumber$1(options.deltaY),
-      deltax: toFiniteNumber$1(options.deltaX),
-      deltay: toFiniteNumber$1(options.deltaY),
+      deltaX: toFiniteNumber$4(options.deltaX),
+      deltaY: toFiniteNumber$4(options.deltaY),
+      deltax: toFiniteNumber$4(options.deltaX),
+      deltay: toFiniteNumber$4(options.deltaY),
       which: resolveWhich(button),
       button,
       buttons,
-      click_time: Math.max(0, toFiniteNumber$1(options.clickTime)),
+      click_time: Math.max(0, toFiniteNumber$4(options.clickTime)),
       dragging: Boolean(options.dragging),
       shiftKey: Boolean(event2.shiftKey),
       ctrlKey: Boolean(event2.ctrlKey),
@@ -4135,6 +4229,285 @@ var LiteGraphTSMigration = (function(exports) {
       }
     }
   }
+  const PORT_DIRECTION_UP = 1;
+  const PORT_DIRECTION_RIGHT = 2;
+  const PORT_DIRECTION_DOWN = 3;
+  const PORT_DIRECTION_LEFT = 4;
+  function toFiniteNumber$3(value, fallback = 0) {
+    const numericValue = Number(value);
+    return Number.isFinite(numericValue) ? numericValue : fallback;
+  }
+  function toPoint(value) {
+    if (Array.isArray(value) || ArrayBuffer.isView(value) || typeof value === "object" && value !== null && "0" in value && "1" in value) {
+      const indexedValue = value;
+      return [toFiniteNumber$3(indexedValue[0]), toFiniteNumber$3(indexedValue[1])];
+    }
+    const point = value;
+    return [toFiniteNumber$3(point.x), toFiniteNumber$3(point.y)];
+  }
+  function distance$1(a, b2) {
+    const dx = b2[0] - a[0];
+    const dy = b2[1] - a[1];
+    return Math.sqrt(dx * dx + dy * dy);
+  }
+  function getOppositePortDirection(direction) {
+    if (direction === PORT_DIRECTION_UP) {
+      return PORT_DIRECTION_DOWN;
+    }
+    if (direction === PORT_DIRECTION_DOWN) {
+      return PORT_DIRECTION_UP;
+    }
+    if (direction === PORT_DIRECTION_LEFT) {
+      return PORT_DIRECTION_RIGHT;
+    }
+    return PORT_DIRECTION_LEFT;
+  }
+  class NodePortAdapter {
+    constructor(graph) {
+      this.graph = graph;
+    }
+    getNodeById(nodeId) {
+      var _a3;
+      if (typeof this.graph.getNodeById === "function") {
+        return this.graph.getNodeById(nodeId);
+      }
+      const nodes = Array.isArray(this.graph._nodes) ? this.graph._nodes : [];
+      for (let i2 = 0; i2 < nodes.length; ++i2) {
+        if (((_a3 = nodes[i2]) == null ? void 0 : _a3.id) === nodeId) {
+          return nodes[i2];
+        }
+      }
+      return null;
+    }
+    getNodeAt(x2, y2) {
+      var _a3;
+      if (typeof this.graph.getNodeOnPos === "function") {
+        return this.graph.getNodeOnPos(x2, y2, void 0, 5) || null;
+      }
+      const nodes = Array.isArray(this.graph._nodes) ? this.graph._nodes : [];
+      for (let i2 = nodes.length - 1; i2 >= 0; --i2) {
+        const node2 = nodes[i2];
+        const bounds = (_a3 = node2.getBounding) == null ? void 0 : _a3.call(node2, void 0, true);
+        if (!bounds) {
+          continue;
+        }
+        const left = toFiniteNumber$3(bounds[0]);
+        const top = toFiniteNumber$3(bounds[1]);
+        const width2 = toFiniteNumber$3(bounds[2]);
+        const height = toFiniteNumber$3(bounds[3]);
+        if (x2 >= left && x2 <= left + width2 && y2 >= top && y2 <= top + height) {
+          return node2;
+        }
+      }
+      return null;
+    }
+    hitPortAt(x2, y2) {
+      const node2 = this.getNodeAt(x2, y2);
+      if (!node2 || typeof node2.getSlotInPosition !== "function") {
+        return null;
+      }
+      const slotInfo = node2.getSlotInPosition(x2, y2);
+      if (!slotInfo) {
+        return null;
+      }
+      const kind = slotInfo.output ? "output" : "input";
+      const slot = slotInfo.output || slotInfo.input;
+      const anchor = slotInfo.link_pos ? toPoint(slotInfo.link_pos) : this.getPortAnchor(node2.id, kind, slotInfo.slot);
+      return {
+        node: node2,
+        nodeId: node2.id,
+        kind,
+        slotIndex: slotInfo.slot,
+        slot,
+        anchor,
+        dir: this.getPortDirection(node2, kind, slotInfo.slot, slot)
+      };
+    }
+    getPortAnchor(nodeId, kind, slotIndex) {
+      const node2 = this.getNodeById(nodeId);
+      if (!node2 || typeof node2.getConnectionPos !== "function") {
+        return [0, 0];
+      }
+      const rawPoint = node2.getConnectionPos(kind === "input", slotIndex);
+      if (!rawPoint) {
+        return [0, 0];
+      }
+      if (typeof rawPoint === "object" && rawPoint !== null && "0" in rawPoint) {
+        const indexedPoint = rawPoint;
+        return [
+          toFiniteNumber$3(indexedPoint[0]),
+          toFiniteNumber$3(indexedPoint[1])
+        ];
+      }
+      return toPoint(rawPoint);
+    }
+    getPortDirection(node2, kind, slotIndex, slot) {
+      const slotList = kind === "input" ? node2.inputs : node2.outputs;
+      const resolvedSlot = slot || (slotList == null ? void 0 : slotList[slotIndex]) || null;
+      const explicitDir = toFiniteNumber$3(resolvedSlot == null ? void 0 : resolvedSlot.dir, 0);
+      if (explicitDir) {
+        return explicitDir;
+      }
+      if (kind === "output") {
+        return node2.horizontal ? PORT_DIRECTION_DOWN : PORT_DIRECTION_RIGHT;
+      }
+      return node2.horizontal ? PORT_DIRECTION_UP : PORT_DIRECTION_LEFT;
+    }
+    getLinkLayout(link) {
+      var _a3, _b2;
+      const originNode = this.getNodeById(link.origin_id);
+      const targetNode = this.getNodeById(link.target_id);
+      if (!originNode || !targetNode) {
+        return null;
+      }
+      return {
+        start: this.getPortAnchor(link.origin_id, "output", link.origin_slot),
+        end: this.getPortAnchor(link.target_id, "input", link.target_slot),
+        startDir: this.getPortDirection(
+          originNode,
+          "output",
+          link.origin_slot,
+          (_a3 = originNode.outputs) == null ? void 0 : _a3[link.origin_slot]
+        ),
+        endDir: this.getPortDirection(
+          targetNode,
+          "input",
+          link.target_slot,
+          (_b2 = targetNode.inputs) == null ? void 0 : _b2[link.target_slot]
+        )
+      };
+    }
+    buildLinkPath(start, end, startDir, endDir) {
+      const safeStart = toPoint(start);
+      const safeEnd = toPoint(end);
+      const dist = Math.max(distance$1(safeStart, safeEnd), 16);
+      const c1 = [safeStart[0], safeStart[1]];
+      const c2 = [safeEnd[0], safeEnd[1]];
+      if (startDir === PORT_DIRECTION_LEFT) {
+        c1[0] += dist * -0.25;
+      } else if (startDir === PORT_DIRECTION_RIGHT) {
+        c1[0] += dist * 0.25;
+      } else if (startDir === PORT_DIRECTION_UP) {
+        c1[1] += dist * -0.25;
+      } else if (startDir === PORT_DIRECTION_DOWN) {
+        c1[1] += dist * 0.25;
+      }
+      if (endDir === PORT_DIRECTION_LEFT) {
+        c2[0] += dist * -0.25;
+      } else if (endDir === PORT_DIRECTION_RIGHT) {
+        c2[0] += dist * 0.25;
+      } else if (endDir === PORT_DIRECTION_UP) {
+        c2[1] += dist * -0.25;
+      } else if (endDir === PORT_DIRECTION_DOWN) {
+        c2[1] += dist * 0.25;
+      }
+      return `M ${safeStart[0]} ${safeStart[1]} C ${c1[0]} ${c1[1]} ${c2[0]} ${c2[1]} ${safeEnd[0]} ${safeEnd[1]}`;
+    }
+  }
+  class ConnectionController {
+    constructor(graph, sceneSyncController, overlayPrimitives, nodePortAdapter) {
+      this.graph = graph;
+      this.sceneSyncController = sceneSyncController;
+      this.overlayPrimitives = overlayPrimitives;
+      this.nodePortAdapter = nodePortAdapter;
+      this.activeConnection = null;
+    }
+    destroy() {
+      this.cancel();
+    }
+    begin(worldX, worldY) {
+      const source = this.nodePortAdapter.hitPortAt(worldX, worldY);
+      if (!source) {
+        return null;
+      }
+      this.activeConnection = { source };
+      this.update(worldX, worldY);
+      return source;
+    }
+    update(worldX, worldY) {
+      if (!this.activeConnection) {
+        return;
+      }
+      const { source } = this.activeConnection;
+      const target = this.getCompatibleTarget(worldX, worldY);
+      const endPoint = target ? target.anchor : [worldX, worldY];
+      const endDir = target ? target.dir : getOppositePortDirection(source.dir);
+      const path = this.nodePortAdapter.buildLinkPath(
+        source.anchor,
+        endPoint,
+        source.dir,
+        endDir
+      );
+      this.overlayPrimitives.setConnectionPreview(path);
+    }
+    finish(worldX, worldY) {
+      if (!this.activeConnection) {
+        return false;
+      }
+      const { source } = this.activeConnection;
+      const target = this.getCompatibleTarget(worldX, worldY);
+      let connected = false;
+      if (target) {
+        connected = this.commitConnection(source, target);
+      }
+      this.cancel();
+      return connected;
+    }
+    cancel() {
+      this.activeConnection = null;
+      this.overlayPrimitives.hideConnectionPreview();
+    }
+    isActive() {
+      return Boolean(this.activeConnection);
+    }
+    getCompatibleTarget(worldX, worldY) {
+      const target = this.nodePortAdapter.hitPortAt(worldX, worldY);
+      if (!target || !this.activeConnection) {
+        return null;
+      }
+      const { source } = this.activeConnection;
+      if (source.kind === target.kind) {
+        return null;
+      }
+      if (source.nodeId === target.nodeId && source.slotIndex === target.slotIndex) {
+        return null;
+      }
+      return target;
+    }
+    commitConnection(source, target) {
+      var _a3, _b2;
+      let link = null;
+      if (source.kind === "output") {
+        const sourceNode = source.node;
+        if (typeof sourceNode.connect === "function") {
+          link = sourceNode.connect(
+            source.slotIndex,
+            target.node,
+            target.slotIndex
+          );
+        }
+      } else {
+        const sourceNode = source.node;
+        const targetNode = target.node;
+        if (typeof targetNode.connect === "function") {
+          link = targetNode.connect(
+            target.slotIndex,
+            sourceNode,
+            source.slotIndex
+          );
+        }
+      }
+      if (!link) {
+        return false;
+      }
+      this.sceneSyncController.repaintNodeHosts([
+        source.nodeId,
+        target.nodeId
+      ]);
+      (_b2 = (_a3 = this.graph).change) == null ? void 0 : _b2.call(_a3);
+      return true;
+    }
+  }
   class HitTestService {
     constructor(graph, sceneSyncController) {
       this.graph = graph;
@@ -4159,276 +4532,6 @@ var LiteGraphTSMigration = (function(exports) {
         return null;
       }
       return this.sceneSyncController.nodeHosts.get(node2.id) || null;
-    }
-  }
-  class InteractionController {
-    constructor(graph, canvas, appHost, sceneSyncController) {
-      this.canvas = canvas;
-      this.appHost = appHost;
-      this.pointerDownAt = 0;
-      this.pointerIsDown = false;
-      this.lastPagePoint = null;
-      this.documentTrackingBound = false;
-      this.handleViewPointerDown = (event2) => {
-        if (!this.shouldHandleLegacyPointerDown(event2)) {
-          return;
-        }
-        const source = this.createPointerSource(event2);
-        const pagePoint = source.getPagePoint();
-        const worldPoint = source.getInnerPoint();
-        const hit = this.hitTestService.hitLegacyNodeAt(
-          worldPoint.x,
-          worldPoint.y
-        );
-        const targets = this.collectTargets((hit == null ? void 0 : hit.host) || null);
-        if (!targets.length) {
-          return;
-        }
-        this.pointerIsDown = true;
-        this.pointerDownAt = Date.now();
-        this.lastPagePoint = {
-          x: Number(pagePoint.x) || 0,
-          y: Number(pagePoint.y) || 0
-        };
-        this.attachDocumentTracking();
-        const legacyEvent = createLegacyPointerEvent({
-          event: source,
-          type: "down",
-          hostElement: this.appHost.view,
-          targets,
-          clickTime: 0,
-          dragging: false,
-          deltaX: 0,
-          deltaY: 0
-        });
-        this.canvas.processMouseDown(legacyEvent);
-        this.stopEvent(event2);
-      };
-      this.handleViewPointerMove = (event2) => {
-        if (this.pointerIsDown) {
-          return;
-        }
-        this.dispatchPointerMove(event2);
-      };
-      this.handleDocumentPointerMove = (event2) => {
-        this.dispatchPointerMove(event2);
-      };
-      this.handleDocumentPointerUp = (event2) => {
-        if (!this.pointerIsDown && event2.button !== 0) {
-          return;
-        }
-        if (!this.pointerIsDown && !this.shouldHandleLegacyPointerMove(event2)) {
-          return;
-        }
-        const source = this.createPointerSource(event2);
-        const pagePoint = source.getPagePoint();
-        const worldPoint = source.getInnerPoint();
-        const hit = this.hitTestService.hitLegacyNodeAt(
-          worldPoint.x,
-          worldPoint.y
-        );
-        const targets = this.collectTargets((hit == null ? void 0 : hit.host) || null);
-        const shouldDispatch = this.pointerIsDown || targets.length > 0 || Boolean(this.canvas.node_widget) || Boolean(this.canvas.node_over) || Boolean(this.canvas.node_capturing_input);
-        const deltaX2 = this.lastPagePoint ? (Number(pagePoint.x) || 0) - this.lastPagePoint.x : 0;
-        const deltaY = this.lastPagePoint ? (Number(pagePoint.y) || 0) - this.lastPagePoint.y : 0;
-        this.lastPagePoint = {
-          x: Number(pagePoint.x) || 0,
-          y: Number(pagePoint.y) || 0
-        };
-        if (shouldDispatch) {
-          const legacyEvent = createLegacyPointerEvent({
-            event: source,
-            type: "up",
-            hostElement: this.appHost.view,
-            targets,
-            clickTime: this.pointerDownAt ? Date.now() - this.pointerDownAt : 0,
-            dragging: this.pointerIsDown,
-            deltaX: deltaX2,
-            deltaY
-          });
-          this.canvas.processMouseUp(legacyEvent);
-          this.stopEvent(event2);
-        }
-        this.pointerIsDown = false;
-        this.pointerDownAt = 0;
-        this.detachDocumentTracking();
-      };
-      this.hitTestService = new HitTestService(graph, sceneSyncController);
-      this.view = this.appHost.view;
-      this.doc = this.view.ownerDocument || document;
-      this.view.addEventListener("pointerdown", this.handleViewPointerDown, true);
-      this.view.addEventListener("pointermove", this.handleViewPointerMove, true);
-    }
-    destroy() {
-      this.view.removeEventListener(
-        "pointerdown",
-        this.handleViewPointerDown,
-        true
-      );
-      this.view.removeEventListener(
-        "pointermove",
-        this.handleViewPointerMove,
-        true
-      );
-      this.detachDocumentTracking();
-      this.pointerIsDown = false;
-      this.pointerDownAt = 0;
-      this.lastPagePoint = null;
-    }
-    dispatchPointerMove(event2) {
-      if (!this.shouldHandleLegacyPointerMove(event2)) {
-        return;
-      }
-      const source = this.createPointerSource(event2);
-      const pagePoint = source.getPagePoint();
-      const worldPoint = source.getInnerPoint();
-      const hit = this.hitTestService.hitLegacyNodeAt(
-        worldPoint.x,
-        worldPoint.y
-      );
-      const targets = this.collectTargets((hit == null ? void 0 : hit.host) || null);
-      const shouldDispatch = targets.length > 0 || Boolean(this.canvas.node_widget) || Boolean(this.canvas.node_over) || Boolean(this.canvas.node_capturing_input);
-      const deltaX2 = this.lastPagePoint ? (Number(pagePoint.x) || 0) - this.lastPagePoint.x : 0;
-      const deltaY = this.lastPagePoint ? (Number(pagePoint.y) || 0) - this.lastPagePoint.y : 0;
-      this.lastPagePoint = {
-        x: Number(pagePoint.x) || 0,
-        y: Number(pagePoint.y) || 0
-      };
-      if (!shouldDispatch) {
-        return;
-      }
-      const legacyEvent = createLegacyPointerEvent({
-        event: source,
-        type: "move",
-        hostElement: this.appHost.view,
-        targets,
-        clickTime: this.pointerDownAt ? Date.now() - this.pointerDownAt : 0,
-        dragging: this.pointerIsDown,
-        deltaX: deltaX2,
-        deltaY
-      });
-      this.canvas.processMouseMove(legacyEvent);
-      this.stopEvent(event2);
-    }
-    collectTargets(hitHost) {
-      var _a3;
-      const targets = /* @__PURE__ */ new Map();
-      const pushHost = (nodeId, host) => {
-        if (!host) {
-          return;
-        }
-        targets.set(String(nodeId), {
-          nodeId,
-          nodeRoot: host.eventRoot
-        });
-      };
-      if (hitHost) {
-        pushHost(hitHost.node.id, hitHost);
-      }
-      const hoveredNode = this.canvas.node_over;
-      if (hoveredNode) {
-        pushHost(
-          hoveredNode.id,
-          this.hitTestService.getLegacyHostForNode(hoveredNode)
-        );
-      }
-      const capturedNode = this.canvas.node_capturing_input;
-      if (capturedNode) {
-        pushHost(
-          capturedNode.id,
-          this.hitTestService.getLegacyHostForNode(capturedNode)
-        );
-      }
-      const widgetNode = (_a3 = this.canvas.node_widget) == null ? void 0 : _a3[0];
-      if (widgetNode) {
-        pushHost(
-          widgetNode.id,
-          this.hitTestService.getLegacyHostForNode(widgetNode)
-        );
-      }
-      return Array.from(targets.values());
-    }
-    createPointerSource(event2) {
-      const clientPoint = {
-        clientX: event2.clientX,
-        clientY: event2.clientY
-      };
-      const pagePoint = this.appHost.app.getPagePointByClient(clientPoint);
-      const worldPoint = this.appHost.app.getWorldPointByClient(clientPoint);
-      return {
-        altKey: event2.altKey,
-        ctrlKey: event2.ctrlKey,
-        shiftKey: event2.shiftKey,
-        metaKey: event2.metaKey,
-        buttons: event2.buttons,
-        target: event2.target,
-        current: event2.currentTarget,
-        time: Date.now(),
-        left: event2.button === 0 || Boolean(event2.buttons & 1),
-        middle: event2.button === 1 || Boolean(event2.buttons & 4),
-        right: event2.button === 2 || Boolean(event2.buttons & 2),
-        getPagePoint: () => pagePoint,
-        getInnerPoint: (relative) => {
-          if (!relative) {
-            return worldPoint;
-          }
-          return relative.getInnerPoint(worldPoint);
-        },
-        stop: () => {
-          event2.stopPropagation();
-        },
-        stopNow: () => {
-          event2.stopImmediatePropagation();
-        }
-      };
-    }
-    attachDocumentTracking() {
-      if (this.documentTrackingBound) {
-        return;
-      }
-      this.documentTrackingBound = true;
-      this.doc.addEventListener(
-        "pointermove",
-        this.handleDocumentPointerMove,
-        true
-      );
-      this.doc.addEventListener(
-        "pointerup",
-        this.handleDocumentPointerUp,
-        true
-      );
-    }
-    detachDocumentTracking() {
-      if (!this.documentTrackingBound) {
-        return;
-      }
-      this.documentTrackingBound = false;
-      this.doc.removeEventListener(
-        "pointermove",
-        this.handleDocumentPointerMove,
-        true
-      );
-      this.doc.removeEventListener(
-        "pointerup",
-        this.handleDocumentPointerUp,
-        true
-      );
-    }
-    stopEvent(event2) {
-      event2.stopPropagation();
-      event2.preventDefault();
-    }
-    shouldHandleLegacyPointerDown(event2) {
-      return event2.button === 0;
-    }
-    shouldHandleLegacyPointerMove(event2) {
-      if (this.pointerIsDown) {
-        return true;
-      }
-      if (!event2.buttons) {
-        return true;
-      }
-      return Boolean(event2.buttons & 1) && !(event2.buttons & -2);
     }
   }
   var t;
@@ -11080,6 +11183,716 @@ var LiteGraphTSMigration = (function(exports) {
     return 1 === n2 ? "rgb(" + o$1 + ")" : "rgba(" + o$1 + "," + n2 + ")";
   } };
   Object.assign(At$2, rs), Object.assign(Ct$2, as), Object.assign(Ft$2, Yt), Object.assign(Wt$2, be), Object.assign(Et$2, Ue), Object.assign(Tt$2, ei), Object.assign(le$2, { interaction: (t2, e2, i2, s2) => new Tt(t2, e2, i2, s2), hitCanvas: (t2, e2) => new et(t2, e2), hitCanvasManager: () => new At$1() }), it();
+  function toFiniteNumber$2(value, fallback = 0) {
+    const numericValue = Number(value);
+    return Number.isFinite(numericValue) ? numericValue : fallback;
+  }
+  class OverlayPrimitives {
+    constructor(appHost) {
+      this.appHost = appHost;
+      this.connectionPreview = new di$1({
+        name: "litegraph-connection-preview",
+        path: "M 0 0 L 0 0",
+        stroke: "#7F7",
+        strokeWidth: 3,
+        fill: "none",
+        visible: false,
+        hittable: false
+      });
+      this.selectionBox = new xe$1({
+        name: "litegraph-selection-box",
+        x: 0,
+        y: 0,
+        width: 1,
+        height: 1,
+        fill: "rgba(255,255,255,0.08)",
+        stroke: "#FFFFFF",
+        strokeWidth: 1,
+        visible: false,
+        hittable: false
+      });
+      this.appHost.overlayWorld.add([
+        this.connectionPreview,
+        this.selectionBox
+      ]);
+    }
+    destroy() {
+      this.connectionPreview.destroy();
+      this.selectionBox.destroy();
+    }
+    setConnectionPreview(path, color = "#7F7") {
+      this.syncWorldTransform();
+      this.connectionPreview.path = path;
+      this.connectionPreview.stroke = color;
+      this.connectionPreview.visible = true;
+    }
+    hideConnectionPreview() {
+      this.connectionPreview.visible = false;
+      this.connectionPreview.path = "M 0 0 L 0 0";
+    }
+    setSelectionBounds(bounds) {
+      this.syncWorldTransform();
+      this.selectionBox.x = bounds.x;
+      this.selectionBox.y = bounds.y;
+      this.selectionBox.width = bounds.width;
+      this.selectionBox.height = bounds.height;
+      this.selectionBox.visible = true;
+    }
+    hideSelectionBox() {
+      this.selectionBox.visible = false;
+      this.selectionBox.width = 1;
+      this.selectionBox.height = 1;
+    }
+    syncWorldTransform() {
+      const zoomLayer = this.appHost.treeZoomLayer;
+      this.appHost.overlayWorld.x = toFiniteNumber$2(zoomLayer.x);
+      this.appHost.overlayWorld.y = toFiniteNumber$2(zoomLayer.y);
+      this.appHost.overlayWorld.scaleX = toFiniteNumber$2(zoomLayer.scaleX, 1);
+      this.appHost.overlayWorld.scaleY = toFiniteNumber$2(zoomLayer.scaleY, 1);
+    }
+  }
+  function normalizeBounds(startX, startY, endX, endY) {
+    const left = Math.min(startX, endX);
+    const top = Math.min(startY, endY);
+    return {
+      x: left,
+      y: top,
+      width: Math.abs(endX - startX),
+      height: Math.abs(endY - startY)
+    };
+  }
+  class SelectionController {
+    constructor(graph, canvas, sceneSyncController, overlayPrimitives) {
+      this.graph = graph;
+      this.canvas = canvas;
+      this.sceneSyncController = sceneSyncController;
+      this.overlayPrimitives = overlayPrimitives;
+      this.activeSelection = null;
+    }
+    destroy() {
+      this.cancel();
+    }
+    begin(worldX, worldY, additive) {
+      this.activeSelection = {
+        startX: worldX,
+        startY: worldY,
+        additive
+      };
+      this.update(worldX, worldY);
+    }
+    update(worldX, worldY) {
+      if (!this.activeSelection) {
+        return;
+      }
+      this.overlayPrimitives.setSelectionBounds(
+        normalizeBounds(
+          this.activeSelection.startX,
+          this.activeSelection.startY,
+          worldX,
+          worldY
+        )
+      );
+    }
+    finish(worldX, worldY) {
+      var _a3;
+      if (!this.activeSelection) {
+        return [];
+      }
+      const selection = this.activeSelection;
+      const bounds = normalizeBounds(
+        selection.startX,
+        selection.startY,
+        worldX,
+        worldY
+      );
+      const normalizedBounding = [
+        bounds.x,
+        bounds.y,
+        bounds.width,
+        bounds.height
+      ];
+      const selectedNodes = [];
+      const tempBounds = new Float32Array(4);
+      const nodes = Array.isArray(this.graph._nodes) ? this.graph._nodes : [];
+      for (let i2 = 0; i2 < nodes.length; ++i2) {
+        const node2 = nodes[i2];
+        const nodeBounds = (_a3 = node2.getBounding) == null ? void 0 : _a3.call(node2, tempBounds, true);
+        if (!nodeBounds) {
+          continue;
+        }
+        if (overlapBounding(
+          normalizedBounding,
+          nodeBounds
+        )) {
+          selectedNodes.push(node2);
+        }
+      }
+      this.canvas.selectNodes(selectedNodes, selection.additive);
+      this.sceneSyncController.repaintAllNodeHosts();
+      this.overlayPrimitives.hideSelectionBox();
+      this.activeSelection = null;
+      return selectedNodes;
+    }
+    cancel() {
+      this.activeSelection = null;
+      this.overlayPrimitives.hideSelectionBox();
+    }
+    isActive() {
+      return Boolean(this.activeSelection);
+    }
+  }
+  function toFiniteNumber$1(value) {
+    const numericValue = Number(value);
+    return Number.isFinite(numericValue) ? numericValue : 0;
+  }
+  function isDraggableNode(node2) {
+    const pos2 = node2 == null ? void 0 : node2.pos;
+    return Boolean(node2) && typeof node2 === "object" && Boolean(pos2) && (Array.isArray(pos2) || ArrayBuffer.isView(pos2));
+  }
+  function getPointerDistance(a, b2) {
+    const dx = a.x - b2.x;
+    const dy = a.y - b2.y;
+    return Math.sqrt(dx * dx + dy * dy);
+  }
+  class InteractionController {
+    constructor(graph, canvas, appHost, sceneSyncController) {
+      this.canvas = canvas;
+      this.appHost = appHost;
+      this.pointerDownAt = 0;
+      this.pointerIsDown = false;
+      this.lastPagePoint = null;
+      this.pointerDownPagePoint = null;
+      this.documentTrackingBound = false;
+      this.session = null;
+      this.dragTransactionNode = null;
+      this.handleViewPointerDown = (event2) => {
+        var _a3;
+        if (!this.shouldHandleLegacyPointerDown(event2)) {
+          return;
+        }
+        const source = this.createPointerSource(event2);
+        const pagePoint = source.getPagePoint();
+        const worldPoint = source.getInnerPoint();
+        const normalizedPagePoint = {
+          x: toFiniteNumber$1(pagePoint.x),
+          y: toFiniteNumber$1(pagePoint.y)
+        };
+        const normalizedWorldPoint = {
+          x: toFiniteNumber$1(worldPoint.x),
+          y: toFiniteNumber$1(worldPoint.y)
+        };
+        this.pointerIsDown = true;
+        this.pointerDownAt = Date.now();
+        this.pointerDownPagePoint = normalizedPagePoint;
+        this.lastPagePoint = normalizedPagePoint;
+        this.attachDocumentTracking();
+        const portHit = this.connectionController.begin(
+          normalizedWorldPoint.x,
+          normalizedWorldPoint.y
+        );
+        if (portHit) {
+          this.session = {
+            kind: "connection"
+          };
+          this.stopEvent(event2, true);
+          return;
+        }
+        const hit = this.hitTestService.hitLegacyNodeAt(
+          normalizedWorldPoint.x,
+          normalizedWorldPoint.y
+        );
+        if (!(hit == null ? void 0 : hit.host)) {
+          this.session = {
+            kind: "background-press",
+            additive: Boolean(event2.ctrlKey || event2.metaKey || event2.shiftKey),
+            startWorldPoint: normalizedWorldPoint
+          };
+          this.stopEvent(event2);
+          return;
+        }
+        const targets = this.collectTargets(hit.host);
+        const legacyEvent = createLegacyPointerEvent({
+          event: source,
+          type: "down",
+          hostElement: this.appHost.view,
+          targets,
+          clickTime: 0,
+          dragging: false,
+          deltaX: 0,
+          deltaY: 0
+        });
+        this.canvas.processMouseDown(legacyEvent);
+        (_a3 = this.canvas.sceneSyncController) == null ? void 0 : _a3.repaintAllNodeHosts();
+        if (!this.hasLegacyInteractiveCapture() && this.canStartNodeDrag(hit.node)) {
+          this.session = {
+            kind: "node-press",
+            node: hit.node
+          };
+        } else {
+          this.session = {
+            kind: "legacy-press"
+          };
+        }
+        this.stopEvent(event2);
+      };
+      this.handleViewPointerMove = (event2) => {
+        if (this.pointerIsDown) {
+          return;
+        }
+        this.dispatchHoverPointerMove(event2);
+      };
+      this.handleDocumentPointerMove = (event2) => {
+        this.dispatchPointerMoveWhileDown(event2);
+      };
+      this.handleDocumentPointerUp = (event2) => {
+        var _a3, _b2, _c2, _d2, _e2;
+        if (!this.pointerIsDown && event2.button !== 0) {
+          return;
+        }
+        if (!this.pointerIsDown && !this.shouldHandleLegacyPointerMove(event2)) {
+          return;
+        }
+        const source = this.createPointerSource(event2);
+        const pagePoint = source.getPagePoint();
+        const worldPoint = source.getInnerPoint();
+        const normalizedPagePoint = {
+          x: toFiniteNumber$1(pagePoint.x),
+          y: toFiniteNumber$1(pagePoint.y)
+        };
+        const normalizedWorldPoint = {
+          x: toFiniteNumber$1(worldPoint.x),
+          y: toFiniteNumber$1(worldPoint.y)
+        };
+        if (((_a3 = this.session) == null ? void 0 : _a3.kind) === "connection") {
+          this.connectionController.finish(
+            normalizedWorldPoint.x,
+            normalizedWorldPoint.y
+          );
+          this.stopEvent(event2, true);
+        } else if (((_b2 = this.session) == null ? void 0 : _b2.kind) === "selection") {
+          this.selectionController.finish(
+            normalizedWorldPoint.x,
+            normalizedWorldPoint.y
+          );
+          this.stopEvent(event2);
+        } else if (((_c2 = this.session) == null ? void 0 : _c2.kind) === "background-press") {
+          if (!this.session.additive) {
+            this.canvas.deselectAllNodes();
+            (_d2 = this.canvas.sceneSyncController) == null ? void 0 : _d2.repaintAllNodeHosts();
+          }
+          this.stopEvent(event2);
+        } else if (((_e2 = this.session) == null ? void 0 : _e2.kind) === "node-drag") {
+          this.finishNodeDrag(this.session);
+          this.stopEvent(event2);
+        } else {
+          this.dispatchLegacyPointerUp(source, normalizedPagePoint, event2);
+        }
+        this.pointerIsDown = false;
+        this.pointerDownAt = 0;
+        this.lastPagePoint = null;
+        this.pointerDownPagePoint = null;
+        this.session = null;
+        this.dragTransactionNode = null;
+        this.detachDocumentTracking();
+      };
+      this.graphRef = graph;
+      this.hitTestService = new HitTestService(graph, sceneSyncController);
+      this.nodePortAdapter = new NodePortAdapter(
+        graph
+      );
+      this.overlayPrimitives = new OverlayPrimitives(this.appHost);
+      this.connectionController = new ConnectionController(
+        this.graphRef,
+        sceneSyncController,
+        this.overlayPrimitives,
+        this.nodePortAdapter
+      );
+      this.selectionController = new SelectionController(
+        this.graphRef,
+        this.canvas,
+        sceneSyncController,
+        this.overlayPrimitives
+      );
+      this.view = this.appHost.view;
+      this.doc = this.view.ownerDocument || document;
+      this.view.addEventListener("pointerdown", this.handleViewPointerDown, true);
+      this.view.addEventListener("pointermove", this.handleViewPointerMove, true);
+    }
+    destroy() {
+      this.view.removeEventListener(
+        "pointerdown",
+        this.handleViewPointerDown,
+        true
+      );
+      this.view.removeEventListener(
+        "pointermove",
+        this.handleViewPointerMove,
+        true
+      );
+      this.detachDocumentTracking();
+      this.pointerIsDown = false;
+      this.pointerDownAt = 0;
+      this.lastPagePoint = null;
+      this.pointerDownPagePoint = null;
+      this.session = null;
+      this.dragTransactionNode = null;
+      this.connectionController.destroy();
+      this.selectionController.destroy();
+      this.overlayPrimitives.destroy();
+    }
+    dispatchHoverPointerMove(event2) {
+      if (!this.shouldHandleLegacyPointerMove(event2)) {
+        return;
+      }
+      const source = this.createPointerSource(event2);
+      const pagePoint = source.getPagePoint();
+      const worldPoint = source.getInnerPoint();
+      const hit = this.hitTestService.hitLegacyNodeAt(worldPoint.x, worldPoint.y);
+      const targets = this.collectTargets((hit == null ? void 0 : hit.host) || null);
+      const shouldDispatch = targets.length > 0 || Boolean(this.canvas.node_widget) || Boolean(this.canvas.node_over) || Boolean(this.canvas.node_capturing_input);
+      const normalizedPagePoint = {
+        x: toFiniteNumber$1(pagePoint.x),
+        y: toFiniteNumber$1(pagePoint.y)
+      };
+      const deltaX2 = this.lastPagePoint ? normalizedPagePoint.x - this.lastPagePoint.x : 0;
+      const deltaY = this.lastPagePoint ? normalizedPagePoint.y - this.lastPagePoint.y : 0;
+      this.lastPagePoint = normalizedPagePoint;
+      if (!shouldDispatch) {
+        return;
+      }
+      const legacyEvent = createLegacyPointerEvent({
+        event: source,
+        type: "move",
+        hostElement: this.appHost.view,
+        targets,
+        clickTime: this.pointerDownAt ? Date.now() - this.pointerDownAt : 0,
+        dragging: this.pointerIsDown,
+        deltaX: deltaX2,
+        deltaY
+      });
+      this.canvas.processMouseMove(legacyEvent);
+      this.stopEvent(event2);
+    }
+    dispatchPointerMoveWhileDown(event2) {
+      var _a3, _b2;
+      if (!this.pointerIsDown || !this.session) {
+        return;
+      }
+      const source = this.createPointerSource(event2);
+      const pagePoint = source.getPagePoint();
+      const worldPoint = source.getInnerPoint();
+      const normalizedPagePoint = {
+        x: toFiniteNumber$1(pagePoint.x),
+        y: toFiniteNumber$1(pagePoint.y)
+      };
+      const normalizedWorldPoint = {
+        x: toFiniteNumber$1(worldPoint.x),
+        y: toFiniteNumber$1(worldPoint.y)
+      };
+      if (this.session.kind === "connection") {
+        this.connectionController.update(
+          normalizedWorldPoint.x,
+          normalizedWorldPoint.y
+        );
+        this.lastPagePoint = normalizedPagePoint;
+        this.stopEvent(event2, true);
+        return;
+      }
+      if (this.session.kind === "background-press") {
+        if (this.pointerDownPagePoint && getPointerDistance(
+          this.pointerDownPagePoint,
+          normalizedPagePoint
+        ) >= 4) {
+          this.selectionController.begin(
+            this.session.startWorldPoint.x,
+            this.session.startWorldPoint.y,
+            this.session.additive
+          );
+          this.session = {
+            kind: "selection"
+          };
+        } else {
+          this.lastPagePoint = normalizedPagePoint;
+          return;
+        }
+      }
+      if (this.session.kind === "selection") {
+        this.selectionController.update(
+          normalizedWorldPoint.x,
+          normalizedWorldPoint.y
+        );
+        this.lastPagePoint = normalizedPagePoint;
+        this.stopEvent(event2);
+        return;
+      }
+      if (this.session.kind === "legacy-press") {
+        this.dispatchLegacyPointerMoveActive(
+          source,
+          normalizedPagePoint,
+          event2
+        );
+        return;
+      }
+      if (this.session.kind === "node-press") {
+        if (this.hasLegacyInteractiveCapture()) {
+          this.session = {
+            kind: "legacy-press"
+          };
+          this.dispatchLegacyPointerMoveActive(
+            source,
+            normalizedPagePoint,
+            event2
+          );
+          return;
+        }
+        if (this.pointerDownPagePoint && getPointerDistance(
+          this.pointerDownPagePoint,
+          normalizedPagePoint
+        ) >= 4) {
+          const dragNodes = this.collectDragNodes(this.session.node);
+          this.dragTransactionNode = this.session.node;
+          (_b2 = (_a3 = this.graphRef).beforeChange) == null ? void 0 : _b2.call(_a3, this.session.node);
+          this.session = {
+            kind: "node-drag",
+            node: this.session.node,
+            dragNodes,
+            lastWorldPoint: normalizedWorldPoint
+          };
+        } else {
+          this.lastPagePoint = normalizedPagePoint;
+          return;
+        }
+      }
+      if (this.session.kind === "node-drag") {
+        const deltaX2 = normalizedWorldPoint.x - this.session.lastWorldPoint.x;
+        const deltaY = normalizedWorldPoint.y - this.session.lastWorldPoint.y;
+        if (deltaX2 || deltaY) {
+          for (let i2 = 0; i2 < this.session.dragNodes.length; ++i2) {
+            const node2 = this.session.dragNodes[i2];
+            node2.pos[0] += deltaX2;
+            node2.pos[1] += deltaY;
+            this.emitNodeMoved(node2);
+          }
+          this.session.lastWorldPoint = normalizedWorldPoint;
+        }
+        this.lastPagePoint = normalizedPagePoint;
+        this.stopEvent(event2);
+      }
+    }
+    dispatchLegacyPointerMoveActive(source, pagePoint, event2) {
+      const worldPoint = source.getInnerPoint();
+      const hit = this.hitTestService.hitLegacyNodeAt(worldPoint.x, worldPoint.y);
+      const targets = this.collectTargets((hit == null ? void 0 : hit.host) || null);
+      const shouldDispatch = targets.length > 0 || Boolean(this.canvas.node_widget) || Boolean(this.canvas.node_over) || Boolean(this.canvas.node_capturing_input);
+      const deltaX2 = this.lastPagePoint ? pagePoint.x - this.lastPagePoint.x : 0;
+      const deltaY = this.lastPagePoint ? pagePoint.y - this.lastPagePoint.y : 0;
+      this.lastPagePoint = pagePoint;
+      if (!shouldDispatch) {
+        return;
+      }
+      const legacyEvent = createLegacyPointerEvent({
+        event: source,
+        type: "move",
+        hostElement: this.appHost.view,
+        targets,
+        clickTime: this.pointerDownAt ? Date.now() - this.pointerDownAt : 0,
+        dragging: this.pointerIsDown,
+        deltaX: deltaX2,
+        deltaY
+      });
+      this.canvas.processMouseMove(legacyEvent);
+      this.stopEvent(event2);
+    }
+    dispatchLegacyPointerUp(source, pagePoint, event2) {
+      const worldPoint = source.getInnerPoint();
+      const hit = this.hitTestService.hitLegacyNodeAt(worldPoint.x, worldPoint.y);
+      const targets = this.collectTargets((hit == null ? void 0 : hit.host) || null);
+      const shouldDispatch = this.pointerIsDown || targets.length > 0 || Boolean(this.canvas.node_widget) || Boolean(this.canvas.node_over) || Boolean(this.canvas.node_capturing_input);
+      const deltaX2 = this.lastPagePoint ? pagePoint.x - this.lastPagePoint.x : 0;
+      const deltaY = this.lastPagePoint ? pagePoint.y - this.lastPagePoint.y : 0;
+      this.lastPagePoint = pagePoint;
+      if (!shouldDispatch) {
+        return;
+      }
+      const legacyEvent = createLegacyPointerEvent({
+        event: source,
+        type: "up",
+        hostElement: this.appHost.view,
+        targets,
+        clickTime: this.pointerDownAt ? Date.now() - this.pointerDownAt : 0,
+        dragging: this.pointerIsDown,
+        deltaX: deltaX2,
+        deltaY
+      });
+      this.canvas.processMouseUp(legacyEvent);
+      this.stopEvent(event2);
+    }
+    finishNodeDrag(session) {
+      var _a3, _b2, _c2, _d2, _e2, _f, _g, _h2;
+      for (let i2 = 0; i2 < session.dragNodes.length; ++i2) {
+        const node2 = session.dragNodes[i2];
+        node2.pos[0] = Math.round(node2.pos[0]);
+        node2.pos[1] = Math.round(node2.pos[1]);
+        if (((_a3 = this.graphRef.config) == null ? void 0 : _a3.align_to_grid) || this.canvas.align_to_grid) {
+          (_b2 = node2.alignToGrid) == null ? void 0 : _b2.call(node2);
+        }
+        this.emitNodeMoved(node2);
+        (_d2 = (_c2 = this.canvas).onNodeMoved) == null ? void 0 : _d2.call(_c2, node2);
+      }
+      (_f = (_e2 = this.graphRef).afterChange) == null ? void 0 : _f.call(_e2, this.dragTransactionNode || session.node);
+      (_h2 = (_g = this.graphRef).change) == null ? void 0 : _h2.call(_g);
+    }
+    emitNodeMoved(node2) {
+      var _a3;
+      (_a3 = this.canvas.graphMutationBus) == null ? void 0 : _a3.emit("node:moved", {
+        graph: this.graphRef,
+        nodeId: node2.id,
+        node: node2
+      });
+    }
+    hasLegacyInteractiveCapture() {
+      return Boolean(this.canvas.node_widget || this.canvas.node_capturing_input);
+    }
+    canStartNodeDrag(node2) {
+      return Boolean(node2) && Boolean(this.canvas.allow_dragnodes) && !this.canvas.read_only && isDraggableNode(node2);
+    }
+    collectDragNodes(primaryNode) {
+      const selectedNodes = Object.values(
+        this.canvas.selected_nodes || {}
+      ).filter(isDraggableNode);
+      if (!selectedNodes.length) {
+        return [primaryNode];
+      }
+      const hasPrimaryNode = selectedNodes.some(
+        (node2) => node2.id === primaryNode.id
+      );
+      return hasPrimaryNode ? selectedNodes : [primaryNode];
+    }
+    collectTargets(hitHost) {
+      var _a3;
+      const targets = /* @__PURE__ */ new Map();
+      const pushHost = (nodeId, host) => {
+        if (!host) {
+          return;
+        }
+        targets.set(String(nodeId), {
+          nodeId,
+          nodeRoot: host.eventRoot
+        });
+      };
+      if (hitHost) {
+        pushHost(hitHost.node.id, hitHost);
+      }
+      const hoveredNode = this.canvas.node_over;
+      if (hoveredNode) {
+        pushHost(
+          hoveredNode.id,
+          this.hitTestService.getLegacyHostForNode(hoveredNode)
+        );
+      }
+      const capturedNode = this.canvas.node_capturing_input;
+      if (capturedNode) {
+        pushHost(
+          capturedNode.id,
+          this.hitTestService.getLegacyHostForNode(capturedNode)
+        );
+      }
+      const widgetNode = (_a3 = this.canvas.node_widget) == null ? void 0 : _a3[0];
+      if (widgetNode) {
+        pushHost(
+          widgetNode.id,
+          this.hitTestService.getLegacyHostForNode(widgetNode)
+        );
+      }
+      return Array.from(targets.values());
+    }
+    createPointerSource(event2) {
+      const clientPoint = {
+        clientX: event2.clientX,
+        clientY: event2.clientY
+      };
+      const pagePoint = this.appHost.app.getPagePointByClient(clientPoint);
+      const worldPoint = this.appHost.app.getWorldPointByClient(clientPoint);
+      return {
+        altKey: event2.altKey,
+        ctrlKey: event2.ctrlKey,
+        shiftKey: event2.shiftKey,
+        metaKey: event2.metaKey,
+        buttons: event2.buttons,
+        target: event2.target,
+        current: event2.currentTarget,
+        time: Date.now(),
+        left: event2.button === 0 || Boolean(event2.buttons & 1),
+        middle: event2.button === 1 || Boolean(event2.buttons & 4),
+        right: event2.button === 2 || Boolean(event2.buttons & 2),
+        getPagePoint: () => pagePoint,
+        getInnerPoint: (relative) => {
+          if (!relative) {
+            return worldPoint;
+          }
+          return relative.getInnerPoint(worldPoint);
+        },
+        stop: () => {
+          event2.stopPropagation();
+        },
+        stopNow: () => {
+          event2.stopImmediatePropagation();
+        }
+      };
+    }
+    attachDocumentTracking() {
+      if (this.documentTrackingBound) {
+        return;
+      }
+      this.documentTrackingBound = true;
+      this.doc.addEventListener(
+        "pointermove",
+        this.handleDocumentPointerMove,
+        true
+      );
+      this.doc.addEventListener(
+        "pointerup",
+        this.handleDocumentPointerUp,
+        true
+      );
+    }
+    detachDocumentTracking() {
+      if (!this.documentTrackingBound) {
+        return;
+      }
+      this.documentTrackingBound = false;
+      this.doc.removeEventListener(
+        "pointermove",
+        this.handleDocumentPointerMove,
+        true
+      );
+      this.doc.removeEventListener(
+        "pointerup",
+        this.handleDocumentPointerUp,
+        true
+      );
+    }
+    stopEvent(event2, immediate = false) {
+      if (immediate) {
+        event2.stopImmediatePropagation();
+      } else {
+        event2.stopPropagation();
+      }
+      event2.preventDefault();
+    }
+    shouldHandleLegacyPointerDown(event2) {
+      return event2.button === 0;
+    }
+    shouldHandleLegacyPointerMove(event2) {
+      if (this.pointerIsDown) {
+        return true;
+      }
+      if (!event2.buttons) {
+        return true;
+      }
+      return Boolean(event2.buttons & 1) && !(event2.buttons & -2);
+    }
+  }
   function createLayerGroup(name, hittable = false) {
     return new ye$1({
       name,
@@ -11263,6 +12076,8 @@ var LiteGraphTSMigration = (function(exports) {
   class LegacyNodeHost {
     constructor(node2, renderHost) {
       this.lastBounds = null;
+      this.positionOffsetX = 0;
+      this.positionOffsetY = 0;
       this.node = node2;
       this.renderHost = renderHost;
       this.root = new ye$1({
@@ -11300,6 +12115,7 @@ var LiteGraphTSMigration = (function(exports) {
       this.repaint();
     }
     repaint() {
+      var _a3, _b2;
       const bounds = LegacyNodePainter.measure(
         this.node,
         this.renderHost,
@@ -11312,8 +12128,9 @@ var LiteGraphTSMigration = (function(exports) {
         this.offscreenContext,
         bounds
       );
-      this.root.x = bounds.x;
-      this.root.y = bounds.y;
+      this.positionOffsetX = bounds.x - Number(((_a3 = this.node.pos) == null ? void 0 : _a3[0]) || 0);
+      this.positionOffsetY = bounds.y - Number(((_b2 = this.node.pos) == null ? void 0 : _b2[1]) || 0);
+      this.syncPosition();
       this.surface.x = 0;
       this.surface.y = 0;
       this.surface.width = bounds.width;
@@ -11333,6 +12150,11 @@ var LiteGraphTSMigration = (function(exports) {
     getBounds() {
       return this.lastBounds;
     }
+    syncPosition() {
+      var _a3, _b2;
+      this.root.x = Number(((_a3 = this.node.pos) == null ? void 0 : _a3[0]) || 0) + this.positionOffsetX;
+      this.root.y = Number(((_b2 = this.node.pos) == null ? void 0 : _b2[1]) || 0) + this.positionOffsetY;
+    }
     ensureCanvasSize(width2, height) {
       if (this.offscreenCanvas.width !== width2 || this.offscreenCanvas.height !== height) {
         this.offscreenCanvas.width = width2;
@@ -11349,13 +12171,16 @@ var LiteGraphTSMigration = (function(exports) {
   function toMutationKey(id) {
     return String(id);
   }
-  function createPlaceholderGroup(name, kind) {
-    return new ye$1({
+  function createLinkView(name) {
+    return new di$1({
       name,
       hittable: false,
-      visible: false,
+      visible: true,
+      stroke: "#9A9",
+      strokeWidth: 3,
+      fill: "none",
       data: {
-        litegraphPlaceholderKind: kind
+        litegraphPlaceholderKind: "link-view"
       }
     });
   }
@@ -11370,7 +12195,11 @@ var LiteGraphTSMigration = (function(exports) {
       this.linksByNodeId = /* @__PURE__ */ new Map();
       this.unsubscribers = [];
       this.nodesById = /* @__PURE__ */ new Map();
+      this.linksById = /* @__PURE__ */ new Map();
       this.dirtyBridgeUninstallers = /* @__PURE__ */ new Map();
+      this.nodePortAdapter = new NodePortAdapter(
+        graph
+      );
       this.unsubscribers.push(
         this.bus.on("graph:clear", () => {
           this.clearScene();
@@ -11383,6 +12212,9 @@ var LiteGraphTSMigration = (function(exports) {
         }),
         this.bus.on("node:dirty", ({ nodeId, node: node2 }) => {
           this.handleNodeDirty(nodeId, node2);
+        }),
+        this.bus.on("node:moved", ({ nodeId, node: node2 }) => {
+          this.syncNodeMoved(nodeId, node2);
         }),
         this.bus.on("link:add", ({ linkId, link }) => {
           this.ensureLinkView(linkId, link);
@@ -11399,6 +12231,28 @@ var LiteGraphTSMigration = (function(exports) {
       }
       this.unsubscribers.length = 0;
       this.clearScene();
+    }
+    repaintNodeHost(nodeId) {
+      var _a3;
+      (_a3 = this.nodeHosts.get(nodeId)) == null ? void 0 : _a3.repaint();
+    }
+    repaintNodeHosts(nodeIds) {
+      for (let i2 = 0; i2 < nodeIds.length; ++i2) {
+        this.repaintNodeHost(nodeIds[i2]);
+      }
+    }
+    repaintAllNodeHosts() {
+      for (const host of this.nodeHosts.values()) {
+        host.repaint();
+      }
+    }
+    syncNodeMoved(nodeId, node2) {
+      var _a3;
+      if (node2) {
+        this.nodesById.set(nodeId, node2);
+      }
+      (_a3 = this.nodeHosts.get(nodeId)) == null ? void 0 : _a3.syncPosition();
+      this.updateIncidentLinks(nodeId);
     }
     hydrateFromGraph() {
       const existingNodes = Array.isArray(this.graph._nodes) ? this.graph._nodes : [];
@@ -11423,6 +12277,7 @@ var LiteGraphTSMigration = (function(exports) {
       this.linkViews.clear();
       this.linksByNodeId.clear();
       this.nodesById.clear();
+      this.linksById.clear();
       this.dirtyBridgeUninstallers.clear();
     }
     ensureNodeHost(node2) {
@@ -11432,6 +12287,8 @@ var LiteGraphTSMigration = (function(exports) {
       this.ensureTrackedNodeId(nodeId);
       this.installNodeDirtyBridge(node2);
       if (existingHost) {
+        existingHost.syncPosition();
+        this.updateIncidentLinks(nodeId);
         return existingHost;
       }
       const nodeHost = new LegacyNodeHost(
@@ -11440,6 +12297,8 @@ var LiteGraphTSMigration = (function(exports) {
       );
       this.appHost.legacyNodeLayer.add(nodeHost.root);
       this.nodeHosts.set(nodeId, nodeHost);
+      nodeHost.syncPosition();
+      this.updateIncidentLinks(nodeId);
       return nodeHost;
     }
     removeNodeHost(nodeId) {
@@ -11447,8 +12306,7 @@ var LiteGraphTSMigration = (function(exports) {
       const incidentLinks = Array.from(this.linksByNodeId.get(nodeId) || []);
       for (let i2 = 0; i2 < incidentLinks.length; ++i2) {
         const linkId = incidentLinks[i2];
-        const link = this.graph.links[toMutationKey(linkId)];
-        this.removeLinkView(linkId, link);
+        this.removeLinkView(linkId);
       }
       const nodeHost = this.nodeHosts.get(nodeId);
       if (nodeHost) {
@@ -11463,6 +12321,8 @@ var LiteGraphTSMigration = (function(exports) {
     ensureLinkView(linkId, link) {
       const existingView = this.linkViews.get(linkId);
       if (existingView) {
+        this.linksById.set(linkId, link);
+        this.syncLinkView(linkId, link, existingView);
         return existingView;
       }
       const originNode = this.findGraphNode(link.origin_id);
@@ -11477,28 +12337,31 @@ var LiteGraphTSMigration = (function(exports) {
       } else {
         this.ensureTrackedNodeId(link.target_id);
       }
-      const linkView = createPlaceholderGroup(
-        `litegraph-link-view:${toMutationKey(linkId)}`,
-        "link-view"
+      const linkView = createLinkView(
+        `litegraph-link-view:${toMutationKey(linkId)}`
       );
       this.appHost.linkLayerBack.add(linkView);
       this.linkViews.set(linkId, linkView);
+      this.linksById.set(linkId, link);
       this.trackLinkOnNode(link.origin_id, linkId);
       this.trackLinkOnNode(link.target_id, linkId);
+      this.syncLinkView(linkId, link, linkView);
       return linkView;
     }
-    removeLinkView(linkId, link) {
+    removeLinkView(linkId, providedLink) {
       var _a3, _b2;
+      const resolvedLink = providedLink || this.linksById.get(linkId);
       const linkView = this.linkViews.get(linkId);
       if (linkView) {
         linkView.destroy();
         this.linkViews.delete(linkId);
       }
-      if (!link) {
+      this.linksById.delete(linkId);
+      if (!resolvedLink) {
         return;
       }
-      (_a3 = this.linksByNodeId.get(link.origin_id)) == null ? void 0 : _a3.delete(linkId);
-      (_b2 = this.linksByNodeId.get(link.target_id)) == null ? void 0 : _b2.delete(linkId);
+      (_a3 = this.linksByNodeId.get(resolvedLink.origin_id)) == null ? void 0 : _a3.delete(linkId);
+      (_b2 = this.linksByNodeId.get(resolvedLink.target_id)) == null ? void 0 : _b2.delete(linkId);
     }
     handleNodeDirty(nodeId, node2) {
       var _a3;
@@ -11558,6 +12421,35 @@ var LiteGraphTSMigration = (function(exports) {
       const links = this.linksByNodeId.get(nodeId) || /* @__PURE__ */ new Set();
       links.add(linkId);
       this.linksByNodeId.set(nodeId, links);
+    }
+    updateIncidentLinks(nodeId) {
+      const incidentLinks = this.linksByNodeId.get(nodeId);
+      if (!(incidentLinks == null ? void 0 : incidentLinks.size)) {
+        return;
+      }
+      for (const linkId of Array.from(incidentLinks)) {
+        this.syncLinkView(linkId);
+      }
+    }
+    syncLinkView(linkId, providedLink, providedView) {
+      const link = providedLink || this.linksById.get(linkId);
+      const view = providedView || this.linkViews.get(linkId);
+      if (!link || !view) {
+        return;
+      }
+      const layout = this.nodePortAdapter.getLinkLayout(link);
+      if (!layout) {
+        view.visible = false;
+        return;
+      }
+      view.path = this.nodePortAdapter.buildLinkPath(
+        layout.start,
+        layout.end,
+        layout.startDir,
+        layout.endDir
+      );
+      view.stroke = link.color || "#9A9";
+      view.visible = true;
     }
   }
   function D(t2) {
@@ -13520,7 +14412,7 @@ var LiteGraphTSMigration = (function(exports) {
             this.bringToFront(node2);
           }
           if (this.allow_interaction && !this.connecting_node && !node2.flags.collapsed && !this.live_mode) {
-            if (!skip_action && node2.resizable !== false && isInsideRectangle$1(
+            if (!skip_action && node2.resizable !== false && isInsideRectangle$2(
               e2.canvasX,
               e2.canvasY,
               node2.pos[0] + node2.size[0] - 5,
@@ -13539,7 +14431,7 @@ var LiteGraphTSMigration = (function(exports) {
                 for (let i2 = 0, l2 = node2.outputs.length; i2 < l2; ++i2) {
                   const output = node2.outputs[i2];
                   const link_pos = node2.getConnectionPos(false, i2);
-                  if (isInsideRectangle$1(
+                  if (isInsideRectangle$2(
                     e2.canvasX,
                     e2.canvasY,
                     link_pos[0] - 15,
@@ -13573,7 +14465,7 @@ var LiteGraphTSMigration = (function(exports) {
                 for (let i2 = 0, l2 = node2.inputs.length; i2 < l2; ++i2) {
                   const input = node2.inputs[i2];
                   const link_pos = node2.getConnectionPos(true, i2);
-                  if (isInsideRectangle$1(
+                  if (isInsideRectangle$2(
                     e2.canvasX,
                     e2.canvasY,
                     link_pos[0] - 15,
@@ -13690,7 +14582,7 @@ var LiteGraphTSMigration = (function(exports) {
               if (e2.ctrlKey) {
                 this.dragging_rectangle = null;
               }
-              const dist = distance(
+              const dist = distance$2(
                 [e2.canvasX, e2.canvasY],
                 [
                   this.selected_group.pos[0] + this.selected_group.size[0],
@@ -13725,7 +14617,7 @@ var LiteGraphTSMigration = (function(exports) {
                 for (let i2 = 0, l2 = node2.outputs.length; i2 < l2; ++i2) {
                   const output = node2.outputs[i2];
                   const link_pos = node2.getConnectionPos(false, i2);
-                  if (isInsideRectangle$1(e2.canvasX, e2.canvasY, link_pos[0] - 15, link_pos[1] - 10, 30, 20)) {
+                  if (isInsideRectangle$2(e2.canvasX, e2.canvasY, link_pos[0] - 15, link_pos[1] - 10, 30, 20)) {
                     mClikSlot = output;
                     mClikSlot_index = i2;
                     mClikSlot_isOut = true;
@@ -13737,7 +14629,7 @@ var LiteGraphTSMigration = (function(exports) {
                 for (let i2 = 0, l2 = node2.inputs.length; i2 < l2; ++i2) {
                   const input = node2.inputs[i2];
                   const link_pos = node2.getConnectionPos(true, i2);
-                  if (isInsideRectangle$1(e2.canvasX, e2.canvasY, link_pos[0] - 15, link_pos[1] - 10, 30, 20)) {
+                  if (isInsideRectangle$2(e2.canvasX, e2.canvasY, link_pos[0] - 15, link_pos[1] - 10, 30, 20)) {
                     mClikSlot = input;
                     mClikSlot_index = i2;
                     mClikSlot_isOut = false;
@@ -13928,7 +14820,7 @@ var LiteGraphTSMigration = (function(exports) {
             }
           }
           if (this.canvas) {
-            if (isInsideRectangle$1(
+            if (isInsideRectangle$2(
               e2.canvasX,
               e2.canvasY,
               node2.pos[0] + node2.size[0] - 5,
@@ -14168,7 +15060,7 @@ var LiteGraphTSMigration = (function(exports) {
           this.resizing_node = null;
         } else if (this.node_dragged) {
           const node_dragged = this.node_dragged;
-          if (node_dragged && e2.click_time < 300 && isInsideRectangle$1(
+          if (node_dragged && e2.click_time < 300 && isInsideRectangle$2(
             e2.canvasX,
             e2.canvasY,
             node_dragged.pos[0],
@@ -14443,7 +15335,7 @@ var LiteGraphTSMigration = (function(exports) {
      **/
     isOverNodeBox(node2, canvasx, canvasy) {
       const title_height = this.getLiteGraphHost().NODE_TITLE_HEIGHT;
-      if (isInsideRectangle$1(
+      if (isInsideRectangle$2(
         canvasx,
         canvasy,
         node2.pos[0] + 2,
@@ -14465,9 +15357,9 @@ var LiteGraphTSMigration = (function(exports) {
           const link_pos = node2.getConnectionPos(true, i2);
           let is_inside = false;
           if (node2.horizontal) {
-            is_inside = isInsideRectangle$1(canvasx, canvasy, link_pos[0] - 5, link_pos[1] - 10, 10, 20);
+            is_inside = isInsideRectangle$2(canvasx, canvasy, link_pos[0] - 5, link_pos[1] - 10, 10, 20);
           } else {
-            is_inside = isInsideRectangle$1(canvasx, canvasy, link_pos[0] - 10, link_pos[1] - 5, 40, 10);
+            is_inside = isInsideRectangle$2(canvasx, canvasy, link_pos[0] - 10, link_pos[1] - 5, 40, 10);
           }
           if (is_inside) {
             if (slot_pos) {
@@ -14490,9 +15382,9 @@ var LiteGraphTSMigration = (function(exports) {
           const link_pos = node2.getConnectionPos(false, i2);
           let is_inside = false;
           if (node2.horizontal) {
-            is_inside = isInsideRectangle$1(canvasx, canvasy, link_pos[0] - 5, link_pos[1] - 10, 10, 20);
+            is_inside = isInsideRectangle$2(canvasx, canvasy, link_pos[0] - 5, link_pos[1] - 10, 10, 20);
           } else {
-            is_inside = isInsideRectangle$1(canvasx, canvasy, link_pos[0] - 10, link_pos[1] - 5, 40, 10);
+            is_inside = isInsideRectangle$2(canvasx, canvasy, link_pos[0] - 10, link_pos[1] - 5, 40, 10);
           }
           if (is_inside) {
             if (slot_pos) {
@@ -15084,7 +15976,7 @@ var LiteGraphTSMigration = (function(exports) {
         node_box_coloured_by_mode: !!host.node_box_coloured_by_mode,
         node_box_coloured_when_on: !!host.node_box_coloured_when_on,
         NODE_MODES_COLORS: host.NODE_MODES_COLORS || {},
-        isInsideRectangle: host.isInsideRectangle || ((x2, y2, left, top, width2, height) => isInsideRectangle$1(x2, y2, left, top, width2, height)),
+        isInsideRectangle: host.isInsideRectangle || ((x2, y2, left, top, width2, height) => isInsideRectangle$2(x2, y2, left, top, width2, height)),
         getTime: host.getTime || (() => Date.now())
       };
     }
@@ -16175,7 +17067,7 @@ var LiteGraphTSMigration = (function(exports) {
       }
       start_dir = start_dir || LiteGraph2.RIGHT;
       end_dir = end_dir || LiteGraph2.LEFT;
-      const dist = distance(a, b2);
+      const dist = distance$2(a, b2);
       if (this.render_connections_border && this.ds.scale > 0.6) {
         ctx.lineWidth = this.connections_width + 4;
       }
@@ -16235,7 +17127,7 @@ var LiteGraphTSMigration = (function(exports) {
       const LiteGraph2 = this.constants();
       start_dir = start_dir || LiteGraph2.RIGHT;
       end_dir = end_dir || LiteGraph2.LEFT;
-      const dist = distance(a, b2);
+      const dist = distance$2(a, b2);
       const p0 = a;
       const p1 = [a[0], a[1]];
       const p2 = [b2[0], b2[1]];
@@ -17224,7 +18116,7 @@ var LiteGraphTSMigration = (function(exports) {
       return (/* @__PURE__ */ new Date()).getTime();
     };
   }
-  const LiteGraphConstants = {
+  const LiteGraphConstants$1 = {
     VERSION: 0.4,
     CANVAS_GRID_SIZE: 10,
     NODE_TITLE_HEIGHT: 30,
@@ -17333,14 +18225,10 @@ var LiteGraphTSMigration = (function(exports) {
     click_do_break_link_from_key: "shift",
     // "shift"|"alt"|"ctrl"|"meta"|Array<string>
     isBreakLinkModifierPressed: function(e2) {
-      const shortcutSetting = LiteGraphConstants.shift_click_do_break_link_from;
-      if (!e2 || !shortcutSetting) {
+      if (!e2 || false) {
         return false;
       }
-      let breakMod = LiteGraphConstants.click_do_break_link_from_key;
-      if (typeof shortcutSetting !== "boolean") {
-        breakMod = shortcutSetting;
-      }
+      let breakMod = LiteGraphConstants$1.click_do_break_link_from_key;
       const hasModifier = (modifier) => {
         const mod = String(modifier || "").toLowerCase();
         return mod === "shift" && !!e2.shiftKey || mod === "alt" && !!e2.altKey || mod === "ctrl" && !!e2.ctrlKey || mod === "meta" && !!e2.metaKey;
@@ -17348,7 +18236,7 @@ var LiteGraphTSMigration = (function(exports) {
       if (Array.isArray(breakMod)) {
         return breakMod.some(hasModifier);
       }
-      return hasModifier(breakMod || "shift");
+      return hasModifier(breakMod);
     },
     click_do_break_link_to: false,
     // [false!] prefer false, way too easy to break links
@@ -17403,7 +18291,7 @@ var LiteGraphTSMigration = (function(exports) {
     // use this if you must have node IDs that are unique across all graphs and subgraphs.
     use_uuids: false
   };
-  class LiteGraphRegistry {
+  let LiteGraphRegistry$1 = class LiteGraphRegistry {
     constructor(host, lGraphNodePrototype) {
       this.host = host;
       this.lGraphNodePrototype = lGraphNodePrototype;
@@ -17700,8 +18588,8 @@ var LiteGraphTSMigration = (function(exports) {
       }
       return this.host.auto_sort_node_types ? result.sort() : result;
     }
-  }
-  class LiteGraphRuntime {
+  };
+  let LiteGraphRuntime$1 = class LiteGraphRuntime {
     constructor(host) {
       this.host = host;
     }
@@ -18029,7 +18917,7 @@ var LiteGraphTSMigration = (function(exports) {
       }
       return null;
     }
-  }
+  };
   function deserializeGraphData(target, data, factories) {
     for (const key in data) {
       if (key === "nodes" || key === "groups" || key === "links") {
@@ -18105,7 +18993,7 @@ var LiteGraphTSMigration = (function(exports) {
       this._pos = new Float32Array(2);
     }
     configure(o2) {
-      const parsed = parseSerializedLLinkInput(o2);
+      const parsed = parseSerializedLLinkInput$1(o2);
       this.id = parsed.id;
       this.type = parsed.type;
       this.origin_id = parsed.origin_id;
@@ -18739,7 +19627,7 @@ var LiteGraphTSMigration = (function(exports) {
       if (!skip_compute_order) {
         this.updateExecutionOrder();
       }
-      invokeGraphOnNodeAddedCompatHook(
+      invokeGraphOnNodeAddedCompatHook$1(
         this,
         graphNode
       );
@@ -20991,7 +21879,7 @@ var LiteGraphTSMigration = (function(exports) {
     setDirtyCanvas(_fg, _bg) {
     }
   }
-  function isInsideRectangle(x2, y2, left, top, width2, height) {
+  function isInsideRectangle$1(x2, y2, left, top, width2, height) {
     return left < x2 && left + width2 > x2 && top < y2 && top + height > y2;
   }
   const hostDefaults = {
@@ -21077,7 +21965,7 @@ var LiteGraphTSMigration = (function(exports) {
         margin_top = 0;
       }
       if ((_c2 = this.flags) == null ? void 0 : _c2.collapsed) {
-        return isInsideRectangle(
+        return isInsideRectangle$1(
           x2,
           y2,
           this.pos[0] - m2,
@@ -21095,7 +21983,7 @@ var LiteGraphTSMigration = (function(exports) {
         for (let i2 = 0; i2 < this.inputs.length; ++i2) {
           const input = this.inputs[i2];
           this.getConnectionPos(true, i2, link_pos);
-          if (isInsideRectangle(x2, y2, link_pos[0] - 10, link_pos[1] - 5, 20, 10)) {
+          if (isInsideRectangle$1(x2, y2, link_pos[0] - 10, link_pos[1] - 5, 20, 10)) {
             return { input, slot: i2, link_pos };
           }
         }
@@ -21104,7 +21992,7 @@ var LiteGraphTSMigration = (function(exports) {
         for (let i2 = 0; i2 < this.outputs.length; ++i2) {
           const output = this.outputs[i2];
           this.getConnectionPos(false, i2, link_pos);
-          if (isInsideRectangle(x2, y2, link_pos[0] - 10, link_pos[1] - 5, 20, 10)) {
+          if (isInsideRectangle$1(x2, y2, link_pos[0] - 10, link_pos[1] - 5, 20, 10)) {
             return { output, slot: i2, link_pos };
           }
         }
@@ -21839,7 +22727,7 @@ var LiteGraphTSMigration = (function(exports) {
       });
     }
     configure(o2) {
-      const normalized = parseSerializedLGraphGroupInput(o2, this.font_size);
+      const normalized = parseSerializedLGraphGroupInput$1(o2, this.font_size);
       this.title = normalized.title;
       this._bounding.set(normalized.bounding);
       this.color = normalized.color;
@@ -22442,7 +23330,7 @@ var LiteGraphTSMigration = (function(exports) {
         p2[0] = p3[0] * w2;
         p2[1] = (1 - p3[1]) * h;
         if (p2[0] < pos2[0]) ;
-        const dist = distance(pos2, p2);
+        const dist = distance$2(pos2, p2);
         if (dist > min_dist || dist > max_dist) {
           continue;
         }
@@ -22452,11 +23340,11 @@ var LiteGraphTSMigration = (function(exports) {
       return closest;
     }
   }
-  function colorToString(c) {
+  function colorToString$1(c) {
     const source = c;
     return "rgba(" + Math.round(source[0] * 255).toFixed() + "," + Math.round(source[1] * 255).toFixed() + "," + Math.round(source[2] * 255).toFixed() + "," + (source.length == 4 ? source[3].toFixed(2) : "1.0") + ")";
   }
-  function hex2num(hex) {
+  function hex2num$1(hex) {
     if (hex.charAt(0) == "#") {
       hex = hex.slice(1);
     }
@@ -22474,7 +23362,7 @@ var LiteGraphTSMigration = (function(exports) {
     }
     return value;
   }
-  function num2hex(triplet) {
+  function num2hex$1(triplet) {
     const hexAlphabets = "0123456789ABCDEF";
     let hex = "#";
     let int1;
@@ -22486,7 +23374,7 @@ var LiteGraphTSMigration = (function(exports) {
     }
     return hex;
   }
-  function getParameterNames(func) {
+  function getParameterNames$1(func) {
     return (func + "").replace(/[/][/].*$/gm, "").replace(/\s+/g, "").replace(/[/][*][^/*]*[*][/]/g, "").split("){", 1)[0].replace(/^[^(]*[(]/, "").replace(/=[^,]+/g, "").split(",").filter(Boolean);
   }
   const LGraph = LGraphPersistence;
@@ -22547,21 +23435,21 @@ var LiteGraphTSMigration = (function(exports) {
     };
   }
   function createLiteGraphNamespace() {
-    const liteGraph = { ...LiteGraphConstants };
-    applyGridSquareShapeAlias(liteGraph);
+    const liteGraph = { ...LiteGraphConstants$1 };
+    applyGridSquareShapeAlias$1(liteGraph);
     const pointerCompat = createDynamicPointerListenerCompat(
       () => String(liteGraph.pointerevents_method || "mouse")
     );
     liteGraph.getTime = createTimeSource();
-    liteGraph.getParameterNames = getParameterNames;
-    liteGraph.compareObjects = compareObjects;
-    liteGraph.distance = distance;
-    liteGraph.colorToString = colorToString;
-    liteGraph.isInsideRectangle = isInsideRectangle$1;
-    liteGraph.growBounding = growBounding;
-    liteGraph.isInsideBounding = isInsideBounding;
-    liteGraph.hex2num = hex2num;
-    liteGraph.num2hex = num2hex;
+    liteGraph.getParameterNames = getParameterNames$1;
+    liteGraph.compareObjects = compareObjects$1;
+    liteGraph.distance = distance$2;
+    liteGraph.colorToString = colorToString$1;
+    liteGraph.isInsideRectangle = isInsideRectangle$2;
+    liteGraph.growBounding = growBounding$1;
+    liteGraph.isInsideBounding = isInsideBounding$1;
+    liteGraph.hex2num = hex2num$1;
+    liteGraph.num2hex = num2hex$1;
     liteGraph.extendClass = extendClass;
     liteGraph.pointerListenerAdd = pointerCompat.add;
     liteGraph.pointerListenerRemove = pointerCompat.remove;
@@ -22574,7 +23462,7 @@ var LiteGraphTSMigration = (function(exports) {
     liteGraph.LGraphCanvas = LGraphCanvas;
     liteGraph.ContextMenu = ContextMenu;
     liteGraph.CurveEditor = CurveEditor;
-    const registry2 = new LiteGraphRegistry(
+    const registry2 = new LiteGraphRegistry$1(
       liteGraph,
       LGraphNode.prototype
     );
@@ -22586,10 +23474,10 @@ var LiteGraphTSMigration = (function(exports) {
     liteGraph.getNodeType = registry2.getNodeType.bind(registry2);
     liteGraph.getNodeTypesInCategory = registry2.getNodeTypesInCategory.bind(registry2);
     liteGraph.getNodeTypesCategories = registry2.getNodeTypesCategories.bind(registry2);
-    const runtime2 = new LiteGraphRuntime({
+    const runtime2 = new LiteGraphRuntime$1({
       ...liteGraph,
       registerNodeType: registry2.registerNodeType.bind(registry2),
-      getParameterNames
+      getParameterNames: getParameterNames$1
     });
     liteGraph.registerNodeAndSlotType = runtime2.registerNodeAndSlotType.bind(runtime2);
     liteGraph.buildNodeClassFromObject = runtime2.buildNodeClassFromObject.bind(runtime2);
@@ -22602,6 +23490,1078 @@ var LiteGraphTSMigration = (function(exports) {
     liteGraph.fetchFile = runtime2.fetchFile.bind(runtime2);
     bindRuntimeIntoClasses(liteGraph);
     return { liteGraph, registry: registry2, runtime: runtime2 };
+  }
+  const LiteGraphConstants = {
+    VERSION: 0.4,
+    CANVAS_GRID_SIZE: 10,
+    NODE_TITLE_HEIGHT: 30,
+    NODE_TITLE_TEXT_Y: 20,
+    NODE_SLOT_HEIGHT: 20,
+    NODE_WIDGET_HEIGHT: 20,
+    NODE_WIDTH: 140,
+    NODE_MIN_WIDTH: 50,
+    NODE_COLLAPSED_RADIUS: 10,
+    NODE_COLLAPSED_WIDTH: 80,
+    NODE_TITLE_COLOR: "#999",
+    NODE_SELECTED_TITLE_COLOR: "#FFF",
+    NODE_TEXT_SIZE: 14,
+    NODE_TEXT_COLOR: "#AAA",
+    NODE_SUBTEXT_SIZE: 12,
+    NODE_DEFAULT_COLOR: "#333",
+    NODE_DEFAULT_BGCOLOR: "#353535",
+    NODE_DEFAULT_BOXCOLOR: "#666",
+    NODE_DEFAULT_SHAPE: "box",
+    NODE_BOX_OUTLINE_COLOR: "#FFF",
+    DEFAULT_SHADOW_COLOR: "rgba(0,0,0,0.5)",
+    DEFAULT_GROUP_FONT: 24,
+    WIDGET_BGCOLOR: "#222",
+    WIDGET_OUTLINE_COLOR: "#666",
+    WIDGET_TEXT_COLOR: "#DDD",
+    WIDGET_SECONDARY_TEXT_COLOR: "#999",
+    LINK_COLOR: "#9A9",
+    EVENT_LINK_COLOR: "#A86",
+    CONNECTING_LINK_COLOR: "#AFA",
+    MAX_NUMBER_OF_NODES: 1e3,
+    // avoid infinite loops
+    DEFAULT_POSITION: [100, 100],
+    // default node position
+    VALID_SHAPES: ["default", "box", "round", "card"],
+    // , "circle"
+    // shapes are used for nodes but also for slots
+    BOX_SHAPE: 1,
+    ROUND_SHAPE: 2,
+    CIRCLE_SHAPE: 3,
+    CARD_SHAPE: 4,
+    ARROW_SHAPE: 5,
+    GRID_SHAPE: 6,
+    // intended for slot arrays
+    // enums
+    INPUT: 1,
+    OUTPUT: 2,
+    EVENT: -1,
+    // for outputs
+    ACTION: -1,
+    // for inputs
+    NODE_MODES: ["Always", "On Event", "Never", "On Trigger"],
+    // helper, will add "On Request" and more in the future
+    NODE_MODES_COLORS: ["#666", "#422", "#333", "#224", "#626"],
+    // use with node_box_coloured_by_mode
+    ALWAYS: 0,
+    ON_EVENT: 1,
+    NEVER: 2,
+    ON_TRIGGER: 3,
+    UP: 1,
+    DOWN: 2,
+    LEFT: 3,
+    RIGHT: 4,
+    CENTER: 5,
+    LINK_RENDER_MODES: ["Straight", "Linear", "Spline"],
+    // helper
+    STRAIGHT_LINK: 0,
+    LINEAR_LINK: 1,
+    SPLINE_LINK: 2,
+    NORMAL_TITLE: 0,
+    NO_TITLE: 1,
+    TRANSPARENT_TITLE: 2,
+    AUTOHIDE_TITLE: 3,
+    VERTICAL_LAYOUT: "vertical",
+    // arrange nodes vertically
+    proxy: null,
+    // used to redirect calls
+    node_images_path: "",
+    debug: false,
+    catch_exceptions: true,
+    throw_errors: true,
+    allow_scripts: false,
+    // if set to true some nodes like Formula would be allowed to evaluate code that comes from unsafe sources (like node configuration), which could lead to exploits
+    use_deferred_actions: true,
+    // executes actions during the graph execution flow
+    registered_node_types: {},
+    // nodetypes by string
+    node_types_by_file_extension: {},
+    // used for dropping files in the canvas
+    Nodes: {},
+    // node types by classname
+    Globals: {},
+    // used to store vars between graphs
+    searchbox_extras: {},
+    // used to add extra features to the search box
+    auto_sort_node_types: false,
+    // [true!] If set to true, will automatically sort node types / categories in the context menus
+    node_box_coloured_when_on: false,
+    // [true!] this make the nodes box (top left circle) coloured when triggered (execute/action), visual feedback
+    node_box_coloured_by_mode: false,
+    // [true!] nodebox based on node mode, visual feedback
+    dialog_close_on_mouse_leave: true,
+    // [false on mobile] better true if not touch device
+    dialog_close_on_mouse_leave_delay: 500,
+    shift_click_do_break_link_from: true,
+    // [false!] set true to enable disconnect shortcut from output slots
+    click_do_break_link_from_key: "shift",
+    // "shift"|"alt"|"ctrl"|"meta"|Array<string>
+    isBreakLinkModifierPressed: function(e2) {
+      const shortcutSetting = LiteGraphConstants.shift_click_do_break_link_from;
+      if (!e2 || !shortcutSetting) {
+        return false;
+      }
+      let breakMod = LiteGraphConstants.click_do_break_link_from_key;
+      if (typeof shortcutSetting !== "boolean") {
+        breakMod = shortcutSetting;
+      }
+      const hasModifier = (modifier) => {
+        const mod = String(modifier || "").toLowerCase();
+        return mod === "shift" && !!e2.shiftKey || mod === "alt" && !!e2.altKey || mod === "ctrl" && !!e2.ctrlKey || mod === "meta" && !!e2.metaKey;
+      };
+      if (Array.isArray(breakMod)) {
+        return breakMod.some(hasModifier);
+      }
+      return hasModifier(breakMod || "shift");
+    },
+    click_do_break_link_to: false,
+    // [false!] prefer false, way too easy to break links
+    search_hide_on_mouse_leave: true,
+    // [false on mobile] better true if not touch device
+    search_filter_enabled: false,
+    // [true!] enable filtering slots type in the search widget, !requires auto_load_slot_types or manual set registered_slot_[in/out]_types and slot_types_[in/out]
+    search_show_all_on_open: true,
+    // [true!] opens the results list when opening the search widget
+    auto_load_slot_types: false,
+    // [if want false, use true, run, get vars values to be statically set, than disable] nodes types and nodeclass association with node types need to be calculated, if dont want this, calculate once and set registered_slot_[in/out]_types and slot_types_[in/out]
+    // set these values if not using auto_load_slot_types
+    registered_slot_in_types: {},
+    // slot types for nodeclass
+    registered_slot_out_types: {},
+    // slot types for nodeclass
+    slot_types_in: [],
+    // slot types IN
+    slot_types_out: [],
+    // slot types OUT
+    slot_types_default_in: [],
+    // specify for each IN slot type a(/many) default node(s), use single string, array, or object (with node, title, parameters, ..) like for search
+    slot_types_default_out: [],
+    // specify for each OUT slot type a(/many) default node(s), use single string, array, or object (with node, title, parameters, ..) like for search
+    alt_drag_do_clone_nodes: false,
+    // [true!] very handy, ALT click to clone and drag the new node
+    do_add_triggers_slots: false,
+    // [true!] will create and connect event slots when using action/events connections, !WILL CHANGE node mode when using onTrigger (enable mode colors), onExecuted does not need this
+    allow_multi_output_for_events: true,
+    // [false!] being events, it is strongly reccomended to use them sequentially, one by one
+    middle_click_slot_add_default_node: false,
+    // [true!] allows to create and connect a ndoe clicking with the third button (wheel)
+    release_link_on_empty_shows_menu: false,
+    // [true!] dragging a link to empty space will open a menu, add from list, search or defaults
+    pointerevents_method: "mouse",
+    // "mouse"|"pointer"|"touch"
+    isTouchDevice: function() {
+      if (typeof navigator === "undefined" || typeof window === "undefined") {
+        return false;
+      }
+      if (navigator.maxTouchPoints && navigator.maxTouchPoints > 0) {
+        return true;
+      }
+      if (window.matchMedia && window.matchMedia("(pointer: coarse)").matches) {
+        return true;
+      }
+      return "ontouchstart" in window;
+    },
+    ctrl_shift_v_paste_connect_unselected_outputs: false,
+    // [true!] allows ctrl + shift + v to paste nodes with the outputs of the unselected nodes connected with the inputs of the newly pasted nodes
+    // if true, all newly created nodes/links will use string UUIDs for their id fields instead of integers.
+    // use this if you must have node IDs that are unique across all graphs and subgraphs.
+    use_uuids: false
+  };
+  class LiteGraphRegistry {
+    constructor(host, lGraphNodePrototype) {
+      this.host = host;
+      this.lGraphNodePrototype = lGraphNodePrototype;
+    }
+    /**
+     * Register a node class so it can be listed when the user wants to create a new one
+     * @method registerNodeType
+     * @param {String} type name of the node and path
+     * @param {Class} base_class class containing the structure of a node
+     */
+    registerNodeType(type, baseClass) {
+      var _a3;
+      if (!baseClass.prototype) {
+        throw "Cannot register a simple object, it must be a class with a prototype";
+      }
+      baseClass.type = type;
+      if (this.host.debug) {
+        console.log("Node registered: " + type);
+      }
+      const className = baseClass.name;
+      const pos2 = type.lastIndexOf("/");
+      baseClass.category = type.substring(0, pos2);
+      if (!baseClass.title) {
+        baseClass.title = className;
+      }
+      const basePrototype = baseClass.prototype;
+      const visited = /* @__PURE__ */ new Set();
+      let cursor = this.lGraphNodePrototype;
+      while (cursor && cursor !== Object.prototype) {
+        const names = Object.getOwnPropertyNames(cursor);
+        for (const name of names) {
+          if (name === "constructor" || name === "__proto__" || visited.has(name)) {
+            continue;
+          }
+          visited.add(name);
+          if (basePrototype[name] !== void 0) {
+            continue;
+          }
+          const descriptor = Object.getOwnPropertyDescriptor(cursor, name);
+          if (!descriptor) {
+            continue;
+          }
+          Object.defineProperty(basePrototype, name, descriptor);
+        }
+        cursor = Object.getPrototypeOf(cursor);
+      }
+      const prev = this.host.registered_node_types[type];
+      if (prev) {
+        console.log("replacing node type: " + type);
+      }
+      const host = this.host;
+      if (!Object.prototype.hasOwnProperty.call(basePrototype, "shape")) {
+        Object.defineProperty(basePrototype, "shape", {
+          set: function(v2) {
+            switch (v2) {
+              case "default":
+                delete this._shape;
+                break;
+              case "box":
+                this._shape = host.BOX_SHAPE;
+                break;
+              case "round":
+                this._shape = host.ROUND_SHAPE;
+                break;
+              case "circle":
+                this._shape = host.CIRCLE_SHAPE;
+                break;
+              case "card":
+                this._shape = host.CARD_SHAPE;
+                break;
+              default:
+                this._shape = v2;
+            }
+          },
+          get: function() {
+            return this._shape;
+          },
+          enumerable: true,
+          configurable: true
+        });
+        if (baseClass.supported_extensions) {
+          for (const ext of baseClass.supported_extensions) {
+            if (ext && typeof ext === "string") {
+              this.host.node_types_by_file_extension[ext.toLowerCase()] = baseClass;
+            }
+          }
+        }
+      }
+      this.host.registered_node_types[type] = baseClass;
+      if ((_a3 = baseClass.constructor) == null ? void 0 : _a3.name) {
+        this.host.Nodes[className] = baseClass;
+      }
+      if (this.host.onNodeTypeRegistered) {
+        this.host.onNodeTypeRegistered(type, baseClass);
+      }
+      if (prev && this.host.onNodeTypeReplaced) {
+        this.host.onNodeTypeReplaced(type, baseClass, prev);
+      }
+      if (baseClass.prototype.onPropertyChange) {
+        console.warn(
+          "LiteGraph node class " + type + " has onPropertyChange method, it must be called onPropertyChanged with d at the end"
+        );
+      }
+      if (this.host.auto_load_slot_types) {
+        try {
+          const tempNode = new baseClass(baseClass.title || "tmpnode");
+          if (tempNode && tempNode.inputs && this.host.registerNodeAndSlotType) {
+            for (let i2 = 0; i2 < tempNode.inputs.length; ++i2) {
+              this.host.registerNodeAndSlotType(
+                tempNode,
+                tempNode.inputs[i2] ? tempNode.inputs[i2].type : 0
+              );
+            }
+          }
+          if (tempNode && tempNode.outputs && this.host.registerNodeAndSlotType) {
+            for (let i2 = 0; i2 < tempNode.outputs.length; ++i2) {
+              this.host.registerNodeAndSlotType(
+                tempNode,
+                tempNode.outputs[i2] ? tempNode.outputs[i2].type : 0,
+                true
+              );
+            }
+          }
+        } catch (err) {
+          if (this.host.debug) {
+            console.warn(
+              "Error while probing slots for node type: " + type,
+              err
+            );
+          }
+        }
+      }
+    }
+    /**
+     * removes a node type from the system
+     * @method unregisterNodeType
+     * @param {String|Object} type name of the node or the node constructor itself
+     */
+    unregisterNodeType(type) {
+      var _a3;
+      const baseClass = typeof type === "string" ? this.host.registered_node_types[type] : type;
+      if (!baseClass) {
+        throw "node type not found: " + type;
+      }
+      if (baseClass.type) {
+        delete this.host.registered_node_types[baseClass.type];
+      }
+      const constructorName = (_a3 = baseClass.constructor) == null ? void 0 : _a3.name;
+      if (constructorName) {
+        delete this.host.Nodes[constructorName];
+      }
+    }
+    /**
+     * Removes all previously registered node's types
+     */
+    clearRegisteredTypes() {
+      this.host.registered_node_types = {};
+      this.host.node_types_by_file_extension = {};
+      this.host.Nodes = {};
+      this.host.searchbox_extras = {};
+    }
+    /**
+     * Adds this method to all nodetypes, existing and to be created
+     * (You can add it to LGraphNode.prototype but then existing node types wont have it)
+     * @method addNodeMethod
+     * @param {Function} func
+     */
+    addNodeMethod(name, func) {
+      this.lGraphNodePrototype[name] = func;
+      for (const i2 in this.host.registered_node_types) {
+        const type = this.host.registered_node_types[i2];
+        const prototype = type.prototype;
+        if (prototype[name]) {
+          prototype["_" + name] = prototype[name];
+        }
+        prototype[name] = func;
+      }
+    }
+    /**
+     * Create a node of a given type with a name. The node is not attached to any graph yet.
+     * @method createNode
+     * @param {String} type full name of the node class. p.e. "math/sin"
+     * @param {String} name a name to distinguish from other nodes
+     * @param {Object} options to set options
+     */
+    createNode(type, title, options) {
+      const baseClass = this.host.registered_node_types[type];
+      if (!baseClass) {
+        if (this.host.debug) {
+          console.log('GraphNode type "' + type + '" not registered.');
+        }
+        return null;
+      }
+      title = title || baseClass.title || type;
+      let node2;
+      if (this.host.catch_exceptions) {
+        try {
+          node2 = new baseClass(title);
+        } catch (err) {
+          console.error(err);
+          return null;
+        }
+      } else {
+        node2 = new baseClass(title);
+      }
+      node2.type = type;
+      if (!node2.title && title) {
+        node2.title = title;
+      }
+      if (!node2.properties) {
+        node2.properties = {};
+      }
+      if (!node2.properties_info) {
+        node2.properties_info = [];
+      }
+      if (!node2.flags) {
+        node2.flags = {};
+      }
+      if (!node2.size) {
+        node2.size = node2.computeSize();
+      }
+      if (!node2.pos) {
+        node2.pos = this.host.DEFAULT_POSITION.concat();
+      }
+      if (!node2.mode) {
+        node2.mode = this.host.ALWAYS;
+      }
+      if (options) {
+        const mutableNode = node2;
+        for (const i2 in options) {
+          mutableNode[i2] = options[i2];
+        }
+      }
+      if (node2.onNodeCreated) {
+        node2.onNodeCreated();
+      }
+      return node2;
+    }
+    /**
+     * Returns a registered node type with a given name
+     * @method getNodeType
+     * @param {String} type full name of the node class. p.e. "math/sin"
+     * @return {Class} the node class
+     */
+    getNodeType(type) {
+      return this.host.registered_node_types[type];
+    }
+    /**
+     * Returns a list of node types matching one category
+     * @method getNodeType
+     * @param {String} category category name
+     * @return {Array} array with all the node classes
+     */
+    getNodeTypesInCategory(category, filter) {
+      const result = [];
+      for (const i2 in this.host.registered_node_types) {
+        const type = this.host.registered_node_types[i2];
+        if (type.filter != filter) {
+          continue;
+        }
+        if (category === "") {
+          if (type.category == null) {
+            result.push(type);
+          }
+        } else if (type.category === category) {
+          result.push(type);
+        }
+      }
+      if (this.host.auto_sort_node_types) {
+        result.sort((a, b2) => (a.title || "").localeCompare(b2.title || ""));
+      }
+      return result;
+    }
+    /**
+     * Returns a list with all the node type categories
+     * @method getNodeTypesCategories
+     * @param {String} filter only nodes with ctor.filter equal can be shown
+     * @return {Array} array with all the names of the categories
+     */
+    getNodeTypesCategories(filter) {
+      const categories = { "": 1 };
+      for (const i2 in this.host.registered_node_types) {
+        const type = this.host.registered_node_types[i2];
+        if (type.category && !type.skip_list) {
+          if (type.filter != filter) {
+            continue;
+          }
+          categories[type.category] = 1;
+        }
+      }
+      const result = [];
+      for (const i2 in categories) {
+        result.push(i2);
+      }
+      return this.host.auto_sort_node_types ? result.sort() : result;
+    }
+  }
+  class LiteGraphRuntime {
+    constructor(host) {
+      this.host = host;
+    }
+    /**
+    * Save a slot type and his node
+    * @method registerSlotType
+    * @param {String|Object} type name of the node or the node constructor itself
+    * @param {String} slot_type name of the slot type (variable type), eg. string, number, array, boolean, ..
+    */
+    registerNodeAndSlotType(type, slotType, out) {
+      out = out || false;
+      const registeredType = this.host.registered_node_types[String(type)];
+      const baseClass = typeof type === "string" && registeredType != "anonymous" ? registeredType : type;
+      const classType = baseClass.constructor.type;
+      let allTypes = [];
+      if (typeof slotType === "string") {
+        allTypes = slotType.split(",");
+      } else if (slotType == this.host.EVENT || slotType == this.host.ACTION) {
+        allTypes = ["_event_"];
+      } else {
+        allTypes = ["*"];
+      }
+      for (let i2 = 0; i2 < allTypes.length; ++i2) {
+        let normalizedSlotType = allTypes[i2];
+        if (normalizedSlotType === "") {
+          normalizedSlotType = "*";
+        }
+        const registerTo = out ? this.host.registered_slot_out_types : this.host.registered_slot_in_types;
+        if (registerTo[normalizedSlotType] === void 0) {
+          registerTo[normalizedSlotType] = { nodes: [] };
+        }
+        if (!registerTo[normalizedSlotType].nodes.includes(classType)) {
+          registerTo[normalizedSlotType].nodes.push(classType);
+        }
+        if (!out) {
+          if (!this.host.slot_types_in.includes(
+            normalizedSlotType.toLowerCase()
+          )) {
+            this.host.slot_types_in.push(normalizedSlotType.toLowerCase());
+            this.host.slot_types_in.sort();
+          }
+        } else if (!this.host.slot_types_out.includes(normalizedSlotType.toLowerCase())) {
+          this.host.slot_types_out.push(normalizedSlotType.toLowerCase());
+          this.host.slot_types_out.sort();
+        }
+      }
+    }
+    /**
+     * Create a new nodetype by passing an object with some properties
+     * like onCreate, inputs:Array, outputs:Array, properties, onExecute
+     * @method buildNodeClassFromObject
+     * @param {String} name node name with namespace (p.e.: 'math/sum')
+     * @param {Object} object methods expected onCreate, inputs, outputs, properties, onExecute
+     */
+    buildNodeClassFromObject(name, object) {
+      let ctorCode = "";
+      if (object.inputs) {
+        for (let i2 = 0; i2 < object.inputs.length; ++i2) {
+          const inputName = object.inputs[i2][0];
+          let inputType = object.inputs[i2][1];
+          if (inputType && inputType.constructor === String) {
+            inputType = '"' + inputType + '"';
+          }
+          ctorCode += "this.addInput('" + inputName + "'," + inputType + ");\n";
+        }
+      }
+      if (object.outputs) {
+        for (let i2 = 0; i2 < object.outputs.length; ++i2) {
+          const outputName = object.outputs[i2][0];
+          let outputType = object.outputs[i2][1];
+          if (outputType && outputType.constructor === String) {
+            outputType = '"' + outputType + '"';
+          }
+          ctorCode += "this.addOutput('" + outputName + "'," + outputType + ");\n";
+        }
+      }
+      if (object.properties) {
+        for (const key in object.properties) {
+          let prop = object.properties[key];
+          if (prop && prop.constructor === String) {
+            prop = '"' + prop + '"';
+          }
+          ctorCode += "this.addProperty('" + key + "'," + prop + ");\n";
+        }
+      }
+      ctorCode += "if(this.onCreate)this.onCreate()";
+      const classObject = Function(ctorCode);
+      for (const key in object) {
+        if (key !== "inputs" && key !== "outputs" && key !== "properties") {
+          classObject.prototype[key] = object[key];
+        }
+      }
+      classObject.title = object.title || name.split("/").pop();
+      classObject.desc = object.desc || "Generated from object";
+      this.host.registerNodeType(name, classObject);
+      return classObject;
+    }
+    /**
+     * Create a new nodetype by passing a function, it wraps it with a proper class and generates inputs according to the parameters of the function.
+     * Useful to wrap simple methods that do not require properties, and that only process some input to generate an output.
+     * @method wrapFunctionAsNode
+     * @param {String} name node name with namespace (p.e.: 'math/sum')
+     * @param {Function} func
+     * @param {Array} param_types [optional] an array containing the type of every parameter, otherwise parameters will accept any type
+     * @param {String} return_type [optional] string with the return type, otherwise it will be generic
+     * @param {Object} properties [optional] properties to be configurable
+     */
+    wrapFunctionAsNode(name, func, paramTypes, returnType, properties) {
+      var _a3;
+      const params = Array(func.length);
+      let code = "";
+      if (paramTypes !== null) {
+        const names = this.host.getParameterNames(func);
+        for (let i2 = 0; i2 < names.length; ++i2) {
+          let type = 0;
+          if (paramTypes) {
+            if (paramTypes[i2] != null && ((_a3 = paramTypes[i2]) == null ? void 0 : _a3.constructor) === String) {
+              type = "'" + paramTypes[i2] + "'";
+            } else if (paramTypes[i2] != null) {
+              type = paramTypes[i2];
+            }
+          }
+          code += "this.addInput('" + names[i2] + "'," + type + ");\n";
+        }
+      }
+      if (returnType !== null) {
+        code += "this.addOutput('out'," + (returnType != null ? returnType.constructor === String ? "'" + returnType + "'" : returnType : 0) + ");\n";
+      }
+      if (properties) {
+        code += "this.properties = " + JSON.stringify(properties) + ";\n";
+      }
+      const classObject = Function(code);
+      classObject.title = name.split("/").pop();
+      classObject.desc = "Generated from " + func.name;
+      classObject.prototype.onExecute = function onExecute() {
+        for (let i2 = 0; i2 < params.length; ++i2) {
+          params[i2] = this.getInputData(i2);
+        }
+        const result = func.apply(this, params);
+        this.setOutputData(0, result);
+      };
+      this.host.registerNodeType(name, classObject);
+      return classObject;
+    }
+    // debug purposes: reloads all the js scripts that matches a wildcard
+    reloadNodes(folderWildcard) {
+      const scripts = document.getElementsByTagName("script");
+      const scriptFiles = [];
+      for (let i2 = 0; i2 < scripts.length; i2++) {
+        scriptFiles.push(scripts[i2]);
+      }
+      const docHeadObj = document.getElementsByTagName("head")[0];
+      folderWildcard = document.location.href + folderWildcard;
+      for (let i2 = 0; i2 < scriptFiles.length; i2++) {
+        const src = scriptFiles[i2].src;
+        if (!src || src.substr(0, folderWildcard.length) !== folderWildcard) {
+          continue;
+        }
+        try {
+          if (this.host.debug) {
+            console.log("Reloading: " + src);
+          }
+          const dynamicScript = document.createElement("script");
+          dynamicScript.type = "text/javascript";
+          dynamicScript.src = src;
+          docHeadObj.appendChild(dynamicScript);
+          docHeadObj.removeChild(scriptFiles[i2]);
+        } catch (err) {
+          if (this.host.throw_errors) {
+            throw err;
+          }
+          if (this.host.debug) {
+            console.log("Error while reloading " + src);
+          }
+        }
+      }
+      if (this.host.debug) {
+        console.log("Nodes reloaded");
+      }
+    }
+    // separated just to improve if it does not work
+    cloneObject(obj, target) {
+      if (obj == null) {
+        return null;
+      }
+      const cloned = JSON.parse(JSON.stringify(obj));
+      if (!target) {
+        return cloned;
+      }
+      for (const key in cloned) {
+        target[key] = cloned[key];
+      }
+      return target;
+    }
+    /*
+     * https://gist.github.com/jed/982883?permalink_comment_id=852670#gistcomment-852670
+     */
+    uuidv4() {
+      const pattern = "10000000-1000-4000-8000-100000000000";
+      return pattern.replace(
+        /[018]/g,
+        (a) => (Number(a) ^ Math.random() * 16 >> Number(a) / 4).toString(16)
+      );
+    }
+    /**
+     * Returns if the types of two slots are compatible (taking into account wildcards, etc)
+     * @method isValidConnection
+     * @param {String} type_a
+     * @param {String} type_b
+     * @return {Boolean} true if they can be connected
+     */
+    isValidConnection(typeA, typeB) {
+      if (typeA == "" || typeA === "*") {
+        typeA = 0;
+      }
+      if (typeB == "" || typeB === "*") {
+        typeB = 0;
+      }
+      if (!typeA || // generic output
+      !typeB || // generic input
+      typeA == typeB || // same type (is valid for triggers)
+      typeA == this.host.EVENT && typeB == this.host.ACTION) {
+        return true;
+      }
+      let normalizedA = String(typeA).toLowerCase();
+      let normalizedB = String(typeB).toLowerCase();
+      if (normalizedA.indexOf(",") === -1 && normalizedB.indexOf(",") === -1) {
+        return normalizedA === normalizedB;
+      }
+      const supportedTypesA = normalizedA.split(",");
+      const supportedTypesB = normalizedB.split(",");
+      for (let i2 = 0; i2 < supportedTypesA.length; ++i2) {
+        for (let j2 = 0; j2 < supportedTypesB.length; ++j2) {
+          if (this.isValidConnection(
+            supportedTypesA[i2],
+            supportedTypesB[j2]
+          )) {
+            return true;
+          }
+        }
+      }
+      return false;
+    }
+    /**
+     * Register a string in the search box so when the user types it it will recommend this node
+     * @method registerSearchboxExtra
+     * @param {String} node_type the node recommended
+     * @param {String} description text to show next to it
+     * @param {Object} data it could contain info of how the node should be configured
+     * @return {Boolean} true if they can be connected
+     */
+    registerSearchboxExtra(nodeType, description, data) {
+      this.host.searchbox_extras[description.toLowerCase()] = {
+        type: nodeType,
+        desc: description,
+        data
+      };
+    }
+    /**
+     * Wrapper to load files (from url using fetch or from file using FileReader)
+     * @method fetchFile
+     * @param {String|File|Blob} url the url of the file (or the file itself)
+     * @param {String} type an string to know how to fetch it: "text","arraybuffer","json","blob"
+     * @param {Function} on_complete callback(data)
+     * @param {Function} on_error in case of an error
+     * @return {FileReader|Promise} returns the object used to
+     */
+    fetchFile(url, type = "text", onComplete, onError) {
+      if (!url) {
+        return null;
+      }
+      if (url.constructor === String) {
+        let normalizedUrl = url;
+        if (normalizedUrl.substr(0, 4) === "http" && this.host.proxy) {
+          normalizedUrl = this.host.proxy + normalizedUrl.substr(normalizedUrl.indexOf(":") + 3);
+        }
+        return fetch(normalizedUrl).then((response) => {
+          if (!response.ok) {
+            throw new Error("File not found");
+          }
+          if (type === "arraybuffer") {
+            return response.arrayBuffer();
+          }
+          if (type === "text" || type === "string") {
+            return response.text();
+          }
+          if (type === "json") {
+            return response.json();
+          }
+          if (type === "blob") {
+            return response.blob();
+          }
+        }).then((data) => {
+          if (onComplete) {
+            onComplete(data);
+          }
+        }).catch((error) => {
+          console.error("error fetching file:", normalizedUrl);
+          if (onError) {
+            onError(error);
+          }
+        });
+      }
+      if (url.constructor === File || url.constructor === Blob) {
+        const reader = new FileReader();
+        reader.onload = (event2) => {
+          var _a3;
+          let value = (_a3 = event2.target) == null ? void 0 : _a3.result;
+          if (type === "json") {
+            value = JSON.parse(String(value));
+          }
+          if (onComplete) {
+            onComplete(value);
+          }
+        };
+        if (type === "arraybuffer") {
+          return reader.readAsArrayBuffer(url);
+        }
+        if (type === "text" || type === "json") {
+          return reader.readAsText(url);
+        }
+        if (type === "blob") {
+          return reader.readAsBinaryString(url);
+        }
+      }
+      return null;
+    }
+  }
+  const LGRAPH_ON_NODE_ADDED_DIFF_ID = LITEGRAPH_COMPAT_DIFF_IDS.graphHooksOnNodeAdded;
+  function hasGraphOnNodeAddedCompatHook(graph) {
+    return typeof graph.onNodeAdded === "function";
+  }
+  function invokeGraphOnNodeAddedCompatHook(graph, node2) {
+    const rawHook = graph.onNodeAdded;
+    if (!rawHook) {
+      return false;
+    }
+    rawHook(node2);
+    return true;
+  }
+  const LGRAPHGROUP_SERIALIZATION_DIFF_ID = LITEGRAPH_COMPAT_DIFF_IDS.serializationGroupFontField;
+  function normalizeSerializedLGraphGroup(group, defaultFontSize = 24) {
+    const anyGroup = group;
+    let fontSize = parseNumber(anyGroup.font_size);
+    if (fontSize == null) {
+      fontSize = parseNumber(anyGroup.font);
+    }
+    if (fontSize == null) {
+      fontSize = defaultFontSize;
+    }
+    return {
+      title: anyGroup.title,
+      bounding: anyGroup.bounding,
+      color: anyGroup.color,
+      font_size: fontSize
+    };
+  }
+  function denormalizeSerializedLGraphGroup(group) {
+    return {
+      title: group.title,
+      bounding: group.bounding,
+      color: group.color,
+      font: String(group.font_size)
+    };
+  }
+  function parseSerializedLGraphGroupInput(input, defaultFontSize = 24) {
+    return normalizeSerializedLGraphGroup(input, defaultFontSize);
+  }
+  function serializeLGraphGroupShape(shape, order = "runtime") {
+    const runtimeShape = {
+      title: shape.title,
+      bounding: shape.bounding,
+      color: shape.color,
+      font_size: shape.font_size
+    };
+    if (order === "runtime") {
+      return runtimeShape;
+    }
+    return denormalizeSerializedLGraphGroup(runtimeShape);
+  }
+  function parseNumber(v2) {
+    if (typeof v2 === "number" && Number.isFinite(v2)) {
+      return v2;
+    }
+    if (typeof v2 === "string" && v2.trim() !== "") {
+      const parsed = Number(v2);
+      if (Number.isFinite(parsed)) {
+        return parsed;
+      }
+    }
+    return null;
+  }
+  const LLINK_SERIALIZATION_DIFF_ID = LITEGRAPH_COMPAT_DIFF_IDS.serializationLinkTupleOrder;
+  function isSerializedLLinkDtsOrder(tuple) {
+    return typeof tuple[1] === "string";
+  }
+  function normalizeSerializedLLinkTuple(tuple) {
+    var _a3, _b2, _c2, _d2, _e2, _f, _g, _h2, _i2, _j, _k, _l;
+    const source = tuple;
+    if (isSerializedLLinkDtsOrder(source)) {
+      return [
+        Number((_a3 = source[0]) != null ? _a3 : 0),
+        Number((_b2 = source[2]) != null ? _b2 : 0),
+        Number((_c2 = source[3]) != null ? _c2 : 0),
+        Number((_d2 = source[4]) != null ? _d2 : 0),
+        Number((_e2 = source[5]) != null ? _e2 : 0),
+        String((_f = source[1]) != null ? _f : "")
+      ];
+    }
+    return [
+      Number((_g = source[0]) != null ? _g : 0),
+      Number((_h2 = source[1]) != null ? _h2 : 0),
+      Number((_i2 = source[2]) != null ? _i2 : 0),
+      Number((_j = source[3]) != null ? _j : 0),
+      Number((_k = source[4]) != null ? _k : 0),
+      String((_l = source[5]) != null ? _l : "")
+    ];
+  }
+  function denormalizeSerializedLLinkTuple(tuple, order = "runtime") {
+    if (order === "runtime") {
+      return [tuple[0], tuple[1], tuple[2], tuple[3], tuple[4], tuple[5]];
+    }
+    return [
+      tuple[0],
+      tuple[5],
+      tuple[1],
+      tuple[2],
+      tuple[3],
+      tuple[4]
+    ];
+  }
+  function parseSerializedLLinkInput(input) {
+    var _a3, _b2, _c2, _d2, _e2, _f;
+    if (Array.isArray(input)) {
+      const normalized = normalizeSerializedLLinkTuple(input);
+      return {
+        id: normalized[0],
+        origin_id: normalized[1],
+        origin_slot: normalized[2],
+        target_id: normalized[3],
+        target_slot: normalized[4],
+        type: normalized[5]
+      };
+    }
+    const shape = input;
+    return {
+      id: Number((_a3 = shape.id) != null ? _a3 : 0),
+      type: String((_b2 = shape.type) != null ? _b2 : ""),
+      origin_id: Number((_c2 = shape.origin_id) != null ? _c2 : 0),
+      origin_slot: Number((_d2 = shape.origin_slot) != null ? _d2 : 0),
+      target_id: Number((_e2 = shape.target_id) != null ? _e2 : 0),
+      target_slot: Number((_f = shape.target_slot) != null ? _f : 0)
+    };
+  }
+  function serializeLLinkShape(shape, order = "runtime") {
+    var _a3, _b2, _c2, _d2, _e2, _f;
+    const runtimeTuple = [
+      Number((_a3 = shape.id) != null ? _a3 : 0),
+      Number((_b2 = shape.origin_id) != null ? _b2 : 0),
+      Number((_c2 = shape.origin_slot) != null ? _c2 : 0),
+      Number((_d2 = shape.target_id) != null ? _d2 : 0),
+      Number((_e2 = shape.target_slot) != null ? _e2 : 0),
+      String((_f = shape.type) != null ? _f : "")
+    ];
+    return denormalizeSerializedLLinkTuple(runtimeTuple, order);
+  }
+  const CONTEXT_MENU_CLOSE_ALL_DIFF_ID = LITEGRAPH_COMPAT_DIFF_IDS.uiCloseAllContextMenus;
+  function applyContextMenuCloseAllCompat(liteGraph, fallback) {
+    var _a3;
+    const beforeLiteGraph = liteGraph.closeAllContextMenus;
+    const beforeContextMenu = (_a3 = liteGraph.ContextMenu) == null ? void 0 : _a3.closeAllContextMenus;
+    const resolved = resolveContextMenuCloseAll(liteGraph, fallback);
+    if (!resolved.fn) {
+      return {
+        diffId: CONTEXT_MENU_CLOSE_ALL_DIFF_ID,
+        source: "none",
+        changed: false,
+        synced: false
+      };
+    }
+    liteGraph.closeAllContextMenus = resolved.fn;
+    if (!liteGraph.ContextMenu) {
+      liteGraph.ContextMenu = {};
+    }
+    liteGraph.ContextMenu.closeAllContextMenus = resolved.fn;
+    const synced = isContextMenuCloseAllCompatSynced(liteGraph);
+    return {
+      diffId: CONTEXT_MENU_CLOSE_ALL_DIFF_ID,
+      source: resolved.source,
+      resolved: resolved.fn,
+      changed: beforeLiteGraph !== liteGraph.closeAllContextMenus || beforeContextMenu !== liteGraph.ContextMenu.closeAllContextMenus,
+      synced
+    };
+  }
+  function isContextMenuCloseAllCompatSynced(liteGraph) {
+    var _a3;
+    return !!(liteGraph.closeAllContextMenus && ((_a3 = liteGraph.ContextMenu) == null ? void 0 : _a3.closeAllContextMenus) && liteGraph.closeAllContextMenus === liteGraph.ContextMenu.closeAllContextMenus);
+  }
+  function resolveContextMenuCloseAll(liteGraph, fallback) {
+    var _a3;
+    if (liteGraph.closeAllContextMenus) {
+      return { source: "LiteGraph", fn: liteGraph.closeAllContextMenus };
+    }
+    if ((_a3 = liteGraph.ContextMenu) == null ? void 0 : _a3.closeAllContextMenus) {
+      return { source: "ContextMenu", fn: liteGraph.ContextMenu.closeAllContextMenus };
+    }
+    if (fallback) {
+      return { source: "fallback", fn: fallback };
+    }
+    return { source: "none" };
+  }
+  function colorToString(c) {
+    const source = c;
+    return "rgba(" + Math.round(source[0] * 255).toFixed() + "," + Math.round(source[1] * 255).toFixed() + "," + Math.round(source[2] * 255).toFixed() + "," + (source.length == 4 ? source[3].toFixed(2) : "1.0") + ")";
+  }
+  function hex2num(hex) {
+    if (hex.charAt(0) == "#") {
+      hex = hex.slice(1);
+    }
+    hex = hex.toUpperCase();
+    const hexAlphabets = "0123456789ABCDEF";
+    const value = [0, 0, 0];
+    let k2 = 0;
+    let int1;
+    let int2;
+    for (let i2 = 0; i2 < 6; i2 += 2) {
+      int1 = hexAlphabets.indexOf(hex.charAt(i2));
+      int2 = hexAlphabets.indexOf(hex.charAt(i2 + 1));
+      value[k2] = int1 * 16 + int2;
+      k2++;
+    }
+    return value;
+  }
+  function num2hex(triplet) {
+    const hexAlphabets = "0123456789ABCDEF";
+    let hex = "#";
+    let int1;
+    let int2;
+    for (let i2 = 0; i2 < 3; i2++) {
+      int1 = triplet[i2] / 16;
+      int2 = triplet[i2] % 16;
+      hex += hexAlphabets.charAt(int1) + hexAlphabets.charAt(int2);
+    }
+    return hex;
+  }
+  function getParameterNames(func) {
+    return (func + "").replace(/[/][/].*$/gm, "").replace(/\s+/g, "").replace(/[/][*][^/*]*[*][/]/g, "").split("){", 1)[0].replace(/^[^(]*[(]/, "").replace(/=[^,]+/g, "").split(",").filter(Boolean);
+  }
+  function compareObjects(a, b2) {
+    for (const i2 in a) {
+      if (a[i2] != b2[i2]) {
+        return false;
+      }
+    }
+    return true;
+  }
+  function distance(a, b2) {
+    return Math.sqrt(
+      (b2[0] - a[0]) * (b2[0] - a[0]) + (b2[1] - a[1]) * (b2[1] - a[1])
+    );
+  }
+  function isInsideRectangle(x2, y2, left, top, width2, height) {
+    if (left < x2 && left + width2 > x2 && top < y2 && top + height > y2) {
+      return true;
+    }
+    return false;
+  }
+  function growBounding(bounding, x2, y2) {
+    if (x2 < bounding[0]) {
+      bounding[0] = x2;
+    } else if (x2 > bounding[2]) {
+      bounding[2] = x2;
+    }
+    if (y2 < bounding[1]) {
+      bounding[1] = y2;
+    } else if (y2 > bounding[3]) {
+      bounding[3] = y2;
+    }
+    return bounding;
+  }
+  function isInsideBounding(p2, bb) {
+    if (Array.isArray(bb[0])) {
+      const corners = bb;
+      if (p2[0] < corners[0][0] || p2[1] < corners[0][1] || p2[0] > corners[1][0] || p2[1] > corners[1][1]) {
+        return false;
+      }
+      return true;
+    }
+    const flat = bb;
+    if (p2[0] < flat[0] || p2[1] < flat[1] || p2[0] > flat[2] || p2[1] > flat[3]) {
+      return false;
+    }
+    return true;
   }
   function createAssemblyBundle(liteGraph, registry2, runtime2) {
     return {
@@ -22640,7 +24600,7 @@ var LiteGraphTSMigration = (function(exports) {
   exports.DragAndScale = DragAndScale;
   exports.GRID_SQUARE_SHAPE_DEFAULT = GRID_SQUARE_SHAPE_DEFAULT;
   exports.GRID_SQUARE_SHAPE_DIFF_ID = GRID_SQUARE_SHAPE_DIFF_ID;
-  exports.LGRAPHCANVAS_STATIC_MISSING_APIS_DIFF_ID = LGRAPHCANVAS_STATIC_MISSING_APIS_DIFF_ID;
+  exports.LGRAPHCANVAS_STATIC_MISSING_APIS_DIFF_ID = LGRAPHCANVAS_STATIC_MISSING_APIS_DIFF_ID$1;
   exports.LGRAPHCANVAS_STATIC_RESIZE_DIFF_ID = LGRAPHCANVAS_STATIC_RESIZE_DIFF_ID;
   exports.LGRAPHCANVAS_STATIC_SUBGRAPH_MENU_DIFF_ID = LGRAPHCANVAS_STATIC_SUBGRAPH_MENU_DIFF_ID;
   exports.LGRAPHGROUP_SERIALIZATION_DIFF_ID = LGRAPHGROUP_SERIALIZATION_DIFF_ID;
@@ -22655,15 +24615,15 @@ var LiteGraphTSMigration = (function(exports) {
   exports.LiteGraphConstants = LiteGraphConstants;
   exports.LiteGraphRegistry = LiteGraphRegistry;
   exports.LiteGraphRuntime = LiteGraphRuntime;
-  exports.applyContextMenuCloseAllCompatUi = applyContextMenuCloseAllCompat$1;
+  exports.applyContextMenuCloseAllCompatUi = applyContextMenuCloseAllCompat;
   exports.applyGridSquareShapeAlias = applyGridSquareShapeAlias;
-  exports.applyLGraphCanvasStaticCompatAliasesLayer = applyLGraphCanvasStaticCompatAliases;
-  exports.applyLGraphCanvasStaticCompatLayer = applyLGraphCanvasStaticCompat$1;
-  exports.applyLGraphCanvasStaticMissingApiGuards = applyLGraphCanvasStaticMissingApiGuards;
+  exports.applyLGraphCanvasStaticCompatAliasesLayer = applyLGraphCanvasStaticCompatAliases$1;
+  exports.applyLGraphCanvasStaticCompatLayer = applyLGraphCanvasStaticCompat$2;
+  exports.applyLGraphCanvasStaticMissingApiGuards = applyLGraphCanvasStaticMissingApiGuards$1;
   exports.applyLiteGraphAssemblyCompat = applyLiteGraphAssemblyCompat;
   exports.assembleLiteGraph = assembleLiteGraph;
   exports.attachLiteGraphAssemblyBridges = attachLiteGraphAssemblyBridges;
-  exports.attachLiteGraphCommonJsExports = attachLiteGraphCommonJsExports;
+  exports.attachLiteGraphCommonJsExports = attachLiteGraphCommonJsExports$1;
   exports.attachLiteGraphGlobalBridge = attachLiteGraphGlobalBridge;
   exports.colorToString = colorToString;
   exports.compareObjects = compareObjects;
@@ -22679,7 +24639,7 @@ var LiteGraphTSMigration = (function(exports) {
   exports.isContextMenuCloseAllCompatSynced = isContextMenuCloseAllCompatSynced;
   exports.isGridSquareShapeAliasSynced = isGridSquareShapeAliasSynced;
   exports.isInsideBounding = isInsideBounding;
-  exports.isInsideRectangle = isInsideRectangle$1;
+  exports.isInsideRectangle = isInsideRectangle;
   exports.isSerializedLLinkDtsOrderCompat = isSerializedLLinkDtsOrder;
   exports.liteGraphMigrationBundle = liteGraphMigrationBundle;
   exports.normalizeSerializedLGraphGroupCompatShape = normalizeSerializedLGraphGroup;

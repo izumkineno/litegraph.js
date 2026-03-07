@@ -17,6 +17,8 @@ export class LegacyNodeHost {
     private readonly offscreenCanvas: HTMLCanvasElement;
     private readonly offscreenContext: CanvasRenderingContext2D;
     private lastBounds: LegacyNodePaintBounds | null = null;
+    private positionOffsetX = 0;
+    private positionOffsetY = 0;
 
     constructor(
         node: LegacyNodePainterNodeLike,
@@ -76,8 +78,9 @@ export class LegacyNodeHost {
             bounds
         );
 
-        this.root.x = bounds.x;
-        this.root.y = bounds.y;
+        this.positionOffsetX = bounds.x - Number(this.node.pos?.[0] || 0);
+        this.positionOffsetY = bounds.y - Number(this.node.pos?.[1] || 0);
+        this.syncPosition();
         this.surface.x = 0;
         this.surface.y = 0;
         this.surface.width = bounds.width;
@@ -100,6 +103,11 @@ export class LegacyNodeHost {
 
     getBounds(): LegacyNodePaintBounds | null {
         return this.lastBounds;
+    }
+
+    syncPosition(): void {
+        this.root.x = Number(this.node.pos?.[0] || 0) + this.positionOffsetX;
+        this.root.y = Number(this.node.pos?.[1] || 0) + this.positionOffsetY;
     }
 
     private ensureCanvasSize(width: number, height: number): void {

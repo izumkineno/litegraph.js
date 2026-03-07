@@ -4,6 +4,7 @@ import type { LiteGraphConstantsShape } from "../core/litegraph.constants";
 import {
     GraphMutationBus,
     type GraphMutationGraphLike,
+    type GraphMutationNodeLike,
 } from "../services/leafer/GraphMutationBus";
 import { InteractionController } from "../services/leafer/InteractionController";
 import { LeaferAppHost } from "../services/leafer/LeaferAppHost";
@@ -821,14 +822,25 @@ export class LGraphCanvasLifecycle extends LGraphCanvasStatic {
             graph,
             this as unknown as {
                 graph: GraphMutationGraphLike | null;
+                graphMutationBus: GraphMutationBus | null;
                 leaferAppHost: LeaferAppHost | null;
                 sceneSyncController: SceneSyncController | null;
+                selected_nodes: Record<string, GraphMutationNodeLike>;
                 node_widget: [unknown, unknown] | null;
                 node_capturing_input: unknown;
                 node_over: unknown;
+                allow_dragnodes?: boolean;
+                read_only?: boolean;
+                align_to_grid?: boolean;
+                onNodeMoved?: ((node: GraphMutationNodeLike) => void) | null;
                 processMouseDown: (event: unknown) => boolean | undefined;
                 processMouseMove: (event: unknown) => boolean | undefined;
                 processMouseUp: (event: unknown) => boolean | undefined;
+                selectNodes: (
+                    nodes?: GraphMutationNodeLike[],
+                    addToCurrentSelection?: boolean
+                ) => void;
+                deselectAllNodes: () => void;
             },
             this.leaferAppHost,
             this.sceneSyncController

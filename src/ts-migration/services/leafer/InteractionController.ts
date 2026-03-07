@@ -1,8 +1,10 @@
 import type {
+    GraphMutationBus,
     GraphMutationGraphLike,
     GraphMutationNodeId,
     GraphMutationNodeLike,
 } from "./GraphMutationBus";
+import { ConnectionController } from "./ConnectionController";
 import { HitTestService } from "./HitTestService";
 import type { LeaferAppHost } from "./LeaferAppHost";
 import {
@@ -11,28 +13,118 @@ import {
     type LegacyPointerTarget,
 } from "./LegacyPointerEventAdapter";
 import type { LegacyNodeHost } from "./LegacyNodeHost";
+import { NodePortAdapter, type NodePortNodeLike } from "./NodePortAdapter";
+import { OverlayPrimitives } from "./OverlayPrimitives";
 import type { SceneSyncController } from "./SceneSyncController";
+import { SelectionController } from "./SelectionController";
 
 interface InteractionCanvasHost {
     readonly graph: GraphMutationGraphLike | null;
+    readonly graphMutationBus: GraphMutationBus | null;
     readonly leaferAppHost: LeaferAppHost | null;
     readonly sceneSyncController: SceneSyncController | null;
+    readonly selected_nodes: Record<string, GraphMutationNodeLike>;
     readonly node_widget: [unknown, unknown] | null;
     readonly node_capturing_input: unknown;
     readonly node_over: unknown;
+    readonly allow_dragnodes?: boolean;
+    readonly read_only?: boolean;
+    readonly align_to_grid?: boolean;
+    readonly onNodeMoved?: ((node: GraphMutationNodeLike) => void) | null;
     processMouseDown: (event: unknown) => boolean | undefined;
     processMouseMove: (event: unknown) => boolean | undefined;
     processMouseUp: (event: unknown) => boolean | undefined;
+    selectNodes: (
+        nodes?: GraphMutationNodeLike[],
+        addToCurrentSelection?: boolean
+    ) => void;
+    deselectAllNodes: () => void;
+}
+
+interface InteractionGraphLike extends GraphMutationGraphLike {
+    _nodes?: GraphMutationNodeLike[];
+    beforeChange?: (info?: GraphMutationNodeLike) => void;
+    afterChange?: (info?: GraphMutationNodeLike) => void;
+    change?: () => void;
+    config?: {
+        align_to_grid?: boolean;
+        [key: string]: unknown;
+    };
+}
+
+interface DraggableNodeLike extends GraphMutationNodeLike {
+    pos: [number, number] | Float32Array;
+    alignToGrid?: () => void;
+}
+
+interface PointLike {
+    x: number;
+    y: number;
+}
+
+type PointerSession =
+    | {
+          kind: "legacy-press";
+      }
+    | {
+          kind: "node-press";
+          node: DraggableNodeLike;
+      }
+    | {
+          kind: "node-drag";
+          node: DraggableNodeLike;
+          dragNodes: DraggableNodeLike[];
+          lastWorldPoint: PointLike;
+      }
+    | {
+          kind: "background-press";
+          additive: boolean;
+          startWorldPoint: PointLike;
+      }
+    | {
+          kind: "selection";
+      }
+    | {
+          kind: "connection";
+      };
+
+function toFiniteNumber(value: unknown): number {
+    const numericValue = Number(value);
+    return Number.isFinite(numericValue) ? numericValue : 0;
+}
+
+function isDraggableNode(node: unknown): node is DraggableNodeLike {
+    const pos = (node as DraggableNodeLike | null | undefined)?.pos;
+    return (
+        Boolean(node) &&
+        typeof node === "object" &&
+        Boolean(pos) &&
+        (Array.isArray(pos) || ArrayBuffer.isView(pos))
+    );
+}
+
+function getPointerDistance(a: PointLike, b: PointLike): number {
+    const dx = a.x - b.x;
+    const dy = a.y - b.y;
+    return Math.sqrt(dx * dx + dy * dy);
 }
 
 export class InteractionController {
     private readonly hitTestService: HitTestService;
+    private readonly nodePortAdapter: NodePortAdapter;
+    private readonly overlayPrimitives: OverlayPrimitives;
+    private readonly connectionController: ConnectionController;
+    private readonly selectionController: SelectionController;
     private readonly view: HTMLElement;
     private readonly doc: Document;
+    private readonly graphRef: InteractionGraphLike;
     private pointerDownAt = 0;
     private pointerIsDown = false;
-    private lastPagePoint: { x: number; y: number } | null = null;
+    private lastPagePoint: PointLike | null = null;
+    private pointerDownPagePoint: PointLike | null = null;
     private documentTrackingBound = false;
+    private session: PointerSession | null = null;
+    private dragTransactionNode: GraphMutationNodeLike | null = null;
 
     constructor(
         graph: GraphMutationGraphLike,
@@ -40,7 +132,27 @@ export class InteractionController {
         private readonly appHost: LeaferAppHost,
         sceneSyncController: SceneSyncController
     ) {
+        this.graphRef = graph as InteractionGraphLike;
         this.hitTestService = new HitTestService(graph, sceneSyncController);
+        this.nodePortAdapter = new NodePortAdapter(
+            graph as GraphMutationGraphLike & {
+                _nodes?: NodePortNodeLike[];
+                getNodeById?: (id: GraphMutationNodeId) => NodePortNodeLike | null;
+            }
+        );
+        this.overlayPrimitives = new OverlayPrimitives(this.appHost);
+        this.connectionController = new ConnectionController(
+            this.graphRef,
+            sceneSyncController,
+            this.overlayPrimitives,
+            this.nodePortAdapter
+        );
+        this.selectionController = new SelectionController(
+            this.graphRef,
+            this.canvas,
+            sceneSyncController,
+            this.overlayPrimitives
+        );
         this.view = this.appHost.view;
         this.doc = this.view.ownerDocument || document;
 
@@ -63,32 +175,64 @@ export class InteractionController {
         this.pointerIsDown = false;
         this.pointerDownAt = 0;
         this.lastPagePoint = null;
+        this.pointerDownPagePoint = null;
+        this.session = null;
+        this.dragTransactionNode = null;
+        this.connectionController.destroy();
+        this.selectionController.destroy();
+        this.overlayPrimitives.destroy();
     }
 
     private readonly handleViewPointerDown = (event: PointerEvent): void => {
         if (!this.shouldHandleLegacyPointerDown(event)) {
             return;
         }
+
         const source = this.createPointerSource(event);
         const pagePoint = source.getPagePoint();
         const worldPoint = source.getInnerPoint();
-        const hit = this.hitTestService.hitLegacyNodeAt(
-            worldPoint.x,
-            worldPoint.y
-        );
-        const targets = this.collectTargets(hit?.host || null);
-        if (!targets.length) {
-            return;
-        }
+        const normalizedPagePoint = {
+            x: toFiniteNumber(pagePoint.x),
+            y: toFiniteNumber(pagePoint.y),
+        };
+        const normalizedWorldPoint = {
+            x: toFiniteNumber(worldPoint.x),
+            y: toFiniteNumber(worldPoint.y),
+        };
 
         this.pointerIsDown = true;
         this.pointerDownAt = Date.now();
-        this.lastPagePoint = {
-            x: Number(pagePoint.x) || 0,
-            y: Number(pagePoint.y) || 0,
-        };
+        this.pointerDownPagePoint = normalizedPagePoint;
+        this.lastPagePoint = normalizedPagePoint;
         this.attachDocumentTracking();
 
+        const portHit = this.connectionController.begin(
+            normalizedWorldPoint.x,
+            normalizedWorldPoint.y
+        );
+        if (portHit) {
+            this.session = {
+                kind: "connection",
+            };
+            this.stopEvent(event, true);
+            return;
+        }
+
+        const hit = this.hitTestService.hitLegacyNodeAt(
+            normalizedWorldPoint.x,
+            normalizedWorldPoint.y
+        );
+        if (!hit?.host) {
+            this.session = {
+                kind: "background-press",
+                additive: Boolean(event.ctrlKey || event.metaKey || event.shiftKey),
+                startWorldPoint: normalizedWorldPoint,
+            };
+            this.stopEvent(event);
+            return;
+        }
+
+        const targets = this.collectTargets(hit.host);
         const legacyEvent = createLegacyPointerEvent({
             event: source,
             type: "down",
@@ -101,6 +245,22 @@ export class InteractionController {
         });
 
         this.canvas.processMouseDown(legacyEvent);
+        this.canvas.sceneSyncController?.repaintAllNodeHosts();
+
+        if (
+            !this.hasLegacyInteractiveCapture() &&
+            this.canStartNodeDrag(hit.node)
+        ) {
+            this.session = {
+                kind: "node-press",
+                node: hit.node as DraggableNodeLike,
+            };
+        } else {
+            this.session = {
+                kind: "legacy-press",
+            };
+        }
+
         this.stopEvent(event);
     };
 
@@ -108,24 +268,77 @@ export class InteractionController {
         if (this.pointerIsDown) {
             return;
         }
-        this.dispatchPointerMove(event);
+
+        this.dispatchHoverPointerMove(event);
     };
 
     private readonly handleDocumentPointerMove = (event: PointerEvent): void => {
-        this.dispatchPointerMove(event);
+        this.dispatchPointerMoveWhileDown(event);
     };
 
-    private dispatchPointerMove(event: PointerEvent): void {
-        if (!this.shouldHandleLegacyPointerMove(event)) {
+    private readonly handleDocumentPointerUp = (event: PointerEvent): void => {
+        if (!this.pointerIsDown && event.button !== 0) {
             return;
         }
+        if (!this.pointerIsDown && !this.shouldHandleLegacyPointerMove(event)) {
+            return;
+        }
+
         const source = this.createPointerSource(event);
         const pagePoint = source.getPagePoint();
         const worldPoint = source.getInnerPoint();
-        const hit = this.hitTestService.hitLegacyNodeAt(
-            worldPoint.x,
-            worldPoint.y
-        );
+        const normalizedPagePoint = {
+            x: toFiniteNumber(pagePoint.x),
+            y: toFiniteNumber(pagePoint.y),
+        };
+        const normalizedWorldPoint = {
+            x: toFiniteNumber(worldPoint.x),
+            y: toFiniteNumber(worldPoint.y),
+        };
+
+        if (this.session?.kind === "connection") {
+            this.connectionController.finish(
+                normalizedWorldPoint.x,
+                normalizedWorldPoint.y
+            );
+            this.stopEvent(event, true);
+        } else if (this.session?.kind === "selection") {
+            this.selectionController.finish(
+                normalizedWorldPoint.x,
+                normalizedWorldPoint.y
+            );
+            this.stopEvent(event);
+        } else if (this.session?.kind === "background-press") {
+            if (!this.session.additive) {
+                this.canvas.deselectAllNodes();
+                this.canvas.sceneSyncController?.repaintAllNodeHosts();
+            }
+            this.stopEvent(event);
+        } else if (this.session?.kind === "node-drag") {
+            this.finishNodeDrag(this.session);
+            this.stopEvent(event);
+        } else {
+            this.dispatchLegacyPointerUp(source, normalizedPagePoint, event);
+        }
+
+        this.pointerIsDown = false;
+        this.pointerDownAt = 0;
+        this.lastPagePoint = null;
+        this.pointerDownPagePoint = null;
+        this.session = null;
+        this.dragTransactionNode = null;
+        this.detachDocumentTracking();
+    };
+
+    private dispatchHoverPointerMove(event: PointerEvent): void {
+        if (!this.shouldHandleLegacyPointerMove(event)) {
+            return;
+        }
+
+        const source = this.createPointerSource(event);
+        const pagePoint = source.getPagePoint();
+        const worldPoint = source.getInnerPoint();
+        const hit = this.hitTestService.hitLegacyNodeAt(worldPoint.x, worldPoint.y);
         const targets = this.collectTargets(hit?.host || null);
         const shouldDispatch =
             targets.length > 0 ||
@@ -133,16 +346,17 @@ export class InteractionController {
             Boolean(this.canvas.node_over) ||
             Boolean(this.canvas.node_capturing_input);
 
+        const normalizedPagePoint = {
+            x: toFiniteNumber(pagePoint.x),
+            y: toFiniteNumber(pagePoint.y),
+        };
         const deltaX = this.lastPagePoint
-            ? (Number(pagePoint.x) || 0) - this.lastPagePoint.x
+            ? normalizedPagePoint.x - this.lastPagePoint.x
             : 0;
         const deltaY = this.lastPagePoint
-            ? (Number(pagePoint.y) || 0) - this.lastPagePoint.y
+            ? normalizedPagePoint.y - this.lastPagePoint.y
             : 0;
-        this.lastPagePoint = {
-            x: Number(pagePoint.x) || 0,
-            y: Number(pagePoint.y) || 0,
-        };
+        this.lastPagePoint = normalizedPagePoint;
 
         if (!shouldDispatch) {
             return;
@@ -163,20 +377,176 @@ export class InteractionController {
         this.stopEvent(event);
     }
 
-    private readonly handleDocumentPointerUp = (event: PointerEvent): void => {
-        if (!this.pointerIsDown && event.button !== 0) {
+    private dispatchPointerMoveWhileDown(event: PointerEvent): void {
+        if (!this.pointerIsDown || !this.session) {
             return;
         }
-        if (!this.pointerIsDown && !this.shouldHandleLegacyPointerMove(event)) {
-            return;
-        }
+
         const source = this.createPointerSource(event);
         const pagePoint = source.getPagePoint();
         const worldPoint = source.getInnerPoint();
-        const hit = this.hitTestService.hitLegacyNodeAt(
-            worldPoint.x,
-            worldPoint.y
-        );
+        const normalizedPagePoint = {
+            x: toFiniteNumber(pagePoint.x),
+            y: toFiniteNumber(pagePoint.y),
+        };
+        const normalizedWorldPoint = {
+            x: toFiniteNumber(worldPoint.x),
+            y: toFiniteNumber(worldPoint.y),
+        };
+
+        if (this.session.kind === "connection") {
+            this.connectionController.update(
+                normalizedWorldPoint.x,
+                normalizedWorldPoint.y
+            );
+            this.lastPagePoint = normalizedPagePoint;
+            this.stopEvent(event, true);
+            return;
+        }
+
+        if (this.session.kind === "background-press") {
+            if (
+                this.pointerDownPagePoint &&
+                getPointerDistance(
+                    this.pointerDownPagePoint,
+                    normalizedPagePoint
+                ) >= 4
+            ) {
+                this.selectionController.begin(
+                    this.session.startWorldPoint.x,
+                    this.session.startWorldPoint.y,
+                    this.session.additive
+                );
+                this.session = {
+                    kind: "selection",
+                };
+            } else {
+                this.lastPagePoint = normalizedPagePoint;
+                return;
+            }
+        }
+
+        if (this.session.kind === "selection") {
+            this.selectionController.update(
+                normalizedWorldPoint.x,
+                normalizedWorldPoint.y
+            );
+            this.lastPagePoint = normalizedPagePoint;
+            this.stopEvent(event);
+            return;
+        }
+
+        if (this.session.kind === "legacy-press") {
+            this.dispatchLegacyPointerMoveActive(
+                source,
+                normalizedPagePoint,
+                event
+            );
+            return;
+        }
+
+        if (this.session.kind === "node-press") {
+            if (this.hasLegacyInteractiveCapture()) {
+                this.session = {
+                    kind: "legacy-press",
+                };
+                this.dispatchLegacyPointerMoveActive(
+                    source,
+                    normalizedPagePoint,
+                    event
+                );
+                return;
+            }
+
+            if (
+                this.pointerDownPagePoint &&
+                getPointerDistance(
+                    this.pointerDownPagePoint,
+                    normalizedPagePoint
+                ) >= 4
+            ) {
+                const dragNodes = this.collectDragNodes(this.session.node);
+                this.dragTransactionNode = this.session.node;
+                this.graphRef.beforeChange?.(this.session.node);
+                this.session = {
+                    kind: "node-drag",
+                    node: this.session.node,
+                    dragNodes,
+                    lastWorldPoint: normalizedWorldPoint,
+                };
+            } else {
+                this.lastPagePoint = normalizedPagePoint;
+                return;
+            }
+        }
+
+        if (this.session.kind === "node-drag") {
+            const deltaX =
+                normalizedWorldPoint.x - this.session.lastWorldPoint.x;
+            const deltaY =
+                normalizedWorldPoint.y - this.session.lastWorldPoint.y;
+            if (deltaX || deltaY) {
+                for (let i = 0; i < this.session.dragNodes.length; ++i) {
+                    const node = this.session.dragNodes[i];
+                    node.pos[0] += deltaX;
+                    node.pos[1] += deltaY;
+                    this.emitNodeMoved(node);
+                }
+                this.session.lastWorldPoint = normalizedWorldPoint;
+            }
+            this.lastPagePoint = normalizedPagePoint;
+            this.stopEvent(event);
+        }
+    }
+
+    private dispatchLegacyPointerMoveActive(
+        source: LegacyPointerEventSource,
+        pagePoint: PointLike,
+        event: PointerEvent
+    ): void {
+        const worldPoint = source.getInnerPoint();
+        const hit = this.hitTestService.hitLegacyNodeAt(worldPoint.x, worldPoint.y);
+        const targets = this.collectTargets(hit?.host || null);
+        const shouldDispatch =
+            targets.length > 0 ||
+            Boolean(this.canvas.node_widget) ||
+            Boolean(this.canvas.node_over) ||
+            Boolean(this.canvas.node_capturing_input);
+
+        const deltaX = this.lastPagePoint
+            ? pagePoint.x - this.lastPagePoint.x
+            : 0;
+        const deltaY = this.lastPagePoint
+            ? pagePoint.y - this.lastPagePoint.y
+            : 0;
+        this.lastPagePoint = pagePoint;
+
+        if (!shouldDispatch) {
+            return;
+        }
+
+        const legacyEvent = createLegacyPointerEvent({
+            event: source,
+            type: "move",
+            hostElement: this.appHost.view,
+            targets,
+            clickTime: this.pointerDownAt ? Date.now() - this.pointerDownAt : 0,
+            dragging: this.pointerIsDown,
+            deltaX,
+            deltaY,
+        });
+
+        this.canvas.processMouseMove(legacyEvent);
+        this.stopEvent(event);
+    }
+
+    private dispatchLegacyPointerUp(
+        source: LegacyPointerEventSource,
+        pagePoint: PointLike,
+        event: PointerEvent
+    ): void {
+        const worldPoint = source.getInnerPoint();
+        const hit = this.hitTestService.hitLegacyNodeAt(worldPoint.x, worldPoint.y);
         const targets = this.collectTargets(hit?.host || null);
         const shouldDispatch =
             this.pointerIsDown ||
@@ -184,39 +554,86 @@ export class InteractionController {
             Boolean(this.canvas.node_widget) ||
             Boolean(this.canvas.node_over) ||
             Boolean(this.canvas.node_capturing_input);
-
         const deltaX = this.lastPagePoint
-            ? (Number(pagePoint.x) || 0) - this.lastPagePoint.x
+            ? pagePoint.x - this.lastPagePoint.x
             : 0;
         const deltaY = this.lastPagePoint
-            ? (Number(pagePoint.y) || 0) - this.lastPagePoint.y
+            ? pagePoint.y - this.lastPagePoint.y
             : 0;
 
-        this.lastPagePoint = {
-            x: Number(pagePoint.x) || 0,
-            y: Number(pagePoint.y) || 0,
-        };
-
-        if (shouldDispatch) {
-            const legacyEvent = createLegacyPointerEvent({
-                event: source,
-                type: "up",
-                hostElement: this.appHost.view,
-                targets,
-                clickTime: this.pointerDownAt ? Date.now() - this.pointerDownAt : 0,
-                dragging: this.pointerIsDown,
-                deltaX,
-                deltaY,
-            });
-
-            this.canvas.processMouseUp(legacyEvent);
-            this.stopEvent(event);
+        this.lastPagePoint = pagePoint;
+        if (!shouldDispatch) {
+            return;
         }
 
-        this.pointerIsDown = false;
-        this.pointerDownAt = 0;
-        this.detachDocumentTracking();
-    };
+        const legacyEvent = createLegacyPointerEvent({
+            event: source,
+            type: "up",
+            hostElement: this.appHost.view,
+            targets,
+            clickTime: this.pointerDownAt ? Date.now() - this.pointerDownAt : 0,
+            dragging: this.pointerIsDown,
+            deltaX,
+            deltaY,
+        });
+
+        this.canvas.processMouseUp(legacyEvent);
+        this.stopEvent(event);
+    }
+
+    private finishNodeDrag(
+        session: Extract<PointerSession, { kind: "node-drag" }>
+    ): void {
+        for (let i = 0; i < session.dragNodes.length; ++i) {
+            const node = session.dragNodes[i];
+            node.pos[0] = Math.round(node.pos[0]);
+            node.pos[1] = Math.round(node.pos[1]);
+            if (this.graphRef.config?.align_to_grid || this.canvas.align_to_grid) {
+                node.alignToGrid?.();
+            }
+            this.emitNodeMoved(node);
+            this.canvas.onNodeMoved?.(node);
+        }
+
+        this.graphRef.afterChange?.(this.dragTransactionNode || session.node);
+        this.graphRef.change?.();
+    }
+
+    private emitNodeMoved(node: DraggableNodeLike): void {
+        this.canvas.graphMutationBus?.emit("node:moved", {
+            graph: this.graphRef,
+            nodeId: node.id,
+            node,
+        });
+    }
+
+    private hasLegacyInteractiveCapture(): boolean {
+        return Boolean(this.canvas.node_widget || this.canvas.node_capturing_input);
+    }
+
+    private canStartNodeDrag(node: GraphMutationNodeLike | null | undefined): boolean {
+        return (
+            Boolean(node) &&
+            Boolean(this.canvas.allow_dragnodes) &&
+            !this.canvas.read_only &&
+            isDraggableNode(node)
+        );
+    }
+
+    private collectDragNodes(primaryNode: DraggableNodeLike): DraggableNodeLike[] {
+        const selectedNodes = Object.values(
+            this.canvas.selected_nodes || {}
+        ).filter(isDraggableNode);
+
+        if (!selectedNodes.length) {
+            return [primaryNode];
+        }
+
+        const hasPrimaryNode = selectedNodes.some(
+            (node) => node.id === primaryNode.id
+        );
+        return hasPrimaryNode ? selectedNodes : [primaryNode];
+    }
 
     private collectTargets(
         hitHost: LegacyNodeHost | null
@@ -344,8 +761,12 @@ export class InteractionController {
         );
     }
 
-    private stopEvent(event: PointerEvent): void {
-        event.stopPropagation();
+    private stopEvent(event: PointerEvent, immediate = false): void {
+        if (immediate) {
+            event.stopImmediatePropagation();
+        } else {
+            event.stopPropagation();
+        }
         event.preventDefault();
     }
 
