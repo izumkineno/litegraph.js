@@ -1,5 +1,3 @@
-import { Path } from "leafer-ui";
-
 import type { LeaferAppHost } from "./LeaferAppHost";
 import {
     GraphMutationBus,
@@ -11,11 +9,17 @@ import {
 } from "./GraphMutationBus";
 import { LegacyNodeHost } from "./LegacyNodeHost";
 import type { LegacyNodeRenderHost } from "./LegacyNodePainter";
+import { LinkViewHost } from "./LinkViewHost";
+import { ModernNodeHost, type ModernNodeLike } from "./ModernNodeHost";
 import { discriminateNodeRuntime } from "./NodeRuntimeDiscriminator";
-import { NodePortAdapter, type NodePortNodeLike } from "./NodePortAdapter";
+import {
+    NodePortAdapter,
+    type NodePortNodeLike,
+} from "./NodePortAdapter";
+import type { NodeViewHost } from "./NodeViewHost";
 
-export type NodeHost = LegacyNodeHost;
-export type LinkView = Path;
+export type NodeHost = NodeViewHost;
+export type LinkView = LinkViewHost;
 export type SceneSyncRenderHost = LegacyNodeRenderHost;
 
 interface DirtyCapableNode extends GraphMutationNodeLike {
@@ -29,24 +33,11 @@ function toMutationKey(id: GraphMutationNodeId | GraphMutationLinkId): string {
     return String(id);
 }
 
-function createLinkView(name: string): Path {
-    return new Path({
-        name,
-        hittable: false,
-        visible: true,
-        stroke: "#9A9",
-        strokeWidth: 3,
-        fill: "none",
-        data: {
-            litegraphPlaceholderKind: "link-view",
-        },
-    });
-}
-
 export class SceneSyncController {
     readonly nodeHosts = new Map<GraphMutationNodeId, NodeHost>();
     readonly linkViews = new Map<GraphMutationLinkId, LinkView>();
     readonly linksByNodeId = new Map<GraphMutationNodeId, Set<GraphMutationLinkId>>();
+    readonly nodePortAdapter: NodePortAdapter;
 
     private readonly unsubscribers: Array<() => void> = [];
     private readonly nodesById = new Map<GraphMutationNodeId, GraphMutationNodeLike>();
@@ -55,7 +46,6 @@ export class SceneSyncController {
         GraphMutationNodeId,
         () => void
     >();
-    private readonly nodePortAdapter: NodePortAdapter;
 
     constructor(
         private readonly graph: GraphMutationGraphLike,
@@ -67,6 +57,9 @@ export class SceneSyncController {
             graph as GraphMutationGraphLike & {
                 _nodes?: NodePortNodeLike[];
                 getNodeById?: (id: GraphMutationNodeId) => NodePortNodeLike | null;
+            },
+            {
+                resolveNodeHost: (nodeId) => this.nodeHosts.get(nodeId) || null,
             }
         );
 
@@ -107,6 +100,7 @@ export class SceneSyncController {
 
     repaintNodeHost(nodeId: GraphMutationNodeId): void {
         this.nodeHosts.get(nodeId)?.repaint();
+        this.updateIncidentLinks(nodeId);
     }
 
     repaintNodeHosts(nodeIds: readonly GraphMutationNodeId[]): void {
@@ -116,8 +110,19 @@ export class SceneSyncController {
     }
 
     repaintAllNodeHosts(): void {
-        for (const host of this.nodeHosts.values()) {
+        for (const [nodeId, host] of this.nodeHosts.entries()) {
             host.repaint();
+            this.updateIncidentLinks(nodeId);
+        }
+    }
+
+    repaintLegacyNodeHosts(): void {
+        for (const [nodeId, host] of this.nodeHosts.entries()) {
+            if (host.runtime !== "legacy") {
+                continue;
+            }
+            host.repaint();
+            this.updateIncidentLinks(nodeId);
         }
     }
 
@@ -167,22 +172,41 @@ export class SceneSyncController {
 
     private ensureNodeHost(node: GraphMutationNodeLike): NodeHost {
         const nodeId = node.id;
+        const runtime = discriminateNodeRuntime(node);
         const existingHost = this.nodeHosts.get(nodeId);
+
         this.nodesById.set(nodeId, node);
         this.ensureTrackedNodeId(nodeId);
         this.installNodeDirtyBridge(node);
 
-        if (existingHost) {
+        if (existingHost && existingHost.runtime === runtime) {
             existingHost.syncPosition();
             this.updateIncidentLinks(nodeId);
             return existingHost;
         }
 
-        const runtime = discriminateNodeRuntime(node);
-        if (runtime !== "legacy") {
-            throw new Error(
-                `SceneSyncController: unsupported node runtime '${runtime}' during Phase 7.`
-            );
+        if (existingHost) {
+            existingHost.destroy();
+            this.nodeHosts.delete(nodeId);
+        }
+
+        const nodeHost = this.createNodeHost(runtime, node);
+        this.nodeHosts.set(nodeId, nodeHost);
+        nodeHost.syncPosition();
+        nodeHost.repaint();
+        this.updateIncidentLinks(nodeId);
+
+        return nodeHost;
+    }
+
+    private createNodeHost(
+        runtime: ReturnType<typeof discriminateNodeRuntime>,
+        node: GraphMutationNodeLike
+    ): NodeHost {
+        if (runtime === "modern") {
+            const nodeHost = new ModernNodeHost(node as ModernNodeLike);
+            this.appHost.modernNodeLayer.add(nodeHost.root);
+            return nodeHost;
         }
 
         const nodeHost = new LegacyNodeHost(
@@ -193,18 +217,13 @@ export class SceneSyncController {
             this.renderHost
         );
         this.appHost.legacyNodeLayer.add(nodeHost.root);
-        this.nodeHosts.set(nodeId, nodeHost);
-        nodeHost.syncPosition();
-        this.updateIncidentLinks(nodeId);
-
         return nodeHost;
     }
 
     private removeNodeHost(nodeId: GraphMutationNodeId): void {
         const incidentLinks = Array.from(this.linksByNodeId.get(nodeId) || []);
         for (let i = 0; i < incidentLinks.length; ++i) {
-            const linkId = incidentLinks[i];
-            this.removeLinkView(linkId);
+            this.removeLinkView(incidentLinks[i]);
         }
 
         const nodeHost = this.nodeHosts.get(nodeId);
@@ -243,10 +262,10 @@ export class SceneSyncController {
             this.ensureTrackedNodeId(link.target_id);
         }
 
-        const linkView = createLinkView(
+        const linkView = new LinkViewHost(
             `litegraph-link-view:${toMutationKey(linkId)}`
         );
-        this.appHost.linkLayerBack.add(linkView);
+        this.appHost.linkLayerBack.add(linkView.view);
         this.linkViews.set(linkId, linkView);
         this.linksById.set(linkId, link);
         this.trackLinkOnNode(link.origin_id, linkId);
@@ -285,6 +304,7 @@ export class SceneSyncController {
         }
 
         this.nodeHosts.get(nodeId)?.repaint();
+        this.updateIncidentLinks(nodeId);
     }
 
     private installNodeDirtyBridge(node: GraphMutationNodeLike): void {
@@ -383,17 +403,22 @@ export class SceneSyncController {
 
         const layout = this.nodePortAdapter.getLinkLayout(link);
         if (!layout) {
-            view.visible = false;
+            view.update({
+                path: "M 0 0 L 0 0",
+                visible: false,
+            });
             return;
         }
 
-        view.path = this.nodePortAdapter.buildLinkPath(
-            layout.start,
-            layout.end,
-            layout.startDir,
-            layout.endDir
-        );
-        view.stroke = (link.color as string) || "#9A9";
-        view.visible = true;
+        view.update({
+            path: this.nodePortAdapter.buildLinkPath(
+                layout.start,
+                layout.end,
+                layout.startDir,
+                layout.endDir
+            ),
+            stroke: (link.color as string) || "#9A9",
+            visible: true,
+        });
     }
 }

@@ -106,75 +106,6 @@ var LiteGraphTSMigration = (function(exports) {
   ];
   const LGRAPHCANVAS_STATIC_RESIZE_DIFF_ID = LITEGRAPH_COMPAT_DIFF_IDS.canvasStaticResize;
   const LGRAPHCANVAS_STATIC_SUBGRAPH_MENU_DIFF_ID = LITEGRAPH_COMPAT_DIFF_IDS.canvasStaticSubgraphMenu;
-  const LGRAPHCANVAS_STATIC_MISSING_APIS_DIFF_ID$1 = LITEGRAPH_COMPAT_DIFF_IDS.canvasStaticMissingApis;
-  function applyLGraphCanvasStaticCompatAliases$1(host) {
-    if (!host.onResizeNode && host.onMenuResizeNode) {
-      host.onResizeNode = host.onMenuResizeNode;
-    }
-    if (!host.onMenuResizeNode && host.onResizeNode) {
-      host.onMenuResizeNode = host.onResizeNode;
-    }
-    if (!host.onNodeToSubgraph && host.onMenuNodeToSubgraph) {
-      host.onNodeToSubgraph = host.onMenuNodeToSubgraph;
-    }
-    if (!host.onMenuNodeToSubgraph && host.onNodeToSubgraph) {
-      host.onMenuNodeToSubgraph = host.onNodeToSubgraph;
-    }
-  }
-  function applyLGraphCanvasStaticMissingApiGuards$1(host) {
-    const filled = [];
-    if (!host.getBoundaryNodes) {
-      host.getBoundaryNodes = () => ({
-        top: null,
-        right: null,
-        bottom: null,
-        left: null
-      });
-      filled.push("getBoundaryNodes");
-    }
-    if (!host.alignNodes) {
-      host.alignNodes = () => {
-      };
-      filled.push("alignNodes");
-    }
-    if (!host.onNodeAlign) {
-      host.onNodeAlign = () => {
-      };
-      filled.push("onNodeAlign");
-    }
-    if (!host.onGroupAlign) {
-      host.onGroupAlign = () => {
-      };
-      filled.push("onGroupAlign");
-    }
-    if (!host.getPropertyPrintableValue) {
-      host.getPropertyPrintableValue = (value) => String(value);
-      filled.push("getPropertyPrintableValue");
-    }
-    return {
-      diffId: LGRAPHCANVAS_STATIC_MISSING_APIS_DIFF_ID$1,
-      filled
-    };
-  }
-  function applyLGraphCanvasStaticCompat$2(host) {
-    applyLGraphCanvasStaticCompatAliases$1(host);
-    return applyLGraphCanvasStaticMissingApiGuards$1(host);
-  }
-  function hasRequiredLGraphCanvasStaticApis(host) {
-    return typeof host.onResizeNode === "function" && typeof host.onMenuResizeNode === "function" && typeof host.onNodeToSubgraph === "function" && typeof host.onMenuNodeToSubgraph === "function" && typeof host.getBoundaryNodes === "function" && typeof host.alignNodes === "function" && typeof host.onNodeAlign === "function" && typeof host.onGroupAlign === "function" && typeof host.getPropertyPrintableValue === "function";
-  }
-  function attachLiteGraphCommonJsExports$1(exportsTarget, globalScope) {
-    const liteGraph = globalScope.LiteGraph;
-    exportsTarget.LiteGraph = globalScope.LiteGraph;
-    exportsTarget.LGraph = globalScope.LGraph || (liteGraph == null ? void 0 : liteGraph.LGraph);
-    exportsTarget.LLink = globalScope.LLink || (liteGraph == null ? void 0 : liteGraph.LLink);
-    exportsTarget.LGraphNode = globalScope.LGraphNode || (liteGraph == null ? void 0 : liteGraph.LGraphNode);
-    exportsTarget.LGraphGroup = globalScope.LGraphGroup || (liteGraph == null ? void 0 : liteGraph.LGraphGroup);
-    exportsTarget.DragAndScale = globalScope.DragAndScale || (liteGraph == null ? void 0 : liteGraph.DragAndScale);
-    exportsTarget.LGraphCanvas = globalScope.LGraphCanvas || (liteGraph == null ? void 0 : liteGraph.LGraphCanvas);
-    exportsTarget.ContextMenu = globalScope.ContextMenu || (liteGraph == null ? void 0 : liteGraph.ContextMenu);
-    return exportsTarget;
-  }
   const LGRAPHCANVAS_STATIC_MISSING_APIS_DIFF_ID = LITEGRAPH_COMPAT_DIFF_IDS.canvasStaticMissingApis;
   function applyLGraphCanvasStaticCompatAliases(host) {
     if (!host.onResizeNode && host.onMenuResizeNode) {
@@ -229,9 +160,24 @@ var LiteGraphTSMigration = (function(exports) {
     applyLGraphCanvasStaticCompatAliases(host);
     return applyLGraphCanvasStaticMissingApiGuards(host);
   }
-  const GRID_SQUARE_SHAPE_DIFF_ID$1 = LITEGRAPH_COMPAT_DIFF_IDS.constantsGridSquareAlias;
-  const GRID_SQUARE_SHAPE_DEFAULT$1 = 6;
-  function resolveGridSquareShapeValue$1(host, fallbackValue = GRID_SQUARE_SHAPE_DEFAULT$1) {
+  function hasRequiredLGraphCanvasStaticApis(host) {
+    return typeof host.onResizeNode === "function" && typeof host.onMenuResizeNode === "function" && typeof host.onNodeToSubgraph === "function" && typeof host.onMenuNodeToSubgraph === "function" && typeof host.getBoundaryNodes === "function" && typeof host.alignNodes === "function" && typeof host.onNodeAlign === "function" && typeof host.onGroupAlign === "function" && typeof host.getPropertyPrintableValue === "function";
+  }
+  function attachLiteGraphCommonJsExports(exportsTarget, globalScope) {
+    const liteGraph = globalScope.LiteGraph;
+    exportsTarget.LiteGraph = globalScope.LiteGraph;
+    exportsTarget.LGraph = globalScope.LGraph || (liteGraph == null ? void 0 : liteGraph.LGraph);
+    exportsTarget.LLink = globalScope.LLink || (liteGraph == null ? void 0 : liteGraph.LLink);
+    exportsTarget.LGraphNode = globalScope.LGraphNode || (liteGraph == null ? void 0 : liteGraph.LGraphNode);
+    exportsTarget.LGraphGroup = globalScope.LGraphGroup || (liteGraph == null ? void 0 : liteGraph.LGraphGroup);
+    exportsTarget.DragAndScale = globalScope.DragAndScale || (liteGraph == null ? void 0 : liteGraph.DragAndScale);
+    exportsTarget.LGraphCanvas = globalScope.LGraphCanvas || (liteGraph == null ? void 0 : liteGraph.LGraphCanvas);
+    exportsTarget.ContextMenu = globalScope.ContextMenu || (liteGraph == null ? void 0 : liteGraph.ContextMenu);
+    return exportsTarget;
+  }
+  const GRID_SQUARE_SHAPE_DIFF_ID = LITEGRAPH_COMPAT_DIFF_IDS.constantsGridSquareAlias;
+  const GRID_SQUARE_SHAPE_DEFAULT = 6;
+  function resolveGridSquareShapeValue(host, fallbackValue = GRID_SQUARE_SHAPE_DEFAULT) {
     if (typeof host.GRID_SHAPE === "number") {
       return { value: host.GRID_SHAPE, source: "GRID_SHAPE" };
     }
@@ -240,24 +186,28 @@ var LiteGraphTSMigration = (function(exports) {
     }
     return { value: fallbackValue, source: "fallback" };
   }
-  function applyGridSquareShapeAlias$1(host, fallbackValue = GRID_SQUARE_SHAPE_DEFAULT$1) {
+  function applyGridSquareShapeAlias(host, fallbackValue = GRID_SQUARE_SHAPE_DEFAULT) {
     const beforeGrid = host.GRID_SHAPE;
     const beforeSquare = host.SQUARE_SHAPE;
-    const resolved = resolveGridSquareShapeValue$1(host, fallbackValue);
+    const resolved = resolveGridSquareShapeValue(host, fallbackValue);
     host.GRID_SHAPE = resolved.value;
     host.SQUARE_SHAPE = resolved.value;
     return {
-      diffId: GRID_SQUARE_SHAPE_DIFF_ID$1,
+      diffId: GRID_SQUARE_SHAPE_DIFF_ID,
       value: resolved.value,
       source: resolved.source,
       changed: beforeGrid !== host.GRID_SHAPE || beforeSquare !== host.SQUARE_SHAPE
     };
   }
-  function normalizeSerializedLGraphGroup$1(group, defaultFontSize = 24) {
+  function isGridSquareShapeAliasSynced(host) {
+    return typeof host.GRID_SHAPE === "number" && typeof host.SQUARE_SHAPE === "number" && host.GRID_SHAPE === host.SQUARE_SHAPE;
+  }
+  const LGRAPHGROUP_SERIALIZATION_DIFF_ID = LITEGRAPH_COMPAT_DIFF_IDS.serializationGroupFontField;
+  function normalizeSerializedLGraphGroup(group, defaultFontSize = 24) {
     const anyGroup = group;
-    let fontSize = parseNumber$1(anyGroup.font_size);
+    let fontSize = parseNumber(anyGroup.font_size);
     if (fontSize == null) {
-      fontSize = parseNumber$1(anyGroup.font);
+      fontSize = parseNumber(anyGroup.font);
     }
     if (fontSize == null) {
       fontSize = defaultFontSize;
@@ -269,10 +219,30 @@ var LiteGraphTSMigration = (function(exports) {
       font_size: fontSize
     };
   }
-  function parseSerializedLGraphGroupInput$1(input, defaultFontSize = 24) {
-    return normalizeSerializedLGraphGroup$1(input, defaultFontSize);
+  function denormalizeSerializedLGraphGroup(group) {
+    return {
+      title: group.title,
+      bounding: group.bounding,
+      color: group.color,
+      font: String(group.font_size)
+    };
   }
-  function parseNumber$1(v2) {
+  function parseSerializedLGraphGroupInput(input, defaultFontSize = 24) {
+    return normalizeSerializedLGraphGroup(input, defaultFontSize);
+  }
+  function serializeLGraphGroupShape(shape, order = "runtime") {
+    const runtimeShape = {
+      title: shape.title,
+      bounding: shape.bounding,
+      color: shape.color,
+      font_size: shape.font_size
+    };
+    if (order === "runtime") {
+      return runtimeShape;
+    }
+    return denormalizeSerializedLGraphGroup(runtimeShape);
+  }
+  function parseNumber(v2) {
     if (typeof v2 === "number" && Number.isFinite(v2)) {
       return v2;
     }
@@ -284,7 +254,11 @@ var LiteGraphTSMigration = (function(exports) {
     }
     return null;
   }
-  function invokeGraphOnNodeAddedCompatHook$1(graph, node2) {
+  const LGRAPH_ON_NODE_ADDED_DIFF_ID = LITEGRAPH_COMPAT_DIFF_IDS.graphHooksOnNodeAdded;
+  function hasGraphOnNodeAddedCompatHook(graph) {
+    return typeof graph.onNodeAdded === "function";
+  }
+  function invokeGraphOnNodeAddedCompatHook(graph, node2) {
     const rawHook = graph.onNodeAdded;
     if (!rawHook) {
       return false;
@@ -292,13 +266,14 @@ var LiteGraphTSMigration = (function(exports) {
     rawHook(node2);
     return true;
   }
-  function isSerializedLLinkDtsOrder$1(tuple) {
+  const LLINK_SERIALIZATION_DIFF_ID = LITEGRAPH_COMPAT_DIFF_IDS.serializationLinkTupleOrder;
+  function isSerializedLLinkDtsOrder(tuple) {
     return typeof tuple[1] === "string";
   }
-  function normalizeSerializedLLinkTuple$1(tuple) {
+  function normalizeSerializedLLinkTuple(tuple) {
     var _a3, _b2, _c2, _d2, _e2, _f, _g, _h2, _i2, _j, _k, _l;
     const source = tuple;
-    if (isSerializedLLinkDtsOrder$1(source)) {
+    if (isSerializedLLinkDtsOrder(source)) {
       return [
         Number((_a3 = source[0]) != null ? _a3 : 0),
         Number((_b2 = source[2]) != null ? _b2 : 0),
@@ -317,10 +292,23 @@ var LiteGraphTSMigration = (function(exports) {
       String((_l = source[5]) != null ? _l : "")
     ];
   }
-  function parseSerializedLLinkInput$1(input) {
+  function denormalizeSerializedLLinkTuple(tuple, order = "runtime") {
+    if (order === "runtime") {
+      return [tuple[0], tuple[1], tuple[2], tuple[3], tuple[4], tuple[5]];
+    }
+    return [
+      tuple[0],
+      tuple[5],
+      tuple[1],
+      tuple[2],
+      tuple[3],
+      tuple[4]
+    ];
+  }
+  function parseSerializedLLinkInput(input) {
     var _a3, _b2, _c2, _d2, _e2, _f;
     if (Array.isArray(input)) {
-      const normalized = normalizeSerializedLLinkTuple$1(input);
+      const normalized = normalizeSerializedLLinkTuple(input);
       return {
         id: normalized[0],
         origin_id: normalized[1],
@@ -340,15 +328,27 @@ var LiteGraphTSMigration = (function(exports) {
       target_slot: Number((_f = shape.target_slot) != null ? _f : 0)
     };
   }
-  const CONTEXT_MENU_CLOSE_ALL_DIFF_ID$1 = LITEGRAPH_COMPAT_DIFF_IDS.uiCloseAllContextMenus;
-  function applyContextMenuCloseAllCompat$2(liteGraph, fallback) {
+  function serializeLLinkShape(shape, order = "runtime") {
+    var _a3, _b2, _c2, _d2, _e2, _f;
+    const runtimeTuple = [
+      Number((_a3 = shape.id) != null ? _a3 : 0),
+      Number((_b2 = shape.origin_id) != null ? _b2 : 0),
+      Number((_c2 = shape.origin_slot) != null ? _c2 : 0),
+      Number((_d2 = shape.target_id) != null ? _d2 : 0),
+      Number((_e2 = shape.target_slot) != null ? _e2 : 0),
+      String((_f = shape.type) != null ? _f : "")
+    ];
+    return denormalizeSerializedLLinkTuple(runtimeTuple, order);
+  }
+  const CONTEXT_MENU_CLOSE_ALL_DIFF_ID = LITEGRAPH_COMPAT_DIFF_IDS.uiCloseAllContextMenus;
+  function applyContextMenuCloseAllCompat$1(liteGraph, fallback) {
     var _a3;
     const beforeLiteGraph = liteGraph.closeAllContextMenus;
     const beforeContextMenu = (_a3 = liteGraph.ContextMenu) == null ? void 0 : _a3.closeAllContextMenus;
-    const resolved = resolveContextMenuCloseAll$1(liteGraph);
+    const resolved = resolveContextMenuCloseAll(liteGraph, fallback);
     if (!resolved.fn) {
       return {
-        diffId: CONTEXT_MENU_CLOSE_ALL_DIFF_ID$1,
+        diffId: CONTEXT_MENU_CLOSE_ALL_DIFF_ID,
         source: "none",
         changed: false,
         synced: false
@@ -359,26 +359,29 @@ var LiteGraphTSMigration = (function(exports) {
       liteGraph.ContextMenu = {};
     }
     liteGraph.ContextMenu.closeAllContextMenus = resolved.fn;
-    const synced = isContextMenuCloseAllCompatSynced$1(liteGraph);
+    const synced = isContextMenuCloseAllCompatSynced(liteGraph);
     return {
-      diffId: CONTEXT_MENU_CLOSE_ALL_DIFF_ID$1,
+      diffId: CONTEXT_MENU_CLOSE_ALL_DIFF_ID,
       source: resolved.source,
       resolved: resolved.fn,
       changed: beforeLiteGraph !== liteGraph.closeAllContextMenus || beforeContextMenu !== liteGraph.ContextMenu.closeAllContextMenus,
       synced
     };
   }
-  function isContextMenuCloseAllCompatSynced$1(liteGraph) {
+  function isContextMenuCloseAllCompatSynced(liteGraph) {
     var _a3;
     return !!(liteGraph.closeAllContextMenus && ((_a3 = liteGraph.ContextMenu) == null ? void 0 : _a3.closeAllContextMenus) && liteGraph.closeAllContextMenus === liteGraph.ContextMenu.closeAllContextMenus);
   }
-  function resolveContextMenuCloseAll$1(liteGraph, fallback) {
+  function resolveContextMenuCloseAll(liteGraph, fallback) {
     var _a3;
     if (liteGraph.closeAllContextMenus) {
       return { source: "LiteGraph", fn: liteGraph.closeAllContextMenus };
     }
     if ((_a3 = liteGraph.ContextMenu) == null ? void 0 : _a3.closeAllContextMenus) {
       return { source: "ContextMenu", fn: liteGraph.ContextMenu.closeAllContextMenus };
+    }
+    if (fallback) {
+      return { source: "fallback", fn: fallback };
     }
     return { source: "none" };
   }
@@ -415,7 +418,7 @@ var LiteGraphTSMigration = (function(exports) {
     },
     [LITEGRAPH_COMPAT_DIFF_IDS.uiCloseAllContextMenus]: (targets) => {
       if (targets.liteGraph) {
-        applyContextMenuCloseAllCompat$1(targets.liteGraph);
+        applyContextMenuCloseAllCompat(targets.liteGraph);
       }
     },
     [LITEGRAPH_COMPAT_DIFF_IDS.canvasStaticMissingApis]: (targets) => {
@@ -427,8 +430,8 @@ var LiteGraphTSMigration = (function(exports) {
   function isAssemblyCompatDiff(diff) {
     return diff.runtimeMode === "assembly";
   }
-  function applyLiteGraphConstantAliases(host, fallbackValue = GRID_SQUARE_SHAPE_DEFAULT$1) {
-    return applyGridSquareShapeAlias$1(host, fallbackValue).value;
+  function applyLiteGraphConstantAliases(host, fallbackValue = GRID_SQUARE_SHAPE_DEFAULT) {
+    return applyGridSquareShapeAlias(host, fallbackValue).value;
   }
   function applyLGraphCanvasStaticCompat(host) {
     applyLGraphCanvasStaticCompat$1(host);
@@ -449,8 +452,8 @@ var LiteGraphTSMigration = (function(exports) {
       };
     }
   }
-  function applyContextMenuCloseAllCompat$1(liteGraph) {
-    applyContextMenuCloseAllCompat$2(liteGraph);
+  function applyContextMenuCloseAllCompat(liteGraph) {
+    applyContextMenuCloseAllCompat$1(liteGraph);
   }
   function applyLiteGraphApiCompatAliases(targets) {
     for (const diff of LITEGRAPH_API_DIFF_MATRIX) {
@@ -467,113 +470,8 @@ var LiteGraphTSMigration = (function(exports) {
       canvasPrototype: bundle.LGraphCanvas.prototype
     });
   }
-  function attachLiteGraphCommonJsExports(exportsTarget, globalScope) {
-    const liteGraph = globalScope.LiteGraph;
-    exportsTarget.LiteGraph = globalScope.LiteGraph;
-    exportsTarget.LGraph = globalScope.LGraph || (liteGraph == null ? void 0 : liteGraph.LGraph);
-    exportsTarget.LLink = globalScope.LLink || (liteGraph == null ? void 0 : liteGraph.LLink);
-    exportsTarget.LGraphNode = globalScope.LGraphNode || (liteGraph == null ? void 0 : liteGraph.LGraphNode);
-    exportsTarget.LGraphGroup = globalScope.LGraphGroup || (liteGraph == null ? void 0 : liteGraph.LGraphGroup);
-    exportsTarget.DragAndScale = globalScope.DragAndScale || (liteGraph == null ? void 0 : liteGraph.DragAndScale);
-    exportsTarget.LGraphCanvas = globalScope.LGraphCanvas || (liteGraph == null ? void 0 : liteGraph.LGraphCanvas);
-    exportsTarget.ContextMenu = globalScope.ContextMenu || (liteGraph == null ? void 0 : liteGraph.ContextMenu);
-    return exportsTarget;
-  }
-  function clamp(v2, a, b2) {
-    return a > v2 ? a : b2 < v2 ? b2 : v2;
-  }
-  const defaultBridgeOptions$1 = {
-    exposeClamp: true,
-    installRequestAnimationFrameShim: true
-  };
-  function attachLiteGraphGlobalBridge$1(globalScope, runtime2, options) {
-    const resolved = { ...defaultBridgeOptions$1, ...options || {} };
-    const liteGraph = runtime2.LiteGraph;
-    globalScope.LiteGraph = liteGraph;
-    if (runtime2.LGraph) {
-      globalScope.LGraph = runtime2.LGraph;
-      liteGraph.LGraph = runtime2.LGraph;
-    }
-    if (runtime2.LLink) {
-      liteGraph.LLink = runtime2.LLink;
-    }
-    if (runtime2.LGraphNode) {
-      globalScope.LGraphNode = runtime2.LGraphNode;
-      liteGraph.LGraphNode = runtime2.LGraphNode;
-    }
-    if (runtime2.LGraphGroup) {
-      globalScope.LGraphGroup = runtime2.LGraphGroup;
-      liteGraph.LGraphGroup = runtime2.LGraphGroup;
-    }
-    if (runtime2.DragAndScale) {
-      liteGraph.DragAndScale = runtime2.DragAndScale;
-    }
-    if (runtime2.LGraphCanvas) {
-      globalScope.LGraphCanvas = runtime2.LGraphCanvas;
-      liteGraph.LGraphCanvas = runtime2.LGraphCanvas;
-    }
-    if (runtime2.ContextMenu) {
-      liteGraph.ContextMenu = runtime2.ContextMenu;
-    }
-    if (runtime2.CurveEditor) {
-      liteGraph.CurveEditor = runtime2.CurveEditor;
-    }
-    if (resolved.exposeClamp) {
-      globalScope.clamp = clamp;
-    }
-    if (resolved.installRequestAnimationFrameShim) {
-      installRequestAnimationFrameShim$1(globalScope);
-    }
-    return globalScope;
-  }
-  function installRequestAnimationFrameShim$1(globalScope) {
-    if (typeof window == "undefined") {
-      return;
-    }
-    if (globalScope.requestAnimationFrame) {
-      return;
-    }
-    globalScope.requestAnimationFrame = globalScope.webkitRequestAnimationFrame || globalScope.mozRequestAnimationFrame || function(callback) {
-      if (!globalScope.setTimeout) {
-        return 0;
-      }
-      return globalScope.setTimeout(callback, 1e3 / 60);
-    };
-  }
-  function resolveLiteGraphGlobalScope(input) {
-    if (input) {
-      return input;
-    }
-    return globalThis;
-  }
-  function attachLiteGraphAssemblyBridges(bundle, options = {}) {
-    const globalScope = resolveLiteGraphGlobalScope(options.globalScope);
-    if (options.attachToGlobal) {
-      const runtimeConstructors = {
-        LiteGraph: bundle.LiteGraph,
-        LGraph: bundle.LGraph,
-        LLink: bundle.LLink,
-        LGraphNode: bundle.LGraphNode,
-        LGraphGroup: bundle.LGraphGroup,
-        DragAndScale: bundle.DragAndScale,
-        LGraphCanvas: bundle.LGraphCanvas,
-        ContextMenu: bundle.ContextMenu,
-        CurveEditor: bundle.CurveEditor
-      };
-      attachLiteGraphGlobalBridge$1(
-        globalScope,
-        runtimeConstructors,
-        options.bridgeOptions
-      );
-    }
-    if (options.attachCommonJsExports) {
-      const exportsTarget = options.exportsTarget || globalScope.exports || {};
-      attachLiteGraphCommonJsExports(
-        exportsTarget,
-        globalScope
-      );
-    }
-    return globalScope;
+  function clamp(v2, a2, b2) {
+    return a2 > v2 ? a2 : b2 < v2 ? b2 : v2;
   }
   const defaultBridgeOptions = {
     exposeClamp: true,
@@ -633,32 +531,40 @@ var LiteGraphTSMigration = (function(exports) {
       return globalScope.setTimeout(callback, 1e3 / 60);
     };
   }
-  const GRID_SQUARE_SHAPE_DIFF_ID = LITEGRAPH_COMPAT_DIFF_IDS.constantsGridSquareAlias;
-  const GRID_SQUARE_SHAPE_DEFAULT = 6;
-  function resolveGridSquareShapeValue(host, fallbackValue = GRID_SQUARE_SHAPE_DEFAULT) {
-    if (typeof host.GRID_SHAPE === "number") {
-      return { value: host.GRID_SHAPE, source: "GRID_SHAPE" };
+  function resolveLiteGraphGlobalScope(input) {
+    if (input) {
+      return input;
     }
-    if (typeof host.SQUARE_SHAPE === "number") {
-      return { value: host.SQUARE_SHAPE, source: "SQUARE_SHAPE" };
+    return globalThis;
+  }
+  function attachLiteGraphAssemblyBridges(bundle, options = {}) {
+    const globalScope = resolveLiteGraphGlobalScope(options.globalScope);
+    if (options.attachToGlobal) {
+      const runtimeConstructors = {
+        LiteGraph: bundle.LiteGraph,
+        LGraph: bundle.LGraph,
+        LLink: bundle.LLink,
+        LGraphNode: bundle.LGraphNode,
+        LGraphGroup: bundle.LGraphGroup,
+        DragAndScale: bundle.DragAndScale,
+        LGraphCanvas: bundle.LGraphCanvas,
+        ContextMenu: bundle.ContextMenu,
+        CurveEditor: bundle.CurveEditor
+      };
+      attachLiteGraphGlobalBridge(
+        globalScope,
+        runtimeConstructors,
+        options.bridgeOptions
+      );
     }
-    return { value: fallbackValue, source: "fallback" };
-  }
-  function applyGridSquareShapeAlias(host, fallbackValue = GRID_SQUARE_SHAPE_DEFAULT) {
-    const beforeGrid = host.GRID_SHAPE;
-    const beforeSquare = host.SQUARE_SHAPE;
-    const resolved = resolveGridSquareShapeValue(host, fallbackValue);
-    host.GRID_SHAPE = resolved.value;
-    host.SQUARE_SHAPE = resolved.value;
-    return {
-      diffId: GRID_SQUARE_SHAPE_DIFF_ID,
-      value: resolved.value,
-      source: resolved.source,
-      changed: beforeGrid !== host.GRID_SHAPE || beforeSquare !== host.SQUARE_SHAPE
-    };
-  }
-  function isGridSquareShapeAliasSynced(host) {
-    return typeof host.GRID_SHAPE === "number" && typeof host.SQUARE_SHAPE === "number" && host.GRID_SHAPE === host.SQUARE_SHAPE;
+    if (options.attachCommonJsExports) {
+      const exportsTarget = options.exportsTarget || globalScope.exports || {};
+      attachLiteGraphCommonJsExports(
+        exportsTarget,
+        globalScope
+      );
+    }
+    return globalScope;
   }
   function buildCanvasMenuOptions(canvas, menuClass) {
     let options = [];
@@ -3617,7 +3523,7 @@ var LiteGraphTSMigration = (function(exports) {
           }
         }
       } else {
-        let c = 0;
+        let c2 = 0;
         str = str.toLowerCase();
         const filter = graphcanvas.filter || graphcanvas.graph.filter;
         const currentSearchBox = getSearchBox();
@@ -3681,7 +3587,7 @@ var LiteGraphTSMigration = (function(exports) {
             continue;
           }
           addResult(extra.desc, "searchbox_extra");
-          if (search_limit !== -1 && c++ > search_limit) {
+          if (search_limit !== -1 && c2++ > search_limit) {
             break;
           }
         }
@@ -3689,7 +3595,7 @@ var LiteGraphTSMigration = (function(exports) {
         const filtered = keys.filter((type) => inner_test_filter(type));
         for (let i2 = 0; i2 < filtered.length; i2++) {
           addResult(filtered[i2]);
-          if (search_limit !== -1 && c++ > search_limit) {
+          if (search_limit !== -1 && c2++ > search_limit) {
             break;
           }
         }
@@ -3788,26 +3694,26 @@ var LiteGraphTSMigration = (function(exports) {
     refresh();
     return panel;
   }
-  function compareObjects$1(a, b2) {
-    for (const i2 in a) {
-      if (a[i2] != b2[i2]) {
+  function compareObjects(a2, b2) {
+    for (const i2 in a2) {
+      if (a2[i2] != b2[i2]) {
         return false;
       }
     }
     return true;
   }
-  function distance$2(a, b2) {
+  function distance$1(a2, b2) {
     return Math.sqrt(
-      (b2[0] - a[0]) * (b2[0] - a[0]) + (b2[1] - a[1]) * (b2[1] - a[1])
+      (b2[0] - a2[0]) * (b2[0] - a2[0]) + (b2[1] - a2[1]) * (b2[1] - a2[1])
     );
   }
-  function isInsideRectangle$2(x2, y2, left, top, width2, height) {
+  function isInsideRectangle$1(x2, y2, left, top, width2, height) {
     if (left < x2 && left + width2 > x2 && top < y2 && top + height > y2) {
       return true;
     }
     return false;
   }
-  function growBounding$1(bounding, x2, y2) {
+  function growBounding(bounding, x2, y2) {
     if (x2 < bounding[0]) {
       bounding[0] = x2;
     } else if (x2 > bounding[2]) {
@@ -3820,7 +3726,7 @@ var LiteGraphTSMigration = (function(exports) {
     }
     return bounding;
   }
-  function isInsideBounding$1(p2, bb) {
+  function isInsideBounding(p2, bb) {
     if (Array.isArray(bb[0])) {
       const corners = bb;
       if (p2[0] < corners[0][0] || p2[1] < corners[0][1] || p2[0] > corners[1][0] || p2[1] > corners[1][1]) {
@@ -3834,12 +3740,12 @@ var LiteGraphTSMigration = (function(exports) {
     }
     return true;
   }
-  function overlapBounding(a, b2) {
-    const aEndX = a[0] + a[2];
-    const aEndY = a[1] + a[3];
+  function overlapBounding(a2, b2) {
+    const aEndX = a2[0] + a2[2];
+    const aEndY = a2[1] + a2[3];
     const bEndX = b2[0] + b2[2];
     const bEndY = b2[1] + b2[3];
-    if (a[0] > bEndX || a[1] > bEndY || aEndX < b2[0] || aEndY < b2[1]) {
+    if (a2[0] > bEndX || a2[1] > bEndY || aEndX < b2[0] || aEndY < b2[1]) {
       return false;
     }
     return true;
@@ -3847,9 +3753,9 @@ var LiteGraphTSMigration = (function(exports) {
   function toMutationKey$1(nodeId) {
     return String(nodeId);
   }
-  function toFiniteNumber$4(value) {
+  function toFiniteNumber$5(value, fallback = 0) {
     const numericValue = Number(value);
-    return Number.isFinite(numericValue) ? numericValue : 0;
+    return Number.isFinite(numericValue) ? numericValue : fallback;
   }
   function resolveMouseType(type) {
     if (type === "down") {
@@ -3861,7 +3767,7 @@ var LiteGraphTSMigration = (function(exports) {
     return "mouseup";
   }
   function resolveButtons(event2) {
-    return toFiniteNumber$4(event2.buttons);
+    return toFiniteNumber$5(event2.buttons);
   }
   function resolveButton(event2) {
     const pointerEvent = event2;
@@ -3891,12 +3797,22 @@ var LiteGraphTSMigration = (function(exports) {
   }
   function buildLocalPosMap(event2, targets) {
     const localPosByNodeId = /* @__PURE__ */ new Map();
+    const pagePoint = event2.getPagePoint();
+    const pageX = toFiniteNumber$5(pagePoint.x);
+    const pageY = toFiniteNumber$5(pagePoint.y);
     for (let i2 = 0; i2 < targets.length; ++i2) {
       const target = targets[i2];
+      if (target.nodePosition) {
+        localPosByNodeId.set(toMutationKey$1(target.nodeId), [
+          pageX - toFiniteNumber$5(target.nodePosition[0]),
+          pageY - toFiniteNumber$5(target.nodePosition[1])
+        ]);
+        continue;
+      }
       const localPoint = event2.getInnerPoint(target.nodeRoot);
       localPosByNodeId.set(toMutationKey$1(target.nodeId), [
-        toFiniteNumber$4(localPoint.x),
-        toFiniteNumber$4(localPoint.y)
+        toFiniteNumber$5(localPoint.x),
+        toFiniteNumber$5(localPoint.y)
       ]);
     }
     return localPosByNodeId;
@@ -3904,11 +3820,11 @@ var LiteGraphTSMigration = (function(exports) {
   function createLegacyPointerEvent(options) {
     const { event: event2, hostElement } = options;
     const pagePoint = event2.getPagePoint();
-    const canvasX = toFiniteNumber$4(pagePoint.x);
-    const canvasY = toFiniteNumber$4(pagePoint.y);
+    const canvasX = toFiniteNumber$5(pagePoint.x);
+    const canvasY = toFiniteNumber$5(pagePoint.y);
     const hostRect = hostElement.getBoundingClientRect();
-    const clientX = hostRect.left + canvasX;
-    const clientY = hostRect.top + canvasY;
+    const clientX = toFiniteNumber$5(event2.clientX, hostRect.left + canvasX);
+    const clientY = toFiniteNumber$5(event2.clientY, hostRect.top + canvasY);
     const button = resolveButton(event2);
     const buttons = resolveButtons(event2);
     const localPosByNodeId = buildLocalPosMap(event2, options.targets || []);
@@ -3928,22 +3844,22 @@ var LiteGraphTSMigration = (function(exports) {
       type: resolveMouseType(options.type),
       canvasX,
       canvasY,
-      pageX: canvasX,
-      pageY: canvasY,
+      pageX: toFiniteNumber$5(event2.pageX, clientX),
+      pageY: toFiniteNumber$5(event2.pageY, clientY),
       clientX,
       clientY,
-      screenX: clientX,
-      screenY: clientY,
+      screenX: toFiniteNumber$5(event2.screenX, clientX),
+      screenY: toFiniteNumber$5(event2.screenY, clientY),
       offsetX: canvasX,
       offsetY: canvasY,
-      deltaX: toFiniteNumber$4(options.deltaX),
-      deltaY: toFiniteNumber$4(options.deltaY),
-      deltax: toFiniteNumber$4(options.deltaX),
-      deltay: toFiniteNumber$4(options.deltaY),
+      deltaX: toFiniteNumber$5(options.deltaX),
+      deltaY: toFiniteNumber$5(options.deltaY),
+      deltax: toFiniteNumber$5(options.deltaX),
+      deltay: toFiniteNumber$5(options.deltaY),
       which: resolveWhich(button),
       button,
       buttons,
-      click_time: Math.max(0, toFiniteNumber$4(options.clickTime)),
+      click_time: Math.max(0, toFiniteNumber$5(options.clickTime)),
       dragging: Boolean(options.dragging),
       shiftKey: Boolean(event2.shiftKey),
       ctrlKey: Boolean(event2.ctrlKey),
@@ -4233,21 +4149,21 @@ var LiteGraphTSMigration = (function(exports) {
   const PORT_DIRECTION_RIGHT = 2;
   const PORT_DIRECTION_DOWN = 3;
   const PORT_DIRECTION_LEFT = 4;
-  function toFiniteNumber$3(value, fallback = 0) {
+  function toFiniteNumber$4(value, fallback = 0) {
     const numericValue = Number(value);
     return Number.isFinite(numericValue) ? numericValue : fallback;
   }
-  function toPoint(value) {
+  function toPoint$1(value) {
     if (Array.isArray(value) || ArrayBuffer.isView(value) || typeof value === "object" && value !== null && "0" in value && "1" in value) {
       const indexedValue = value;
-      return [toFiniteNumber$3(indexedValue[0]), toFiniteNumber$3(indexedValue[1])];
+      return [toFiniteNumber$4(indexedValue[0]), toFiniteNumber$4(indexedValue[1])];
     }
     const point = value;
-    return [toFiniteNumber$3(point.x), toFiniteNumber$3(point.y)];
+    return [toFiniteNumber$4(point.x), toFiniteNumber$4(point.y)];
   }
-  function distance$1(a, b2) {
-    const dx = b2[0] - a[0];
-    const dy = b2[1] - a[1];
+  function distance(a2, b2) {
+    const dx = b2[0] - a2[0];
+    const dy = b2[1] - a2[1];
     return Math.sqrt(dx * dx + dy * dy);
   }
   function getOppositePortDirection(direction) {
@@ -4263,8 +4179,9 @@ var LiteGraphTSMigration = (function(exports) {
     return PORT_DIRECTION_LEFT;
   }
   class NodePortAdapter {
-    constructor(graph) {
+    constructor(graph, options = {}) {
       this.graph = graph;
+      this.options = options;
     }
     getNodeById(nodeId) {
       var _a3;
@@ -4291,10 +4208,10 @@ var LiteGraphTSMigration = (function(exports) {
         if (!bounds) {
           continue;
         }
-        const left = toFiniteNumber$3(bounds[0]);
-        const top = toFiniteNumber$3(bounds[1]);
-        const width2 = toFiniteNumber$3(bounds[2]);
-        const height = toFiniteNumber$3(bounds[3]);
+        const left = toFiniteNumber$4(bounds[0]);
+        const top = toFiniteNumber$4(bounds[1]);
+        const width2 = toFiniteNumber$4(bounds[2]);
+        const height = toFiniteNumber$4(bounds[3]);
         if (x2 >= left && x2 <= left + width2 && y2 >= top && y2 <= top + height) {
           return node2;
         }
@@ -4302,8 +4219,31 @@ var LiteGraphTSMigration = (function(exports) {
       return null;
     }
     hitPortAt(x2, y2) {
+      var _a3, _b2, _c2, _d2, _e2;
       const node2 = this.getNodeAt(x2, y2);
-      if (!node2 || typeof node2.getSlotInPosition !== "function") {
+      if (!node2) {
+        return null;
+      }
+      const hostHit = (_d2 = (_c2 = (_b2 = (_a3 = this.options).resolveNodeHost) == null ? void 0 : _b2.call(_a3, node2.id)) == null ? void 0 : _c2.hitPortAt) == null ? void 0 : _d2.call(_c2, x2, y2);
+      if (hostHit) {
+        const slotList = hostHit.kind === "input" ? node2.inputs : node2.outputs;
+        const slot2 = (Array.isArray(slotList) ? slotList[hostHit.slotIndex] : null) || {};
+        return {
+          node: node2,
+          nodeId: node2.id,
+          kind: hostHit.kind,
+          slotIndex: hostHit.slotIndex,
+          slot: slot2,
+          anchor: hostHit.anchor,
+          dir: (_e2 = hostHit.dir) != null ? _e2 : this.getPortDirection(
+            node2,
+            hostHit.kind,
+            hostHit.slotIndex,
+            slot2
+          )
+        };
+      }
+      if (typeof node2.getSlotInPosition !== "function") {
         return null;
       }
       const slotInfo = node2.getSlotInPosition(x2, y2);
@@ -4312,7 +4252,7 @@ var LiteGraphTSMigration = (function(exports) {
       }
       const kind = slotInfo.output ? "output" : "input";
       const slot = slotInfo.output || slotInfo.input;
-      const anchor = slotInfo.link_pos ? toPoint(slotInfo.link_pos) : this.getPortAnchor(node2.id, kind, slotInfo.slot);
+      const anchor = slotInfo.link_pos ? toPoint$1(slotInfo.link_pos) : this.getPortAnchor(node2.id, kind, slotInfo.slot);
       return {
         node: node2,
         nodeId: node2.id,
@@ -4324,6 +4264,15 @@ var LiteGraphTSMigration = (function(exports) {
       };
     }
     getPortAnchor(nodeId, kind, slotIndex) {
+      var _a3, _b2, _c2, _d2;
+      const hostAnchor = (_d2 = (_c2 = (_b2 = (_a3 = this.options).resolveNodeHost) == null ? void 0 : _b2.call(_a3, nodeId)) == null ? void 0 : _c2.getPortAnchor) == null ? void 0 : _d2.call(
+        _c2,
+        kind,
+        slotIndex
+      );
+      if (hostAnchor) {
+        return [toFiniteNumber$4(hostAnchor[0]), toFiniteNumber$4(hostAnchor[1])];
+      }
       const node2 = this.getNodeById(nodeId);
       if (!node2 || typeof node2.getConnectionPos !== "function") {
         return [0, 0];
@@ -4335,16 +4284,28 @@ var LiteGraphTSMigration = (function(exports) {
       if (typeof rawPoint === "object" && rawPoint !== null && "0" in rawPoint) {
         const indexedPoint = rawPoint;
         return [
-          toFiniteNumber$3(indexedPoint[0]),
-          toFiniteNumber$3(indexedPoint[1])
+          toFiniteNumber$4(indexedPoint[0]),
+          toFiniteNumber$4(indexedPoint[1])
         ];
       }
-      return toPoint(rawPoint);
+      return toPoint$1(rawPoint);
     }
     getPortDirection(node2, kind, slotIndex, slot) {
+      var _a3, _b2, _c2, _d2;
+      const hostDirection = (_d2 = (_c2 = (_b2 = (_a3 = this.options).resolveNodeHost) == null ? void 0 : _b2.call(_a3, node2.id)) == null ? void 0 : _c2.getPortDirection) == null ? void 0 : _d2.call(
+        _c2,
+        kind,
+        slotIndex
+      );
+      if (hostDirection != null) {
+        const normalizedDirection = toFiniteNumber$4(hostDirection, 0);
+        if (normalizedDirection) {
+          return normalizedDirection;
+        }
+      }
       const slotList = kind === "input" ? node2.inputs : node2.outputs;
       const resolvedSlot = slot || (slotList == null ? void 0 : slotList[slotIndex]) || null;
-      const explicitDir = toFiniteNumber$3(resolvedSlot == null ? void 0 : resolvedSlot.dir, 0);
+      const explicitDir = toFiniteNumber$4(resolvedSlot == null ? void 0 : resolvedSlot.dir, 0);
       if (explicitDir) {
         return explicitDir;
       }
@@ -4378,9 +4339,9 @@ var LiteGraphTSMigration = (function(exports) {
       };
     }
     buildLinkPath(start, end, startDir, endDir) {
-      const safeStart = toPoint(start);
-      const safeEnd = toPoint(end);
-      const dist = Math.max(distance$1(safeStart, safeEnd), 16);
+      const safeStart = toPoint$1(start);
+      const safeEnd = toPoint$1(end);
+      const dist = Math.max(distance(safeStart, safeEnd), 16);
       const c1 = [safeStart[0], safeStart[1]];
       const c2 = [safeEnd[0], safeEnd[1]];
       if (startDir === PORT_DIRECTION_LEFT) {
@@ -4513,7 +4474,7 @@ var LiteGraphTSMigration = (function(exports) {
       this.graph = graph;
       this.sceneSyncController = sceneSyncController;
     }
-    hitLegacyNodeAt(canvasX, canvasY) {
+    hitNodeAt(canvasX, canvasY) {
       if (typeof this.graph.getNodeOnPos !== "function") {
         return null;
       }
@@ -4527,7 +4488,7 @@ var LiteGraphTSMigration = (function(exports) {
       }
       return { node: node2, host };
     }
-    getLegacyHostForNode(node2) {
+    getHostForNode(node2) {
       if (!node2) {
         return null;
       }
@@ -4552,9 +4513,16 @@ var LiteGraphTSMigration = (function(exports) {
   function o(t2) {
     return "number" == typeof t2;
   }
+  const a = /^-?\d+(?:\.\d+)?$/;
+  function h(t2) {
+    return "string" == typeof t2 && a.test(t2) ? +t2 : t2;
+  }
   const { isArray: l } = Array;
   function d(t2) {
     return t2 && "object" == typeof t2;
+  }
+  function c(t2) {
+    return d(t2) && !l(t2);
   }
   function u(t2) {
     return "{}" === JSON.stringify(t2);
@@ -4687,8 +4655,8 @@ var LiteGraphTSMigration = (function(exports) {
     return r2;
   }, max: (t2, e2, s2) => o(t2) && o(e2) ? b$1(t2, e2) : (T$1(t2, e2, s2), k$1(w$1, b$1(m[0], x$1[0]), b$1(m[1], x$1[1]), b$1(m[2], x$1[2]), b$1(m[3], x$1[3]))), add: (t2, e2, s2) => o(t2) && o(e2) ? t2 + e2 : (T$1(t2, e2, s2), k$1(w$1, m[0] + x$1[0], m[1] + x$1[1], m[2] + x$1[2], m[3] + x$1[3])), swapAndScale(t2, e2, s2, r2) {
     if (o(t2)) return e2 === s2 ? t2 * e2 : [t2 * s2, t2 * e2];
-    const i2 = r2 ? t2 : [], [n2, a, h, l2] = 4 === t2.length ? t2 : C$1(t2);
-    return k$1(i2, h * s2, l2 * e2, n2 * s2, a * e2);
+    const i2 = r2 ? t2 : [], [n2, a2, h2, l2] = 4 === t2.length ? t2 : C$1(t2);
+    return k$1(i2, h2 * s2, l2 * e2, n2 * s2, a2 * e2);
   } }, { set: k$1, get: C$1, setTemp: O$1, toTempAB: T$1 } = v, { round: P$1, pow: S$1, max: L$1, floor: R$1, PI: E$1 } = Math, I$2 = { within: (t2, e2, r2) => (d(e2) && (r2 = e2.max, e2 = e2.min), !s(e2) && t2 < e2 && (t2 = e2), !s(r2) && t2 > r2 && (t2 = r2), t2), fourNumber: v.get, formatRotation: (t2, e2) => (t2 %= 360, e2 ? t2 < 0 && (t2 += 360) : (t2 > 180 && (t2 -= 360), t2 < -180 && (t2 += 360)), I$2.float(t2)), getGapRotation(t2, e2, s2 = 0) {
     let r2 = t2 + s2;
     if (e2 > 1) {
@@ -4742,8 +4710,8 @@ var LiteGraphTSMigration = (function(exports) {
   }, scaleOfInner(t2, e2, s2, r2 = s2) {
     Q$1.translateInner(t2, e2.x, e2.y), Q$1.scale(t2, s2, r2), Q$1.translateInner(t2, -e2.x, -e2.y);
   }, rotate(t2, e2) {
-    const { a: s2, b: r2, c: i2, d: n2 } = t2, o2 = F$2(e2 *= A$1), a = z$2(e2);
-    t2.a = s2 * o2 - r2 * a, t2.b = s2 * a + r2 * o2, t2.c = i2 * o2 - n2 * a, t2.d = i2 * a + n2 * o2;
+    const { a: s2, b: r2, c: i2, d: n2 } = t2, o2 = F$2(e2 *= A$1), a2 = z$2(e2);
+    t2.a = s2 * o2 - r2 * a2, t2.b = s2 * a2 + r2 * o2, t2.c = i2 * o2 - n2 * a2, t2.d = i2 * a2 + n2 * o2;
   }, rotateOfOuter(t2, e2, s2) {
     Q$1.toInnerPoint(t2, e2, H$1), Q$1.rotateOfInner(t2, H$1, s2);
   }, rotateOfInner(t2, e2, s2) {
@@ -4756,15 +4724,15 @@ var LiteGraphTSMigration = (function(exports) {
   }, skewOfInner(t2, e2, s2, r2 = 0) {
     Q$1.translateInner(t2, e2.x, e2.y), Q$1.skew(t2, s2, r2), Q$1.translateInner(t2, -e2.x, -e2.y);
   }, multiply(t2, e2) {
-    const { a: s2, b: r2, c: i2, d: n2, e: o2, f: a } = t2;
-    t2.a = e2.a * s2 + e2.b * i2, t2.b = e2.a * r2 + e2.b * n2, t2.c = e2.c * s2 + e2.d * i2, t2.d = e2.c * r2 + e2.d * n2, t2.e = e2.e * s2 + e2.f * i2 + o2, t2.f = e2.e * r2 + e2.f * n2 + a;
+    const { a: s2, b: r2, c: i2, d: n2, e: o2, f: a2 } = t2;
+    t2.a = e2.a * s2 + e2.b * i2, t2.b = e2.a * r2 + e2.b * n2, t2.c = e2.c * s2 + e2.d * i2, t2.d = e2.c * r2 + e2.d * n2, t2.e = e2.e * s2 + e2.f * i2 + o2, t2.f = e2.e * r2 + e2.f * n2 + a2;
   }, multiplyParent(t2, e2, r2, i2, n2) {
-    const { e: o2, f: a } = t2;
+    const { e: o2, f: a2 } = t2;
     if (r2 || (r2 = t2), s(i2) && (i2 = 1 !== t2.a || t2.b || t2.c || 1 !== t2.d), i2) {
-      const { a: s2, b: i3, c: o3, d: a2 } = t2;
-      r2.a = s2 * e2.a + i3 * e2.c, r2.b = s2 * e2.b + i3 * e2.d, r2.c = o3 * e2.a + a2 * e2.c, r2.d = o3 * e2.b + a2 * e2.d, n2 && (r2.scaleX = e2.scaleX * n2.scaleX, r2.scaleY = e2.scaleY * n2.scaleY);
+      const { a: s2, b: i3, c: o3, d: a3 } = t2;
+      r2.a = s2 * e2.a + i3 * e2.c, r2.b = s2 * e2.b + i3 * e2.d, r2.c = o3 * e2.a + a3 * e2.c, r2.d = o3 * e2.b + a3 * e2.d, n2 && (r2.scaleX = e2.scaleX * n2.scaleX, r2.scaleY = e2.scaleY * n2.scaleY);
     } else r2.a = e2.a, r2.b = e2.b, r2.c = e2.c, r2.d = e2.d, n2 && (r2.scaleX = e2.scaleX, r2.scaleY = e2.scaleY);
-    r2.e = o2 * e2.a + a * e2.c + e2.e, r2.f = o2 * e2.b + a * e2.d + e2.f;
+    r2.e = o2 * e2.a + a2 * e2.c + e2.e, r2.f = o2 * e2.b + a2 * e2.d + e2.f;
   }, divide(t2, e2) {
     Q$1.multiply(t2, Q$1.tempInvert(e2));
   }, divideParent(t2, e2) {
@@ -4775,8 +4743,8 @@ var LiteGraphTSMigration = (function(exports) {
   }, invert(t2) {
     const { a: e2, b: s2, c: r2, d: i2, e: n2, f: o2 } = t2;
     if (s2 || r2) {
-      const a = 1 / (e2 * i2 - s2 * r2);
-      t2.a = i2 * a, t2.b = -s2 * a, t2.c = -r2 * a, t2.d = e2 * a, t2.e = -(n2 * i2 - o2 * r2) * a, t2.f = -(o2 * e2 - n2 * s2) * a;
+      const a2 = 1 / (e2 * i2 - s2 * r2);
+      t2.a = i2 * a2, t2.b = -s2 * a2, t2.c = -r2 * a2, t2.d = e2 * a2, t2.e = -(n2 * i2 - o2 * r2) * a2, t2.f = -(o2 * e2 - n2 * s2) * a2;
     } else if (1 === e2 && 1 === i2) t2.e = -n2, t2.f = -o2;
     else {
       const s3 = 1 / (e2 * i2);
@@ -4786,39 +4754,39 @@ var LiteGraphTSMigration = (function(exports) {
     const { x: i2, y: n2 } = e2;
     s2 || (s2 = e2), s2.x = i2 * t2.a + n2 * t2.c, s2.y = i2 * t2.b + n2 * t2.d, r2 || (s2.x += t2.e, s2.y += t2.f);
   }, toInnerPoint(t2, e2, s2, r2) {
-    const { a: i2, b: n2, c: o2, d: a } = t2, h = 1 / (i2 * a - n2 * o2), { x: l2, y: d2 } = e2;
-    if (s2 || (s2 = e2), s2.x = (l2 * a - d2 * o2) * h, s2.y = (d2 * i2 - l2 * n2) * h, !r2) {
+    const { a: i2, b: n2, c: o2, d: a2 } = t2, h2 = 1 / (i2 * a2 - n2 * o2), { x: l2, y: d2 } = e2;
+    if (s2 || (s2 = e2), s2.x = (l2 * a2 - d2 * o2) * h2, s2.y = (d2 * i2 - l2 * n2) * h2, !r2) {
       const { e: e3, f: r3 } = t2;
-      s2.x -= (e3 * a - r3 * o2) * h, s2.y -= (r3 * i2 - e3 * n2) * h;
+      s2.x -= (e3 * a2 - r3 * o2) * h2, s2.y -= (r3 * i2 - e3 * n2) * h2;
     }
   }, setLayout(t2, e2, r2, i2, n2) {
-    const { x: o2, y: a, scaleX: h, scaleY: l2 } = e2;
+    const { x: o2, y: a2, scaleX: h2, scaleY: l2 } = e2;
     if (s(n2) && (n2 = e2.rotation || e2.skewX || e2.skewY), n2) {
-      const { rotation: s2, skewX: r3, skewY: i3 } = e2, n3 = s2 * A$1, o3 = F$2(n3), a2 = z$2(n3);
+      const { rotation: s2, skewX: r3, skewY: i3 } = e2, n3 = s2 * A$1, o3 = F$2(n3), a3 = z$2(n3);
       if (r3 || i3) {
         const e3 = r3 * A$1, s3 = i3 * A$1;
-        t2.a = (o3 + s3 * -a2) * h, t2.b = (a2 + s3 * o3) * h, t2.c = (e3 * o3 - a2) * l2, t2.d = (o3 + e3 * a2) * l2;
-      } else t2.a = o3 * h, t2.b = a2 * h, t2.c = -a2 * l2, t2.d = o3 * l2;
-    } else t2.a = h, t2.b = 0, t2.c = 0, t2.d = l2;
-    t2.e = o2, t2.f = a, (r2 = r2 || i2) && Q$1.translateInner(t2, -r2.x, -r2.y, !i2);
+        t2.a = (o3 + s3 * -a3) * h2, t2.b = (a3 + s3 * o3) * h2, t2.c = (e3 * o3 - a3) * l2, t2.d = (o3 + e3 * a3) * l2;
+      } else t2.a = o3 * h2, t2.b = a3 * h2, t2.c = -a3 * l2, t2.d = o3 * l2;
+    } else t2.a = h2, t2.b = 0, t2.c = 0, t2.d = l2;
+    t2.e = o2, t2.f = a2, (r2 = r2 || i2) && Q$1.translateInner(t2, -r2.x, -r2.y, !i2);
   }, getLayout(t2, e2, s2, r2) {
-    const { a: i2, b: n2, c: o2, d: a, e: h, f: l2 } = t2;
-    let d2, c, u2, _2, p2, f2 = h, g2 = l2;
+    const { a: i2, b: n2, c: o2, d: a2, e: h2, f: l2 } = t2;
+    let d2, c2, u2, _2, p2, f2 = h2, g2 = l2;
     if (n2 || o2) {
-      const t3 = i2 * a - n2 * o2;
+      const t3 = i2 * a2 - n2 * o2;
       if (o2 && !r2) {
-        d2 = j$2(i2 * i2 + n2 * n2), c = t3 / d2;
+        d2 = j$2(i2 * i2 + n2 * n2), c2 = t3 / d2;
         const e4 = i2 / d2;
         u2 = n2 > 0 ? U$1(e4) : -U$1(e4);
       } else {
-        c = j$2(o2 * o2 + a * a), d2 = t3 / c;
-        const e4 = o2 / c;
-        u2 = N$2 - (a > 0 ? U$1(-e4) : -U$1(e4));
+        c2 = j$2(o2 * o2 + a2 * a2), d2 = t3 / c2;
+        const e4 = o2 / c2;
+        u2 = N$2 - (a2 > 0 ? U$1(-e4) : -U$1(e4));
       }
       const e3 = V$2(F$2(u2)), s3 = z$2(u2);
-      d2 = V$2(d2), c = V$2(c), _2 = e3 ? V$2((o2 / c + s3) / e3 / A$1, 9) : 0, p2 = e3 ? V$2((n2 / d2 - s3) / e3 / A$1, 9) : 0, u2 = V$2(u2 / A$1);
-    } else d2 = i2, c = a, u2 = _2 = p2 = 0;
-    return (e2 = s2 || e2) && (f2 += e2.x * i2 + e2.y * o2, g2 += e2.x * n2 + e2.y * a, s2 || (f2 -= e2.x, g2 -= e2.y)), { x: f2, y: g2, scaleX: d2, scaleY: c, rotation: u2, skewX: _2, skewY: p2 };
+      d2 = V$2(d2), c2 = V$2(c2), _2 = e3 ? V$2((o2 / c2 + s3) / e3 / A$1, 9) : 0, p2 = e3 ? V$2((n2 / d2 - s3) / e3 / A$1, 9) : 0, u2 = V$2(u2 / A$1);
+    } else d2 = i2, c2 = a2, u2 = _2 = p2 = 0;
+    return (e2 = s2 || e2) && (f2 += e2.x * i2 + e2.y * o2, g2 += e2.x * n2 + e2.y * a2, s2 || (f2 -= e2.x, g2 -= e2.y)), { x: f2, y: g2, scaleX: d2, scaleY: c2, rotation: u2, skewX: _2, skewY: p2 };
   }, withScale(t2, e2, s2 = e2) {
     const r2 = t2;
     if (!e2 || !s2) {
@@ -4828,7 +4796,7 @@ var LiteGraphTSMigration = (function(exports) {
     return r2.scaleX = e2, r2.scaleY = s2, r2;
   }, reset(t2) {
     Q$1.set(t2);
-  } }, Q$1 = q$1, { float: J$2 } = I$2, { toInnerPoint: Z$3, toOuterPoint: $$1 } = q$1, { sin: K$2, cos: tt$2, abs: et$2, sqrt: st$1, atan2: rt$1, min: it$2, round: nt$2 } = Math, ot$2 = { defaultPoint: { x: 0, y: 0 }, tempPoint: {}, tempRadiusPoint: {}, set(t2, e2 = 0, s2 = 0) {
+  } }, Q$1 = q$1, { float: J$2 } = I$2, { toInnerPoint: Z$3, toOuterPoint: $$1 } = q$1, { sin: K$2, cos: tt$2, abs: et$2, sqrt: st$2, atan2: rt$2, min: it$2, round: nt$2 } = Math, ot$2 = { defaultPoint: { x: 0, y: 0 }, tempPoint: {}, tempRadiusPoint: {}, set(t2, e2 = 0, s2 = 0) {
     t2.x = e2, t2.y = s2;
   }, setRadius(t2, e2, r2) {
     t2.radiusX = e2, t2.radiusY = s(r2) ? e2 : r2;
@@ -4865,18 +4833,19 @@ var LiteGraphTSMigration = (function(exports) {
     $$1(e2, t2, s2);
   }, getCenter: (t2, e2) => ({ x: t2.x + (e2.x - t2.x) / 2, y: t2.y + (e2.y - t2.y) / 2 }), getCenterX: (t2, e2) => t2 + (e2 - t2) / 2, getCenterY: (t2, e2) => t2 + (e2 - t2) / 2, getDistance: (t2, e2) => ht$2(t2.x, t2.y, e2.x, e2.y), getDistanceFrom(t2, e2, s2, r2) {
     const i2 = et$2(s2 - t2), n2 = et$2(r2 - e2);
-    return st$1(i2 * i2 + n2 * n2);
-  }, getMinDistanceFrom: (t2, e2, s2, r2, i2, n2) => it$2(ht$2(t2, e2, s2, r2), ht$2(s2, r2, i2, n2)), getAngle: (t2, e2) => ct$2(t2, e2) / A$1, getRotation: (t2, e2, s2, r2) => (r2 || (r2 = e2), at$2.getRadianFrom(t2.x, t2.y, e2.x, e2.y, s2.x, s2.y, r2.x, r2.y) / A$1), getRadianFrom(t2, e2, r2, i2, n2, o2, a, h) {
-    s(a) && (a = r2, h = i2);
-    const l2 = t2 - r2, d2 = e2 - i2, c = n2 - a, u2 = o2 - h;
-    return Math.atan2(l2 * u2 - d2 * c, l2 * c + d2 * u2);
-  }, getAtan2: (t2, e2) => rt$1(e2.y - t2.y, e2.x - t2.x), getDistancePoint(t2, e2, s2, r2, i2) {
+    return st$2(i2 * i2 + n2 * n2);
+  }, getMinDistanceFrom: (t2, e2, s2, r2, i2, n2) => it$2(ht$2(t2, e2, s2, r2), ht$2(s2, r2, i2, n2)), getAngle: (t2, e2) => ct$2(t2, e2) / A$1, getRotation: (t2, e2, s2, r2) => (r2 || (r2 = e2), at$2.getRadianFrom(t2.x, t2.y, e2.x, e2.y, s2.x, s2.y, r2.x, r2.y) / A$1), getRadianFrom(t2, e2, r2, i2, n2, o2, a2, h2) {
+    s(a2) && (a2 = r2, h2 = i2);
+    const l2 = t2 - r2, d2 = e2 - i2, c2 = n2 - a2, u2 = o2 - h2;
+    return Math.atan2(l2 * u2 - d2 * c2, l2 * c2 + d2 * u2);
+  }, getAtan2: (t2, e2) => rt$2(e2.y - t2.y, e2.x - t2.x), getDistancePoint(t2, e2, s2, r2, i2) {
     const n2 = ct$2(t2, e2);
     return i2 && (t2 = e2), r2 || (e2 = {}), e2.x = t2.x + tt$2(n2) * s2, e2.y = t2.y + K$2(n2) * s2, e2;
   }, toNumberPoints(t2) {
     let e2 = t2;
     return d(t2[0]) && (e2 = [], t2.forEach((t3) => e2.push(t3.x, t3.y))), e2;
   }, isSame: (t2, e2) => J$2(t2.x) === J$2(e2.x) && J$2(t2.y) === J$2(e2.y), reset(t2) {
+    at$2.reset(t2);
   } }, at$2 = ot$2, { getDistanceFrom: ht$2, copy: lt$2, setRadius: dt$2, getAtan2: ct$2 } = at$2;
   let ut$2 = class ut2 {
     constructor(t2, e2) {
@@ -4935,10 +4904,10 @@ var LiteGraphTSMigration = (function(exports) {
       return ot$2.isSame(this, t2);
     }
     reset() {
-      return this;
+      return ot$2.reset(this), this;
     }
   };
-  new ut$2();
+  const _t$2 = new ut$2();
   let pt$2 = class pt2 {
     constructor(t2, e2, s2, r2, i2, n2) {
       this.set(t2, e2, s2, r2, i2, n2);
@@ -5032,8 +5001,7 @@ var LiteGraphTSMigration = (function(exports) {
       q$1.reset(this);
     }
   };
-  new pt$2();
-  const gt$1 = { tempPointBounds: {}, setPoint(t2, e2, s2) {
+  const ft$2 = new pt$2(), gt$2 = { tempPointBounds: {}, setPoint(t2, e2, s2) {
     t2.minX = t2.maxX = e2, t2.minY = t2.maxY = s2;
   }, addPoint(t2, e2, s2) {
     t2.minX = e2 < t2.minX ? e2 : t2.minX, t2.minY = s2 < t2.minY ? s2 : t2.minY, t2.maxX = e2 > t2.maxX ? e2 : t2.maxX, t2.maxY = s2 > t2.maxY ? s2 : t2.maxY;
@@ -5045,7 +5013,7 @@ var LiteGraphTSMigration = (function(exports) {
     t2.minX = e2.minX < t2.minX ? e2.minX : t2.minX, t2.minY = e2.minY < t2.minY ? e2.minY : t2.minY, t2.maxX = e2.maxX > t2.maxX ? e2.maxX : t2.maxX, t2.maxY = e2.maxY > t2.maxY ? e2.maxY : t2.maxY;
   }, toBounds(t2, e2) {
     e2.x = t2.minX, e2.y = t2.minY, e2.width = t2.maxX - t2.minX, e2.height = t2.maxY - t2.minY;
-  } }, { addPoint: yt$2 } = gt$1;
+  } }, { addPoint: yt$2 } = gt$2;
   var mt$3, xt$2;
   !(function(t2) {
     t2[t2.top = 0] = "top", t2[t2.right = 1] = "right", t2[t2.bottom = 2] = "bottom", t2[t2.left = 3] = "left";
@@ -5054,28 +5022,28 @@ var LiteGraphTSMigration = (function(exports) {
   })(xt$2 || (xt$2 = {}));
   const wt$2 = [{ x: 0, y: 0 }, { x: 0.5, y: 0 }, { x: 1, y: 0 }, { x: 1, y: 0.5 }, { x: 1, y: 1 }, { x: 0.5, y: 1 }, { x: 0, y: 1 }, { x: 0, y: 0.5 }, { x: 0.5, y: 0.5 }];
   wt$2.forEach((t2) => t2.type = "percent");
-  const bt$3 = { directionData: wt$2, tempPoint: {}, get: Bt$2, toPoint(t2, e2, s2, r2, i2, n2) {
-    const o2 = Bt$2(t2);
+  const bt$3 = { directionData: wt$2, tempPoint: {}, get: Bt$3, toPoint(t2, e2, s2, r2, i2, n2) {
+    const o2 = Bt$3(t2);
     s2.x = o2.x, s2.y = o2.y, "percent" === o2.type && (s2.x *= e2.width, s2.y *= e2.height, i2 && (n2 || (s2.x -= i2.x, s2.y -= i2.y), o2.x && (s2.x -= 1 === o2.x ? i2.width : 0.5 === o2.x ? o2.x * i2.width : 0), o2.y && (s2.y -= 1 === o2.y ? i2.height : 0.5 === o2.y ? o2.y * i2.height : 0))), r2 || (s2.x += e2.x, s2.y += e2.y);
   }, getPoint: (t2, e2, s2) => (s2 || (s2 = {}), bt$3.toPoint(t2, e2, s2, true), s2) };
-  function Bt$2(t2) {
+  function Bt$3(t2) {
     return i(t2) ? wt$2[xt$2[t2]] : t2;
   }
   const { toPoint: vt$2 } = bt$3, kt$3 = { toPoint(t2, e2, s2, r2, i2, n2) {
     vt$2(t2, s2, r2, i2, e2, n2);
-  } }, { tempPointBounds: Ct$3, setPoint: Ot$3, addPoint: Tt$3, toBounds: Pt$3 } = gt$1, { toOuterPoint: St$3 } = q$1, { float: Lt$3, fourNumber: Rt$3 } = I$2, { floor: Et$3, ceil: It$3 } = Math;
+  } }, { tempPointBounds: Ct$3, setPoint: Ot$3, addPoint: Tt$3, toBounds: Pt$3 } = gt$2, { toOuterPoint: St$3 } = q$1, { float: Lt$3, fourNumber: Rt$3 } = I$2, { floor: Et$3, ceil: It$3 } = Math;
   let Mt$3, At$3, Wt$3, Nt$3;
-  const Yt$3 = {}, Dt$3 = {}, Xt$3 = {}, zt$1 = { tempBounds: Xt$3, set(t2, e2 = 0, s2 = 0, r2 = 0, i2 = 0) {
+  const Yt$3 = {}, Dt$3 = {}, Xt$3 = {}, zt$2 = { tempBounds: Xt$3, set(t2, e2 = 0, s2 = 0, r2 = 0, i2 = 0) {
     t2.x = e2, t2.y = s2, t2.width = r2, t2.height = i2;
   }, copy(t2, e2) {
     t2.x = e2.x, t2.y = e2.y, t2.width = e2.width, t2.height = e2.height;
   }, copyAndSpread(t2, e2, s2, r2, i2) {
-    const { x: n2, y: o2, width: a, height: h } = e2;
+    const { x: n2, y: o2, width: a2, height: h2 } = e2;
     if (l(s2)) {
       const e3 = Rt$3(s2);
-      r2 ? Ft$3.set(t2, n2 + e3[3], o2 + e3[0], a - e3[1] - e3[3], h - e3[2] - e3[0]) : Ft$3.set(t2, n2 - e3[3], o2 - e3[0], a + e3[1] + e3[3], h + e3[2] + e3[0]);
-    } else r2 && (s2 = -s2), Ft$3.set(t2, n2 - s2, o2 - s2, a + 2 * s2, h + 2 * s2);
-    i2 && ("width" === i2 ? (t2.y = o2, t2.height = h) : (t2.x = n2, t2.width = a));
+      r2 ? Ft$3.set(t2, n2 + e3[3], o2 + e3[0], a2 - e3[1] - e3[3], h2 - e3[2] - e3[0]) : Ft$3.set(t2, n2 - e3[3], o2 - e3[0], a2 + e3[1] + e3[3], h2 + e3[2] + e3[0]);
+    } else r2 && (s2 = -s2), Ft$3.set(t2, n2 - s2, o2 - s2, a2 + 2 * s2, h2 + 2 * s2);
+    i2 && ("width" === i2 ? (t2.y = o2, t2.height = h2) : (t2.x = n2, t2.width = a2));
   }, minX: (t2) => t2.width > 0 ? t2.x : t2.x + t2.width, minY: (t2) => t2.height > 0 ? t2.y : t2.y + t2.height, maxX: (t2) => t2.width > 0 ? t2.x + t2.width : t2.x, maxY: (t2) => t2.height > 0 ? t2.y + t2.height : t2.y, move(t2, e2, s2) {
     t2.x += e2, t2.y += s2;
   }, scroll(t2, e2) {
@@ -5125,7 +5093,7 @@ var LiteGraphTSMigration = (function(exports) {
     Ft$3.setListWithFn(t2, e2, s2, true);
   }, setListWithFn(t2, e2, s2, r2 = false) {
     let i2, n2 = true;
-    for (let o2 = 0, a = e2.length; o2 < a; o2++) i2 = s2 ? s2(e2[o2], o2) : e2[o2], i2 && (i2.width || i2.height) && (n2 ? (n2 = false, r2 || jt$3(t2, i2)) : Ut$3(t2, i2));
+    for (let o2 = 0, a2 = e2.length; o2 < a2; o2++) i2 = s2 ? s2(e2[o2], o2) : e2[o2], i2 && (i2.width || i2.height) && (n2 ? (n2 = false, r2 || jt$3(t2, i2)) : Ut$3(t2, i2));
     n2 && Ft$3.reset(t2);
   }, setPoints(t2, e2) {
     e2.forEach((t3, e3) => 0 === e3 ? Ot$3(Ct$3, t3.x, t3.y) : Tt$3(Ct$3, t3.x, t3.y)), Pt$3(Ct$3, t2);
@@ -5144,25 +5112,25 @@ var LiteGraphTSMigration = (function(exports) {
     Ft$3.copy(t2, Ft$3.getIntersectData(t2, e2, s2));
   }, isSame: (t2, e2) => t2.x === e2.x && t2.y === e2.y && t2.width === e2.width && t2.height === e2.height, isEmpty: (t2) => 0 === t2.x && 0 === t2.y && 0 === t2.width && 0 === t2.height, hasSize: (t2) => t2.width && t2.height, reset(t2) {
     Ft$3.set(t2);
-  } }, Ft$3 = zt$1, { add: Ut$3, copy: jt$3 } = Ft$3;
+  } }, Ft$3 = zt$2, { add: Ut$3, copy: jt$3 } = Ft$3;
   let Vt$3 = class Vt2 {
     get minX() {
-      return zt$1.minX(this);
+      return zt$2.minX(this);
     }
     get minY() {
-      return zt$1.minY(this);
+      return zt$2.minY(this);
     }
     get maxX() {
-      return zt$1.maxX(this);
+      return zt$2.maxX(this);
     }
     get maxY() {
-      return zt$1.maxY(this);
+      return zt$2.maxY(this);
     }
     constructor(t2, e2, s2, r2) {
       this.set(t2, e2, s2, r2);
     }
     set(t2, e2, s2, r2) {
-      return d(t2) ? zt$1.copy(this, t2) : zt$1.set(this, t2, e2, s2, r2), this;
+      return d(t2) ? zt$2.copy(this, t2) : zt$2.set(this, t2, e2, s2, r2), this;
     }
     get() {
       const { x: t2, y: e2, width: s2, height: r2 } = this;
@@ -5172,94 +5140,94 @@ var LiteGraphTSMigration = (function(exports) {
       return new Vt2(this);
     }
     move(t2, e2) {
-      return zt$1.move(this, t2, e2), this;
+      return zt$2.move(this, t2, e2), this;
     }
     scale(t2, e2, s2) {
-      return zt$1.scale(this, t2, e2, s2), this;
+      return zt$2.scale(this, t2, e2, s2), this;
     }
     scaleOf(t2, e2, s2) {
-      return zt$1.scaleOf(this, t2, e2, s2), this;
+      return zt$2.scaleOf(this, t2, e2, s2), this;
     }
     toOuterOf(t2, e2) {
-      return zt$1.toOuterOf(this, t2, e2), this;
+      return zt$2.toOuterOf(this, t2, e2), this;
     }
     toInnerOf(t2, e2) {
-      return zt$1.toInnerOf(this, t2, e2), this;
+      return zt$2.toInnerOf(this, t2, e2), this;
     }
     getFitMatrix(t2, e2) {
-      return zt$1.getFitMatrix(this, t2, e2);
+      return zt$2.getFitMatrix(this, t2, e2);
     }
     put(t2, e2, s2) {
-      zt$1.put(this, t2, e2, s2);
+      zt$2.put(this, t2, e2, s2);
     }
     spread(t2, e2) {
-      return zt$1.spread(this, t2, e2), this;
+      return zt$2.spread(this, t2, e2), this;
     }
     shrink(t2, e2) {
-      return zt$1.shrink(this, t2, e2), this;
+      return zt$2.shrink(this, t2, e2), this;
     }
     ceil() {
-      return zt$1.ceil(this), this;
+      return zt$2.ceil(this), this;
     }
     unsign() {
-      return zt$1.unsign(this), this;
+      return zt$2.unsign(this), this;
     }
     float(t2) {
-      return zt$1.float(this, t2), this;
+      return zt$2.float(this, t2), this;
     }
     add(t2) {
-      return zt$1.add(this, t2), this;
+      return zt$2.add(this, t2), this;
     }
     addList(t2) {
-      return zt$1.setList(this, t2, true), this;
+      return zt$2.setList(this, t2, true), this;
     }
     setList(t2) {
-      return zt$1.setList(this, t2), this;
+      return zt$2.setList(this, t2), this;
     }
     addListWithFn(t2, e2) {
-      return zt$1.setListWithFn(this, t2, e2, true), this;
+      return zt$2.setListWithFn(this, t2, e2, true), this;
     }
     setListWithFn(t2, e2) {
-      return zt$1.setListWithFn(this, t2, e2), this;
+      return zt$2.setListWithFn(this, t2, e2), this;
     }
     setPoint(t2) {
-      return zt$1.setPoint(this, t2), this;
+      return zt$2.setPoint(this, t2), this;
     }
     setPoints(t2) {
-      return zt$1.setPoints(this, t2), this;
+      return zt$2.setPoints(this, t2), this;
     }
     addPoint(t2) {
-      return zt$1.addPoint(this, t2), this;
+      return zt$2.addPoint(this, t2), this;
     }
     getPoints() {
-      return zt$1.getPoints(this);
+      return zt$2.getPoints(this);
     }
     hitPoint(t2, e2) {
-      return zt$1.hitPoint(this, t2, e2);
+      return zt$2.hitPoint(this, t2, e2);
     }
     hitRadiusPoint(t2, e2) {
-      return zt$1.hitRadiusPoint(this, t2, e2);
+      return zt$2.hitRadiusPoint(this, t2, e2);
     }
     hit(t2, e2) {
-      return zt$1.hit(this, t2, e2);
+      return zt$2.hit(this, t2, e2);
     }
     includes(t2, e2) {
-      return zt$1.includes(this, t2, e2);
+      return zt$2.includes(this, t2, e2);
     }
     intersect(t2, e2) {
-      return zt$1.intersect(this, t2, e2), this;
+      return zt$2.intersect(this, t2, e2), this;
     }
     getIntersect(t2, e2) {
-      return new Vt2(zt$1.getIntersectData(this, t2, e2));
+      return new Vt2(zt$2.getIntersectData(this, t2, e2));
     }
     isSame(t2) {
-      return zt$1.isSame(this, t2);
+      return zt$2.isSame(this, t2);
     }
     isEmpty() {
-      return zt$1.isEmpty(this);
+      return zt$2.isEmpty(this);
     }
     reset() {
-      zt$1.reset(this);
+      zt$2.reset(this);
     }
   };
   const Ht$3 = new Vt$3();
@@ -5285,17 +5253,17 @@ var LiteGraphTSMigration = (function(exports) {
   }, image: { hitCanvasSize: 100, maxCacheSize: 4096e3, maxPatternSize: 8847360, crossOrigin: "anonymous", isLarge: (t2, e2, s2, r2) => t2.width * t2.height * (e2 ? e2 * s2 : 1) > (r2 || Kt$3.maxCacheSize), isSuperLarge: (t2, e2, s2) => Kt$3.isLarge(t2, e2, s2, Kt$3.maxPatternSize), getRealURL(t2) {
     const { prefix: e2, suffix: s2 } = Kt$3;
     return !s2 || t2.startsWith("data:") || t2.startsWith("blob:") || (t2 += (t2.includes("?") ? "&" : "?") + s2), e2 && "/" === t2[0] && (t2 = e2 + t2), t2;
-  }, resize(t2, e2, s2, r2, i2, n2, o2, a, h, l2) {
-    const d2 = Zt$2(Jt$2(e2 + (r2 || 0)), 1), c = Zt$2(Jt$2(s2 + (i2 || 0)), 1);
+  }, resize(t2, e2, s2, r2, i2, n2, o2, a2, h2, l2) {
+    const d2 = Zt$2(Jt$2(e2 + (r2 || 0)), 1), c2 = Zt$2(Jt$2(s2 + (i2 || 0)), 1);
     let u2, _2, p2;
     l2 && (p2 = qt$2.number(l2.offset, "x" === l2.type ? e2 : s2)) && ("x" === l2.type ? u2 = true : _2 = true);
-    const f2 = $t$2.origin.createCanvas(_2 ? 2 * d2 : d2, u2 ? 2 * c : c), g2 = f2.getContext("2d");
-    if (a && (g2.globalAlpha = a), g2.imageSmoothingEnabled = false !== o2, Kt$3.canUse(t2)) {
+    const f2 = $t$2.origin.createCanvas(_2 ? 2 * d2 : d2, u2 ? 2 * c2 : c2), g2 = f2.getContext("2d");
+    if (a2 && (g2.globalAlpha = a2), g2.imageSmoothingEnabled = false !== o2, Kt$3.canUse(t2)) {
       if (n2) {
         const r3 = e2 / n2.width, i3 = s2 / n2.height;
         g2.setTransform(r3, 0, 0, i3, -n2.x * r3, -n2.y * i3), g2.drawImage(t2, 0, 0, t2.width, t2.height);
       } else g2.drawImage(t2, 0, 0, e2, s2);
-      p2 && (g2.drawImage(f2, 0, 0, d2, c, u2 ? p2 - d2 : d2, u2 ? c : p2 - c, d2, c), g2.drawImage(f2, 0, 0, d2, c, u2 ? p2 : d2, u2 ? c : p2, d2, c));
+      p2 && (g2.drawImage(f2, 0, 0, d2, c2, u2 ? p2 - d2 : d2, u2 ? c2 : p2 - c2, d2, c2), g2.drawImage(f2, 0, 0, d2, c2, u2 ? p2 : d2, u2 ? c2 : p2, d2, c2));
     }
     return f2;
   }, canUse: (t2) => t2 && t2.width && !t2.__closed, setPatternTransform(t2, e2, s2) {
@@ -5377,8 +5345,8 @@ var LiteGraphTSMigration = (function(exports) {
     ue$2[e2] && de$2.repeat(e2), ue$2[e2] = t2;
   }, get(t2, e2, r2, i2, n2, o2) {
     if (!ue$2[t2]) return void de$2.warn("not register " + t2);
-    const a = new ue$2[t2](e2);
-    return s(r2) || (a.x = r2, i2 && (a.y = i2), n2 && (a.width = n2), o2 && (a.height = o2)), a;
+    const a2 = new ue$2[t2](e2);
+    return s(r2) || (a2.x = r2, i2 && (a2.y = i2), n2 && (a2.width = n2), o2 && (a2.height = o2)), a2;
   } }, { list: ue$2 } = ce$2, _e$2 = ee$2.get("EventCreator"), pe$2 = { nameList: {}, register(t2) {
     let e2;
     Object.keys(t2).forEach((s2) => {
@@ -5428,32 +5396,32 @@ var LiteGraphTSMigration = (function(exports) {
   function ye$2(t2, e2, s2, r2) {
     var i2, n2 = arguments.length, o2 = n2 < 3 ? e2 : null === r2 ? r2 = Object.getOwnPropertyDescriptor(e2, s2) : r2;
     if ("object" == typeof Reflect && "function" == typeof Reflect.decorate) o2 = Reflect.decorate(t2, e2, s2, r2);
-    else for (var a = t2.length - 1; a >= 0; a--) (i2 = t2[a]) && (o2 = (n2 < 3 ? i2(o2) : n2 > 3 ? i2(e2, s2, o2) : i2(e2, s2)) || o2);
+    else for (var a2 = t2.length - 1; a2 >= 0; a2--) (i2 = t2[a2]) && (o2 = (n2 < 3 ? i2(o2) : n2 > 3 ? i2(e2, s2, o2) : i2(e2, s2)) || o2);
     return n2 > 3 && o2 && Object.defineProperty(e2, s2, o2), o2;
   }
   function me$2(t2, e2, s2, r2) {
     return new (s2 || (s2 = Promise))(function(i2, n2) {
       function o2(t3) {
         try {
-          h(r2.next(t3));
+          h2(r2.next(t3));
         } catch (t4) {
           n2(t4);
         }
       }
-      function a(t3) {
+      function a2(t3) {
         try {
-          h(r2.throw(t3));
+          h2(r2.throw(t3));
         } catch (t4) {
           n2(t4);
         }
       }
-      function h(t3) {
+      function h2(t3) {
         var e3;
         t3.done ? i2(t3.value) : (e3 = t3.value, e3 instanceof s2 ? e3 : new s2(function(t4) {
           t4(e3);
-        })).then(o2, a);
+        })).then(o2, a2);
       }
-      h((r2 = r2.apply(t2, [])).next());
+      h2((r2 = r2.apply(t2, [])).next());
     });
   }
   function xe$2(t2) {
@@ -5527,18 +5495,18 @@ var LiteGraphTSMigration = (function(exports) {
     }
     clearRect(t2, e2, s2, r2) {
     }
-    drawImage(t2, e2, s2, r2, i2, n2, o2, a, h) {
+    drawImage(t2, e2, s2, r2, i2, n2, o2, a2, h2) {
       switch (arguments.length) {
         case 9:
           if (e2 < 0) {
-            const t3 = -e2 / r2 * a;
-            r2 += e2, e2 = 0, n2 += t3, a -= t3;
+            const t3 = -e2 / r2 * a2;
+            r2 += e2, e2 = 0, n2 += t3, a2 -= t3;
           }
           if (s2 < 0) {
-            const t3 = -s2 / i2 * h;
-            i2 += s2, s2 = 0, o2 += t3, h -= t3;
+            const t3 = -s2 / i2 * h2;
+            i2 += s2, s2 = 0, o2 += t3, h2 -= t3;
           }
-          this.context.drawImage(t2, e2, s2, r2, i2, n2, o2, a, h);
+          this.context.drawImage(t2, e2, s2, r2, i2, n2, o2, a2, h2);
           break;
         case 5:
           this.context.drawImage(t2, e2, s2, r2, i2);
@@ -5563,7 +5531,7 @@ var LiteGraphTSMigration = (function(exports) {
     }
     arcTo(t2, e2, s2, r2, i2) {
     }
-    ellipse(t2, e2, s2, r2, i2, n2, o2, a) {
+    ellipse(t2, e2, s2, r2, i2, n2, o2, a2) {
     }
     rect(t2, e2, s2, r2) {
     }
@@ -5666,8 +5634,8 @@ var LiteGraphTSMigration = (function(exports) {
       e2 && (this.strokeWidth = e2), t2 && (this.strokeStyle = t2), s2 && this.setStrokeOptions(s2, r2);
     }
     setStrokeOptions(t2, e2) {
-      let { strokeCap: r2, strokeJoin: i2, dashPattern: n2, dashOffset: o2, miterLimit: a } = t2;
-      e2 && (e2.strokeCap && (r2 = e2.strokeCap), e2.strokeJoin && (i2 = e2.strokeJoin), s(e2.dashPattern) || (n2 = e2.dashPattern), s(e2.dashOffset) || (o2 = e2.dashOffset), e2.miterLimit && (a = e2.miterLimit)), this.strokeCap = r2, this.strokeJoin = i2, this.dashPattern = n2, this.dashOffset = o2, this.miterLimit = a;
+      let { strokeCap: r2, strokeJoin: i2, dashPattern: n2, dashOffset: o2, miterLimit: a2 } = t2;
+      e2 && (e2.strokeCap && (r2 = e2.strokeCap), e2.strokeJoin && (i2 = e2.strokeJoin), s(e2.dashPattern) || (n2 = e2.dashPattern), s(e2.dashOffset) || (o2 = e2.dashOffset), e2.miterLimit && (a2 = e2.miterLimit)), this.strokeCap = r2, this.strokeJoin = i2, this.dashPattern = n2, this.dashOffset = o2, this.miterLimit = a2;
     }
     saveBlendMode(t2) {
       this.savedBlendMode = this.blendMode, this.blendMode = t2;
@@ -5696,7 +5664,7 @@ var LiteGraphTSMigration = (function(exports) {
       r2 && (this.blendMode = r2), e2 ? (this.setTempPixelBounds(e2, i2), s2 ? (this.setTempPixelBounds2(s2, i2), s2 = Se$2) : s2 = Pe$2, this.drawImage(t2.view, Pe$2.x, Pe$2.y, Pe$2.width, Pe$2.height, s2.x, s2.y, s2.width, s2.height)) : this.drawImage(t2.view, 0, 0), r2 && (this.blendMode = "source-over");
     }
     copyWorldToInner(t2, e2, s2, r2, i2) {
-      e2.b || e2.c ? (this.save(), this.resetTransform(), this.copyWorld(t2, e2, zt$1.tempToOuterOf(s2, e2), r2, i2), this.restore()) : (r2 && (this.blendMode = r2), this.setTempPixelBounds(e2, i2), this.drawImage(t2.view, Pe$2.x, Pe$2.y, Pe$2.width, Pe$2.height, s2.x, s2.y, s2.width, s2.height), r2 && (this.blendMode = "source-over"));
+      e2.b || e2.c ? (this.save(), this.resetTransform(), this.copyWorld(t2, e2, zt$2.tempToOuterOf(s2, e2), r2, i2), this.restore()) : (r2 && (this.blendMode = r2), this.setTempPixelBounds(e2, i2), this.drawImage(t2.view, Pe$2.x, Pe$2.y, Pe$2.width, Pe$2.height, s2.x, s2.y, s2.width, s2.height), r2 && (this.blendMode = "source-over"));
     }
     copyWorldByReset(t2, e2, s2, r2, i2, n2) {
       this.resetTransform(), this.copyWorld(t2, e2, s2, r2, n2), i2 || this.useWorldTransform();
@@ -5767,15 +5735,15 @@ var LiteGraphTSMigration = (function(exports) {
   const ze$2 = {};
   for (let t2 in De$2) ze$2[De$2[t2]] = We$2[t2];
   const Fe$2 = { drawRoundRect(t2, e2, s2, r2, i2, n2) {
-    const o2 = I$2.fourNumber(n2, Math.min(r2 / 2, i2 / 2)), a = e2 + r2, h = s2 + i2;
-    o2[0] ? t2.moveTo(e2 + o2[0], s2) : t2.moveTo(e2, s2), o2[1] ? t2.arcTo(a, s2, a, h, o2[1]) : t2.lineTo(a, s2), o2[2] ? t2.arcTo(a, h, e2, h, o2[2]) : t2.lineTo(a, h), o2[3] ? t2.arcTo(e2, h, e2, s2, o2[3]) : t2.lineTo(e2, h), o2[0] ? t2.arcTo(e2, s2, a, s2, o2[0]) : t2.lineTo(e2, s2);
-  } }, { sin: Ue$2, cos: je$2, hypot: Ve$2, atan2: He$2, ceil: Ge$2, abs: qe$2, PI: Qe$2, sqrt: Je$2, pow: Ze$2 } = Math, { setPoint: $e$2, addPoint: Ke$2 } = gt$1, { set: ts$1, toNumberPoints: es$1 } = ot$2, { M: ss$1, L: rs$1, C: is$1, Q: ns$1, Z: os$1 } = Ae$2, as$1 = {}, hs = { points(t2, e2, s2, r2) {
+    const o2 = I$2.fourNumber(n2, Math.min(r2 / 2, i2 / 2)), a2 = e2 + r2, h2 = s2 + i2;
+    o2[0] ? t2.moveTo(e2 + o2[0], s2) : t2.moveTo(e2, s2), o2[1] ? t2.arcTo(a2, s2, a2, h2, o2[1]) : t2.lineTo(a2, s2), o2[2] ? t2.arcTo(a2, h2, e2, h2, o2[2]) : t2.lineTo(a2, h2), o2[3] ? t2.arcTo(e2, h2, e2, s2, o2[3]) : t2.lineTo(e2, h2), o2[0] ? t2.arcTo(e2, s2, a2, s2, o2[0]) : t2.lineTo(e2, s2);
+  } }, { sin: Ue$2, cos: je$2, hypot: Ve$2, atan2: He$2, ceil: Ge$2, abs: qe$2, PI: Qe$2, sqrt: Je$2, pow: Ze$2 } = Math, { setPoint: $e$2, addPoint: Ke$2 } = gt$2, { set: ts$1, toNumberPoints: es$1 } = ot$2, { M: ss$1, L: rs$1, C: is$1, Q: ns$1, Z: os$1 } = Ae$2, as$1 = {}, hs = { points(t2, e2, s2, r2) {
     let i2 = es$1(e2);
     if (t2.push(ss$1, i2[0], i2[1]), s2 && i2.length > 5) {
-      let e3, n2, o2, a, h, l2, d2, c, u2, _2, p2, f2, g2, y2, m2, x2 = i2.length;
+      let e3, n2, o2, a2, h2, l2, d2, c2, u2, _2, p2, f2, g2, y2, m2, x2 = i2.length;
       const w2 = true === s2 ? 0.5 : s2;
       r2 && (i2 = [i2[x2 - 2], i2[x2 - 1], ...i2, i2[0], i2[1], i2[2], i2[3]], x2 = i2.length);
-      for (let s3 = 2; s3 < x2 - 2; s3 += 2) e3 = i2[s3 - 2], n2 = i2[s3 - 1], o2 = i2[s3], a = i2[s3 + 1], h = i2[s3 + 2], l2 = i2[s3 + 3], p2 = o2 - e3, f2 = a - n2, g2 = Je$2(Ze$2(p2, 2) + Ze$2(f2, 2)), y2 = Je$2(Ze$2(h - o2, 2) + Ze$2(l2 - a, 2)), (g2 || y2) && (m2 = g2 + y2, g2 = w2 * g2 / m2, y2 = w2 * y2 / m2, h -= e3, l2 -= n2, d2 = o2 - g2 * h, c = a - g2 * l2, 2 === s3 ? r2 || t2.push(ns$1, d2, c, o2, a) : (p2 || f2) && t2.push(is$1, u2, _2, d2, c, o2, a), u2 = o2 + y2 * h, _2 = a + y2 * l2);
+      for (let s3 = 2; s3 < x2 - 2; s3 += 2) e3 = i2[s3 - 2], n2 = i2[s3 - 1], o2 = i2[s3], a2 = i2[s3 + 1], h2 = i2[s3 + 2], l2 = i2[s3 + 3], p2 = o2 - e3, f2 = a2 - n2, g2 = Je$2(Ze$2(p2, 2) + Ze$2(f2, 2)), y2 = Je$2(Ze$2(h2 - o2, 2) + Ze$2(l2 - a2, 2)), (g2 || y2) && (m2 = g2 + y2, g2 = w2 * g2 / m2, y2 = w2 * y2 / m2, h2 -= e3, l2 -= n2, d2 = o2 - g2 * h2, c2 = a2 - g2 * l2, 2 === s3 ? r2 || t2.push(ns$1, d2, c2, o2, a2) : (p2 || f2) && t2.push(is$1, u2, _2, d2, c2, o2, a2), u2 = o2 + y2 * h2, _2 = a2 + y2 * l2);
       r2 || t2.push(ns$1, u2, _2, i2[x2 - 2], i2[x2 - 1]);
     } else for (let e3 = 2, s3 = i2.length; e3 < s3; e3 += 2) t2.push(rs$1, i2[e3], i2[e3 + 1]);
     r2 && t2.push(os$1);
@@ -5783,153 +5751,153 @@ var LiteGraphTSMigration = (function(exports) {
     Ie$2.creator.path = t2, Ie$2.creator.moveTo(e2, s2).lineTo(e2 + r2, s2).lineTo(e2 + r2, s2 + i2).lineTo(e2, s2 + i2).lineTo(e2, s2);
   }, roundRect(t2, e2, s2, r2, i2, n2) {
     Ie$2.creator.path = [], Fe$2.drawRoundRect(Ie$2.creator, e2, s2, r2, i2, n2), t2.push(...Ie$2.convertToCanvasData(Ie$2.creator.path, true));
-  }, arcTo(t2, e2, s2, r2, i2, n2, o2, a, h, l2, d2) {
-    const c = r2 - e2, u2 = i2 - s2, _2 = n2 - r2, p2 = o2 - i2;
-    let f2 = He$2(u2, c), g2 = He$2(p2, _2);
-    const y2 = Ve$2(c, u2), m2 = Ve$2(_2, p2);
+  }, arcTo(t2, e2, s2, r2, i2, n2, o2, a2, h2, l2, d2) {
+    const c2 = r2 - e2, u2 = i2 - s2, _2 = n2 - r2, p2 = o2 - i2;
+    let f2 = He$2(u2, c2), g2 = He$2(p2, _2);
+    const y2 = Ve$2(c2, u2), m2 = Ve$2(_2, p2);
     let x2 = g2 - f2;
-    if (x2 < 0 && (x2 += W$2), y2 < 1e-12 || m2 < 1e-12 || x2 < 1e-12 || qe$2(x2 - Qe$2) < 1e-12) return t2 && t2.push(rs$1, r2, i2), h && ($e$2(h, e2, s2), Ke$2(h, r2, i2)), d2 && ts$1(d2, e2, s2), void (l2 && ts$1(l2, r2, i2));
-    const w2 = c * p2 - _2 * u2 < 0, b2 = w2 ? -1 : 1, B2 = a / je$2(x2 / 2), v2 = r2 + B2 * je$2(f2 + x2 / 2 + N$2 * b2), k2 = i2 + B2 * Ue$2(f2 + x2 / 2 + N$2 * b2);
-    return f2 -= N$2 * b2, g2 -= N$2 * b2, cs(t2, v2, k2, a, a, 0, f2 / A$1, g2 / A$1, w2, h, l2, d2);
-  }, arc: (t2, e2, s2, r2, i2, n2, o2, a, h, l2) => cs(t2, e2, s2, r2, r2, 0, i2, n2, o2, a, h, l2), ellipse(t2, e2, s2, r2, i2, n2, o2, a, h, l2, d2, c) {
+    if (x2 < 0 && (x2 += W$2), y2 < 1e-12 || m2 < 1e-12 || x2 < 1e-12 || qe$2(x2 - Qe$2) < 1e-12) return t2 && t2.push(rs$1, r2, i2), h2 && ($e$2(h2, e2, s2), Ke$2(h2, r2, i2)), d2 && ts$1(d2, e2, s2), void (l2 && ts$1(l2, r2, i2));
+    const w2 = c2 * p2 - _2 * u2 < 0, b2 = w2 ? -1 : 1, B2 = a2 / je$2(x2 / 2), v2 = r2 + B2 * je$2(f2 + x2 / 2 + N$2 * b2), k2 = i2 + B2 * Ue$2(f2 + x2 / 2 + N$2 * b2);
+    return f2 -= N$2 * b2, g2 -= N$2 * b2, cs(t2, v2, k2, a2, a2, 0, f2 / A$1, g2 / A$1, w2, h2, l2, d2);
+  }, arc: (t2, e2, s2, r2, i2, n2, o2, a2, h2, l2) => cs(t2, e2, s2, r2, r2, 0, i2, n2, o2, a2, h2, l2), ellipse(t2, e2, s2, r2, i2, n2, o2, a2, h2, l2, d2, c2) {
     const u2 = n2 * A$1, _2 = Ue$2(u2), p2 = je$2(u2);
-    let f2 = o2 * A$1, g2 = a * A$1;
+    let f2 = o2 * A$1, g2 = a2 * A$1;
     f2 > Qe$2 && (f2 -= W$2), g2 < 0 && (g2 += W$2);
     let y2 = g2 - f2;
-    y2 < 0 ? y2 += W$2 : y2 > W$2 && (y2 -= W$2), h && (y2 -= W$2);
+    y2 < 0 ? y2 += W$2 : y2 > W$2 && (y2 -= W$2), h2 && (y2 -= W$2);
     const m2 = Ge$2(qe$2(y2 / N$2)), x2 = y2 / m2, w2 = Ue$2(x2 / 4), b2 = 8 / 3 * w2 * w2 / Ue$2(x2 / 2);
     g2 = f2 + x2;
     let B2, v2, k2, C2, O2, T2, P2, S2, L2 = je$2(f2), R2 = Ue$2(f2), E2 = k2 = p2 * r2 * L2 - _2 * i2 * R2, I2 = C2 = _2 * r2 * L2 + p2 * i2 * R2, M2 = e2 + k2, Y2 = s2 + C2;
-    t2 && t2.push(t2.length ? rs$1 : ss$1, M2, Y2), l2 && $e$2(l2, M2, Y2), c && ts$1(c, M2, Y2);
+    t2 && t2.push(t2.length ? rs$1 : ss$1, M2, Y2), l2 && $e$2(l2, M2, Y2), c2 && ts$1(c2, M2, Y2);
     for (let n3 = 0; n3 < m2; n3++) B2 = je$2(g2), v2 = Ue$2(g2), k2 = p2 * r2 * B2 - _2 * i2 * v2, C2 = _2 * r2 * B2 + p2 * i2 * v2, O2 = e2 + E2 - b2 * (p2 * r2 * R2 + _2 * i2 * L2), T2 = s2 + I2 - b2 * (_2 * r2 * R2 - p2 * i2 * L2), P2 = e2 + k2 + b2 * (p2 * r2 * v2 + _2 * i2 * B2), S2 = s2 + C2 + b2 * (_2 * r2 * v2 - p2 * i2 * B2), t2 && t2.push(is$1, O2, T2, P2, S2, e2 + k2, s2 + C2), l2 && ds(e2 + E2, s2 + I2, O2, T2, P2, S2, e2 + k2, s2 + C2, l2, true), E2 = k2, I2 = C2, L2 = B2, R2 = v2, f2 = g2, g2 += x2;
     d2 && ts$1(d2, e2 + k2, s2 + C2);
   }, quadraticCurveTo(t2, e2, s2, r2, i2, n2, o2) {
     t2.push(is$1, (e2 + 2 * r2) / 3, (s2 + 2 * i2) / 3, (n2 + 2 * r2) / 3, (o2 + 2 * i2) / 3, n2, o2);
-  }, toTwoPointBoundsByQuadraticCurve(t2, e2, s2, r2, i2, n2, o2, a) {
-    ds(t2, e2, (t2 + 2 * s2) / 3, (e2 + 2 * r2) / 3, (i2 + 2 * s2) / 3, (n2 + 2 * r2) / 3, i2, n2, o2, a);
-  }, toTwoPointBounds(t2, e2, s2, r2, i2, n2, o2, a, h, l2) {
+  }, toTwoPointBoundsByQuadraticCurve(t2, e2, s2, r2, i2, n2, o2, a2) {
+    ds(t2, e2, (t2 + 2 * s2) / 3, (e2 + 2 * r2) / 3, (i2 + 2 * s2) / 3, (n2 + 2 * r2) / 3, i2, n2, o2, a2);
+  }, toTwoPointBounds(t2, e2, s2, r2, i2, n2, o2, a2, h2, l2) {
     const d2 = [];
-    let c, u2, _2, p2, f2, g2, y2, m2, x2 = t2, w2 = s2, b2 = i2, B2 = o2;
-    for (let t3 = 0; t3 < 2; ++t3) if (1 == t3 && (x2 = e2, w2 = r2, b2 = n2, B2 = a), c = -3 * x2 + 9 * w2 - 9 * b2 + 3 * B2, u2 = 6 * x2 - 12 * w2 + 6 * b2, _2 = 3 * w2 - 3 * x2, Math.abs(c) < 1e-12) {
+    let c2, u2, _2, p2, f2, g2, y2, m2, x2 = t2, w2 = s2, b2 = i2, B2 = o2;
+    for (let t3 = 0; t3 < 2; ++t3) if (1 == t3 && (x2 = e2, w2 = r2, b2 = n2, B2 = a2), c2 = -3 * x2 + 9 * w2 - 9 * b2 + 3 * B2, u2 = 6 * x2 - 12 * w2 + 6 * b2, _2 = 3 * w2 - 3 * x2, Math.abs(c2) < 1e-12) {
       if (Math.abs(u2) < 1e-12) continue;
       p2 = -_2 / u2, 0 < p2 && p2 < 1 && d2.push(p2);
-    } else y2 = u2 * u2 - 4 * _2 * c, m2 = Math.sqrt(y2), y2 < 0 || (f2 = (-u2 + m2) / (2 * c), 0 < f2 && f2 < 1 && d2.push(f2), g2 = (-u2 - m2) / (2 * c), 0 < g2 && g2 < 1 && d2.push(g2));
-    l2 ? Ke$2(h, t2, e2) : $e$2(h, t2, e2), Ke$2(h, o2, a);
-    for (let l3 = 0, c2 = d2.length; l3 < c2; l3++) ls(d2[l3], t2, e2, s2, r2, i2, n2, o2, a, as$1), Ke$2(h, as$1.x, as$1.y);
-  }, getPointAndSet(t2, e2, s2, r2, i2, n2, o2, a, h, l2) {
-    const d2 = 1 - t2, c = d2 * d2 * d2, u2 = 3 * d2 * d2 * t2, _2 = 3 * d2 * t2 * t2, p2 = t2 * t2 * t2;
-    l2.x = c * e2 + u2 * r2 + _2 * n2 + p2 * a, l2.y = c * s2 + u2 * i2 + _2 * o2 + p2 * h;
-  }, getPoint(t2, e2, s2, r2, i2, n2, o2, a, h) {
+    } else y2 = u2 * u2 - 4 * _2 * c2, m2 = Math.sqrt(y2), y2 < 0 || (f2 = (-u2 + m2) / (2 * c2), 0 < f2 && f2 < 1 && d2.push(f2), g2 = (-u2 - m2) / (2 * c2), 0 < g2 && g2 < 1 && d2.push(g2));
+    l2 ? Ke$2(h2, t2, e2) : $e$2(h2, t2, e2), Ke$2(h2, o2, a2);
+    for (let l3 = 0, c3 = d2.length; l3 < c3; l3++) ls(d2[l3], t2, e2, s2, r2, i2, n2, o2, a2, as$1), Ke$2(h2, as$1.x, as$1.y);
+  }, getPointAndSet(t2, e2, s2, r2, i2, n2, o2, a2, h2, l2) {
+    const d2 = 1 - t2, c2 = d2 * d2 * d2, u2 = 3 * d2 * d2 * t2, _2 = 3 * d2 * t2 * t2, p2 = t2 * t2 * t2;
+    l2.x = c2 * e2 + u2 * r2 + _2 * n2 + p2 * a2, l2.y = c2 * s2 + u2 * i2 + _2 * o2 + p2 * h2;
+  }, getPoint(t2, e2, s2, r2, i2, n2, o2, a2, h2) {
     const l2 = {};
-    return ls(t2, e2, s2, r2, i2, n2, o2, a, h, l2), l2;
+    return ls(t2, e2, s2, r2, i2, n2, o2, a2, h2, l2), l2;
   }, getDerivative(t2, e2, s2, r2, i2) {
     const n2 = 1 - t2;
     return 3 * n2 * n2 * (s2 - e2) + 6 * n2 * t2 * (r2 - s2) + 3 * t2 * t2 * (i2 - r2);
-  } }, { getPointAndSet: ls, toTwoPointBounds: ds, ellipse: cs } = hs, { sin: us, cos: _s, sqrt: ps, atan2: fs } = Math, { ellipse: gs } = hs, ys = { ellipticalArc(t2, e2, s2, r2, i2, n2, o2, a, h, l2, d2) {
-    const c = (h - e2) / 2, u2 = (l2 - s2) / 2, _2 = n2 * A$1, p2 = us(_2), f2 = _s(_2), g2 = -f2 * c - p2 * u2, y2 = -f2 * u2 + p2 * c, m2 = r2 * r2, x2 = i2 * i2, w2 = y2 * y2, b2 = g2 * g2, B2 = m2 * x2 - m2 * w2 - x2 * b2;
+  } }, { getPointAndSet: ls, toTwoPointBounds: ds, ellipse: cs } = hs, { sin: us, cos: _s, sqrt: ps, atan2: fs } = Math, { ellipse: gs } = hs, ys = { ellipticalArc(t2, e2, s2, r2, i2, n2, o2, a2, h2, l2, d2) {
+    const c2 = (h2 - e2) / 2, u2 = (l2 - s2) / 2, _2 = n2 * A$1, p2 = us(_2), f2 = _s(_2), g2 = -f2 * c2 - p2 * u2, y2 = -f2 * u2 + p2 * c2, m2 = r2 * r2, x2 = i2 * i2, w2 = y2 * y2, b2 = g2 * g2, B2 = m2 * x2 - m2 * w2 - x2 * b2;
     let v2 = 0;
     if (B2 < 0) {
       const t3 = ps(1 - B2 / (m2 * x2));
       r2 *= t3, i2 *= t3;
-    } else v2 = (o2 === a ? -1 : 1) * ps(B2 / (m2 * w2 + x2 * b2));
+    } else v2 = (o2 === a2 ? -1 : 1) * ps(B2 / (m2 * w2 + x2 * b2));
     const k2 = v2 * r2 * y2 / i2, C2 = -v2 * i2 * g2 / r2, O2 = fs((y2 - C2) / i2, (g2 - k2) / r2), T2 = fs((-y2 - C2) / i2, (-g2 - k2) / r2);
     let P2 = T2 - O2;
-    0 === a && P2 > 0 ? P2 -= W$2 : 1 === a && P2 < 0 && (P2 += W$2);
-    const S2 = e2 + c + f2 * k2 - p2 * C2, L2 = s2 + u2 + p2 * k2 + f2 * C2, R2 = P2 < 0 ? 1 : 0;
+    0 === a2 && P2 > 0 ? P2 -= W$2 : 1 === a2 && P2 < 0 && (P2 += W$2);
+    const S2 = e2 + c2 + f2 * k2 - p2 * C2, L2 = s2 + u2 + p2 * k2 + f2 * C2, R2 = P2 < 0 ? 1 : 0;
     d2 || $t$2.ellipseToCurve ? gs(t2, S2, L2, r2, i2, n2, O2 / A$1, T2 / A$1, R2) : r2 !== i2 || n2 ? t2.push(Ae$2.G, S2, L2, r2, i2, n2, O2 / A$1, T2 / A$1, R2) : t2.push(Ae$2.O, S2, L2, r2, O2 / A$1, T2 / A$1, R2);
   } }, ms = { toCommand: (t2) => [], toNode: (t2) => [] }, { M: xs, m: ws, L: bs, l: Bs, H: vs, h: ks, V: Cs, v: Os, C: Ts, c: Ps, S: Ss, s: Ls, Q: Rs, q: Es, T: Is, t: Ms, A: As, a: Ws, Z: Ns, z: Ys, N: Ds, D: Xs, X: zs, G: Fs, F: Us, O: js, P: Vs, U: Hs } = Ae$2, { rect: Gs, roundRect: qs, arcTo: Qs, arc: Js, ellipse: Zs, quadraticCurveTo: $s } = hs, { ellipticalArc: Ks } = ys, tr = ee$2.get("PathConvert"), er = {}, sr = { current: { dot: 0 }, stringify(t2, e2) {
-    let s2, r2, i2, n2 = 0, o2 = t2.length, a = "";
+    let s2, r2, i2, n2 = 0, o2 = t2.length, a2 = "";
     for (; n2 < o2; ) {
-      r2 = t2[n2], s2 = ze$2[r2], a += r2 === i2 ? " " : Xe$2[r2];
-      for (let r3 = 1; r3 < s2; r3++) a += I$2.float(t2[n2 + r3], e2), r3 === s2 - 1 || (a += " ");
+      r2 = t2[n2], s2 = ze$2[r2], a2 += r2 === i2 ? " " : Xe$2[r2];
+      for (let r3 = 1; r3 < s2; r3++) a2 += I$2.float(t2[n2 + r3], e2), r3 === s2 - 1 || (a2 += " ");
       i2 = r2, n2 += s2;
     }
-    return a;
+    return a2;
   }, parse(t2, e2) {
     let s2, r2, i2, n2 = "";
-    const o2 = [], a = e2 ? Ye$2 : Ne$2;
-    for (let e3 = 0, h = t2.length; e3 < h; e3++) r2 = t2[e3], Qt$2[r2] ? ("." === r2 && (rr.dot && (ir(o2, n2), n2 = ""), rr.dot++), "0" === n2 && "." !== r2 && (ir(o2, n2), n2 = ""), n2 += r2) : Ae$2[r2] ? (n2 && (ir(o2, n2), n2 = ""), rr.name = Ae$2[r2], rr.length = We$2[r2], rr.index = 0, ir(o2, rr.name), !s2 && a[r2] && (s2 = true)) : "-" === r2 || "+" === r2 ? "e" === i2 || "E" === i2 ? n2 += r2 : (n2 && ir(o2, n2), n2 = r2) : n2 && (ir(o2, n2), n2 = ""), i2 = r2;
+    const o2 = [], a2 = e2 ? Ye$2 : Ne$2;
+    for (let e3 = 0, h2 = t2.length; e3 < h2; e3++) r2 = t2[e3], Qt$2[r2] ? ("." === r2 && (rr.dot && (ir(o2, n2), n2 = ""), rr.dot++), "0" === n2 && "." !== r2 && (ir(o2, n2), n2 = ""), n2 += r2) : Ae$2[r2] ? (n2 && (ir(o2, n2), n2 = ""), rr.name = Ae$2[r2], rr.length = We$2[r2], rr.index = 0, ir(o2, rr.name), !s2 && a2[r2] && (s2 = true)) : "-" === r2 || "+" === r2 ? "e" === i2 || "E" === i2 ? n2 += r2 : (n2 && ir(o2, n2), n2 = r2) : n2 && (ir(o2, n2), n2 = ""), i2 = r2;
     return n2 && ir(o2, n2), s2 ? sr.toCanvasData(o2, e2) : o2;
   }, toCanvasData(t2, e2) {
-    let s2, r2, i2, n2, o2, a = 0, h = 0, l2 = 0, d2 = 0, c = 0, u2 = t2.length;
+    let s2, r2, i2, n2, o2, a2 = 0, h2 = 0, l2 = 0, d2 = 0, c2 = 0, u2 = t2.length;
     const _2 = [];
-    for (; c < u2; ) {
-      switch (i2 = t2[c], i2) {
+    for (; c2 < u2; ) {
+      switch (i2 = t2[c2], i2) {
         case ws:
-          t2[c + 1] += a, t2[c + 2] += h;
+          t2[c2 + 1] += a2, t2[c2 + 2] += h2;
         case xs:
-          a = t2[c + 1], h = t2[c + 2], _2.push(xs, a, h), c += 3;
+          a2 = t2[c2 + 1], h2 = t2[c2 + 2], _2.push(xs, a2, h2), c2 += 3;
           break;
         case ks:
-          t2[c + 1] += a;
+          t2[c2 + 1] += a2;
         case vs:
-          a = t2[c + 1], _2.push(bs, a, h), c += 2;
+          a2 = t2[c2 + 1], _2.push(bs, a2, h2), c2 += 2;
           break;
         case Os:
-          t2[c + 1] += h;
+          t2[c2 + 1] += h2;
         case Cs:
-          h = t2[c + 1], _2.push(bs, a, h), c += 2;
+          h2 = t2[c2 + 1], _2.push(bs, a2, h2), c2 += 2;
           break;
         case Bs:
-          t2[c + 1] += a, t2[c + 2] += h;
+          t2[c2 + 1] += a2, t2[c2 + 2] += h2;
         case bs:
-          a = t2[c + 1], h = t2[c + 2], _2.push(bs, a, h), c += 3;
+          a2 = t2[c2 + 1], h2 = t2[c2 + 2], _2.push(bs, a2, h2), c2 += 3;
           break;
         case Ls:
-          t2[c + 1] += a, t2[c + 2] += h, t2[c + 3] += a, t2[c + 4] += h, i2 = Ss;
+          t2[c2 + 1] += a2, t2[c2 + 2] += h2, t2[c2 + 3] += a2, t2[c2 + 4] += h2, i2 = Ss;
         case Ss:
-          o2 = n2 === Ts || n2 === Ss, l2 = o2 ? 2 * a - s2 : t2[c + 1], d2 = o2 ? 2 * h - r2 : t2[c + 2], s2 = t2[c + 1], r2 = t2[c + 2], a = t2[c + 3], h = t2[c + 4], _2.push(Ts, l2, d2, s2, r2, a, h), c += 5;
+          o2 = n2 === Ts || n2 === Ss, l2 = o2 ? 2 * a2 - s2 : t2[c2 + 1], d2 = o2 ? 2 * h2 - r2 : t2[c2 + 2], s2 = t2[c2 + 1], r2 = t2[c2 + 2], a2 = t2[c2 + 3], h2 = t2[c2 + 4], _2.push(Ts, l2, d2, s2, r2, a2, h2), c2 += 5;
           break;
         case Ps:
-          t2[c + 1] += a, t2[c + 2] += h, t2[c + 3] += a, t2[c + 4] += h, t2[c + 5] += a, t2[c + 6] += h, i2 = Ts;
+          t2[c2 + 1] += a2, t2[c2 + 2] += h2, t2[c2 + 3] += a2, t2[c2 + 4] += h2, t2[c2 + 5] += a2, t2[c2 + 6] += h2, i2 = Ts;
         case Ts:
-          s2 = t2[c + 3], r2 = t2[c + 4], a = t2[c + 5], h = t2[c + 6], _2.push(Ts, t2[c + 1], t2[c + 2], s2, r2, a, h), c += 7;
+          s2 = t2[c2 + 3], r2 = t2[c2 + 4], a2 = t2[c2 + 5], h2 = t2[c2 + 6], _2.push(Ts, t2[c2 + 1], t2[c2 + 2], s2, r2, a2, h2), c2 += 7;
           break;
         case Ms:
-          t2[c + 1] += a, t2[c + 2] += h, i2 = Is;
+          t2[c2 + 1] += a2, t2[c2 + 2] += h2, i2 = Is;
         case Is:
-          o2 = n2 === Rs || n2 === Is, s2 = o2 ? 2 * a - s2 : t2[c + 1], r2 = o2 ? 2 * h - r2 : t2[c + 2], e2 ? $s(_2, a, h, s2, r2, t2[c + 1], t2[c + 2]) : _2.push(Rs, s2, r2, t2[c + 1], t2[c + 2]), a = t2[c + 1], h = t2[c + 2], c += 3;
+          o2 = n2 === Rs || n2 === Is, s2 = o2 ? 2 * a2 - s2 : t2[c2 + 1], r2 = o2 ? 2 * h2 - r2 : t2[c2 + 2], e2 ? $s(_2, a2, h2, s2, r2, t2[c2 + 1], t2[c2 + 2]) : _2.push(Rs, s2, r2, t2[c2 + 1], t2[c2 + 2]), a2 = t2[c2 + 1], h2 = t2[c2 + 2], c2 += 3;
           break;
         case Es:
-          t2[c + 1] += a, t2[c + 2] += h, t2[c + 3] += a, t2[c + 4] += h, i2 = Rs;
+          t2[c2 + 1] += a2, t2[c2 + 2] += h2, t2[c2 + 3] += a2, t2[c2 + 4] += h2, i2 = Rs;
         case Rs:
-          s2 = t2[c + 1], r2 = t2[c + 2], e2 ? $s(_2, a, h, s2, r2, t2[c + 3], t2[c + 4]) : _2.push(Rs, s2, r2, t2[c + 3], t2[c + 4]), a = t2[c + 3], h = t2[c + 4], c += 5;
+          s2 = t2[c2 + 1], r2 = t2[c2 + 2], e2 ? $s(_2, a2, h2, s2, r2, t2[c2 + 3], t2[c2 + 4]) : _2.push(Rs, s2, r2, t2[c2 + 3], t2[c2 + 4]), a2 = t2[c2 + 3], h2 = t2[c2 + 4], c2 += 5;
           break;
         case Ws:
-          t2[c + 6] += a, t2[c + 7] += h;
+          t2[c2 + 6] += a2, t2[c2 + 7] += h2;
         case As:
-          Ks(_2, a, h, t2[c + 1], t2[c + 2], t2[c + 3], t2[c + 4], t2[c + 5], t2[c + 6], t2[c + 7], e2), a = t2[c + 6], h = t2[c + 7], c += 8;
+          Ks(_2, a2, h2, t2[c2 + 1], t2[c2 + 2], t2[c2 + 3], t2[c2 + 4], t2[c2 + 5], t2[c2 + 6], t2[c2 + 7], e2), a2 = t2[c2 + 6], h2 = t2[c2 + 7], c2 += 8;
           break;
         case Ys:
         case Ns:
-          _2.push(Ns), c++;
+          _2.push(Ns), c2++;
           break;
         case Ds:
-          a = t2[c + 1], h = t2[c + 2], e2 ? Gs(_2, a, h, t2[c + 3], t2[c + 4]) : nr(_2, t2, c, 5), c += 5;
+          a2 = t2[c2 + 1], h2 = t2[c2 + 2], e2 ? Gs(_2, a2, h2, t2[c2 + 3], t2[c2 + 4]) : nr(_2, t2, c2, 5), c2 += 5;
           break;
         case Xs:
-          a = t2[c + 1], h = t2[c + 2], e2 ? qs(_2, a, h, t2[c + 3], t2[c + 4], [t2[c + 5], t2[c + 6], t2[c + 7], t2[c + 8]]) : nr(_2, t2, c, 9), c += 9;
+          a2 = t2[c2 + 1], h2 = t2[c2 + 2], e2 ? qs(_2, a2, h2, t2[c2 + 3], t2[c2 + 4], [t2[c2 + 5], t2[c2 + 6], t2[c2 + 7], t2[c2 + 8]]) : nr(_2, t2, c2, 9), c2 += 9;
           break;
         case zs:
-          a = t2[c + 1], h = t2[c + 2], e2 ? qs(_2, a, h, t2[c + 3], t2[c + 4], t2[c + 5]) : nr(_2, t2, c, 6), c += 6;
+          a2 = t2[c2 + 1], h2 = t2[c2 + 2], e2 ? qs(_2, a2, h2, t2[c2 + 3], t2[c2 + 4], t2[c2 + 5]) : nr(_2, t2, c2, 6), c2 += 6;
           break;
         case Fs:
-          Zs(e2 ? _2 : nr(_2, t2, c, 9), t2[c + 1], t2[c + 2], t2[c + 3], t2[c + 4], t2[c + 5], t2[c + 6], t2[c + 7], t2[c + 8], null, er), a = er.x, h = er.y, c += 9;
+          Zs(e2 ? _2 : nr(_2, t2, c2, 9), t2[c2 + 1], t2[c2 + 2], t2[c2 + 3], t2[c2 + 4], t2[c2 + 5], t2[c2 + 6], t2[c2 + 7], t2[c2 + 8], null, er), a2 = er.x, h2 = er.y, c2 += 9;
           break;
         case Us:
-          e2 ? Zs(_2, t2[c + 1], t2[c + 2], t2[c + 3], t2[c + 4], 0, 0, 360, false) : nr(_2, t2, c, 5), a = t2[c + 1] + t2[c + 3], h = t2[c + 2], c += 5;
+          e2 ? Zs(_2, t2[c2 + 1], t2[c2 + 2], t2[c2 + 3], t2[c2 + 4], 0, 0, 360, false) : nr(_2, t2, c2, 5), a2 = t2[c2 + 1] + t2[c2 + 3], h2 = t2[c2 + 2], c2 += 5;
           break;
         case js:
-          Js(e2 ? _2 : nr(_2, t2, c, 7), t2[c + 1], t2[c + 2], t2[c + 3], t2[c + 4], t2[c + 5], t2[c + 6], null, er), a = er.x, h = er.y, c += 7;
+          Js(e2 ? _2 : nr(_2, t2, c2, 7), t2[c2 + 1], t2[c2 + 2], t2[c2 + 3], t2[c2 + 4], t2[c2 + 5], t2[c2 + 6], null, er), a2 = er.x, h2 = er.y, c2 += 7;
           break;
         case Vs:
-          e2 ? Js(_2, t2[c + 1], t2[c + 2], t2[c + 3], 0, 360, false) : nr(_2, t2, c, 4), a = t2[c + 1] + t2[c + 3], h = t2[c + 2], c += 4;
+          e2 ? Js(_2, t2[c2 + 1], t2[c2 + 2], t2[c2 + 3], 0, 360, false) : nr(_2, t2, c2, 4), a2 = t2[c2 + 1] + t2[c2 + 3], h2 = t2[c2 + 2], c2 += 4;
           break;
         case Hs:
-          Qs(e2 ? _2 : nr(_2, t2, c, 6), a, h, t2[c + 1], t2[c + 2], t2[c + 3], t2[c + 4], t2[c + 5], null, er), a = er.x, h = er.y, c += 6;
+          Qs(e2 ? _2 : nr(_2, t2, c2, 6), a2, h2, t2[c2 + 1], t2[c2 + 2], t2[c2 + 3], t2[c2 + 4], t2[c2 + 5], null, er), a2 = er.x, h2 = er.y, c2 += 6;
           break;
         default:
-          return tr.error(`command: ${i2} [index:${c}]`, t2), _2;
+          return tr.error(`command: ${i2} [index:${c2}]`, t2), _2;
       }
       n2 = i2;
     }
@@ -5981,21 +5949,21 @@ var LiteGraphTSMigration = (function(exports) {
       const o2 = I$2.fourNumber(n2);
       o2 ? t2.push(ur, e2, s2, r2, i2, ...o2) : t2.push(cr, e2, s2, r2, i2);
     }
-  }, ellipse(t2, e2, s2, i2, n2, o2, a, h, l2) {
-    if (i2 === n2) return Tr(t2, e2, s2, i2, a, h, l2);
-    r(o2) ? t2.push(fr, e2, s2, i2, n2) : (r(a) && (a = 0), r(h) && (h = 360), t2.push(pr, e2, s2, i2, n2, o2, a, h, l2 ? 1 : 0));
-  }, arc(t2, e2, s2, i2, n2, o2, a) {
-    r(n2) ? t2.push(yr, e2, s2, i2) : (r(n2) && (n2 = 0), r(o2) && (o2 = 360), t2.push(gr, e2, s2, i2, n2, o2, a ? 1 : 0));
-  }, arcTo(t2, e2, r2, i2, n2, o2, a, h, l2) {
-    if (!s(a)) {
-      const t3 = xr(a, h, e2, r2, i2, n2) / (l2 ? 1 : 2);
-      o2 = Br(o2, Br(t3, t3 * vr(br(wr(a, h, e2, r2, i2, n2) / 2))));
+  }, ellipse(t2, e2, s2, i2, n2, o2, a2, h2, l2) {
+    if (i2 === n2) return Tr(t2, e2, s2, i2, a2, h2, l2);
+    r(o2) ? t2.push(fr, e2, s2, i2, n2) : (r(a2) && (a2 = 0), r(h2) && (h2 = 360), t2.push(pr, e2, s2, i2, n2, o2, a2, h2, l2 ? 1 : 0));
+  }, arc(t2, e2, s2, i2, n2, o2, a2) {
+    r(n2) ? t2.push(yr, e2, s2, i2) : (r(n2) && (n2 = 0), r(o2) && (o2 = 360), t2.push(gr, e2, s2, i2, n2, o2, a2 ? 1 : 0));
+  }, arcTo(t2, e2, r2, i2, n2, o2, a2, h2, l2) {
+    if (!s(a2)) {
+      const t3 = xr(a2, h2, e2, r2, i2, n2) / (l2 ? 1 : 2);
+      o2 = Br(o2, Br(t3, t3 * vr(br(wr(a2, h2, e2, r2, i2, n2) / 2))));
     }
     t2.push(mr, e2, r2, i2, n2, o2);
-  }, drawEllipse(t2, e2, s2, i2, n2, o2, a, h, l2) {
-    hs.ellipse(null, e2, s2, i2, n2, r(o2) ? 0 : o2, r(a) ? 0 : a, r(h) ? 360 : h, l2, null, null, kr), t2.push(or, kr.x, kr.y), Or(t2, e2, s2, i2, n2, o2, a, h, l2);
-  }, drawArc(t2, e2, s2, i2, n2, o2, a) {
-    hs.arc(null, e2, s2, i2, r(n2) ? 0 : n2, r(o2) ? 360 : o2, a, null, null, kr), t2.push(or, kr.x, kr.y), Tr(t2, e2, s2, i2, n2, o2, a);
+  }, drawEllipse(t2, e2, s2, i2, n2, o2, a2, h2, l2) {
+    hs.ellipse(null, e2, s2, i2, n2, r(o2) ? 0 : o2, r(a2) ? 0 : a2, r(h2) ? 360 : h2, l2, null, null, kr), t2.push(or, kr.x, kr.y), Or(t2, e2, s2, i2, n2, o2, a2, h2, l2);
+  }, drawArc(t2, e2, s2, i2, n2, o2, a2) {
+    hs.arc(null, e2, s2, i2, r(n2) ? 0 : n2, r(o2) ? 360 : o2, a2, null, null, kr), t2.push(or, kr.x, kr.y), Tr(t2, e2, s2, i2, n2, o2, a2);
   }, drawPoints(t2, e2, s2, r2) {
     hs.points(t2, e2, s2, r2);
   } }, { ellipse: Or, arc: Tr } = Cr, { moveTo: Pr, lineTo: Sr, quadraticCurveTo: Lr, bezierCurveTo: Rr, closePath: Er, beginPath: Ir, rect: Mr, roundRect: Ar, ellipse: Wr, arc: Nr, arcTo: Yr, drawEllipse: Dr, drawArc: Xr, drawPoints: zr } = Cr;
@@ -6036,8 +6004,8 @@ var LiteGraphTSMigration = (function(exports) {
     roundRect(t2, e2, s2, r2, i2) {
       return Ar(this.__path, t2, e2, s2, r2, i2), this.paint(), this;
     }
-    ellipse(t2, e2, s2, r2, i2, n2, o2, a) {
-      return Wr(this.__path, t2, e2, s2, r2, i2, n2, o2, a), this.paint(), this;
+    ellipse(t2, e2, s2, r2, i2, n2, o2, a2) {
+      return Wr(this.__path, t2, e2, s2, r2, i2, n2, o2, a2), this.paint(), this;
     }
     arc(t2, e2, s2, r2, i2, n2) {
       return Nr(this.__path, t2, e2, s2, r2, i2, n2), this.paint(), this;
@@ -6045,8 +6013,8 @@ var LiteGraphTSMigration = (function(exports) {
     arcTo(t2, e2, s2, r2, i2) {
       return Yr(this.__path, t2, e2, s2, r2, i2), this.paint(), this;
     }
-    drawEllipse(t2, e2, s2, r2, i2, n2, o2, a) {
-      return Dr(this.__path, t2, e2, s2, r2, i2, n2, o2, a), this.paint(), this;
+    drawEllipse(t2, e2, s2, r2, i2, n2, o2, a2) {
+      return Dr(this.__path, t2, e2, s2, r2, i2, n2, o2, a2), this.paint(), this;
     }
     drawArc(t2, e2, s2, r2, i2, n2) {
       return Xr(this.__path, t2, e2, s2, r2, i2, n2), this.paint(), this;
@@ -6106,77 +6074,77 @@ var LiteGraphTSMigration = (function(exports) {
       default:
         return void si$2.error(`command: ${s2} [index:${r2}]`, e2);
     }
-  } }, { M: ii$1, L: ni$2, C: oi$2, Q: ai$2, Z: hi$2, N: li$2, D: di$2, X: ci$1, G: ui$1, F: _i$2, O: pi$1, P: fi$1, U: gi$1 } = Ae$2, { toTwoPointBounds: yi$1, toTwoPointBoundsByQuadraticCurve: mi$1, arcTo: xi$1, arc: wi$1, ellipse: bi$1 } = hs, { addPointBounds: Bi$1, copy: vi$1, addPoint: ki$1, setPoint: Ci$1, addBounds: Oi$1, toBounds: Ti$1 } = gt$1, Pi$1 = ee$2.get("PathBounds");
+  } }, { M: ii$2, L: ni$2, C: oi$2, Q: ai$2, Z: hi$2, N: li$2, D: di$2, X: ci$1, G: ui$1, F: _i$2, O: pi$1, P: fi$1, U: gi$1 } = Ae$2, { toTwoPointBounds: yi$1, toTwoPointBoundsByQuadraticCurve: mi$1, arcTo: xi$1, arc: wi$1, ellipse: bi$1 } = hs, { addPointBounds: Bi$1, copy: vi$1, addPoint: ki$1, setPoint: Ci$1, addBounds: Oi$1, toBounds: Ti$1 } = gt$2, Pi$1 = ee$2.get("PathBounds");
   let Si$1, Li$1, Ri$1;
   const Ei$1 = {}, Ii$1 = {}, Mi$1 = {}, Ai$1 = { toBounds(t2, e2) {
     Ai$1.toTwoPointBounds(t2, Ii$1), Ti$1(Ii$1, e2);
   }, toTwoPointBounds(t2, e2) {
     if (!t2 || !t2.length) return Ci$1(e2, 0, 0);
-    let s2, r2, i2, n2, o2, a = 0, h = 0, l2 = 0;
+    let s2, r2, i2, n2, o2, a2 = 0, h2 = 0, l2 = 0;
     const d2 = t2.length;
-    for (; a < d2; ) switch (o2 = t2[a], 0 === a && (o2 === hi$2 || o2 === oi$2 || o2 === ai$2 ? Ci$1(e2, h, l2) : Ci$1(e2, t2[a + 1], t2[a + 2])), o2) {
-      case ii$1:
+    for (; a2 < d2; ) switch (o2 = t2[a2], 0 === a2 && (o2 === hi$2 || o2 === oi$2 || o2 === ai$2 ? Ci$1(e2, h2, l2) : Ci$1(e2, t2[a2 + 1], t2[a2 + 2])), o2) {
+      case ii$2:
       case ni$2:
-        h = t2[a + 1], l2 = t2[a + 2], ki$1(e2, h, l2), a += 3;
+        h2 = t2[a2 + 1], l2 = t2[a2 + 2], ki$1(e2, h2, l2), a2 += 3;
         break;
       case oi$2:
-        i2 = t2[a + 5], n2 = t2[a + 6], yi$1(h, l2, t2[a + 1], t2[a + 2], t2[a + 3], t2[a + 4], i2, n2, Ei$1), Bi$1(e2, Ei$1), h = i2, l2 = n2, a += 7;
+        i2 = t2[a2 + 5], n2 = t2[a2 + 6], yi$1(h2, l2, t2[a2 + 1], t2[a2 + 2], t2[a2 + 3], t2[a2 + 4], i2, n2, Ei$1), Bi$1(e2, Ei$1), h2 = i2, l2 = n2, a2 += 7;
         break;
       case ai$2:
-        s2 = t2[a + 1], r2 = t2[a + 2], i2 = t2[a + 3], n2 = t2[a + 4], mi$1(h, l2, s2, r2, i2, n2, Ei$1), Bi$1(e2, Ei$1), h = i2, l2 = n2, a += 5;
+        s2 = t2[a2 + 1], r2 = t2[a2 + 2], i2 = t2[a2 + 3], n2 = t2[a2 + 4], mi$1(h2, l2, s2, r2, i2, n2, Ei$1), Bi$1(e2, Ei$1), h2 = i2, l2 = n2, a2 += 5;
         break;
       case hi$2:
-        a += 1;
+        a2 += 1;
         break;
       case li$2:
-        h = t2[a + 1], l2 = t2[a + 2], Oi$1(e2, h, l2, t2[a + 3], t2[a + 4]), a += 5;
+        h2 = t2[a2 + 1], l2 = t2[a2 + 2], Oi$1(e2, h2, l2, t2[a2 + 3], t2[a2 + 4]), a2 += 5;
         break;
       case di$2:
       case ci$1:
-        h = t2[a + 1], l2 = t2[a + 2], Oi$1(e2, h, l2, t2[a + 3], t2[a + 4]), a += o2 === di$2 ? 9 : 6;
+        h2 = t2[a2 + 1], l2 = t2[a2 + 2], Oi$1(e2, h2, l2, t2[a2 + 3], t2[a2 + 4]), a2 += o2 === di$2 ? 9 : 6;
         break;
       case ui$1:
-        bi$1(null, t2[a + 1], t2[a + 2], t2[a + 3], t2[a + 4], t2[a + 5], t2[a + 6], t2[a + 7], t2[a + 8], Ei$1, Mi$1), 0 === a ? vi$1(e2, Ei$1) : Bi$1(e2, Ei$1), h = Mi$1.x, l2 = Mi$1.y, a += 9;
+        bi$1(null, t2[a2 + 1], t2[a2 + 2], t2[a2 + 3], t2[a2 + 4], t2[a2 + 5], t2[a2 + 6], t2[a2 + 7], t2[a2 + 8], Ei$1, Mi$1), 0 === a2 ? vi$1(e2, Ei$1) : Bi$1(e2, Ei$1), h2 = Mi$1.x, l2 = Mi$1.y, a2 += 9;
         break;
       case _i$2:
-        h = t2[a + 1], l2 = t2[a + 2], Li$1 = t2[a + 3], Ri$1 = t2[a + 4], Oi$1(e2, h - Li$1, l2 - Ri$1, 2 * Li$1, 2 * Ri$1), h += Li$1, a += 5;
+        h2 = t2[a2 + 1], l2 = t2[a2 + 2], Li$1 = t2[a2 + 3], Ri$1 = t2[a2 + 4], Oi$1(e2, h2 - Li$1, l2 - Ri$1, 2 * Li$1, 2 * Ri$1), h2 += Li$1, a2 += 5;
         break;
       case pi$1:
-        wi$1(null, t2[a + 1], t2[a + 2], t2[a + 3], t2[a + 4], t2[a + 5], t2[a + 6], Ei$1, Mi$1), 0 === a ? vi$1(e2, Ei$1) : Bi$1(e2, Ei$1), h = Mi$1.x, l2 = Mi$1.y, a += 7;
+        wi$1(null, t2[a2 + 1], t2[a2 + 2], t2[a2 + 3], t2[a2 + 4], t2[a2 + 5], t2[a2 + 6], Ei$1, Mi$1), 0 === a2 ? vi$1(e2, Ei$1) : Bi$1(e2, Ei$1), h2 = Mi$1.x, l2 = Mi$1.y, a2 += 7;
         break;
       case fi$1:
-        h = t2[a + 1], l2 = t2[a + 2], Si$1 = t2[a + 3], Oi$1(e2, h - Si$1, l2 - Si$1, 2 * Si$1, 2 * Si$1), h += Si$1, a += 4;
+        h2 = t2[a2 + 1], l2 = t2[a2 + 2], Si$1 = t2[a2 + 3], Oi$1(e2, h2 - Si$1, l2 - Si$1, 2 * Si$1, 2 * Si$1), h2 += Si$1, a2 += 4;
         break;
       case gi$1:
-        xi$1(null, h, l2, t2[a + 1], t2[a + 2], t2[a + 3], t2[a + 4], t2[a + 5], Ei$1, Mi$1), 0 === a ? vi$1(e2, Ei$1) : Bi$1(e2, Ei$1), h = Mi$1.x, l2 = Mi$1.y, a += 6;
+        xi$1(null, h2, l2, t2[a2 + 1], t2[a2 + 2], t2[a2 + 3], t2[a2 + 4], t2[a2 + 5], Ei$1, Mi$1), 0 === a2 ? vi$1(e2, Ei$1) : Bi$1(e2, Ei$1), h2 = Mi$1.x, l2 = Mi$1.y, a2 += 6;
         break;
       default:
-        return void Pi$1.error(`command: ${o2} [index:${a}]`, t2);
+        return void Pi$1.error(`command: ${o2} [index:${a2}]`, t2);
     }
   } }, { M: Wi$1, L: Ni$1, Z: Yi$1 } = Ae$2, { getCenterX: Di$1, getCenterY: Xi$1 } = ot$2, { arcTo: zi$1 } = Cr, Fi$1 = { smooth(t2, e2, s2) {
-    let r2, i2, n2, o2 = 0, a = 0, h = 0, d2 = 0, c = 0, u2 = 0, _2 = 0, p2 = 0, f2 = 0;
+    let r2, i2, n2, o2 = 0, a2 = 0, h2 = 0, d2 = 0, c2 = 0, u2 = 0, _2 = 0, p2 = 0, f2 = 0;
     l(e2) && (e2 = e2[0] || 0);
     const g2 = t2.length, y2 = 9 === g2, m2 = [];
     for (; o2 < g2; ) {
       switch (r2 = t2[o2], r2) {
         case Wi$1:
-          d2 = p2 = t2[o2 + 1], c = f2 = t2[o2 + 2], o2 += 3, t2[o2] === Ni$1 ? (u2 = t2[o2 + 1], _2 = t2[o2 + 2], y2 ? m2.push(Wi$1, d2, c) : m2.push(Wi$1, Di$1(d2, u2), Xi$1(c, _2))) : m2.push(Wi$1, d2, c);
+          d2 = p2 = t2[o2 + 1], c2 = f2 = t2[o2 + 2], o2 += 3, t2[o2] === Ni$1 ? (u2 = t2[o2 + 1], _2 = t2[o2 + 2], y2 ? m2.push(Wi$1, d2, c2) : m2.push(Wi$1, Di$1(d2, u2), Xi$1(c2, _2))) : m2.push(Wi$1, d2, c2);
           break;
         case Ni$1:
-          switch (a = t2[o2 + 1], h = t2[o2 + 2], o2 += 3, t2[o2]) {
+          switch (a2 = t2[o2 + 1], h2 = t2[o2 + 2], o2 += 3, t2[o2]) {
             case Ni$1:
-              zi$1(m2, a, h, t2[o2 + 1], t2[o2 + 2], e2, p2, f2, y2);
+              zi$1(m2, a2, h2, t2[o2 + 1], t2[o2 + 2], e2, p2, f2, y2);
               break;
             case Yi$1:
-              zi$1(m2, a, h, d2, c, e2, p2, f2, y2);
+              zi$1(m2, a2, h2, d2, c2, e2, p2, f2, y2);
               break;
             default:
-              m2.push(Ni$1, a, h);
+              m2.push(Ni$1, a2, h2);
           }
-          p2 = a, f2 = h;
+          p2 = a2, f2 = h2;
           break;
         case Yi$1:
-          i2 !== Yi$1 && (zi$1(m2, d2, c, u2, _2, e2, p2, f2, y2), m2.push(Yi$1)), o2 += 1;
+          i2 !== Yi$1 && (zi$1(m2, d2, c2, u2, _2, e2, p2, f2, y2), m2.push(Yi$1)), o2 += 1;
           break;
         default:
           n2 = ze$2[r2];
@@ -6185,7 +6153,7 @@ var LiteGraphTSMigration = (function(exports) {
       }
       i2 = r2;
     }
-    return r2 !== Yi$1 && (m2[1] = d2, m2[2] = c), m2;
+    return r2 !== Yi$1 && (m2[1] = d2, m2[2] = c2), m2;
   } };
   function Ui$1(t2) {
     return new Fr(t2);
@@ -6262,11 +6230,11 @@ var LiteGraphTSMigration = (function(exports) {
       this.config = { parallel: 6 }, this.list = [], this.running = false, this.isComplete = true, this.index = 0, this.delayNumber = 0, t2 && _$1.assign(this.config, t2), this.empty();
     }
     add(t2, e2, r2) {
-      let i2, n2, a, h;
+      let i2, n2, a2, h2;
       const l2 = new Ji$1(t2);
-      return l2.parent = this, o(e2) ? h = e2 : e2 && (n2 = e2.parallel, i2 = e2.start, a = e2.time, h = e2.delay, r2 || (r2 = e2.canUse)), a && (l2.time = a), false === n2 && (l2.parallel = false), r2 && (l2.canUse = r2), s(h) ? this.push(l2, i2) : (this.delayNumber++, setTimeout(() => {
+      return l2.parent = this, o(e2) ? h2 = e2 : e2 && (n2 = e2.parallel, i2 = e2.start, a2 = e2.time, h2 = e2.delay, r2 || (r2 = e2.canUse)), a2 && (l2.time = a2), false === n2 && (l2.parallel = false), r2 && (l2.canUse = r2), s(h2) ? this.push(l2, i2) : (this.delayNumber++, setTimeout(() => {
         this.delayNumber && (this.delayNumber--, this.push(l2, i2));
-      }, h)), this.isComplete = false, l2;
+      }, h2)), this.isComplete = false, l2;
     }
     push(t2, e2) {
       this.list.push(t2), false === e2 || this.timer || (this.timer = setTimeout(() => this.start()));
@@ -6445,7 +6413,7 @@ var LiteGraphTSMigration = (function(exports) {
     getFull(t2) {
       return this.view;
     }
-    getCanvas(t2, e2, s2, r2, i2, n2, o2, a) {
+    getCanvas(t2, e2, s2, r2, i2, n2, o2, a2) {
       if (t2 || (t2 = this.width), e2 || (e2 = this.height), this.cache) {
         let { params: t3, data: e3 } = this.cache;
         for (let s3 in t3) if (t3[s3] !== arguments[s3]) {
@@ -6454,14 +6422,14 @@ var LiteGraphTSMigration = (function(exports) {
         }
         if (e3) return e3;
       }
-      const h = $t$2.image.resize(this.view, t2, e2, i2, n2, void 0, o2, s2, r2, a);
-      return this.cache = this.use > 1 ? { data: h, params: arguments } : null, h;
+      const h2 = $t$2.image.resize(this.view, t2, e2, i2, n2, void 0, o2, s2, r2, a2);
+      return this.cache = this.use > 1 ? { data: h2, params: arguments } : null, h2;
     }
     getPattern(t2, e2, s2, r2) {
       const i2 = $t$2.canvas.createPattern(t2, e2);
       return $t$2.image.setPatternTransform(i2, s2, r2), i2;
     }
-    render(t2, e2, s2, r2, i2, n2, o2, a, h) {
+    render(t2, e2, s2, r2, i2, n2, o2, a2, h2) {
       t2.drawImage(this.view, e2, s2, r2, i2);
     }
     getLoadUrl(t2) {
@@ -6483,8 +6451,18 @@ var LiteGraphTSMigration = (function(exports) {
       t2 && t2.close && t2.close(), this.config = { url: "" }, this.cache = this.view = null, this.waitComplete.length = 0;
     }
   }
+  class an extends on {
+    get tag() {
+      return "Film";
+    }
+  }
+  class hn extends on {
+    get tag() {
+      return "Video";
+    }
+  }
   function ln(t2, e2, s2, r2) {
-    s2.configurable = s2.enumerable = true, Object.defineProperty(t2, e2, s2);
+    r2 || (s2.configurable = s2.enumerable = true), Object.defineProperty(t2, e2, s2);
   }
   function dn(t2, e2) {
     return Object.getOwnPropertyDescriptor(t2, e2);
@@ -6647,43 +6625,48 @@ var LiteGraphTSMigration = (function(exports) {
       ln(e2, "__DataProcessor", { get: () => t2 });
     };
   }
+  function Fn(t2) {
+    return (e2, s2) => {
+      ln(e2, "__LayoutProcessor", { get: () => t2 });
+    };
+  }
   function Un(t2, e2, r2) {
     const i2 = t2.__DataProcessor.prototype, n2 = "_" + e2, o2 = (function(t3) {
       return "set" + t3.charAt(0).toUpperCase() + t3.slice(1);
-    })(e2), a = cn(e2, r2);
-    if (s(r2)) a.get = function() {
+    })(e2), a2 = cn(e2, r2);
+    if (s(r2)) a2.get = function() {
       return this[n2];
     };
-    else if ("function" == typeof r2) a.get = function() {
+    else if ("function" == typeof r2) a2.get = function() {
       const t3 = this[n2];
       return null == t3 ? r2(this.__leaf) : t3;
     };
     else if (d(r2)) {
       const t3 = u(r2);
-      a.get = function() {
+      a2.get = function() {
         const e3 = this[n2];
         return null == e3 ? this[n2] = t3 ? {} : _$1.clone(r2) : e3;
       };
     }
-    const h = t2.isBranchLeaf;
-    "width" === e2 ? a.get = function() {
+    const h2 = t2.isBranchLeaf;
+    "width" === e2 ? a2.get = function() {
       const t3 = this[n2];
       if (null == t3) {
         const t4 = this, e3 = t4.__naturalWidth, s2 = t4.__leaf;
-        return !r2 || s2.pathInputed ? s2.boxBounds.width : e3 ? t4._height && t4.__useNaturalRatio ? t4._height * e3 / t4.__naturalHeight : e3 : h && s2.children.length ? s2.boxBounds.width : r2;
+        return !r2 || s2.pathInputed ? s2.boxBounds.width : e3 ? t4._height && t4.__useNaturalRatio ? t4._height * e3 / t4.__naturalHeight : e3 : h2 && s2.children.length ? s2.boxBounds.width : r2;
       }
       return t3;
-    } : "height" === e2 && (a.get = function() {
+    } : "height" === e2 && (a2.get = function() {
       const t3 = this[n2];
       if (null == t3) {
         const t4 = this, e3 = t4.__naturalHeight, s2 = t4.__leaf;
-        return !r2 || s2.pathInputed ? s2.boxBounds.height : e3 ? t4._width && t4.__useNaturalRatio ? t4._width * e3 / t4.__naturalWidth : e3 : h && s2.children.length ? s2.boxBounds.height : r2;
+        return !r2 || s2.pathInputed ? s2.boxBounds.height : e3 ? t4._width && t4.__useNaturalRatio ? t4._width * e3 / t4.__naturalWidth : e3 : h2 && s2.children.length ? s2.boxBounds.height : r2;
       }
       return t3;
     });
-    let l2, c = i2;
-    for (; !l2 && c; ) l2 = dn(c, e2), c = c.__proto__;
-    l2 && l2.set && (a.set = l2.set), i2[o2] && (a.set = i2[o2], delete i2[o2]), ln(i2, e2, a);
+    let l2, c2 = i2;
+    for (; !l2 && c2; ) l2 = dn(c2, e2), c2 = c2.__proto__;
+    l2 && l2.set && (a2.set = l2.set), i2[o2] && (a2.set = i2[o2], delete i2[o2]), ln(i2, e2, a2);
   }
   const jn = new ee$2("rewrite"), Vn = [], Hn = ["destroy", "constructor"];
   function Gn(t2) {
@@ -6764,10 +6747,10 @@ var LiteGraphTSMigration = (function(exports) {
   }, zoomOfWorld(t2, e2, s2, r2, i2, n2) {
     uo.zoomOfLocal(t2, mo(t2, e2), s2, r2, i2, n2);
   }, zoomOfLocal(t2, e2, s2, r2 = s2, i2, n2) {
-    const a = t2.__localMatrix;
-    if (o(r2) || (r2 && (n2 = r2), r2 = s2), Kn(ho, a), so(ho, e2, s2, r2), uo.hasHighPosition(t2)) uo.setTransform(t2, ho, i2, n2);
+    const a2 = t2.__localMatrix;
+    if (o(r2) || (r2 && (n2 = r2), r2 = s2), Kn(ho, a2), so(ho, e2, s2, r2), uo.hasHighPosition(t2)) uo.setTransform(t2, ho, i2, n2);
     else {
-      const e3 = t2.x + ho.e - a.e, o2 = t2.y + ho.f - a.f;
+      const e3 = t2.x + ho.e - a2.e, o2 = t2.y + ho.f - a2.f;
       n2 && !i2 ? t2.animate({ x: e3, y: o2, scaleX: t2.scaleX * s2, scaleY: t2.scaleY * r2 }, n2) : (t2.x = e3, t2.y = o2, t2.scaleResize(s2, r2, true !== i2));
     }
   }, rotateOfWorld(t2, e2, s2, r2) {
@@ -6788,7 +6771,7 @@ var LiteGraphTSMigration = (function(exports) {
     if (uo.hasOffset(t2) && (o2.x -= i2.offsetX, o2.y -= i2.offsetY), s2) {
       const e3 = o2.scaleX / t2.scaleX, s3 = o2.scaleY / t2.scaleY;
       if (delete o2.scaleX, delete o2.scaleY, n2) {
-        zt$1.scale(t2.boxBounds, Math.abs(e3), Math.abs(s3));
+        zt$2.scale(t2.boxBounds, Math.abs(e3), Math.abs(s3));
         const r3 = uo.getInnerOrigin(t2, i2.origin);
         ot$2.move(o2, n2.x - r3.x, n2.y - r3.y);
       }
@@ -6852,16 +6835,16 @@ var LiteGraphTSMigration = (function(exports) {
     const { children: i2 } = t2;
     for (let n2 = 0, o2 = i2.length; n2 < o2; n2++) r2 = (t2 = i2[n2]).__world, r2.e += e2, r2.f += s2, r2.x += e2, r2.y += s2, t2.isBranch && To(t2, e2, s2);
   }, scale(t2, e2, s2, r2, i2, n2, o2) {
-    let a;
-    const { children: h } = t2, l2 = r2 - 1, d2 = i2 - 1;
-    for (let c = 0, u2 = h.length; c < u2; c++) a = (t2 = h[c]).__world, a.a *= r2, a.d *= i2, (a.b || a.c) && (a.b *= r2, a.c *= i2), a.e === a.x && a.f === a.y ? (a.x = a.e += (a.e - n2) * l2 + e2, a.y = a.f += (a.f - o2) * d2 + s2) : (a.e += (a.e - n2) * l2 + e2, a.f += (a.f - o2) * d2 + s2, a.x += (a.x - n2) * l2 + e2, a.y += (a.y - o2) * d2 + s2), a.width *= r2, a.height *= i2, a.scaleX *= r2, a.scaleY *= i2, t2.isBranch && Po(t2, e2, s2, r2, i2, n2, o2);
+    let a2;
+    const { children: h2 } = t2, l2 = r2 - 1, d2 = i2 - 1;
+    for (let c2 = 0, u2 = h2.length; c2 < u2; c2++) a2 = (t2 = h2[c2]).__world, a2.a *= r2, a2.d *= i2, (a2.b || a2.c) && (a2.b *= r2, a2.c *= i2), a2.e === a2.x && a2.f === a2.y ? (a2.x = a2.e += (a2.e - n2) * l2 + e2, a2.y = a2.f += (a2.f - o2) * d2 + s2) : (a2.e += (a2.e - n2) * l2 + e2, a2.f += (a2.f - o2) * d2 + s2, a2.x += (a2.x - n2) * l2 + e2, a2.y += (a2.y - o2) * d2 + s2), a2.width *= r2, a2.height *= i2, a2.scaleX *= r2, a2.scaleY *= i2, t2.isBranch && Po(t2, e2, s2, r2, i2, n2, o2);
   } }, { pushAllChildBranch: ko, pushAllBranchStack: Co, updateBoundsByBranchStack: Oo, move: To, scale: Po } = vo, So = { run(t2) {
     if (t2 && t2.length) {
       const e2 = t2.length;
       for (let s2 = 0; s2 < e2; s2++) t2[s2]();
       t2.length === e2 ? t2.length = 0 : t2.splice(0, e2);
     }
-  } }, { getRelativeWorld: Lo, updateBounds: Ro } = co, { toOuterOf: Eo, getPoints: Io, copy: Mo } = zt$1, Ao = "_localContentBounds", Wo = "_worldContentBounds", No = "_worldBoxBounds", Yo = "_worldStrokeBounds";
+  } }, { getRelativeWorld: Lo, updateBounds: Ro } = co, { toOuterOf: Eo, getPoints: Io, copy: Mo } = zt$2, Ao = "_localContentBounds", Wo = "_worldContentBounds", No = "_worldBoxBounds", Yo = "_worldStrokeBounds";
   class Do {
     get contentBounds() {
       return this._contentBounds || this.boxBounds;
@@ -7013,24 +6996,24 @@ var LiteGraphTSMigration = (function(exports) {
     }
     getLayoutBounds(t2, e2 = "world", s2) {
       const { leaf: r2 } = this;
-      let i2, n2, o2, a = this.getInnerBounds(t2);
+      let i2, n2, o2, a2 = this.getInnerBounds(t2);
       switch (e2) {
         case "world":
-          i2 = r2.getWorldPoint(a), n2 = r2.__world;
+          i2 = r2.getWorldPoint(a2), n2 = r2.__world;
           break;
         case "local":
-          const { scaleX: t3, scaleY: s3, rotation: h, skewX: l2, skewY: d2 } = r2.__;
-          o2 = { scaleX: t3, scaleY: s3, rotation: h, skewX: l2, skewY: d2 }, i2 = r2.getLocalPointByInner(a);
+          const { scaleX: t3, scaleY: s3, rotation: h2, skewX: l2, skewY: d2 } = r2.__;
+          o2 = { scaleX: t3, scaleY: s3, rotation: h2, skewX: l2, skewY: d2 }, i2 = r2.getLocalPointByInner(a2);
           break;
         case "inner":
-          i2 = a, n2 = q$1.defaultMatrix;
+          i2 = a2, n2 = q$1.defaultMatrix;
           break;
         case "page":
           e2 = r2.zoomLayer;
         default:
-          i2 = r2.getWorldPoint(a, e2), n2 = Lo(r2, e2, true);
+          i2 = r2.getWorldPoint(a2, e2), n2 = Lo(r2, e2, true);
       }
-      if (o2 || (o2 = q$1.getLayout(n2)), Mo(o2, a), ot$2.copy(o2, i2), s2) {
+      if (o2 || (o2 = q$1.getLayout(n2)), Mo(o2, a2), ot$2.copy(o2, i2), s2) {
         const { scaleX: t3, scaleY: e3 } = o2, s3 = Math.abs(t3), r3 = Math.abs(e3);
         1 === s3 && 1 === r3 || (o2.scaleX /= s3, o2.scaleY /= r3, o2.width *= s3, o2.height *= r3);
       }
@@ -7219,9 +7202,9 @@ var LiteGraphTSMigration = (function(exports) {
       }
       let r2, n2, o2;
       s2 && ("once" === s2 ? n2 = true : "boolean" == typeof s2 ? r2 = s2 : (r2 = s2.capture, n2 = s2.once));
-      const a = da(this, r2, true), h = i(t2) ? t2.split(" ") : t2, d2 = n2 ? { listener: e2, once: n2 } : { listener: e2 };
-      h.forEach((t3) => {
-        t3 && (o2 = a[t3], o2 ? -1 === o2.findIndex((t4) => t4.listener === e2) && o2.push(d2) : a[t3] = [d2], Zo[t3] && Ho.checkHas(this, t3, "on"));
+      const a2 = da(this, r2, true), h2 = i(t2) ? t2.split(" ") : t2, d2 = n2 ? { listener: e2, once: n2 } : { listener: e2 };
+      h2.forEach((t3) => {
+        t3 && (o2 = a2[t3], o2 ? -1 === o2.findIndex((t4) => t4.listener === e2) && o2.push(d2) : a2[t3] = [d2], Zo[t3] && Ho.checkHas(this, t3, "on"));
       });
     }
     off(t2, e2, s2) {
@@ -7320,7 +7303,7 @@ var LiteGraphTSMigration = (function(exports) {
       t2.affectScaleOrRotation && (t2.scaleChanged && (t2.resized || (t2.resized = "scale")) || t2.rotationChanged) && (va(e2, s2, null, null, t2.affectRotation), t2.scaleChanged = t2.rotationChanged = void 0), e2.e = s2.x + s2.offsetX, e2.f = s2.y + s2.offsetY, (s2.around || s2.origin) && (Ta(s2.around || s2.origin, t2.boxBounds, Pa), Ca(e2, -Pa.x, -Pa.y, !s2.around));
     }
     this.__layout.matrixChanged = void 0;
-  } }, { updateMatrix: La, updateAllMatrix: Ra } = co, { updateBounds: Ea } = vo, { toOuterOf: Ia, copyAndSpread: Ma, copy: Aa } = zt$1, { toBounds: Wa } = Ai$1, Na = { __updateWorldBounds() {
+  } }, { updateMatrix: La, updateAllMatrix: Ra } = co, { updateBounds: Ea } = vo, { toOuterOf: Ia, copyAndSpread: Ma, copy: Aa } = zt$2, { toBounds: Wa } = Ai$1, Na = { __updateWorldBounds() {
     const { __layout: t2, __world: e2 } = this;
     Ia(t2.renderBounds, e2, e2), t2.resized && ("inner" === t2.resized && this.__onUpdateSize(), this.__hasLocalEvent && Ho.emitLocal(this), t2.resized = void 0), this.__hasWorldEvent && Ho.emitWorld(this);
   }, __updateLocalBounds() {
@@ -7364,7 +7347,7 @@ var LiteGraphTSMigration = (function(exports) {
     this.__worldOpacity && (t2.setWorld(this.__nowWorld = this.__getNowWorld(e2)), this.__drawRenderPath(t2), t2.clipUI(this));
   }, __updateWorldOpacity() {
     this.__worldOpacity = this.__.visible ? this.parent ? this.parent.__worldOpacity * this.__.opacity : this.__.opacity : 0, this.__layout.opacityChanged && (this.__layout.opacityChanged = false);
-  } }, { excludeRenderBounds: Da } = xo, { hasSize: Xa } = zt$1, za = { __updateChange() {
+  } }, { excludeRenderBounds: Da } = xo, { hasSize: Xa } = zt$2, za = { __updateChange() {
     const { __layout: t2 } = this;
     t2.childrenSortChanged && (this.__updateSortChildren(), t2.childrenSortChanged = false), this.__.__checkSingle();
   }, __render(t2, e2) {
@@ -7394,7 +7377,7 @@ var LiteGraphTSMigration = (function(exports) {
       const { children: s2 } = this;
       for (let r2 = 0, i2 = s2.length; r2 < i2; r2++) Da(s2[r2], e2) || s2[r2].__clip(t2, e2);
     }
-  } }, Fa = {}, { LEAF: Ua, create: ja } = g, { stintSet: Va } = _$1, { toInnerPoint: Ha, toOuterPoint: Ga, multiplyParent: qa } = q$1, { toOuterOf: Qa } = zt$1, { copy: Ja, move: Za } = ot$2, { moveLocal: $a, zoomOfLocal: Ka, rotateOfLocal: th, skewOfLocal: eh, moveWorld: sh, zoomOfWorld: rh, rotateOfWorld: ih, skewOfWorld: nh, transform: oh, transformWorld: ah, setTransform: hh, getFlipTransform: lh, getLocalOrigin: dh, getRelativeWorld: ch, drop: uh } = co;
+  } }, Fa = {}, { LEAF: Ua, create: ja } = g, { stintSet: Va } = _$1, { toInnerPoint: Ha, toOuterPoint: Ga, multiplyParent: qa } = q$1, { toOuterOf: Qa } = zt$2, { copy: Ja, move: Za } = ot$2, { moveLocal: $a, zoomOfLocal: Ka, rotateOfLocal: th, skewOfLocal: eh, moveWorld: sh, zoomOfWorld: rh, rotateOfWorld: ih, skewOfWorld: nh, transform: oh, transformWorld: ah, setTransform: hh, getFlipTransform: lh, getLocalOrigin: dh, getRelativeWorld: ch, drop: uh } = co;
   let _h = class {
     get tag() {
       return this.__tag;
@@ -7851,7 +7834,7 @@ var LiteGraphTSMigration = (function(exports) {
     }
   };
   _h = ye$2([Jn(Ba), Jn(Sa), Jn(Na), Jn(wa), Jn(Ya)], _h);
-  const { setListWithFn: ph } = zt$1, { sort: fh } = vo, { localBoxBounds: gh, localStrokeBounds: yh, localRenderBounds: mh, maskLocalBoxBounds: xh, maskLocalStrokeBounds: wh, maskLocalRenderBounds: bh } = xo, Bh = new ee$2("Branch");
+  const { setListWithFn: ph } = zt$2, { sort: fh } = vo, { localBoxBounds: gh, localStrokeBounds: yh, localRenderBounds: mh, maskLocalBoxBounds: xh, maskLocalStrokeBounds: wh, maskLocalRenderBounds: bh } = xo, Bh = new ee$2("Branch");
   let vh = class extends _h {
     __updateStrokeSpread() {
       const { children: t2 } = this;
@@ -8025,11 +8008,12 @@ var LiteGraphTSMigration = (function(exports) {
       this.levelMap = null;
     }
   }
+  const Oh = "2.0.2";
   function St$2(t2, e2, i2, s2) {
-    var o2, r2 = arguments.length, a = r2 < 3 ? e2 : null === s2 ? s2 = Object.getOwnPropertyDescriptor(e2, i2) : s2;
-    if ("object" == typeof Reflect && "function" == typeof Reflect.decorate) a = Reflect.decorate(t2, e2, i2, s2);
-    else for (var n2 = t2.length - 1; n2 >= 0; n2--) (o2 = t2[n2]) && (a = (r2 < 3 ? o2(a) : r2 > 3 ? o2(e2, i2, a) : o2(e2, i2)) || a);
-    return r2 > 3 && a && Object.defineProperty(e2, i2, a), a;
+    var o2, r2 = arguments.length, a2 = r2 < 3 ? e2 : null === s2 ? s2 = Object.getOwnPropertyDescriptor(e2, i2) : s2;
+    if ("object" == typeof Reflect && "function" == typeof Reflect.decorate) a2 = Reflect.decorate(t2, e2, i2, s2);
+    else for (var n2 = t2.length - 1; n2 >= 0; n2--) (o2 = t2[n2]) && (a2 = (r2 < 3 ? o2(a2) : r2 > 3 ? o2(e2, i2, a2) : o2(e2, i2)) || a2);
+    return r2 > 3 && a2 && Object.defineProperty(e2, i2, a2), a2;
   }
   function mt$2(t2) {
     return un(t2, (t3) => _n({ set(e2) {
@@ -8051,6 +8035,11 @@ var LiteGraphTSMigration = (function(exports) {
       } });
     };
   }
+  function Bt$2(e2) {
+    return (i2, o2) => {
+      ln(i2, o2, cn(o2, e2));
+    };
+  }
   "function" == typeof SuppressedError && SuppressedError;
   const At$2 = {}, Ct$2 = { hasTransparent: function(t2) {
     if (!t2 || 7 === t2.length || 4 === t2.length) return false;
@@ -8069,7 +8058,9 @@ var LiteGraphTSMigration = (function(exports) {
     return false;
   } }, bt$2 = qt$2, Pt$2 = {}, Ft$2 = {}, Wt$2 = {}, Et$2 = {}, Tt$2 = {}, Dt$2 = { apply() {
     he$2.need("filter");
-  } }, It$2 = {}, Lt$2 = { setStyleName: () => he$2.need("state"), set: () => he$2.need("state") }, { parse: Mt$2, objectToCanvasData: Ot$2 } = sr, { stintSet: Nt$2 } = _$1, { hasTransparent: Vt$2 } = Ct$2, Ht$2 = { originPaint: {} }, Yt$2 = ee$2.get("UIData");
+  } }, It$2 = {}, Lt$2 = { setStyleName: () => he$2.need("state"), set: () => he$2.need("state") }, zt$1 = { list: {}, register(t2, e2) {
+    zt$1.list[t2] = e2;
+  }, get: (t2) => zt$1.list[t2] }, { parse: Mt$2, objectToCanvasData: Ot$2 } = sr, { stintSet: Nt$2 } = _$1, { hasTransparent: Vt$2 } = Ct$2, Ht$2 = { originPaint: {} }, Yt$2 = ee$2.get("UIData");
   let Ut$2 = class Ut extends f {
     get scale() {
       const { scaleX: t2, scaleY: e2 } = this;
@@ -8272,10 +8263,10 @@ var LiteGraphTSMigration = (function(exports) {
     return i2.__useArrow && (t2 += 5 * o2), r2 && (t2 = ne$1(t2, r2.__layout.strokeSpread = r2.__updateStrokeSpread()), e2 = Math.max(e2, r2.__layout.strokeBoxSpread)), this.__layout.strokeBoxSpread = e2, t2;
   }, __updateRenderSpread() {
     let t2 = 0;
-    const { shadow: e2, innerShadow: i2, blur: s2, backgroundBlur: o2, filter: r2, renderSpread: a } = this.__, { strokeSpread: n2 } = this.__layout, _2 = this.__box;
-    e2 && (t2 = Tt$2.getShadowRenderSpread(this, e2)), s2 && (t2 = ne$1(t2, s2)), r2 && (t2 = _e$1(t2, Dt$2.getSpread(r2))), a && (t2 = _e$1(t2, a)), n2 && (t2 = _e$1(t2, n2));
-    let h = t2;
-    return i2 && (h = ne$1(h, Tt$2.getInnerShadowSpread(this, i2))), o2 && (h = ne$1(h, o2)), this.__layout.renderShapeSpread = h, _2 ? ne$1(_2.__updateRenderSpread(), t2) : t2;
+    const { shadow: e2, innerShadow: i2, blur: s2, backgroundBlur: o2, filter: r2, renderSpread: a2 } = this.__, { strokeSpread: n2 } = this.__layout, _2 = this.__box;
+    e2 && (t2 = Tt$2.getShadowRenderSpread(this, e2)), s2 && (t2 = ne$1(t2, s2)), r2 && (t2 = _e$1(t2, Dt$2.getSpread(r2))), a2 && (t2 = _e$1(t2, a2)), n2 && (t2 = _e$1(t2, n2));
+    let h2 = t2;
+    return i2 && (h2 = ne$1(h2, Tt$2.getInnerShadowSpread(this, i2))), o2 && (h2 = ne$1(h2, o2)), this.__layout.renderShapeSpread = h2, _2 ? ne$1(_2.__updateRenderSpread(), t2) : t2;
   } }, { stintSet: de$1 } = _$1, le$1 = { __updateChange() {
     const t2 = this.__;
     if (t2.__useStroke) {
@@ -8293,18 +8284,18 @@ var LiteGraphTSMigration = (function(exports) {
     const s2 = this.__;
     if (s2.__complex) {
       s2.__needComputePaint && s2.__computePaint();
-      const { fill: o2, stroke: r2, __drawAfterFill: a, __fillAfterStroke: n2, __isFastShadow: _2 } = s2;
+      const { fill: o2, stroke: r2, __drawAfterFill: a2, __fillAfterStroke: n2, __isFastShadow: _2 } = s2;
       if (this.__drawRenderPath(t2), s2.__useEffect && !_2) {
         const _3 = Ft$2.shape(this, t2, e2);
         this.__nowWorld = this.__getNowWorld(e2);
-        const { shadow: h, innerShadow: d2, filter: l2 } = s2;
-        h && Tt$2.shadow(this, t2, _3), n2 && (s2.__isStrokes ? Ft$2.strokes(r2, this, t2, e2) : Ft$2.stroke(r2, this, t2, e2)), o2 && (s2.__isFills ? Ft$2.fills(o2, this, t2, e2) : Ft$2.fill(o2, this, t2, e2)), a && this.__drawAfterFill(t2, e2), d2 && Tt$2.innerShadow(this, t2, _3), r2 && !n2 && (s2.__isStrokes ? Ft$2.strokes(r2, this, t2, e2) : Ft$2.stroke(r2, this, t2, e2)), l2 && Dt$2.apply(l2, this, this.__nowWorld, t2, i2, _3), _3.worldCanvas && _3.worldCanvas.recycle(), _3.canvas.recycle();
+        const { shadow: h2, innerShadow: d2, filter: l2 } = s2;
+        h2 && Tt$2.shadow(this, t2, _3), n2 && (s2.__isStrokes ? Ft$2.strokes(r2, this, t2, e2) : Ft$2.stroke(r2, this, t2, e2)), o2 && (s2.__isFills ? Ft$2.fills(o2, this, t2, e2) : Ft$2.fill(o2, this, t2, e2)), a2 && this.__drawAfterFill(t2, e2), d2 && Tt$2.innerShadow(this, t2, _3), r2 && !n2 && (s2.__isStrokes ? Ft$2.strokes(r2, this, t2, e2) : Ft$2.stroke(r2, this, t2, e2)), l2 && Dt$2.apply(l2, this, this.__nowWorld, t2, i2, _3), _3.worldCanvas && _3.worldCanvas.recycle(), _3.canvas.recycle();
       } else {
         if (n2 && (s2.__isStrokes ? Ft$2.strokes(r2, this, t2, e2) : Ft$2.stroke(r2, this, t2, e2)), _2) {
           const e3 = s2.shadow[0], { scaleX: i3, scaleY: o3 } = this.getRenderScaleData(true, e3.scaleFixed);
           t2.save(), t2.setWorldShadow(e3.x * i3, e3.y * o3, e3.blur * i3, Ct$2.string(e3.color));
         }
-        o2 && (s2.__isFills ? Ft$2.fills(o2, this, t2, e2) : Ft$2.fill(o2, this, t2, e2)), _2 && t2.restore(), a && this.__drawAfterFill(t2, e2), r2 && !n2 && (s2.__isStrokes ? Ft$2.strokes(r2, this, t2, e2) : Ft$2.stroke(r2, this, t2, e2));
+        o2 && (s2.__isFills ? Ft$2.fills(o2, this, t2, e2) : Ft$2.fill(o2, this, t2, e2)), _2 && t2.restore(), a2 && this.__drawAfterFill(t2, e2), r2 && !n2 && (s2.__isStrokes ? Ft$2.strokes(r2, this, t2, e2) : Ft$2.stroke(r2, this, t2, e2));
       }
     } else s2.__pathForRender ? pe$1(this, t2, e2) : this.__drawFast(t2, e2);
   }, __drawShape(t2, e2) {
@@ -8315,26 +8306,26 @@ var LiteGraphTSMigration = (function(exports) {
     this.__.__clipAfterFill ? (t2.save(), t2.clipUI(this), this.__drawContent(t2, e2), t2.restore()) : this.__drawContent(t2, e2);
   } };
   function pe$1(t2, e2, i2) {
-    const { fill: s2, stroke: o2, __drawAfterFill: r2, __fillAfterStroke: a } = t2.__;
-    t2.__drawRenderPath(e2), a && Ft$2.stroke(o2, t2, e2, i2), s2 && Ft$2.fill(s2, t2, e2, i2), r2 && t2.__drawAfterFill(e2, i2), o2 && !a && Ft$2.stroke(o2, t2, e2, i2);
+    const { fill: s2, stroke: o2, __drawAfterFill: r2, __fillAfterStroke: a2 } = t2.__;
+    t2.__drawRenderPath(e2), a2 && Ft$2.stroke(o2, t2, e2, i2), s2 && Ft$2.fill(s2, t2, e2, i2), r2 && t2.__drawAfterFill(e2, i2), o2 && !a2 && Ft$2.stroke(o2, t2, e2, i2);
   }
   const ue$1 = { __drawFast(t2, e2) {
     let { x: i2, y: s2, width: o2, height: r2 } = this.__layout.boxBounds;
-    const { fill: a, stroke: n2, __drawAfterFill: _2 } = this.__;
-    if (a && (t2.fillStyle = a, t2.fillRect(i2, s2, o2, r2)), _2 && this.__drawAfterFill(t2, e2), n2) {
-      const { strokeAlign: a2, __strokeWidth: _3 } = this.__;
+    const { fill: a2, stroke: n2, __drawAfterFill: _2 } = this.__;
+    if (a2 && (t2.fillStyle = a2, t2.fillRect(i2, s2, o2, r2)), _2 && this.__drawAfterFill(t2, e2), n2) {
+      const { strokeAlign: a3, __strokeWidth: _3 } = this.__;
       if (!_3) return;
       t2.setStroke(n2, _3, this.__);
-      const h = _3 / 2;
-      switch (a2) {
+      const h2 = _3 / 2;
+      switch (a3) {
         case "center":
           t2.strokeRect(0, 0, o2, r2);
           break;
         case "inside":
-          o2 -= _3, r2 -= _3, o2 < 0 || r2 < 0 ? (t2.save(), this.__clip(t2, e2), t2.strokeRect(i2 + h, s2 + h, o2, r2), t2.restore()) : t2.strokeRect(i2 + h, s2 + h, o2, r2);
+          o2 -= _3, r2 -= _3, o2 < 0 || r2 < 0 ? (t2.save(), this.__clip(t2, e2), t2.strokeRect(i2 + h2, s2 + h2, o2, r2), t2.restore()) : t2.strokeRect(i2 + h2, s2 + h2, o2, r2);
           break;
         case "outside":
-          t2.strokeRect(i2 - h, s2 - h, o2 + _3, r2 + _3);
+          t2.strokeRect(i2 - h2, s2 - h2, o2 + _3, r2 + _3);
       }
     }
   } };
@@ -8644,8 +8635,8 @@ var LiteGraphTSMigration = (function(exports) {
       const { grow: t2, width: e2, height: i2 } = this.config;
       if (t2) {
         let { width: s2, height: o2, pixelRatio: r2 } = this;
-        const a = "box" === t2 ? this.worldBoxBounds : this.__world;
-        e2 || (s2 = Math.max(1, a.x + a.width)), i2 || (o2 = Math.max(1, a.y + a.height)), this.__doResize({ width: s2, height: o2, pixelRatio: r2 });
+        const a2 = "box" === t2 ? this.worldBoxBounds : this.__world;
+        e2 || (s2 = Math.max(1, a2.x + a2.width)), i2 || (o2 = Math.max(1, a2.y + a2.height)), this.__doResize({ width: s2, height: o2, pixelRatio: r2 });
       }
       this.ready || this.__onReady();
     }
@@ -8744,7 +8735,7 @@ var LiteGraphTSMigration = (function(exports) {
     }
   };
   St$2([zn(Kt$2)], xe$1.prototype, "__", void 0), xe$1 = St$2([Jn(ue$1), qn(), Zn()], xe$1);
-  const { add: Se$1, includes: me$1, scroll: Re$1 } = zt$1, ke$1 = xe$1.prototype, Be$1 = ye$1.prototype;
+  const { add: Se$1, includes: me$1, scroll: Re$1 } = zt$2, ke$1 = xe$1.prototype, Be$1 = ye$1.prototype;
   let Ae$1 = class Ae extends ye$1 {
     get __tag() {
       return "Box";
@@ -8781,8 +8772,8 @@ var LiteGraphTSMigration = (function(exports) {
     __updateRenderBounds() {
       let t2, e2;
       if (this.children.length) {
-        const i2 = this.__, s2 = this.__layout, { renderBounds: o2, boxBounds: r2 } = s2, { overflow: a } = i2, n2 = s2.childrenRenderBounds || (s2.childrenRenderBounds = D$1());
-        super.__updateRenderBounds(n2), (e2 = a && a.includes("scroll")) && (Se$1(n2, r2), Re$1(n2, i2)), this.__updateRectRenderBounds(), t2 = !me$1(r2, n2), t2 && "show" === a && Se$1(o2, n2);
+        const i2 = this.__, s2 = this.__layout, { renderBounds: o2, boxBounds: r2 } = s2, { overflow: a2 } = i2, n2 = s2.childrenRenderBounds || (s2.childrenRenderBounds = D$1());
+        super.__updateRenderBounds(n2), (e2 = a2 && a2.includes("scroll")) && (Se$1(n2, r2), Re$1(n2, i2)), this.__updateRectRenderBounds(), t2 = !me$1(r2, n2), t2 && "show" === a2 && Se$1(o2, n2);
       } else this.__updateRectRenderBounds();
       _$1.stintSet(this, "isOverflow", t2), this.__checkScroll(e2);
     }
@@ -8822,9 +8813,9 @@ var LiteGraphTSMigration = (function(exports) {
       return "Ellipse";
     }
     __updatePath() {
-      const { width: t2, height: e2, innerRadius: i2, startAngle: s2, endAngle: o2 } = this.__, r2 = t2 / 2, a = e2 / 2, n2 = this.__.path = [];
+      const { width: t2, height: e2, innerRadius: i2, startAngle: s2, endAngle: o2 } = this.__, r2 = t2 / 2, a2 = e2 / 2, n2 = this.__.path = [];
       let _2;
-      i2 ? s2 || o2 ? (i2 < 1 ? Fe$1(n2, r2, a, r2 * i2, a * i2, 0, s2, o2, false) : _2 = true, Fe$1(n2, r2, a, r2, a, 0, o2, s2, true)) : (i2 < 1 && (Fe$1(n2, r2, a, r2 * i2, a * i2), be$1(n2, t2, a)), Fe$1(n2, r2, a, r2, a, 0, 360, 0, true)) : s2 || o2 ? (be$1(n2, r2, a), Fe$1(n2, r2, a, r2, a, 0, s2, o2, false)) : Fe$1(n2, r2, a, r2, a), _2 || Pe$1(n2), $t$2.ellipseToCurve && (this.__.path = this.getPath(true));
+      i2 ? s2 || o2 ? (i2 < 1 ? Fe$1(n2, r2, a2, r2 * i2, a2 * i2, 0, s2, o2, false) : _2 = true, Fe$1(n2, r2, a2, r2, a2, 0, o2, s2, true)) : (i2 < 1 && (Fe$1(n2, r2, a2, r2 * i2, a2 * i2), be$1(n2, t2, a2)), Fe$1(n2, r2, a2, r2, a2, 0, 360, 0, true)) : s2 || o2 ? (be$1(n2, r2, a2), Fe$1(n2, r2, a2, r2, a2, 0, s2, o2, false)) : Fe$1(n2, r2, a2, r2, a2), _2 || Pe$1(n2), $t$2.ellipseToCurve && (this.__.path = this.getPath(true));
     }
   };
   St$2([zn(Qt$1)], We$1.prototype, "__", void 0), St$2([Cn(0)], We$1.prototype, "innerRadius", void 0), St$2([Cn(0)], We$1.prototype, "startAngle", void 0), St$2([Cn(0)], We$1.prototype, "endAngle", void 0), We$1 = St$2([Zn()], We$1);
@@ -8837,9 +8828,9 @@ var LiteGraphTSMigration = (function(exports) {
       const t2 = this.__, e2 = t2.path = [];
       if (t2.points) Me$1(e2, t2.points, t2.curve, true);
       else {
-        const { width: i2, height: s2, sides: o2 } = t2, r2 = i2 / 2, a = s2 / 2;
+        const { width: i2, height: s2, sides: o2 } = t2, r2 = i2 / 2, a2 = s2 / 2;
         Ie$1(e2, r2, 0);
-        for (let t3 = 1; t3 < o2; t3++) Le$1(e2, r2 + r2 * Ee$1(2 * t3 * De$1 / o2), a - a * Te$1(2 * t3 * De$1 / o2));
+        for (let t3 = 1; t3 < o2; t3++) Le$1(e2, r2 + r2 * Ee$1(2 * t3 * De$1 / o2), a2 - a2 * Te$1(2 * t3 * De$1 / o2));
         ze$1(e2);
       }
     }
@@ -8851,10 +8842,10 @@ var LiteGraphTSMigration = (function(exports) {
       return "Star";
     }
     __updatePath() {
-      const { width: t2, height: e2, corners: i2, innerRadius: s2 } = this.__, o2 = t2 / 2, r2 = e2 / 2, a = this.__.path = [];
-      Ye$1(a, o2, 0);
-      for (let t3 = 1; t3 < 2 * i2; t3++) Ue$1(a, o2 + (t3 % 2 == 0 ? o2 : o2 * s2) * Ne$1(t3 * He$1 / i2), r2 - (t3 % 2 == 0 ? r2 : r2 * s2) * Ve$1(t3 * He$1 / i2));
-      Xe$1(a);
+      const { width: t2, height: e2, corners: i2, innerRadius: s2 } = this.__, o2 = t2 / 2, r2 = e2 / 2, a2 = this.__.path = [];
+      Ye$1(a2, o2, 0);
+      for (let t3 = 1; t3 < 2 * i2; t3++) Ue$1(a2, o2 + (t3 % 2 == 0 ? o2 : o2 * s2) * Ne$1(t3 * He$1 / i2), r2 - (t3 % 2 == 0 ? r2 : r2 * s2) * Ve$1(t3 * He$1 / i2));
+      Xe$1(a2);
     }
   };
   St$2([zn(te$1)], je$1.prototype, "__", void 0), St$2([Cn(5)], je$1.prototype, "corners", void 0), St$2([Cn(0.382)], je$1.prototype, "innerRadius", void 0), je$1 = St$2([Zn()], je$1);
@@ -8890,6 +8881,7 @@ var LiteGraphTSMigration = (function(exports) {
     }
   };
   St$2([zn(re$1)], ei$1.prototype, "__", void 0), St$2([bn("")], ei$1.prototype, "url", void 0), ei$1 = St$2([Zn()], ei$1);
+  const ii$1 = ei$1;
   let si$1 = class si extends xe$1 {
     get __tag() {
       return "Canvas";
@@ -8931,7 +8923,7 @@ var LiteGraphTSMigration = (function(exports) {
     }
   };
   St$2([zn(ae$1)], si$1.prototype, "__", void 0), St$2([Rt$2(100)], si$1.prototype, "width", void 0), St$2([Rt$2(100)], si$1.prototype, "height", void 0), St$2([Rt$2(1)], si$1.prototype, "pixelRatio", void 0), St$2([Rt$2(true)], si$1.prototype, "smooth", void 0), St$2([fn(false)], si$1.prototype, "safeResize", void 0), St$2([Rt$2()], si$1.prototype, "contextSettings", void 0), si$1 = St$2([Zn()], si$1);
-  const { copyAndSpread: oi$1, includes: ri$1, spread: ai$1, setList: ni$1 } = zt$1, { stintSet: _i$1 } = _$1;
+  const { copyAndSpread: oi$1, includes: ri$1, spread: ai$1, setList: ni$1 } = zt$2, { stintSet: _i$1 } = _$1;
   let hi$1 = class hi extends ge$1 {
     get __tag() {
       return "Text";
@@ -8940,21 +8932,21 @@ var LiteGraphTSMigration = (function(exports) {
       return this.updateLayout(), this.__.__textDrawData;
     }
     __updateTextDrawData() {
-      const t2 = this.__, { lineHeight: e2, letterSpacing: i2, fontFamily: s2, fontSize: o2, fontWeight: r2, italic: a, textCase: n2, textOverflow: _2, padding: h, width: d2, height: l2 } = t2;
-      t2.__lineHeight = bt$2.number(e2, o2), t2.__letterSpacing = bt$2.number(i2, o2), t2.__baseLine = t2.__lineHeight - (t2.__lineHeight - 0.7 * o2) / 2, t2.__font = `${a ? "italic " : ""}${"small-caps" === n2 ? "small-caps " : ""}${"normal" !== r2 ? r2 + " " : ""}${o2 || 12}px ${s2 || "caption"}`, _i$1(t2, "__padding", h && I$2.fourNumber(h)), _i$1(t2, "__clipText", "show" !== _2 && !t2.__autoSize), _i$1(t2, "__isCharMode", d2 || l2 || t2.__letterSpacing || "none" !== n2), t2.__textDrawData = At$2.getDrawData((t2.__isPlacehold = t2.placeholder && "" === t2.text) ? t2.placeholder : t2.text, this.__);
+      const t2 = this.__, { lineHeight: e2, letterSpacing: i2, fontFamily: s2, fontSize: o2, fontWeight: r2, italic: a2, textCase: n2, textOverflow: _2, padding: h2, width: d2, height: l2 } = t2;
+      t2.__lineHeight = bt$2.number(e2, o2), t2.__letterSpacing = bt$2.number(i2, o2), t2.__baseLine = t2.__lineHeight - (t2.__lineHeight - 0.7 * o2) / 2, t2.__font = `${a2 ? "italic " : ""}${"small-caps" === n2 ? "small-caps " : ""}${"normal" !== r2 ? r2 + " " : ""}${o2 || 12}px ${s2 || "caption"}`, _i$1(t2, "__padding", h2 && I$2.fourNumber(h2)), _i$1(t2, "__clipText", "show" !== _2 && !t2.__autoSize), _i$1(t2, "__isCharMode", d2 || l2 || t2.__letterSpacing || "none" !== n2), t2.__textDrawData = At$2.getDrawData((t2.__isPlacehold = t2.placeholder && "" === t2.text) ? t2.placeholder : t2.text, this.__);
     }
     __updateBoxBounds() {
-      const t2 = this.__, e2 = this.__layout, { fontSize: i2, italic: s2, padding: o2, __autoWidth: r2, __autoHeight: a } = t2;
+      const t2 = this.__, e2 = this.__layout, { fontSize: i2, italic: s2, padding: o2, __autoWidth: r2, __autoHeight: a2 } = t2;
       this.__updateTextDrawData();
-      const { bounds: _2 } = t2.__textDrawData, h = e2.boxBounds;
-      if (e2.contentBounds = _2, t2.__lineHeight < i2 && ai$1(_2, i2 / 2), r2 || a) {
-        if (h.x = r2 ? _2.x : 0, h.y = a ? _2.y : 0, h.width = r2 ? _2.width : t2.width, h.height = a ? _2.height : t2.height, o2) {
+      const { bounds: _2 } = t2.__textDrawData, h2 = e2.boxBounds;
+      if (e2.contentBounds = _2, t2.__lineHeight < i2 && ai$1(_2, i2 / 2), r2 || a2) {
+        if (h2.x = r2 ? _2.x : 0, h2.y = a2 ? _2.y : 0, h2.width = r2 ? _2.width : t2.width, h2.height = a2 ? _2.height : t2.height, o2) {
           const [e3, i3, s3, o3] = t2.__padding;
-          r2 && (h.x -= o3, h.width += i3 + o3), a && (h.y -= e3, h.height += s3 + e3);
+          r2 && (h2.x -= o3, h2.width += i3 + o3), a2 && (h2.y -= e3, h2.height += s3 + e3);
         }
         this.__updateNaturalSize();
       } else super.__updateBoxBounds();
-      s2 && (h.width += 0.16 * i2), _$1.stintSet(this, "isOverflow", !ri$1(h, _2)), this.isOverflow ? (ni$1(t2.__textBoxBounds = {}, [h, _2]), e2.renderChanged = true) : t2.__textBoxBounds = h;
+      s2 && (h2.width += 0.16 * i2), _$1.stintSet(this, "isOverflow", !ri$1(h2, _2)), this.isOverflow ? (ni$1(t2.__textBoxBounds = {}, [h2, _2]), e2.renderChanged = true) : t2.__textBoxBounds = h2;
     }
     __updateRenderSpread() {
       let t2 = super.__updateRenderSpread();
@@ -9022,7 +9014,7 @@ var LiteGraphTSMigration = (function(exports) {
     roundRect(t2, e2, i2, s2, o2) {
       return this;
     }
-    ellipse(t2, e2, i2, s2, o2, r2, a, n2) {
+    ellipse(t2, e2, i2, s2, o2, r2, a2, n2) {
       return this;
     }
     arc(t2, e2, i2, s2, o2, r2) {
@@ -9031,7 +9023,7 @@ var LiteGraphTSMigration = (function(exports) {
     arcTo(t2, e2, i2, s2, o2) {
       return this;
     }
-    drawEllipse(t2, e2, i2, s2, o2, r2, a, n2) {
+    drawEllipse(t2, e2, i2, s2, o2, r2, a2, n2) {
       return this;
     }
     drawArc(t2, e2, i2, s2, o2, r2) {
@@ -9053,9 +9045,9 @@ var LiteGraphTSMigration = (function(exports) {
     } });
   }], li$1.prototype, "path", void 0), li$1 = St$2([Jn(Fr, ["set", "path", "paint"]), Zn()], li$1);
   function I$1(t2, e2, i2, s2) {
-    var a, n2 = arguments.length, r2 = n2 < 3 ? e2 : null === s2 ? s2 = Object.getOwnPropertyDescriptor(e2, i2) : s2;
+    var a2, n2 = arguments.length, r2 = n2 < 3 ? e2 : null === s2 ? s2 = Object.getOwnPropertyDescriptor(e2, i2) : s2;
     if ("object" == typeof Reflect && "function" == typeof Reflect.decorate) r2 = Reflect.decorate(t2, e2, i2, s2);
-    else for (var h = t2.length - 1; h >= 0; h--) (a = t2[h]) && (r2 = (n2 < 3 ? a(r2) : n2 > 3 ? a(e2, i2, r2) : a(e2, i2)) || r2);
+    else for (var h2 = t2.length - 1; h2 >= 0; h2--) (a2 = t2[h2]) && (r2 = (n2 < 3 ? a2(r2) : n2 > 3 ? a2(e2, i2, r2) : a2(e2, i2)) || r2);
     return n2 > 3 && r2 && Object.defineProperty(e2, i2, r2), r2;
   }
   "function" == typeof SuppressedError && SuppressedError;
@@ -9071,8 +9063,8 @@ var LiteGraphTSMigration = (function(exports) {
     }
     init(t2, e2) {
       if (super.init(t2, e2), t2) {
-        const { ground: e3, tree: i2, sky: s2, editor: a } = t2;
-        e3 && (this.ground = this.addLeafer(e3)), (i2 || a) && (this.tree = this.addLeafer(i2 || { type: t2.type || "design" })), (s2 || a) && (this.sky = this.addLeafer(s2)), a && le$2.editor(a, this);
+        const { ground: e3, tree: i2, sky: s2, editor: a2 } = t2;
+        e3 && (this.ground = this.addLeafer(e3)), (i2 || a2) && (this.tree = this.addLeafer(i2 || { type: t2.type || "design" })), (s2 || a2) && (this.sky = this.addLeafer(s2)), a2 && le$2.editor(a2, this);
       }
     }
     __setApp() {
@@ -9192,31 +9184,31 @@ var LiteGraphTSMigration = (function(exports) {
       pe$2.changeName(t2, e2);
     }
   };
-  const { min: U, max: j$1, abs: X$1 } = Math, { float: Y$1, sign: z$1 } = I$2, { minX: G$1, maxX: Z$2, minY: q, maxY: J$1 } = zt$1, Q = new Vt$3(), $ = new Vt$3(), tt$1 = { limitMove(t2, e2) {
+  const { min: U, max: j$1, abs: X$1 } = Math, { float: Y$1, sign: z$1 } = I$2, { minX: G$1, maxX: Z$2, minY: q, maxY: J$1 } = zt$2, Q = new Vt$3(), $ = new Vt$3(), tt$1 = { limitMove(t2, e2) {
     const { dragBounds: i2, dragBoundsType: s2 } = t2;
     i2 && et$1.getValidMove(t2.__localBoxBounds, et$1.getDragBounds(t2), s2, e2, true), et$1.axisMove(t2, e2);
   }, limitScaleOf(t2, e2, i2, s2) {
-    const { dragBounds: a, dragBoundsType: n2 } = t2;
-    a && et$1.getValidScaleOf(t2.__localBoxBounds, et$1.getDragBounds(t2), n2, t2.getLocalPointByInner(t2.getInnerPointByBox(e2)), i2, s2, true);
+    const { dragBounds: a2, dragBoundsType: n2 } = t2;
+    a2 && et$1.getValidScaleOf(t2.__localBoxBounds, et$1.getDragBounds(t2), n2, t2.getLocalPointByInner(t2.getInnerPointByBox(e2)), i2, s2, true);
   }, axisMove(t2, e2) {
     const { draggable: i2 } = t2;
     "x" === i2 && (e2.y = 0), "y" === i2 && (e2.x = 0);
   }, getDragBounds(t2) {
     const { dragBounds: e2 } = t2;
     return "parent" === e2 ? t2.parent.boxBounds : e2;
-  }, isInnerMode: (t2, e2, i2, s2) => "inner" === i2 || "auto" === i2 && t2[s2] > e2[s2], getValidMove(t2, e2, i2, s2, a) {
-    const n2 = t2.x + s2.x, r2 = t2.y + s2.y, h = n2 + t2.width, o2 = r2 + t2.height, d2 = e2.x + e2.width, g2 = e2.y + e2.height;
-    return a || (s2 = Object.assign({}, s2)), et$1.isInnerMode(t2, e2, i2, "width") ? n2 > e2.x ? s2.x += e2.x - n2 : h < d2 && (s2.x += d2 - h) : n2 < e2.x ? s2.x += e2.x - n2 : h > d2 && (s2.x += d2 - h), et$1.isInnerMode(t2, e2, i2, "height") ? r2 > e2.y ? s2.y += e2.y - r2 : o2 < g2 && (s2.y += g2 - o2) : r2 < e2.y ? s2.y += e2.y - r2 : o2 > g2 && (s2.y += g2 - o2), s2.x = Y$1(s2.x), s2.y = Y$1(s2.y), s2;
-  }, getValidScaleOf(t2, e2, i2, s2, a, n$1, r2) {
-    r2 || (a = Object.assign({}, a)), $.set(e2), Q.set(t2).scaleOf(s2, a.x, a.y);
-    const h = (s2.x - t2.x) / t2.width, o2 = 1 - h, d2 = (s2.y - t2.y) / t2.height, g2 = 1 - d2;
-    let l2, c, u2, p2, _2 = 1, m2 = 1;
-    return et$1.isInnerMode(t2, e2, i2, "width") ? (a.x < 0 && Q.scaleOf(s2, _2 = 1 / a.x, 1), u2 = Y$1(Q.minX - $.minX), p2 = Y$1($.maxX - Q.maxX), l2 = h && u2 > 0 ? 1 + u2 / (h * Q.width) : 1, c = o2 && p2 > 0 ? 1 + p2 / (o2 * Q.width) : 1, _2 *= j$1(l2, c)) : (a.x < 0 && ((Y$1(G$1(t2) - G$1(e2)) <= 0 || Y$1(Z$2(e2) - Z$2(t2)) <= 0) && Q.scaleOf(s2, _2 = 1 / a.x, 1), Q.unsign()), u2 = Y$1($.minX - Q.minX), p2 = Y$1(Q.maxX - $.maxX), l2 = h && u2 > 0 ? 1 - u2 / (h * Q.width) : 1, c = o2 && p2 > 0 ? 1 - p2 / (o2 * Q.width) : 1, _2 *= U(l2, c)), et$1.isInnerMode(t2, e2, i2, "height") ? (a.y < 0 && Q.scaleOf(s2, 1, m2 = 1 / a.y), u2 = Y$1(Q.minY - $.minY), p2 = Y$1($.maxY - Q.maxY), l2 = d2 && u2 > 0 ? 1 + u2 / (d2 * Q.height) : 1, c = g2 && p2 > 0 ? 1 + p2 / (g2 * Q.height) : 1, m2 *= j$1(l2, c), n$1 && (l2 = j$1(X$1(_2), X$1(m2)), _2 = z$1(_2) * l2, m2 = z$1(m2) * l2)) : (a.y < 0 && ((Y$1(q(t2) - q(e2)) <= 0 || Y$1(J$1(e2) - J$1(t2)) <= 0) && Q.scaleOf(s2, 1, m2 = 1 / a.y), Q.unsign()), u2 = Y$1($.minY - Q.minY), p2 = Y$1(Q.maxY - $.maxY), l2 = d2 && u2 > 0 ? 1 - u2 / (d2 * Q.height) : 1, c = g2 && p2 > 0 ? 1 - p2 / (g2 * Q.height) : 1, m2 *= U(l2, c)), a.x *= n(_2) ? _2 : 1, a.y *= n(m2) ? m2 : 1, a;
+  }, isInnerMode: (t2, e2, i2, s2) => "inner" === i2 || "auto" === i2 && t2[s2] > e2[s2], getValidMove(t2, e2, i2, s2, a2) {
+    const n2 = t2.x + s2.x, r2 = t2.y + s2.y, h2 = n2 + t2.width, o2 = r2 + t2.height, d2 = e2.x + e2.width, g2 = e2.y + e2.height;
+    return a2 || (s2 = Object.assign({}, s2)), et$1.isInnerMode(t2, e2, i2, "width") ? n2 > e2.x ? s2.x += e2.x - n2 : h2 < d2 && (s2.x += d2 - h2) : n2 < e2.x ? s2.x += e2.x - n2 : h2 > d2 && (s2.x += d2 - h2), et$1.isInnerMode(t2, e2, i2, "height") ? r2 > e2.y ? s2.y += e2.y - r2 : o2 < g2 && (s2.y += g2 - o2) : r2 < e2.y ? s2.y += e2.y - r2 : o2 > g2 && (s2.y += g2 - o2), s2.x = Y$1(s2.x), s2.y = Y$1(s2.y), s2;
+  }, getValidScaleOf(t2, e2, i2, s2, a2, n$1, r2) {
+    r2 || (a2 = Object.assign({}, a2)), $.set(e2), Q.set(t2).scaleOf(s2, a2.x, a2.y);
+    const h2 = (s2.x - t2.x) / t2.width, o2 = 1 - h2, d2 = (s2.y - t2.y) / t2.height, g2 = 1 - d2;
+    let l2, c2, u2, p2, _2 = 1, m2 = 1;
+    return et$1.isInnerMode(t2, e2, i2, "width") ? (a2.x < 0 && Q.scaleOf(s2, _2 = 1 / a2.x, 1), u2 = Y$1(Q.minX - $.minX), p2 = Y$1($.maxX - Q.maxX), l2 = h2 && u2 > 0 ? 1 + u2 / (h2 * Q.width) : 1, c2 = o2 && p2 > 0 ? 1 + p2 / (o2 * Q.width) : 1, _2 *= j$1(l2, c2)) : (a2.x < 0 && ((Y$1(G$1(t2) - G$1(e2)) <= 0 || Y$1(Z$2(e2) - Z$2(t2)) <= 0) && Q.scaleOf(s2, _2 = 1 / a2.x, 1), Q.unsign()), u2 = Y$1($.minX - Q.minX), p2 = Y$1(Q.maxX - $.maxX), l2 = h2 && u2 > 0 ? 1 - u2 / (h2 * Q.width) : 1, c2 = o2 && p2 > 0 ? 1 - p2 / (o2 * Q.width) : 1, _2 *= U(l2, c2)), et$1.isInnerMode(t2, e2, i2, "height") ? (a2.y < 0 && Q.scaleOf(s2, 1, m2 = 1 / a2.y), u2 = Y$1(Q.minY - $.minY), p2 = Y$1($.maxY - Q.maxY), l2 = d2 && u2 > 0 ? 1 + u2 / (d2 * Q.height) : 1, c2 = g2 && p2 > 0 ? 1 + p2 / (g2 * Q.height) : 1, m2 *= j$1(l2, c2), n$1 && (l2 = j$1(X$1(_2), X$1(m2)), _2 = z$1(_2) * l2, m2 = z$1(m2) * l2)) : (a2.y < 0 && ((Y$1(q(t2) - q(e2)) <= 0 || Y$1(J$1(e2) - J$1(t2)) <= 0) && Q.scaleOf(s2, 1, m2 = 1 / a2.y), Q.unsign()), u2 = Y$1($.minY - Q.minY), p2 = Y$1(Q.maxY - $.maxY), l2 = d2 && u2 > 0 ? 1 - u2 / (d2 * Q.height) : 1, c2 = g2 && p2 > 0 ? 1 - p2 / (g2 * Q.height) : 1, m2 *= U(l2, c2)), a2.x *= n(_2) ? _2 : 1, a2.y *= n(m2) ? m2 : 1, a2;
   } }, et$1 = tt$1;
   let it$1 = class it extends V$1 {
   };
   it$1.POINTER = "pointer", it$1.BEFORE_DOWN = "pointer.before_down", it$1.BEFORE_MOVE = "pointer.before_move", it$1.BEFORE_UP = "pointer.before_up", it$1.DOWN = "pointer.down", it$1.MOVE = "pointer.move", it$1.UP = "pointer.up", it$1.OVER = "pointer.over", it$1.OUT = "pointer.out", it$1.ENTER = "pointer.enter", it$1.LEAVE = "pointer.leave", it$1.TAP = "tap", it$1.DOUBLE_TAP = "double_tap", it$1.CLICK = "click", it$1.DOUBLE_CLICK = "double_click", it$1.LONG_PRESS = "long_press", it$1.LONG_TAP = "long_tap", it$1.MENU = "pointer.menu", it$1.MENU_TAP = "pointer.menu_tap", it$1 = I$1([$n()], it$1);
-  const at$1 = {};
+  const st$1 = it$1, at$1 = {};
   let nt$1 = class nt extends it$1 {
     static setList(t2) {
       this.list = t2 instanceof kh ? t2 : new kh(t2);
@@ -9225,8 +9217,8 @@ var LiteGraphTSMigration = (function(exports) {
       this.data = t2;
     }
     static getValidMove(t2, e2, i2, s2 = true) {
-      const a = t2.getLocalPoint(i2, null, true);
-      return ot$2.move(a, e2.x - t2.x, e2.y - t2.y), s2 && this.limitMove(t2, a), tt$1.axisMove(t2, a), a;
+      const a2 = t2.getLocalPoint(i2, null, true);
+      return ot$2.move(a2, e2.x - t2.x, e2.y - t2.y), s2 && this.limitMove(t2, a2), tt$1.axisMove(t2, a2), a2;
     }
     static limitMove(t2, e2) {
       tt$1.limitMove(t2, e2);
@@ -9251,13 +9243,14 @@ var LiteGraphTSMigration = (function(exports) {
     }
     getPageBounds() {
       const t2 = this.getPageTotal(), e2 = this.getPagePoint(), i2 = {};
-      return zt$1.set(i2, e2.x - t2.x, e2.y - t2.y, t2.x, t2.y), zt$1.unsign(i2), i2;
+      return zt$2.set(i2, e2.x - t2.x, e2.y - t2.y, t2.x, t2.y), zt$2.unsign(i2), i2;
     }
     assignMove(t2) {
       at$1.x = t2 ? this.totalX : this.moveX, at$1.y = t2 ? this.totalY : this.moveY;
     }
   };
   nt$1.BEFORE_DRAG = "drag.before_drag", nt$1.START = "drag.start", nt$1.DRAG = "drag", nt$1.END = "drag.end", nt$1.OVER = "drag.over", nt$1.OUT = "drag.out", nt$1.ENTER = "drag.enter", nt$1.LEAVE = "drag.leave", nt$1 = I$1([$n()], nt$1);
+  const rt$1 = nt$1;
   let ht$1 = class ht extends it$1 {
     static setList(t2) {
       nt$1.setList(t2);
@@ -9273,6 +9266,7 @@ var LiteGraphTSMigration = (function(exports) {
   let dt$1 = class dt extends V$1 {
   };
   dt$1 = I$1([$n()], dt$1);
+  const gt$1 = dt$1;
   let lt$1 = class lt extends it$1 {
   };
   lt$1.BEFORE_ROTATE = "rotate.before_rotate", lt$1.START = "rotate.start", lt$1.ROTATE = "rotate", lt$1.END = "rotate.end", lt$1 = I$1([$n()], lt$1);
@@ -9294,7 +9288,7 @@ var LiteGraphTSMigration = (function(exports) {
     return false;
   }, filterPathByEventType(t2, e2) {
     const i2 = new kh(), { list: s2 } = t2;
-    for (let t3 = 0, a = s2.length; t3 < a; t3++) s2[t3].hasEvent(e2) && i2.add(s2[t3]);
+    for (let t3 = 0, a2 = s2.length; t3 < a2; t3++) s2[t3].hasEvent(e2) && i2.add(s2[t3]);
     return i2;
   }, pathCanDrag: (t2) => t2 && t2.list.some((t3) => co.draggable(t3) || !t3.isLeafer && t3.hasEvent(nt$1.DRAG)), pathHasOutside: (t2) => t2 && t2.list.some((t3) => t3.isOutside) }, mt$1 = _t$1, vt$1 = new kh(), { getDragEventData: ft$1, getDropEventData: yt$1, getSwipeEventData: Et$1 } = _t$1;
   let Dt$1 = class Dt {
@@ -9305,8 +9299,8 @@ var LiteGraphTSMigration = (function(exports) {
       this.animateWait && this.dragEndReal(), this.downData = this.interaction.downData, this.dragData = ft$1(t2, t2, t2), this.canAnimate = this.canDragOut = true;
     }
     getList(t2, e2) {
-      const { proxy: i2 } = this.interaction.selector, s2 = i2 && i2.list.length, a = nt$1.list || this.draggableList || vt$1;
-      return this.dragging && (s2 ? t2 ? vt$1 : new kh(e2 ? [...i2.list, ...i2.dragHoverExclude] : i2.list) : a);
+      const { proxy: i2 } = this.interaction.selector, s2 = i2 && i2.list.length, a2 = nt$1.list || this.draggableList || vt$1;
+      return this.dragging && (s2 ? t2 ? vt$1 : new kh(e2 ? [...i2.list, ...i2.dragHoverExclude] : i2.list) : a2);
     }
     checkDrag(t2, e2) {
       const { interaction: i2 } = this;
@@ -9327,17 +9321,17 @@ var LiteGraphTSMigration = (function(exports) {
       }
     }
     drag(t2) {
-      const { interaction: e2, dragData: i2, downData: s2 } = this, { path: a, throughPath: n2 } = s2;
-      this.dragData = ft$1(s2, i2, t2), n2 && (this.dragData.throughPath = n2), this.dragData.path = a, this.dragDataList.push(this.dragData), this.moving ? (t2.moving = true, this.dragData.moveType = "drag", e2.emit(ot$1.BEFORE_MOVE, this.dragData), e2.emit(ot$1.MOVE, this.dragData)) : this.dragging && (t2.dragging = true, this.dragReal(), e2.emit(nt$1.BEFORE_DRAG, this.dragData), e2.emit(nt$1.DRAG, this.dragData));
+      const { interaction: e2, dragData: i2, downData: s2 } = this, { path: a2, throughPath: n2 } = s2;
+      this.dragData = ft$1(s2, i2, t2), n2 && (this.dragData.throughPath = n2), this.dragData.path = a2, this.dragDataList.push(this.dragData), this.moving ? (t2.moving = true, this.dragData.moveType = "drag", e2.emit(ot$1.BEFORE_MOVE, this.dragData), e2.emit(ot$1.MOVE, this.dragData)) : this.dragging && (t2.dragging = true, this.dragReal(), e2.emit(nt$1.BEFORE_DRAG, this.dragData), e2.emit(nt$1.DRAG, this.dragData));
     }
     dragReal(t2) {
       const { interaction: e2 } = this, { running: i$1 } = e2, s2 = this.realDraggableList;
       if (s2.length && i$1) {
-        const { totalX: i$12, totalY: a } = this.dragData, { dragLimitAnimate: n2 } = e2.p, r2 = !n2 || !!t2;
+        const { totalX: i$12, totalY: a2 } = this.dragData, { dragLimitAnimate: n2 } = e2.p, r2 = !n2 || !!t2;
         s2.forEach((e3) => {
           if (e3.draggable) {
-            const s3 = i(e3.draggable), h = nt$1.getValidMove(e3, this.dragStartPoints[e3.innerId], { x: i$12, y: a }, r2 || s3);
-            n2 && !s3 && t2 ? co.animateMove(e3, h, o(n2) ? n2 : 0.3) : e3.move(h);
+            const s3 = i(e3.draggable), h2 = nt$1.getValidMove(e3, this.dragStartPoints[e3.innerId], { x: i$12, y: a2 }, r2 || s3);
+            n2 && !s3 && t2 ? co.animateMove(e3, h2, o(n2) ? n2 : 0.3) : e3.move(h2);
           }
         });
       }
@@ -9356,16 +9350,16 @@ var LiteGraphTSMigration = (function(exports) {
     dragEndReal(t2) {
       const { interaction: e2, downData: i2, dragData: s2 } = this;
       t2 || (t2 = s2);
-      const { path: a, throughPath: n2 } = i2, r2 = ft$1(i2, t2, t2);
-      if (n2 && (r2.throughPath = n2), r2.path = a, this.moving && (this.moving = false, r2.moveType = "drag", e2.emit(ot$1.END, r2)), this.dragging) {
-        const a2 = this.getList();
-        this.dragging = false, e2.p.dragLimitAnimate && this.dragReal(true), e2.emit(nt$1.END, r2), this.swipe(t2, i2, s2, r2), this.drop(t2, a2, this.dragEnterPath);
+      const { path: a2, throughPath: n2 } = i2, r2 = ft$1(i2, t2, t2);
+      if (n2 && (r2.throughPath = n2), r2.path = a2, this.moving && (this.moving = false, r2.moveType = "drag", e2.emit(ot$1.END, r2)), this.dragging) {
+        const a3 = this.getList();
+        this.dragging = false, e2.p.dragLimitAnimate && this.dragReal(true), e2.emit(nt$1.END, r2), this.swipe(t2, i2, s2, r2), this.drop(t2, a3, this.dragEnterPath);
       }
       this.autoMoveCancel(), this.dragReset(), this.animate(null, "off");
     }
     swipe(t2, e2, i2, s2) {
-      const { interaction: a } = this;
-      if (ot$2.getDistance(e2, t2) > a.config.pointer.swipeDistance) {
+      const { interaction: a2 } = this;
+      if (ot$2.getDistance(e2, t2) > a2.config.pointer.swipeDistance) {
         const t3 = Et$1(e2, i2, s2);
         this.interaction.emit(t3.type, t3);
       }
@@ -9396,18 +9390,18 @@ var LiteGraphTSMigration = (function(exports) {
   };
   const Pt$1 = ee$2.get("emit");
   const xt$1 = ["move", "zoom", "rotate", "key"];
-  function wt$1(t2, e2, i2, s2, a) {
-    if (xt$1.some((t3) => e2.startsWith(t3)) && t2.__.hitChildren && !Tt$1(t2, a)) {
+  function wt$1(t2, e2, i2, s2, a2) {
+    if (xt$1.some((t3) => e2.startsWith(t3)) && t2.__.hitChildren && !Tt$1(t2, a2)) {
       let n2;
-      for (let r2 = 0, h = t2.children.length; r2 < h; r2++) n2 = t2.children[r2], !i2.path.has(n2) && n2.__.hittable && Ot$1(n2, e2, i2, s2, a);
+      for (let r2 = 0, h2 = t2.children.length; r2 < h2; r2++) n2 = t2.children[r2], !i2.path.has(n2) && n2.__.hittable && Ot$1(n2, e2, i2, s2, a2);
     }
   }
-  function Ot$1(t2, i2, s2, a, n2) {
+  function Ot$1(t2, i2, s2, a2, n2) {
     if (t2.destroyed) return false;
-    if (t2.__.hitSelf && !Tt$1(t2, n2) && (Lt$2.updateEventStyle && !a && Lt$2.updateEventStyle(t2, i2), t2.hasEvent(i2, a))) {
-      s2.phase = a ? 1 : t2 === s2.target ? 2 : 3;
+    if (t2.__.hitSelf && !Tt$1(t2, n2) && (Lt$2.updateEventStyle && !a2 && Lt$2.updateEventStyle(t2, i2), t2.hasEvent(i2, a2))) {
+      s2.phase = a2 ? 1 : t2 === s2.target ? 2 : 3;
       const e2 = pe$2.get(i2, s2);
-      if (t2.emitEvent(e2, a), e2.isStop) return true;
+      if (t2.emitEvent(e2, a2), e2.isStop) return true;
     }
     return false;
   }
@@ -9543,15 +9537,15 @@ var LiteGraphTSMigration = (function(exports) {
       if (!e2.tapMore && i2) return;
       if (!this.waitTap) return;
       e2.tapMore && this.emitTap(t2);
-      const s2 = Date.now() - this.downTime, a = [it$1.DOUBLE_TAP, it$1.DOUBLE_CLICK].some((e3) => Rt$1(t2.path, e3));
-      s2 < e2.tapTime + 50 && a ? (this.tapCount++, 2 === this.tapCount ? (this.tapWaitCancel(), this.emitDoubleTap(t2)) : (clearTimeout(this.tapTimer), this.tapTimer = setTimeout(() => {
+      const s2 = Date.now() - this.downTime, a2 = [it$1.DOUBLE_TAP, it$1.DOUBLE_CLICK].some((e3) => Rt$1(t2.path, e3));
+      s2 < e2.tapTime + 50 && a2 ? (this.tapCount++, 2 === this.tapCount ? (this.tapWaitCancel(), this.emitDoubleTap(t2)) : (clearTimeout(this.tapTimer), this.tapTimer = setTimeout(() => {
         e2.tapMore || (this.tapWaitCancel(), this.emitTap(t2));
       }, e2.tapTime))) : e2.tapMore || (this.tapWaitCancel(), this.emitTap(t2));
     }
     findPath(t2, e2) {
-      const { hitRadius: i2, through: s2 } = this.p, { bottomList: a, target: n2 } = this;
+      const { hitRadius: i2, through: s2 } = this.p, { bottomList: a2, target: n2 } = this;
       $t$2.backgrounder || t2.origin || n2 && n2.updateLayout();
-      const r2 = this.selector.getByPoint(t2, i2, Object.assign({ bottomList: a, name: t2.type }, e2 || { through: s2 }));
+      const r2 = this.selector.getByPoint(t2, i2, Object.assign({ bottomList: a2, name: t2.type }, e2 || { through: s2 }));
       return r2.throughPath && (t2.throughPath = r2.throughPath), t2.path = r2.path, r2.path;
     }
     isRootPath(t2) {
@@ -9600,15 +9594,15 @@ var LiteGraphTSMigration = (function(exports) {
       if (!t2) return;
       let e2, i2;
       const { path: s2 } = t2;
-      for (let t3 = 0, a = s2.length; t3 < a && (e2 = s2.list[t3], i2 = e2.syncEventer && e2.syncEventer.cursor || e2.cursor, !i2); t3++) ;
+      for (let t3 = 0, a2 = s2.length; t3 < a2 && (e2 = s2.list[t3], i2 = e2.syncEventer && e2.syncEventer.cursor || e2.cursor, !i2); t3++) ;
       this.setCursor(i2);
     }
     setCursor(t2) {
       this.cursor = t2;
     }
     getLocal(t2, e2) {
-      const i2 = this.canvas.getClientBounds(e2), s2 = { x: t2.clientX - i2.x, y: t2.clientY - i2.y }, { bounds: a } = this.canvas;
-      return s2.x *= a.width / i2.width, s2.y *= a.height / i2.height, this.p.snap && ot$2.round(s2), s2;
+      const i2 = this.canvas.getClientBounds(e2), s2 = { x: t2.clientX - i2.x, y: t2.clientY - i2.y }, { bounds: a2 } = this.canvas;
+      return s2.x *= a2.width / i2.width, s2.y *= a2.height / i2.height, this.p.snap && ot$2.round(s2), s2;
     }
     emitTap(t2) {
       this.emit(it$1.TAP, t2), this.emit(it$1.CLICK, t2);
@@ -9651,14 +9645,14 @@ var LiteGraphTSMigration = (function(exports) {
     emit(t2, e2, i2, s2) {
       this.running && (function(t3, e3, i3, s3) {
         if (!i3 && !e3.path) return;
-        let a;
+        let a2;
         e3.type = t3, i3 ? e3 = Object.assign(Object.assign({}, e3), { path: i3 }) : i3 = e3.path, e3.target = i3.indexAt(0);
         try {
           for (let n2 = i3.length - 1; n2 > -1; n2--) {
-            if (a = i3.list[n2], Ot$1(a, t3, e3, true, s3)) return;
-            a.isApp && wt$1(a, t3, e3, true, s3);
+            if (a2 = i3.list[n2], Ot$1(a2, t3, e3, true, s3)) return;
+            a2.isApp && wt$1(a2, t3, e3, true, s3);
           }
-          for (let n2 = 0, r2 = i3.length; n2 < r2; n2++) if (a = i3.list[n2], a.isApp && wt$1(a, t3, e3, false, s3), Ot$1(a, t3, e3, false, s3)) return;
+          for (let n2 = 0, r2 = i3.length; n2 < r2; n2++) if (a2 = i3.list[n2], a2.isApp && wt$1(a2, t3, e3, false, s3), Ot$1(a2, t3, e3, false, s3)) return;
         } catch (t4) {
           Pt$1.error(t4);
         }
@@ -9708,7 +9702,7 @@ var LiteGraphTSMigration = (function(exports) {
   $t$2.getSelector = function(t2) {
     return t2.leafer ? t2.leafer.selector : $t$2.selector || ($t$2.selector = le$2.selector());
   };
-  const { toInnerRadiusPointOf: Bt$1, copyRadiusPoint: kt$1 } = ot$2, { hitRadiusPoint: Ht$1, hitPoint: It$1 } = zt$1, Nt$1 = {}, Ft$1 = {}, Wt$1 = _h.prototype;
+  const { toInnerRadiusPointOf: Bt$1, copyRadiusPoint: kt$1 } = ot$2, { hitRadiusPoint: Ht$1, hitPoint: It$1 } = zt$2, Nt$1 = {}, Ft$1 = {}, Wt$1 = _h.prototype;
   Wt$1.hit = function(t2, e2 = 0) {
     this.updateLayout(), kt$1(Ft$1, t2, e2);
     const i2 = this.__world;
@@ -9716,12 +9710,12 @@ var LiteGraphTSMigration = (function(exports) {
   }, Wt$1.__hitWorld = function(t2, e2) {
     const i2 = this.__;
     if (!i2.hitSelf) return false;
-    const s2 = this.__world, a = this.__layout, n2 = s2.width < 10 && s2.height < 10;
+    const s2 = this.__world, a2 = this.__layout, n2 = s2.width < 10 && s2.height < 10;
     if (i2.hitRadius && (kt$1(Nt$1, t2, i2.hitRadius), t2 = Nt$1), Bt$1(t2, s2, Nt$1), i2.hitBox || n2) {
-      if (zt$1.hitRadiusPoint(a.boxBounds, Nt$1)) return true;
+      if (zt$2.hitRadiusPoint(a2.boxBounds, Nt$1)) return true;
       if (n2) return false;
     }
-    return !a.hitCanvasChanged && this.__hitCanvas || (this.__updateHitCanvas(), a.boundsChanged || (a.hitCanvasChanged = false)), this.__hit(Nt$1, e2);
+    return !a2.hitCanvasChanged && this.__hitCanvas || (this.__updateHitCanvas(), a2.boundsChanged || (a2.hitCanvasChanged = false)), this.__hit(Nt$1, e2);
   }, Wt$1.__hitFill = function(t2) {
     const e2 = this.__hitCanvas;
     return e2 && e2.hitFill(t2, this.__.windingRule);
@@ -9739,34 +9733,34 @@ var LiteGraphTSMigration = (function(exports) {
     this.__box && this.__box.__updateHitCanvas();
     const { hitCanvasManager: t2 } = this.leafer || this.parent && this.parent.leafer || {};
     if (!t2) return;
-    const e2 = this.__, i2 = (e2.__isAlphaPixelFill || e2.__isCanvas) && "pixel" === e2.hitFill, s2 = e2.__isAlphaPixelStroke && "pixel" === e2.hitStroke, a = i2 || s2;
-    this.__hitCanvas || (this.__hitCanvas = a ? t2.getPixelType(this, { contextSettings: { willReadFrequently: true } }) : t2.getPathType(this));
+    const e2 = this.__, i2 = (e2.__isAlphaPixelFill || e2.__isCanvas) && "pixel" === e2.hitFill, s2 = e2.__isAlphaPixelStroke && "pixel" === e2.hitStroke, a2 = i2 || s2;
+    this.__hitCanvas || (this.__hitCanvas = a2 ? t2.getPixelType(this, { contextSettings: { willReadFrequently: true } }) : t2.getPathType(this));
     const n2 = this.__hitCanvas;
-    if (a) {
-      const { renderBounds: t3 } = this.__layout, a2 = $t$2.image.hitCanvasSize, r2 = n2.hitScale = Ht$3.set(0, 0, a2, a2).getFitMatrix(t3).a, { x: h, y: o2, width: d2, height: g2 } = Ht$3.set(t3).scale(r2);
-      n2.resize({ width: d2, height: g2, pixelRatio: 1 }), n2.clear(), en.patternLocked = true, this.__renderShape(n2, { matrix: Kt$1.setWith(this.__world).scaleWith(1 / r2).invertWith().translate(-h, -o2), snapshot: true, ignoreFill: !i2, ignoreStroke: !s2 }), en.patternLocked = false, n2.resetTransform(), e2.__isHitPixel = true;
+    if (a2) {
+      const { renderBounds: t3 } = this.__layout, a3 = $t$2.image.hitCanvasSize, r2 = n2.hitScale = Ht$3.set(0, 0, a3, a3).getFitMatrix(t3).a, { x: h2, y: o2, width: d2, height: g2 } = Ht$3.set(t3).scale(r2);
+      n2.resize({ width: d2, height: g2, pixelRatio: 1 }), n2.clear(), en.patternLocked = true, this.__renderShape(n2, { matrix: Kt$1.setWith(this.__world).scaleWith(1 / r2).invertWith().translate(-h2, -o2), snapshot: true, ignoreFill: !i2, ignoreStroke: !s2 }), en.patternLocked = false, n2.resetTransform(), e2.__isHitPixel = true;
     } else e2.__isHitPixel && (e2.__isHitPixel = false);
     this.__drawHitPath(n2), n2.setStrokeOptions(e2);
   }, Vt$1.__hit = function(t2, e2) {
     if (this.__box && this.__box.__hit(t2)) return true;
     const i2 = this.__;
     if (i2.__isHitPixel && this.__hitPixel(t2)) return true;
-    const { hitFill: s2 } = i2, a = (i2.fill || i2.__isCanvas) && ("path" === s2 || "pixel" === s2 && !(i2.__isAlphaPixelFill || i2.__isCanvas)) || "all" === s2 || e2;
-    if (a && this.__hitFill(t2)) return true;
-    const { hitStroke: n2, __maxStrokeWidth: r2 } = i2, h = i2.stroke && ("path" === n2 || "pixel" === n2 && !i2.__isAlphaPixelStroke) || "all" === n2;
-    if (!a && !h) return false;
+    const { hitFill: s2 } = i2, a2 = (i2.fill || i2.__isCanvas) && ("path" === s2 || "pixel" === s2 && !(i2.__isAlphaPixelFill || i2.__isCanvas)) || "all" === s2 || e2;
+    if (a2 && this.__hitFill(t2)) return true;
+    const { hitStroke: n2, __maxStrokeWidth: r2 } = i2, h2 = i2.stroke && ("path" === n2 || "pixel" === n2 && !i2.__isAlphaPixelStroke) || "all" === n2;
+    if (!a2 && !h2) return false;
     const o2 = 2 * t2.radiusX;
     let d2 = o2;
-    if (h) switch (i2.strokeAlign) {
+    if (h2) switch (i2.strokeAlign) {
       case "inside":
-        if (d2 += 2 * r2, !a && this.__hitFill(t2) && this.__hitStroke(t2, d2)) return true;
+        if (d2 += 2 * r2, !a2 && this.__hitFill(t2) && this.__hitStroke(t2, d2)) return true;
         d2 = o2;
         break;
       case "center":
         d2 += r2;
         break;
       case "outside":
-        if (d2 += 2 * r2, !a) {
+        if (d2 += 2 * r2, !a2) {
           if (!this.__hitFill(t2) && this.__hitStroke(t2, d2)) return true;
           d2 = o2;
         }
@@ -9777,10 +9771,10 @@ var LiteGraphTSMigration = (function(exports) {
   jt$1.__updateHitCanvas = Xt$1.__updateHitCanvas = function() {
     this.stroke || this.cornerRadius || (this.fill || this.__.__isCanvas) && "pixel" === this.hitFill || "all" === this.hitStroke ? Ut$1.__updateHitCanvas.call(this) : this.__hitCanvas && (this.__hitCanvas = null);
   }, jt$1.__hitFill = Xt$1.__hitFill = function(t2) {
-    return this.__hitCanvas ? Ut$1.__hitFill.call(this, t2) : zt$1.hitRadiusPoint(this.__layout.boxBounds, t2);
+    return this.__hitCanvas ? Ut$1.__hitFill.call(this, t2) : zt$2.hitRadiusPoint(this.__layout.boxBounds, t2);
   }, hi$1.prototype.__drawHitPath = function(t2) {
-    const { __lineHeight: e2, fontSize: i2, __baseLine: s2, __letterSpacing: a, __textDrawData: n2 } = this.__;
-    t2.beginPath(), a < 0 ? this.__drawPathByBox(t2) : n2.rows.forEach((a2) => t2.rect(a2.x, a2.y - s2, a2.width, e2 < i2 ? i2 : e2));
+    const { __lineHeight: e2, fontSize: i2, __baseLine: s2, __letterSpacing: a2, __textDrawData: n2 } = this.__;
+    t2.beginPath(), a2 < 0 ? this.__drawPathByBox(t2) : n2.rows.forEach((a3) => t2.rect(a3.x, a3.y - s2, a3.width, e2 < i2 ? i2 : e2));
   }, ye$1.prototype.pick = function(t2, e$1) {
     return e$1 || (e$1 = e), this.updateLayout(), $t$2.getSelector(this).getByPoint(t2, e$1.hitRadius || 0, Object.assign(Object.assign({}, e$1), { target: this }));
   };
@@ -9790,36 +9784,36 @@ var LiteGraphTSMigration = (function(exports) {
   }, Yt$1.hitStroke = function(t2, e2) {
     return this.strokeWidth = e2, this.context.isPointInStroke(t2.x, t2.y);
   }, Yt$1.hitPixel = function(t2, e2, i2 = 1) {
-    let { x: s2, y: a, radiusX: n2, radiusY: r2 } = t2;
-    e2 && (s2 -= e2.x, a -= e2.y), Ht$3.set(s2 - n2, a - r2, 2 * n2, 2 * r2).scale(i2).ceil();
-    const { data: h } = this.context.getImageData(Ht$3.x, Ht$3.y, Ht$3.width || 1, Ht$3.height || 1);
-    for (let t3 = 0, e3 = h.length; t3 < e3; t3 += 4) if (h[t3 + 3] > 0) return true;
-    return h[3] > 0;
+    let { x: s2, y: a2, radiusX: n2, radiusY: r2 } = t2;
+    e2 && (s2 -= e2.x, a2 -= e2.y), Ht$3.set(s2 - n2, a2 - r2, 2 * n2, 2 * r2).scale(i2).ceil();
+    const { data: h2 } = this.context.getImageData(Ht$3.x, Ht$3.y, Ht$3.width || 1, Ht$3.height || 1);
+    for (let t3 = 0, e3 = h2.length; t3 < e3; t3 += 4) if (h2[t3 + 3] > 0) return true;
+    return h2[3] > 0;
   };
   var Z$1;
   function J(t2, e2, i2, s2) {
     return new (i2 || (i2 = Promise))(function(n2, o2) {
       function r2(t3) {
         try {
-          h(s2.next(t3));
+          h2(s2.next(t3));
         } catch (t4) {
           o2(t4);
         }
       }
-      function a(t3) {
+      function a2(t3) {
         try {
-          h(s2.throw(t3));
+          h2(s2.throw(t3));
         } catch (t4) {
           o2(t4);
         }
       }
-      function h(t3) {
+      function h2(t3) {
         var e3;
         t3.done ? n2(t3.value) : (e3 = t3.value, e3 instanceof i2 ? e3 : new i2(function(t4) {
           t4(e3);
-        })).then(r2, a);
+        })).then(r2, a2);
       }
-      h((s2 = s2.apply(t2, e2 || [])).next());
+      h2((s2 = s2.apply(t2, e2 || [])).next());
     });
   }
   !(function(t2) {
@@ -9921,10 +9915,10 @@ var LiteGraphTSMigration = (function(exports) {
       this.windowListener && (window.removeEventListener("resize", this.windowListener), this.windowListener = null);
     }
     checkAutoBounds(t2) {
-      const e2 = this.view, { x: s2, y: n2, width: o2, height: r2 } = this.autoBounds.getBoundsFrom(t2), a = { width: o2, height: r2, pixelRatio: this.config.pixelRatio ? this.pixelRatio : $t$2.devicePixelRatio };
-      if (!this.isSameSize(a)) {
+      const e2 = this.view, { x: s2, y: n2, width: o2, height: r2 } = this.autoBounds.getBoundsFrom(t2), a2 = { width: o2, height: r2, pixelRatio: this.config.pixelRatio ? this.pixelRatio : $t$2.devicePixelRatio };
+      if (!this.isSameSize(a2)) {
         const { style: t3 } = e2;
-        t3.marginLeft = s2 + "px", t3.marginTop = n2 + "px", this.emitResize(a);
+        t3.marginLeft = s2 + "px", t3.marginTop = n2 + "px", this.emitResize(a2);
       }
     }
     stopAutoLayout() {
@@ -10093,8 +10087,8 @@ var LiteGraphTSMigration = (function(exports) {
     partLayout() {
       var t2;
       if (!(null === (t2 = this.__updatedList) || void 0 === t2 ? void 0 : t2.length)) return;
-      const e2 = ne$2.start("PartLayout"), { target: i2, __updatedList: s2 } = this, { BEFORE: n2, LAYOUT: o2, AFTER: r2 } = ta, a = this.getBlocks(s2);
-      a.forEach((t3) => t3.setBefore()), i2.emitEvent(new ta(n2, a, this.times)), this.extraBlock = null, s2.sort(), (function(t3, e3) {
+      const e2 = ne$2.start("PartLayout"), { target: i2, __updatedList: s2 } = this, { BEFORE: n2, LAYOUT: o2, AFTER: r2 } = ta, a2 = this.getBlocks(s2);
+      a2.forEach((t3) => t3.setBefore()), i2.emitEvent(new ta(n2, a2, this.times)), this.extraBlock = null, s2.sort(), (function(t3, e3) {
         let i3;
         t3.list.forEach((t4) => {
           i3 = t4.__layout, e3.without(t4) && !i3.proxyZoom && (i3.matrixChanged ? (ot(t4, true), e3.add(t4), t4.isBranch && ht(t4, e3), lt(t4, e3)) : i3.boundsChanged && (e3.add(t4), t4.isBranch && (t4.__tempNumber = 0), lt(t4, e3)));
@@ -10113,7 +10107,7 @@ var LiteGraphTSMigration = (function(exports) {
         });
       })(this.__levelList), (function(t3) {
         t3.list.forEach(at);
-      })(s2), this.extraBlock && a.push(this.extraBlock), a.forEach((t3) => t3.setAfter()), i2.emitEvent(new ta(o2, a, this.times)), i2.emitEvent(new ta(r2, a, this.times)), this.addBlocks(a), this.__levelList.reset(), this.__updatedList = null, ne$2.end(e2);
+      })(s2), this.extraBlock && a2.push(this.extraBlock), a2.forEach((t3) => t3.setAfter()), i2.emitEvent(new ta(o2, a2, this.times)), i2.emitEvent(new ta(r2, a2, this.times)), this.addBlocks(a2), this.__levelList.reset(), this.__updatedList = null, ne$2.end(e2);
     }
     fullLayout() {
       const t2 = ne$2.start("FullLayout"), { target: e2 } = this, { BEFORE: i2, LAYOUT: s2, AFTER: n2 } = ta, o2 = this.getBlocks(new kh(e2));
@@ -10221,8 +10215,8 @@ var LiteGraphTSMigration = (function(exports) {
       e2.save(), e2.clear(), this.__render(e2.bounds), e2.restore(), ne$2.end(t2);
     }
     __render(e2, s2) {
-      const { canvas: n2, target: o2 } = this, r2 = e2.includes(o2.__world), a = r2 ? { includes: r2 } : { bounds: e2, includes: r2 };
-      this.needFill && n2.fillWorld(e2, this.config.fill), ee$2.showRepaint && ee$2.drawRepaint(n2, e2), this.config.useCellRender && (a.cellList = this.getCellList()), $t$2.render(o2, n2, a), this.renderBounds = s2 = s2 || e2, this.renderOptions = a, this.totalBounds.isEmpty() ? this.totalBounds = s2 : this.totalBounds.add(s2), n2.updateRender(s2);
+      const { canvas: n2, target: o2 } = this, r2 = e2.includes(o2.__world), a2 = r2 ? { includes: r2 } : { bounds: e2, includes: r2 };
+      this.needFill && n2.fillWorld(e2, this.config.fill), ee$2.showRepaint && ee$2.drawRepaint(n2, e2), this.config.useCellRender && (a2.cellList = this.getCellList()), $t$2.render(o2, n2, a2), this.renderBounds = s2 = s2 || e2, this.renderOptions = a2, this.totalBounds.isEmpty() ? this.totalBounds = s2 : this.totalBounds.add(s2), n2.updateRender(s2);
     }
     getCellList() {
     }
@@ -10279,7 +10273,7 @@ var LiteGraphTSMigration = (function(exports) {
     }
   }
   _t.clipSpread = 10;
-  const mt = {}, { copyRadiusPoint: vt } = ot$2, { hitRadiusPoint: yt } = zt$1;
+  const mt = {}, { copyRadiusPoint: vt } = ot$2, { hitRadiusPoint: yt } = zt$2;
   class xt {
     constructor(t2, e2) {
       this.target = t2, this.selector = e2;
@@ -10288,8 +10282,8 @@ var LiteGraphTSMigration = (function(exports) {
       e2 || (e2 = 0), i2 || (i2 = {});
       const s2 = i2.through || false, n2 = i2.ignoreHittable || false, o2 = i2.target || this.target;
       this.exclude = i2.exclude || null, this.point = { x: t2.x, y: t2.y, radiusX: e2, radiusY: e2 }, this.findList = new kh(i2.findList), i2.findList || this.hitBranch(o2.isBranchLeaf ? { children: [o2] } : o2);
-      const { list: r2 } = this.findList, a = this.getBestMatchLeaf(r2, i2.bottomList, n2, !!i2.findList), h = n2 ? this.getPath(a) : this.getHitablePath(a);
-      return this.clear(), s2 ? { path: h, target: a, throughPath: r2.length ? this.getThroughPath(r2) : h } : { path: h, target: a };
+      const { list: r2 } = this.findList, a2 = this.getBestMatchLeaf(r2, i2.bottomList, n2, !!i2.findList), h2 = n2 ? this.getPath(a2) : this.getHitablePath(a2);
+      return this.clear(), s2 ? { path: h2, target: a2, throughPath: r2.length ? this.getThroughPath(r2) : h2 } : { path: h2, target: a2 };
     }
     hitPoint(t2, e2, i2) {
       return !!this.getByPoint(t2, e2, i2).target;
@@ -10578,19 +10572,19 @@ var LiteGraphTSMigration = (function(exports) {
     const o2 = s2.getSameCanvas(true, true);
     o2.font = i2.__.__font, Pt(t2, 2, i2, o2, n2), o2.blendMode = "outside" === e2 ? "destination-out" : "destination-in", Ft$2.fillText(i2, o2, n2), o2.blendMode = "normal", co.copyCanvasByWorld(i2, s2, o2), o2.recycle(i2.__nowWorld);
   }
-  const { getSpread: Mt, copyAndSpread: Ct, toOuterOf: At, getOuterOf: Ot, getByMove: Dt, move: Wt, getIntersectData: It } = zt$1, Ft = {};
+  const { getSpread: Mt, copyAndSpread: Ct, toOuterOf: At, getOuterOf: Ot, getByMove: Dt, move: Wt, getIntersectData: It } = zt$2, Ft = {};
   let zt;
   const { stintSet: jt } = _$1, { hasTransparent: Ut } = Ct$2;
   function Gt(t2, e2, i$1) {
     if (!d(e2) || false === e2.visible || 0 === e2.opacity) return;
     let n2;
-    const { boxBounds: o2 } = i$1.__layout, { type: a } = e2;
-    switch (a) {
+    const { boxBounds: o2 } = i$1.__layout, { type: a2 } = e2;
+    switch (a2) {
       case "image":
       case "film":
       case "video":
         if (!e2.url) return;
-        n2 = Wt$2.image(i$1, t2, e2, o2, !zt || !zt[e2.url]), "image" !== a && Wt$2[a](n2);
+        n2 = Wt$2.image(i$1, t2, e2, o2, !zt || !zt[e2.url]), "image" !== a2 && Wt$2[a2](n2);
         break;
       case "linear":
         n2 = Et$2.linearGradient(e2, o2);
@@ -10602,8 +10596,8 @@ var LiteGraphTSMigration = (function(exports) {
         n2 = Et$2.conicGradient(e2, o2);
         break;
       case "solid":
-        const { color: s$1, opacity: h } = e2;
-        n2 = { type: a, style: Ct$2.string(s$1, h) };
+        const { color: s$1, opacity: h2 } = e2;
+        n2 = { type: a2, style: Ct$2.string(s$1, h2) };
         break;
       default:
         s(e2.r) || (n2 = { type: "solid", style: Ct$2.string(e2) });
@@ -10616,16 +10610,16 @@ var LiteGraphTSMigration = (function(exports) {
   }
   const Yt = { compute: function(t2, e2) {
     const i2 = e2.__, s2 = [];
-    let n2, o2, r2, a = i2.__input[t2];
-    l(a) || (a = [a]), zt = Wt$2.recycleImage(t2, i2);
-    for (let i3, n3 = 0, o3 = a.length; n3 < o3; n3++) (i3 = Gt(t2, a[n3], e2)) && (s2.push(i3), i3.strokeStyle && (r2 || (r2 = 1), i3.strokeStyle.strokeWidth && (r2 = Math.max(r2, i3.strokeStyle.strokeWidth))));
+    let n2, o2, r2, a2 = i2.__input[t2];
+    l(a2) || (a2 = [a2]), zt = Wt$2.recycleImage(t2, i2);
+    for (let i3, n3 = 0, o3 = a2.length; n3 < o3; n3++) (i3 = Gt(t2, a2[n3], e2)) && (s2.push(i3), i3.strokeStyle && (r2 || (r2 = 1), i3.strokeStyle.strokeWidth && (r2 = Math.max(r2, i3.strokeStyle.strokeWidth))));
     i2["_" + t2] = s2.length ? s2 : void 0, s2.length ? (s2.every((t3) => t3.isTransparent) && (s2.some((t3) => t3.image) && (n2 = true), o2 = true), "fill" === t2 ? (jt(i2, "__isAlphaPixelFill", n2), jt(i2, "__isTransparentFill", o2)) : (jt(i2, "__isAlphaPixelStroke", n2), jt(i2, "__isTransparentStroke", o2), jt(i2, "__hasMultiStrokeStyle", r2))) : i2.__removePaint(t2, false);
   }, fill: function(t2, e2, i2, s2) {
     i2.fillStyle = t2, Bt(e2, i2, s2);
   }, fills: function(t2, e2, i2, s2) {
     let n2, o2, r2;
-    for (let a = 0, h = t2.length; a < h; a++) {
-      if (n2 = t2[a], o2 = n2.originPaint, n2.image) {
+    for (let a2 = 0, h2 = t2.length; a2 < h2; a2++) {
+      if (n2 = t2[a2], o2 = n2.originPaint, n2.image) {
         if (r2 ? r2++ : r2 = 1, Wt$2.checkImage(n2, !e2.__.__font, e2, i2, s2)) continue;
         if (!n2.style) {
           1 === r2 && n2.image.isPlacehold && e2.drawImagePlaceholder(n2, i2, s2);
@@ -10698,45 +10692,45 @@ var LiteGraphTSMigration = (function(exports) {
     }
   }, drawStrokesStyle: function(t2, e2, i2, s2, n2, o2) {
     let r2;
-    const a = s2.__, { __hasMultiStrokeStyle: h } = a;
-    h || n2.setStroke(void 0, a.__strokeWidth * e2, a);
-    for (let l2 = 0, c = t2.length; l2 < c; l2++) if (r2 = t2[l2], (!r2.image || !Wt$2.checkImage(r2, false, s2, n2, o2)) && r2.style) {
-      if (h) {
+    const a2 = s2.__, { __hasMultiStrokeStyle: h2 } = a2;
+    h2 || n2.setStroke(void 0, a2.__strokeWidth * e2, a2);
+    for (let l2 = 0, c2 = t2.length; l2 < c2; l2++) if (r2 = t2[l2], (!r2.image || !Wt$2.checkImage(r2, false, s2, n2, o2)) && r2.style) {
+      if (h2) {
         const { strokeStyle: t3 } = r2;
-        t3 ? n2.setStroke(r2.style, a.__getRealStrokeWidth(t3) * e2, a, t3) : n2.setStroke(r2.style, a.__strokeWidth * e2, a);
+        t3 ? n2.setStroke(r2.style, a2.__getRealStrokeWidth(t3) * e2, a2, t3) : n2.setStroke(r2.style, a2.__strokeWidth * e2, a2);
       } else n2.strokeStyle = r2.style;
       r2.originPaint.blendMode ? (n2.saveBlendMode(r2.originPaint.blendMode), i2 ? Ft$2.drawTextStroke(s2, n2, o2) : n2.stroke(), n2.restoreBlendMode()) : i2 ? Ft$2.drawTextStroke(s2, n2, o2) : n2.stroke();
     }
   }, shape: function(t2, e2, s2) {
-    const n2 = e2.getSameCanvas(), o2 = e2.bounds, r2 = t2.__nowWorld, a = t2.__layout, h = t2.__nowWorldShapeBounds || (t2.__nowWorldShapeBounds = {});
-    let l2, c, d2, u2, f2, p2;
-    At(a.strokeSpread ? (Ct(Ft, a.boxBounds, a.strokeSpread), Ft) : a.boxBounds, r2, h);
+    const n2 = e2.getSameCanvas(), o2 = e2.bounds, r2 = t2.__nowWorld, a2 = t2.__layout, h2 = t2.__nowWorldShapeBounds || (t2.__nowWorldShapeBounds = {});
+    let l2, c2, d2, u2, f2, p2;
+    At(a2.strokeSpread ? (Ct(Ft, a2.boxBounds, a2.strokeSpread), Ft) : a2.boxBounds, r2, h2);
     let { scaleX: g2, scaleY: w2 } = t2.getRenderScaleData(true);
-    if (o2.includes(h)) p2 = n2, l2 = f2 = h, c = r2;
+    if (o2.includes(h2)) p2 = n2, l2 = f2 = h2, c2 = r2;
     else {
       let n3;
-      if ($t$2.fullImageShadow) n3 = h;
+      if ($t$2.fullImageShadow) n3 = h2;
       else {
-        const t3 = a.renderShapeSpread ? Mt(o2, v.swapAndScale(a.renderShapeSpread, g2, w2)) : o2;
-        n3 = It(t3, h);
+        const t3 = a2.renderShapeSpread ? Mt(o2, v.swapAndScale(a2.renderShapeSpread, g2, w2)) : o2;
+        n3 = It(t3, h2);
       }
       u2 = o2.getFitMatrix(n3);
       let { a: _2, d: m2 } = u2;
-      u2.a < 1 && (p2 = e2.getSameCanvas(), t2.__renderShape(p2, s2), g2 *= _2, w2 *= m2), f2 = Ot(h, u2), l2 = Dt(f2, -u2.e, -u2.f), c = Ot(r2, u2), Wt(c, -u2.e, -u2.f);
+      u2.a < 1 && (p2 = e2.getSameCanvas(), t2.__renderShape(p2, s2), g2 *= _2, w2 *= m2), f2 = Ot(h2, u2), l2 = Dt(f2, -u2.e, -u2.f), c2 = Ot(r2, u2), Wt(c2, -u2.e, -u2.f);
       const v$1 = s2.matrix;
       v$1 ? (d2 = new pt$2(u2), d2.multiply(v$1), _2 *= v$1.scaleX, m2 *= v$1.scaleY) : d2 = u2, d2.withScale(_2, m2), s2 = Object.assign(Object.assign({}, s2), { matrix: d2 });
     }
-    return t2.__renderShape(n2, s2), { canvas: n2, matrix: d2, fitMatrix: u2, bounds: l2, renderBounds: c, worldCanvas: p2, shapeBounds: f2, scaleX: g2, scaleY: w2 };
+    return t2.__renderShape(n2, s2), { canvas: n2, matrix: d2, fitMatrix: u2, bounds: l2, renderBounds: c2, worldCanvas: p2, shapeBounds: f2, scaleX: g2, scaleY: w2 };
   } };
   let Xt, Vt = new Vt$3();
-  const { isSame: Nt } = zt$1;
+  const { isSame: Nt } = zt$2;
   function Ht(t2, e2, i2, s2, n2, o2) {
     const r2 = t2.__;
     if ("fill" === e2 && !r2.__naturalWidth && (r2.__naturalWidth = s2.width / r2.pixelRatio, r2.__naturalHeight = s2.height / r2.pixelRatio, r2.__autoSide)) return t2.forceUpdate("width"), t2.__proxyData && (t2.setProxyAttr("width", r2.width), t2.setProxyAttr("height", r2.height)), false;
     if (!n2.data) {
       Wt$2.createData(n2, s2, i2, o2);
-      const { transform: t3 } = n2.data, { opacity: e3, blendMode: a } = i2, h = t3 && !t3.onlyScale || r2.path || r2.cornerRadius;
-      (h || e3 && e3 < 1 || a) && (n2.complex = !h || 2);
+      const { transform: t3 } = n2.data, { opacity: e3, blendMode: a2 } = i2, h2 = t3 && !t3.onlyScale || r2.path || r2.cornerRadius;
+      (h2 || e3 && e3 < 1 || a2) && (n2.complex = !h2 || 2);
     }
     return true;
   }
@@ -10763,30 +10757,30 @@ var LiteGraphTSMigration = (function(exports) {
   }
   let oe = {}, re = X$2();
   const { get: ae, set: he, rotateOfOuter: le, translate: ce, scaleOfOuter: de, multiplyParent: ue, scale: fe, rotate: pe, skew: ge } = q$1;
-  function we(t2, e2, i2, s2, n2, o2, r2, a) {
-    r2 && pe(t2, r2), a && ge(t2, a.x, a.y), n2 && fe(t2, n2, o2), ce(t2, e2.x + i2, e2.y + s2);
+  function we(t2, e2, i2, s2, n2, o2, r2, a2) {
+    r2 && pe(t2, r2), a2 && ge(t2, a2.x, a2.y), n2 && fe(t2, n2, o2), ce(t2, e2.x + i2, e2.y + s2);
   }
   const { get: _e, scale: me, copy: ve } = q$1, { getFloorScale: ye } = I$2, { abs: xe } = Math;
   const be = { image: function(t2, e2, i2, s2, n2) {
     let o2, r2;
-    const a = en.get(i2, i2.type);
-    return Xt && i2 === Xt.paint && Nt(s2, Xt.boxBounds) ? o2 = Xt.leafPaint : (o2 = { type: i2.type, image: a }, a.hasAlphaPixel && (o2.isTransparent = true), Xt = a.use > 1 ? { leafPaint: o2, paint: i2, boxBounds: Vt.set(s2) } : null), (n2 || a.loading) && (r2 = { image: a, attrName: e2, attrValue: i2 }), a.ready ? (Ht(t2, e2, i2, a, o2, s2), n2 && (qt(t2, r2), Kt(t2, r2))) : a.error ? n2 && Qt(t2, r2, a.error) : (n2 && (Zt(t2, true), qt(t2, r2)), o2.loadId = a.load(() => {
-      Zt(t2, false), t2.destroyed || (Ht(t2, e2, i2, a, o2, s2) && (a.hasAlphaPixel && (t2.__layout.hitCanvasChanged = true), t2.forceUpdate("surface")), Kt(t2, r2)), o2.loadId = void 0;
+    const a2 = en.get(i2, i2.type);
+    return Xt && i2 === Xt.paint && Nt(s2, Xt.boxBounds) ? o2 = Xt.leafPaint : (o2 = { type: i2.type, image: a2 }, a2.hasAlphaPixel && (o2.isTransparent = true), Xt = a2.use > 1 ? { leafPaint: o2, paint: i2, boxBounds: Vt.set(s2) } : null), (n2 || a2.loading) && (r2 = { image: a2, attrName: e2, attrValue: i2 }), a2.ready ? (Ht(t2, e2, i2, a2, o2, s2), n2 && (qt(t2, r2), Kt(t2, r2))) : a2.error ? n2 && Qt(t2, r2, a2.error) : (n2 && (Zt(t2, true), qt(t2, r2)), o2.loadId = a2.load(() => {
+      Zt(t2, false), t2.destroyed || (Ht(t2, e2, i2, a2, o2, s2) && (a2.hasAlphaPixel && (t2.__layout.hitCanvasChanged = true), t2.forceUpdate("surface")), Kt(t2, r2)), o2.loadId = void 0;
     }, (e3) => {
       Zt(t2, false), Qt(t2, r2, e3), o2.loadId = void 0;
-    }, i2.lod && a.getThumbSize(i2.lod)), t2.placeholderColor && (t2.placeholderDelay ? setTimeout(() => {
-      a.ready || (a.isPlacehold = true, t2.forceUpdate("surface"));
-    }, t2.placeholderDelay) : a.isPlacehold = true)), o2;
+    }, i2.lod && a2.getThumbSize(i2.lod)), t2.placeholderColor && (t2.placeholderDelay ? setTimeout(() => {
+      a2.ready || (a2.isPlacehold = true, t2.forceUpdate("surface"));
+    }, t2.placeholderDelay) : a2.isPlacehold = true)), o2;
   }, checkImage: function(t2, e2, s2, n2, o2) {
-    const { scaleX: r2, scaleY: h } = Wt$2.getImageRenderScaleData(t2, s2, n2, o2), l2 = t2.film ? t2.nowIndex : r2 + "-" + h, { image: c, data: d2, originPaint: u2 } = t2, { exporting: f2, snapshot: p2 } = o2;
-    return !(!d2 || t2.patternId === l2 && !f2 || p2) && (e2 && (d2.repeat ? e2 = false : u2.changeful || t2.film || "miniapp" === $t$2.name && $o.isResizing(s2) || f2 || (e2 = $t$2.image.isLarge(c, r2, h) || c.width * r2 > 8096 || c.height * h > 8096)), e2 ? (s2.__.__isFastShadow && (n2.fillStyle = t2.style || "#000", n2.fill()), Wt$2.drawImage(t2, r2, h, s2, n2, o2), true) : (!t2.style || u2.sync || f2 ? Wt$2.createPattern(t2, s2, n2, o2) : Wt$2.createPatternTask(t2, s2, n2, o2), false));
+    const { scaleX: r2, scaleY: h2 } = Wt$2.getImageRenderScaleData(t2, s2, n2, o2), l2 = t2.film ? t2.nowIndex : r2 + "-" + h2, { image: c2, data: d2, originPaint: u2 } = t2, { exporting: f2, snapshot: p2 } = o2;
+    return !(!d2 || t2.patternId === l2 && !f2 || p2) && (e2 && (d2.repeat ? e2 = false : u2.changeful || t2.film || "miniapp" === $t$2.name && $o.isResizing(s2) || f2 || (e2 = $t$2.image.isLarge(c2, r2, h2) || c2.width * r2 > 8096 || c2.height * h2 > 8096)), e2 ? (s2.__.__isFastShadow && (n2.fillStyle = t2.style || "#000", n2.fill()), Wt$2.drawImage(t2, r2, h2, s2, n2, o2), true) : (!t2.style || u2.sync || f2 ? Wt$2.createPattern(t2, s2, n2, o2) : Wt$2.createPatternTask(t2, s2, n2, o2), false));
   }, drawImage: function(t2, e2, i2, s2, n2, o2) {
-    const { data: r2, image: a, complex: h } = t2;
-    let { width: l2, height: c } = a;
-    if (h) {
+    const { data: r2, image: a2, complex: h2 } = t2;
+    let { width: l2, height: c2 } = a2;
+    if (h2) {
       const { blendMode: o3, opacity: d2 } = t2.originPaint, { transform: u2 } = r2;
-      n2.save(), 2 === h && n2.clipUI(s2), o3 && (n2.blendMode = o3), d2 && (n2.opacity *= d2), u2 && n2.transform(u2), a.render(n2, 0, 0, l2, c, s2, t2, e2, i2), n2.restore();
-    } else r2.scaleX && (l2 *= r2.scaleX, c *= r2.scaleY), a.render(n2, 0, 0, l2, c, s2, t2, e2, i2);
+      n2.save(), 2 === h2 && n2.clipUI(s2), o3 && (n2.blendMode = o3), d2 && (n2.opacity *= d2), u2 && n2.transform(u2), a2.render(n2, 0, 0, l2, c2, s2, t2, e2, i2), n2.restore();
+    } else r2.scaleX && (l2 *= r2.scaleX, c2 *= r2.scaleY), a2.render(n2, 0, 0, l2, c2, s2, t2, e2, i2);
   }, getImageRenderScaleData: function(t2, e2, i2, s2) {
     const n2 = e2.getRenderScaleData(true, t2.originPaint.scaleFixed), { data: o2 } = t2;
     if (i2) {
@@ -10797,8 +10791,8 @@ var LiteGraphTSMigration = (function(exports) {
   }, recycleImage: function(t2, e2) {
     const i2 = e2["_" + t2];
     if (l(i2)) {
-      let s2, n2, o2, r2, a;
-      for (let h = 0, l$1 = i2.length; h < l$1; h++) s2 = i2[h], n2 = s2.image, a = n2 && n2.url, a && (o2 || (o2 = {}), o2[a] = true, en.recyclePaint(s2), n2.loading && (r2 || (r2 = e2.__input && e2.__input[t2] || [], l(r2) || (r2 = [r2])), n2.unload(i2[h].loadId, !r2.some((t3) => t3.url === a))));
+      let s2, n2, o2, r2, a2;
+      for (let h2 = 0, l$1 = i2.length; h2 < l$1; h2++) s2 = i2[h2], n2 = s2.image, a2 = n2 && n2.url, a2 && (o2 || (o2 = {}), o2[a2] = true, en.recyclePaint(s2), n2.loading && (r2 || (r2 = e2.__input && e2.__input[t2] || [], l(r2) || (r2 = [r2])), n2.unload(i2[h2].loadId, !r2.some((t3) => t3.url === a2))));
       return o2;
     }
     return null;
@@ -10807,25 +10801,25 @@ var LiteGraphTSMigration = (function(exports) {
       Wt$2.createPattern(t2, e2, i2, s2), e2.forceUpdate("surface");
     }), 0, () => (t2.patternTask = null, i2.bounds.hit(e2.__nowWorld))));
   }, createPattern: function(t2, e2, s2, n2) {
-    let { scaleX: o2, scaleY: r2 } = Wt$2.getImageRenderScaleData(t2, e2, s2, n2), a = t2.film ? t2.nowIndex : o2 + "-" + r2;
-    if (t2.patternId !== a && !e2.destroyed && (!$t$2.image.isLarge(t2.image, o2, r2) || t2.data.repeat)) {
-      const { image: s3, data: n3 } = t2, { opacity: h, filters: l2 } = t2.originPaint, { transform: c, gap: d2 } = n3, u2 = Wt$2.getPatternFixScale(t2, o2, r2);
+    let { scaleX: o2, scaleY: r2 } = Wt$2.getImageRenderScaleData(t2, e2, s2, n2), a2 = t2.film ? t2.nowIndex : o2 + "-" + r2;
+    if (t2.patternId !== a2 && !e2.destroyed && (!$t$2.image.isLarge(t2.image, o2, r2) || t2.data.repeat)) {
+      const { image: s3, data: n3 } = t2, { opacity: h2, filters: l2 } = t2.originPaint, { transform: c2, gap: d2 } = n3, u2 = Wt$2.getPatternFixScale(t2, o2, r2);
       let f2, p2, g2, { width: w2, height: _2 } = s3;
-      u2 && (o2 *= u2, r2 *= u2), w2 *= o2, _2 *= r2, d2 && (p2 = d2.x * o2 / xe(n3.scaleX || 1), g2 = d2.y * r2 / xe(n3.scaleY || 1)), (c || 1 !== o2 || 1 !== r2) && (o2 *= ye(w2 + (p2 || 0)), r2 *= ye(_2 + (g2 || 0)), f2 = _e(), c && ve(f2, c), me(f2, 1 / o2, 1 / r2));
-      const m2 = s3.getCanvas(w2, _2, h, l2, p2, g2, e2.leafer && e2.leafer.config.smooth, n3.interlace), v2 = s3.getPattern(m2, n3.repeat || $t$2.origin.noRepeat || "no-repeat", f2, t2);
-      t2.style = v2, t2.patternId = a;
+      u2 && (o2 *= u2, r2 *= u2), w2 *= o2, _2 *= r2, d2 && (p2 = d2.x * o2 / xe(n3.scaleX || 1), g2 = d2.y * r2 / xe(n3.scaleY || 1)), (c2 || 1 !== o2 || 1 !== r2) && (o2 *= ye(w2 + (p2 || 0)), r2 *= ye(_2 + (g2 || 0)), f2 = _e(), c2 && ve(f2, c2), me(f2, 1 / o2, 1 / r2));
+      const m2 = s3.getCanvas(w2, _2, h2, l2, p2, g2, e2.leafer && e2.leafer.config.smooth, n3.interlace), v2 = s3.getPattern(m2, n3.repeat || $t$2.origin.noRepeat || "no-repeat", f2, t2);
+      t2.style = v2, t2.patternId = a2;
     }
   }, getPatternFixScale: function(t2, e2, s2) {
     const { image: n2 } = t2;
-    let o2, r2 = $t$2.image.maxPatternSize, a = n2.width * n2.height;
-    return n2.isSVG ? e2 > 1 && (o2 = Math.ceil(e2) / e2) : r2 > a && (r2 = a), (a *= e2 * s2) > r2 && (o2 = Math.sqrt(r2 / a)), o2;
+    let o2, r2 = $t$2.image.maxPatternSize, a2 = n2.width * n2.height;
+    return n2.isSVG ? e2 > 1 && (o2 = Math.ceil(e2) / e2) : r2 > a2 && (r2 = a2), (a2 *= e2 * s2) > r2 && (o2 = Math.sqrt(r2 / a2)), o2;
   }, createData: function(t2, e2, i2, s2) {
     t2.data = Wt$2.getPatternData(i2, s2, e2);
   }, getPatternData: function(t2, e2, i$1) {
     t2.padding && (e2 = ee.set(e2).shrink(t2.padding)), "strench" === t2.mode && (t2.mode = "stretch");
-    const { width: n2, height: o$1 } = i$1, { mode: r2, align: a, offset: h, scale: l2, size: c, rotation: d$1, skew: u2, clipSize: f2, repeat: p2, gap: g2, interlace: w2 } = t2, _2 = e2.width === n2 && e2.height === o$1, m2 = { mode: r2 }, v2 = "center" !== a && (d$1 || 0) % 180 == 90;
+    const { width: n2, height: o$1 } = i$1, { mode: r2, align: a2, offset: h2, scale: l2, size: c2, rotation: d$1, skew: u2, clipSize: f2, repeat: p2, gap: g2, interlace: w2 } = t2, _2 = e2.width === n2 && e2.height === o$1, m2 = { mode: r2 }, v2 = "center" !== a2 && (d$1 || 0) % 180 == 90;
     let y2, x2;
-    switch (zt$1.set(se, 0, 0, v2 ? o$1 : n2, v2 ? n2 : o$1), r2 && "cover" !== r2 && "fit" !== r2 ? ((l2 || c) && (I$2.getScaleData(l2, c, i$1, ie), y2 = ie.scaleX, x2 = ie.scaleY), (a || g2 || p2) && (y2 && zt$1.scale(se, y2, x2, true), a && kt$3.toPoint(a, se, e2, se, true, true))) : _2 && !d$1 || (y2 = x2 = zt$1.getFitScale(e2, se, "fit" !== r2), zt$1.put(e2, i$1, a, y2, false, se), zt$1.scale(se, y2, x2, true)), h && ot$2.move(se, h), r2) {
+    switch (zt$2.set(se, 0, 0, v2 ? o$1 : n2, v2 ? n2 : o$1), r2 && "cover" !== r2 && "fit" !== r2 ? ((l2 || c2) && (I$2.getScaleData(l2, c2, i$1, ie), y2 = ie.scaleX, x2 = ie.scaleY), (a2 || g2 || p2) && (y2 && zt$2.scale(se, y2, x2, true), a2 && kt$3.toPoint(a2, se, e2, se, true, true))) : _2 && !d$1 || (y2 = x2 = zt$2.getFitScale(e2, se, "fit" !== r2), zt$2.put(e2, i$1, a2, y2, false, se), zt$2.scale(se, y2, x2, true)), h2 && ot$2.move(se, h2), r2) {
       case "stretch":
         _2 ? y2 && (y2 = x2 = void 0) : (y2 = e2.width / n2, x2 = e2.height / o$1, Wt$2.stretchMode(m2, e2, y2, x2));
         break;
@@ -10837,7 +10831,7 @@ var LiteGraphTSMigration = (function(exports) {
         }
         break;
       case "repeat":
-        (!_2 || y2 || d$1 || u2) && Wt$2.repeatMode(m2, e2, n2, o$1, se.x, se.y, y2, x2, d$1, u2, a, t2.freeTransform), p2 || (m2.repeat = "repeat");
+        (!_2 || y2 || d$1 || u2) && Wt$2.repeatMode(m2, e2, n2, o$1, se.x, se.y, y2, x2, d$1, u2, a2, t2.freeTransform), p2 || (m2.repeat = "repeat");
         const i2 = d(p2);
         (g2 || i2) && (m2.gap = (function(t3, e3, i3, s2, n3) {
           let o2, r3;
@@ -10853,17 +10847,17 @@ var LiteGraphTSMigration = (function(exports) {
     const n2 = ae(), { x: o2, y: r2 } = e2;
     o2 || r2 ? ce(n2, o2, r2) : i2 > 0 && s2 > 0 && (n2.onlyScale = true), fe(n2, i2, s2), t2.transform = n2;
   }, fillOrFitMode: function(t2, e2, i2, s2, n2, o2, r2) {
-    const a = ae();
-    ce(a, e2.x + i2, e2.y + s2), fe(a, n2, o2), r2 && le(a, { x: e2.x + e2.width / 2, y: e2.y + e2.height / 2 }, r2), t2.transform = a;
-  }, clipMode: function(t2, e2, i2, s2, n2, o2, r2, a, h, l2) {
-    const c = ae();
-    we(c, e2, i2, s2, n2, o2, r2, a), h && (r2 || a ? (he(re), de(re, e2, h, l2), ue(c, re)) : de(c, e2, h, l2)), t2.transform = c;
-  }, repeatMode: function(t2, e2, i2, s2, n2, o2, r2, a, h, l2, c, d2) {
+    const a2 = ae();
+    ce(a2, e2.x + i2, e2.y + s2), fe(a2, n2, o2), r2 && le(a2, { x: e2.x + e2.width / 2, y: e2.y + e2.height / 2 }, r2), t2.transform = a2;
+  }, clipMode: function(t2, e2, i2, s2, n2, o2, r2, a2, h2, l2) {
+    const c2 = ae();
+    we(c2, e2, i2, s2, n2, o2, r2, a2), h2 && (r2 || a2 ? (he(re), de(re, e2, h2, l2), ue(c2, re)) : de(c2, e2, h2, l2)), t2.transform = c2;
+  }, repeatMode: function(t2, e2, i2, s2, n2, o2, r2, a2, h2, l2, c2, d2) {
     const u2 = ae();
-    if (d2) we(u2, e2, n2, o2, r2, a, h, l2);
+    if (d2) we(u2, e2, n2, o2, r2, a2, h2, l2);
     else {
-      if (h) if ("center" === c) le(u2, { x: i2 / 2, y: s2 / 2 }, h);
-      else switch (pe(u2, h), h) {
+      if (h2) if ("center" === c2) le(u2, { x: i2 / 2, y: s2 / 2 }, h2);
+      else switch (pe(u2, h2), h2) {
         case 90:
           ce(u2, s2, 0);
           break;
@@ -10873,24 +10867,24 @@ var LiteGraphTSMigration = (function(exports) {
         case 270:
           ce(u2, 0, i2);
       }
-      oe.x = e2.x + n2, oe.y = e2.y + o2, ce(u2, oe.x, oe.y), r2 && de(u2, oe, r2, a);
+      oe.x = e2.x + n2, oe.y = e2.y + o2, ce(u2, oe.x, oe.y), r2 && de(u2, oe, r2, a2);
     }
     t2.transform = u2;
   } }, { toPoint: Se } = bt$3, { hasTransparent: Le } = Ct$2, ke = {}, Te = {};
   function Be(t2, e2, i$1, n2) {
     if (i$1) {
-      let o2, r2, a, h;
-      for (let t3 = 0, l2 = i$1.length; t3 < l2; t3++) o2 = i$1[t3], i(o2) ? (a = t3 / (l2 - 1), r2 = Ct$2.string(o2, n2)) : (a = o2.offset, r2 = Ct$2.string(o2.color, n2)), e2.addColorStop(a, r2), !h && Le(r2) && (h = true);
-      h && (t2.isTransparent = true);
+      let o2, r2, a2, h2;
+      for (let t3 = 0, l2 = i$1.length; t3 < l2; t3++) o2 = i$1[t3], i(o2) ? (a2 = t3 / (l2 - 1), r2 = Ct$2.string(o2, n2)) : (a2 = o2.offset, r2 = Ct$2.string(o2.color, n2)), e2.addColorStop(a2, r2), !h2 && Le(r2) && (h2 = true);
+      h2 && (t2.isTransparent = true);
     }
   }
   const { getAngle: Ee, getDistance: Pe } = ot$2, { get: Re, rotateOfOuter: Me, scaleOfOuter: Ce } = q$1, { toPoint: Ae } = bt$3, Oe = {}, De = {};
   function We(t2, e2, i2, s2, n2) {
     let o2;
-    const { width: r2, height: a } = t2;
-    if (r2 !== a || s2) {
+    const { width: r2, height: a2 } = t2;
+    if (r2 !== a2 || s2) {
       const t3 = Ee(e2, i2);
-      o2 = Re(), n2 ? (Ce(o2, e2, r2 / a * (s2 || 1), 1), Me(o2, e2, t3 + 90)) : (Ce(o2, e2, 1, r2 / a * (s2 || 1)), Me(o2, e2, t3));
+      o2 = Re(), n2 ? (Ce(o2, e2, r2 / a2 * (s2 || 1), 1), Me(o2, e2, t3 + 90)) : (Ce(o2, e2, 1, r2 / a2 * (s2 || 1)), Me(o2, e2, t3));
     }
     return o2;
   }
@@ -10898,57 +10892,57 @@ var LiteGraphTSMigration = (function(exports) {
   const Ue = { linearGradient: function(t2, e2) {
     let { from: s2, to: n2, type: o2, opacity: r2 } = t2;
     Se(s2 || "top", e2, ke), Se(n2 || "bottom", e2, Te);
-    const a = $t$2.canvas.createLinearGradient(ke.x, ke.y, Te.x, Te.y), h = { type: o2, style: a };
-    return Be(h, a, t2.stops, r2), h;
+    const a2 = $t$2.canvas.createLinearGradient(ke.x, ke.y, Te.x, Te.y), h2 = { type: o2, style: a2 };
+    return Be(h2, a2, t2.stops, r2), h2;
   }, radialGradient: function(t2, e2) {
-    let { from: s2, to: n2, type: o2, opacity: r2, stretch: a } = t2;
+    let { from: s2, to: n2, type: o2, opacity: r2, stretch: a2 } = t2;
     Ae(s2 || "center", e2, Oe), Ae(n2 || "bottom", e2, De);
-    const h = $t$2.canvas.createRadialGradient(Oe.x, Oe.y, 0, Oe.x, Oe.y, Pe(Oe, De)), l2 = { type: o2, style: h };
-    Be(l2, h, t2.stops, r2);
-    const c = We(e2, Oe, De, a, true);
-    return c && (l2.transform = c), l2;
+    const h2 = $t$2.canvas.createRadialGradient(Oe.x, Oe.y, 0, Oe.x, Oe.y, Pe(Oe, De)), l2 = { type: o2, style: h2 };
+    Be(l2, h2, t2.stops, r2);
+    const c2 = We(e2, Oe, De, a2, true);
+    return c2 && (l2.transform = c2), l2;
   }, conicGradient: function(t2, e2) {
-    let { from: s2, to: n2, type: o2, opacity: r2, stretch: a } = t2;
+    let { from: s2, to: n2, type: o2, opacity: r2, stretch: a2 } = t2;
     Fe(s2 || "center", e2, ze), Fe(n2 || "bottom", e2, je);
-    const h = $t$2.conicGradientSupport ? $t$2.canvas.createConicGradient(0, ze.x, ze.y) : $t$2.canvas.createRadialGradient(ze.x, ze.y, 0, ze.x, ze.y, Ie(ze, je)), l2 = { type: o2, style: h };
-    Be(l2, h, t2.stops, r2);
-    const c = We(e2, ze, je, a || 1, $t$2.conicGradientRotate90);
-    return c && (l2.transform = c), l2;
-  }, getTransform: We }, { copy: Ge, move: Ye, toOffsetOutBounds: Xe } = zt$1, { max: Ve, abs: Ne } = Math, He = {}, qe = new pt$2(), Ke = {};
+    const h2 = $t$2.conicGradientSupport ? $t$2.canvas.createConicGradient(0, ze.x, ze.y) : $t$2.canvas.createRadialGradient(ze.x, ze.y, 0, ze.x, ze.y, Ie(ze, je)), l2 = { type: o2, style: h2 };
+    Be(l2, h2, t2.stops, r2);
+    const c2 = We(e2, ze, je, a2 || 1, $t$2.conicGradientRotate90);
+    return c2 && (l2.transform = c2), l2;
+  }, getTransform: We }, { copy: Ge, move: Ye, toOffsetOutBounds: Xe } = zt$2, { max: Ve, abs: Ne } = Math, He = {}, qe = new pt$2(), Ke = {};
   function Qe(t2, e2) {
-    let i2, s2, n2, o2, r2 = 0, a = 0, h = 0, l2 = 0;
+    let i2, s2, n2, o2, r2 = 0, a2 = 0, h2 = 0, l2 = 0;
     return e2.forEach((t3) => {
-      i2 = t3.x || 0, s2 = t3.y || 0, o2 = 1.5 * (t3.blur || 0), n2 = Ne(t3.spread || 0), r2 = Ve(r2, n2 + o2 - s2), a = Ve(a, n2 + o2 + i2), h = Ve(h, n2 + o2 + s2), l2 = Ve(l2, n2 + o2 - i2);
-    }), r2 === a && a === h && h === l2 ? r2 : [r2, a, h, l2];
+      i2 = t3.x || 0, s2 = t3.y || 0, o2 = 1.5 * (t3.blur || 0), n2 = Ne(t3.spread || 0), r2 = Ve(r2, n2 + o2 - s2), a2 = Ve(a2, n2 + o2 + i2), h2 = Ve(h2, n2 + o2 + s2), l2 = Ve(l2, n2 + o2 - i2);
+    }), r2 === a2 && a2 === h2 && h2 === l2 ? r2 : [r2, a2, h2, l2];
   }
   function $e(t2, e2, s2) {
     const { shapeBounds: n2 } = s2;
     let o2, r2;
     $t$2.fullImageShadow ? (Ge(He, t2.bounds), Ye(He, e2.x - n2.x, e2.y - n2.y), o2 = t2.bounds, r2 = He) : (o2 = n2, r2 = e2), t2.copyWorld(s2.canvas, o2, r2);
   }
-  const { toOffsetOutBounds: Ze } = zt$1, Je = {};
+  const { toOffsetOutBounds: Ze } = zt$2, Je = {};
   const ti = Qe;
   const ei = { shadow: function(t2, e2, i2) {
     let s2, n2;
-    const { __nowWorld: o2 } = t2, { shadow: r2 } = t2.__, { worldCanvas: a, bounds: h, renderBounds: l2, shapeBounds: c, scaleX: d2, scaleY: u2 } = i2, f2 = e2.getSameCanvas(), p2 = r2.length - 1;
-    Xe(h, Ke, l2), r2.forEach((r3, g2) => {
+    const { __nowWorld: o2 } = t2, { shadow: r2 } = t2.__, { worldCanvas: a2, bounds: h2, renderBounds: l2, shapeBounds: c2, scaleX: d2, scaleY: u2 } = i2, f2 = e2.getSameCanvas(), p2 = r2.length - 1;
+    Xe(h2, Ke, l2), r2.forEach((r3, g2) => {
       let w2 = 1;
       if (r3.scaleFixed) {
         const t3 = Math.abs(o2.scaleX);
         t3 > 1 && (w2 = 1 / t3);
       }
-      f2.setWorldShadow(Ke.offsetX + (r3.x || 0) * d2 * w2, Ke.offsetY + (r3.y || 0) * u2 * w2, (r3.blur || 0) * d2 * w2, Ct$2.string(r3.color)), n2 = Tt$2.getShadowTransform(t2, f2, i2, r3, Ke, w2), n2 && f2.setTransform(n2), $e(f2, Ke, i2), n2 && f2.resetTransform(), s2 = l2, r3.box && (f2.restore(), f2.save(), a && (f2.copyWorld(f2, l2, o2, "copy"), s2 = o2), a ? f2.copyWorld(a, o2, o2, "destination-out") : f2.copyWorld(i2.canvas, c, h, "destination-out")), co.copyCanvasByWorld(t2, e2, f2, s2, r3.blendMode), p2 && g2 < p2 && f2.clearWorld(s2);
+      f2.setWorldShadow(Ke.offsetX + (r3.x || 0) * d2 * w2, Ke.offsetY + (r3.y || 0) * u2 * w2, (r3.blur || 0) * d2 * w2, Ct$2.string(r3.color)), n2 = Tt$2.getShadowTransform(t2, f2, i2, r3, Ke, w2), n2 && f2.setTransform(n2), $e(f2, Ke, i2), n2 && f2.resetTransform(), s2 = l2, r3.box && (f2.restore(), f2.save(), a2 && (f2.copyWorld(f2, l2, o2, "copy"), s2 = o2), a2 ? f2.copyWorld(a2, o2, o2, "destination-out") : f2.copyWorld(i2.canvas, c2, h2, "destination-out")), co.copyCanvasByWorld(t2, e2, f2, s2, r3.blendMode), p2 && g2 < p2 && f2.clearWorld(s2);
     }), f2.recycle(s2);
   }, innerShadow: function(t2, e2, i2) {
     let s2, n2;
-    const { __nowWorld: o2 } = t2, { innerShadow: r2 } = t2.__, { worldCanvas: a, bounds: h, renderBounds: l2, shapeBounds: c, scaleX: d2, scaleY: u2 } = i2, f2 = e2.getSameCanvas(), p2 = r2.length - 1;
-    Ze(h, Je, l2), r2.forEach((r3, g2) => {
+    const { __nowWorld: o2 } = t2, { innerShadow: r2 } = t2.__, { worldCanvas: a2, bounds: h2, renderBounds: l2, shapeBounds: c2, scaleX: d2, scaleY: u2 } = i2, f2 = e2.getSameCanvas(), p2 = r2.length - 1;
+    Ze(h2, Je, l2), r2.forEach((r3, g2) => {
       let w2 = 1;
       if (r3.scaleFixed) {
         const t3 = Math.abs(o2.scaleX);
         t3 > 1 && (w2 = 1 / t3);
       }
-      f2.save(), f2.setWorldShadow(Je.offsetX + (r3.x || 0) * d2 * w2, Je.offsetY + (r3.y || 0) * u2 * w2, (r3.blur || 0) * d2 * w2), n2 = Tt$2.getShadowTransform(t2, f2, i2, r3, Je, w2, true), n2 && f2.setTransform(n2), $e(f2, Je, i2), f2.restore(), a ? (f2.copyWorld(f2, l2, o2, "copy"), f2.copyWorld(a, o2, o2, "source-out"), s2 = o2) : (f2.copyWorld(i2.canvas, c, h, "source-out"), s2 = l2), f2.fillWorld(s2, Ct$2.string(r3.color), "source-in"), co.copyCanvasByWorld(t2, e2, f2, s2, r3.blendMode), p2 && g2 < p2 && f2.clearWorld(s2);
+      f2.save(), f2.setWorldShadow(Je.offsetX + (r3.x || 0) * d2 * w2, Je.offsetY + (r3.y || 0) * u2 * w2, (r3.blur || 0) * d2 * w2), n2 = Tt$2.getShadowTransform(t2, f2, i2, r3, Je, w2, true), n2 && f2.setTransform(n2), $e(f2, Je, i2), f2.restore(), a2 ? (f2.copyWorld(f2, l2, o2, "copy"), f2.copyWorld(a2, o2, o2, "source-out"), s2 = o2) : (f2.copyWorld(i2.canvas, c2, h2, "source-out"), s2 = l2), f2.fillWorld(s2, Ct$2.string(r3.color), "source-in"), co.copyCanvasByWorld(t2, e2, f2, s2, r3.blendMode), p2 && g2 < p2 && f2.clearWorld(s2);
     }), f2.recycle(s2);
   }, blur: function(t2, e2, i2) {
     const { blur: s2 } = t2.__;
@@ -10956,13 +10950,13 @@ var LiteGraphTSMigration = (function(exports) {
   }, backgroundBlur: function(t2, e2, i2) {
   }, getShadowRenderSpread: Qe, getShadowTransform: function(t2, e2, i2, s2, n2, o2, r2) {
     if (s2.spread) {
-      const i3 = 2 * s2.spread * o2 * (r2 ? -1 : 1), { width: a, height: h } = t2.__layout.strokeBounds;
-      return qe.set().scaleOfOuter({ x: (n2.x + n2.width / 2) * e2.pixelRatio, y: (n2.y + n2.height / 2) * e2.pixelRatio }, 1 + i3 / a, 1 + i3 / h), qe;
+      const i3 = 2 * s2.spread * o2 * (r2 ? -1 : 1), { width: a2, height: h2 } = t2.__layout.strokeBounds;
+      return qe.set().scaleOfOuter({ x: (n2.x + n2.width / 2) * e2.pixelRatio, y: (n2.y + n2.height / 2) * e2.pixelRatio }, 1 + i3 / a2, 1 + i3 / h2), qe;
     }
   }, isTransformShadow(t2) {
   }, getInnerShadowSpread: ti }, { excludeRenderBounds: ii } = xo;
   let si;
-  function ni(t2, e2, i2, s2, n2, o2, r2, a) {
+  function ni(t2, e2, i2, s2, n2, o2, r2, a2) {
     switch (e2) {
       case "grayscale":
         si || (si = true, n2.useGrayscaleAlpha(t2.__nowWorld));
@@ -10971,13 +10965,13 @@ var LiteGraphTSMigration = (function(exports) {
           const r3 = t3.__nowWorld;
           i3.resetTransform(), i3.opacity = 1, i3.useMask(s3, r3), o3 && s3.recycle(r3);
           ri(t3, e3, i3, 1, n3, o3);
-        })(t2, i2, s2, n2, r2, a);
+        })(t2, i2, s2, n2, r2, a2);
         break;
       case "opacity-path":
-        ri(t2, i2, s2, o2, r2, a);
+        ri(t2, i2, s2, o2, r2, a2);
         break;
       case "path":
-        a && i2.restore();
+        a2 && i2.restore();
     }
   }
   function oi(t2) {
@@ -10988,15 +10982,15 @@ var LiteGraphTSMigration = (function(exports) {
     e2.resetTransform(), e2.opacity = s2, e2.copyWorld(i2, r2, void 0, n2), o2 ? i2.recycle(r2) : i2.clearWorld(r2);
   }
   ye$1.prototype.__renderMask = function(t2, e2) {
-    let i2, s2, n2, o2, r2, a;
-    const { children: h } = this;
-    for (let l2 = 0, c = h.length; l2 < c; l2++) {
-      if (i2 = h[l2], a = i2.__.mask, a) {
-        r2 && (ni(this, r2, t2, n2, s2, o2, void 0, true), s2 = n2 = null), "clipping" !== a && "clipping-path" !== a || ii(i2, e2) || i2.__render(t2, e2), o2 = i2.__.opacity, si = false, "path" === a || "clipping-path" === a ? (o2 < 1 ? (r2 = "opacity-path", n2 || (n2 = oi(t2))) : (r2 = "path", t2.save()), i2.__clip(n2 || t2, e2)) : (r2 = "grayscale" === a ? "grayscale" : "alpha", s2 || (s2 = oi(t2)), n2 || (n2 = oi(t2)), i2.__render(s2, e2));
+    let i2, s2, n2, o2, r2, a2;
+    const { children: h2 } = this;
+    for (let l2 = 0, c2 = h2.length; l2 < c2; l2++) {
+      if (i2 = h2[l2], a2 = i2.__.mask, a2) {
+        r2 && (ni(this, r2, t2, n2, s2, o2, void 0, true), s2 = n2 = null), "clipping" !== a2 && "clipping-path" !== a2 || ii(i2, e2) || i2.__render(t2, e2), o2 = i2.__.opacity, si = false, "path" === a2 || "clipping-path" === a2 ? (o2 < 1 ? (r2 = "opacity-path", n2 || (n2 = oi(t2))) : (r2 = "path", t2.save()), i2.__clip(n2 || t2, e2)) : (r2 = "grayscale" === a2 ? "grayscale" : "alpha", s2 || (s2 = oi(t2)), n2 || (n2 = oi(t2)), i2.__render(s2, e2));
         continue;
       }
-      const c2 = 1 === o2 && i2.__.__blendMode;
-      c2 && ni(this, r2, t2, n2, s2, o2, void 0, false), ii(i2, e2) || i2.__render(n2 || t2, e2), c2 && ni(this, r2, t2, n2, s2, o2, c2, false);
+      const c3 = 1 === o2 && i2.__.__blendMode;
+      c3 && ni(this, r2, t2, n2, s2, o2, void 0, false), ii(i2, e2) || i2.__render(n2 || t2, e2), c3 && ni(this, r2, t2, n2, s2, o2, c3, false);
     }
     ni(this, r2, t2, n2, s2, o2, void 0, true);
   };
@@ -11054,22 +11048,22 @@ var LiteGraphTSMigration = (function(exports) {
   }
   const rs = { getDrawData: function(t2, e2) {
     i(t2) || (t2 = String(t2));
-    let n2 = 0, o2 = 0, r2 = e2.__getInput("width") || 0, a = e2.__getInput("height") || 0;
-    const { __padding: h } = e2;
-    h && (r2 ? (n2 = h[ns], r2 -= h[is] + h[ns], !r2 && (r2 = 0.01)) : e2.autoSizeAlign || (n2 = h[ns]), a ? (o2 = h[es], a -= h[es] + h[ss], !a && (a = 0.01)) : e2.autoSizeAlign || (o2 = h[es]));
-    const l2 = { bounds: { x: n2, y: o2, width: r2, height: a }, rows: [], paraNumber: 0, font: $t$2.canvas.font = e2.__font };
+    let n2 = 0, o2 = 0, r2 = e2.__getInput("width") || 0, a2 = e2.__getInput("height") || 0;
+    const { __padding: h2 } = e2;
+    h2 && (r2 ? (n2 = h2[ns], r2 -= h2[is] + h2[ns], !r2 && (r2 = 0.01)) : e2.autoSizeAlign || (n2 = h2[ns]), a2 ? (o2 = h2[es], a2 -= h2[es] + h2[ss], !a2 && (a2 = 0.01)) : e2.autoSizeAlign || (o2 = h2[es]));
+    const l2 = { bounds: { x: n2, y: o2, width: r2, height: a2 }, rows: [], paraNumber: 0, font: $t$2.canvas.font = e2.__font };
     return (function(t3, e3, s2) {
       Hi = t3, Qi = t3.rows, qi = t3.bounds, Ki = !qi.width && !s2.autoSizeAlign;
-      const { __letterSpacing: n3, paraIndent: o3, textCase: r3 } = s2, { canvas: a2 } = $t$2, { width: h2 } = qi;
+      const { __letterSpacing: n3, paraIndent: o3, textCase: r3 } = s2, { canvas: a3 } = $t$2, { width: h3 } = qi;
       if (s2.__isCharMode) {
         const t4 = "none" !== s2.textWrap, i2 = "break" === s2.textWrap;
         Ni = true, Yi = null, ji = zi = Ui = Di = Wi = 0, Ai = { data: [] }, Oi = { words: [] }, n3 && (e3 = [...e3]);
-        for (let s3 = 0, l3 = e3.length; s3 < l3; s3++) Fi = e3[s3], "\n" === Fi ? (Di && Zi(), Oi.paraEnd = true, Ji(), Ni = true) : (Gi = Si(Fi), Gi === Bi && "none" !== r3 && (Fi = ki(Fi, r3, !Di)), zi = a2.measureText(Fi).width, n3 && (n3 < 0 && (Ui = zi), zi += n3), Xi = Gi === Ei && (Yi === Ei || Yi === Bi) || Yi === Ei && Gi !== Ri, Vi = !(Gi !== Pi && Gi !== Ei || Yi !== Mi && Yi !== Ri), Ii = Ni && o3 ? h2 - o3 : h2, t4 && h2 && Wi + Di + zi > Ii && (i2 ? (Di && Zi(), Wi && Ji()) : (Vi || (Vi = Gi === Bi && Yi == Ri), Xi || Vi || Gi === Ci || Gi === Pi || Gi === Ei || Di + zi > Ii ? (Di && Zi(), Wi && Ji()) : Wi && Ji())), " " === Fi && true !== Ni && Wi + Di === 0 || (Gi === Ci ? (" " === Fi && Di && Zi(), $i(Fi, zi), Zi()) : Xi || Vi ? (Di && Zi(), $i(Fi, zi)) : $i(Fi, zi)), Yi = Gi);
+        for (let s3 = 0, l3 = e3.length; s3 < l3; s3++) Fi = e3[s3], "\n" === Fi ? (Di && Zi(), Oi.paraEnd = true, Ji(), Ni = true) : (Gi = Si(Fi), Gi === Bi && "none" !== r3 && (Fi = ki(Fi, r3, !Di)), zi = a3.measureText(Fi).width, n3 && (n3 < 0 && (Ui = zi), zi += n3), Xi = Gi === Ei && (Yi === Ei || Yi === Bi) || Yi === Ei && Gi !== Ri, Vi = !(Gi !== Pi && Gi !== Ei || Yi !== Mi && Yi !== Ri), Ii = Ni && o3 ? h3 - o3 : h3, t4 && h3 && Wi + Di + zi > Ii && (i2 ? (Di && Zi(), Wi && Ji()) : (Vi || (Vi = Gi === Bi && Yi == Ri), Xi || Vi || Gi === Ci || Gi === Pi || Gi === Ei || Di + zi > Ii ? (Di && Zi(), Wi && Ji()) : Wi && Ji())), " " === Fi && true !== Ni && Wi + Di === 0 || (Gi === Ci ? (" " === Fi && Di && Zi(), $i(Fi, zi), Zi()) : Xi || Vi ? (Di && Zi(), $i(Fi, zi)) : $i(Fi, zi)), Yi = Gi);
         Di && Zi(), Wi && Ji(), Qi.length > 0 && (Qi[Qi.length - 1].paraEnd = true);
       } else e3.split("\n").forEach((t4) => {
-        Hi.paraNumber++, Wi = a2.measureText(t4).width, Qi.push({ x: o3 || 0, text: t4, width: Wi, paraStart: true }), Ki && ts();
+        Hi.paraNumber++, Wi = a3.measureText(t4).width, Qi.push({ x: o3 || 0, text: t4, width: Wi, paraStart: true }), Ki && ts();
       });
-    })(l2, t2, e2), h && (function(t3, e3, i2, s2, n3) {
+    })(l2, t2, e2), h2 && (function(t3, e3, i2, s2, n3) {
       if (!s2 && i2.autoSizeAlign) switch (i2.textAlign) {
         case "left":
           os(e3, "x", t3[ns]);
@@ -11084,11 +11078,11 @@ var LiteGraphTSMigration = (function(exports) {
         case "bottom":
           os(e3, "y", -t3[ss]);
       }
-    })(h, l2, e2, r2, a), (function(t3, e3) {
-      const { rows: i2, bounds: s2 } = t3, n3 = i2.length, { __lineHeight: o3, __baseLine: r3, __letterSpacing: a2, __clipText: h2, textAlign: l3, verticalAlign: c, paraSpacing: d2, autoSizeAlign: u2 } = e3;
+    })(h2, l2, e2, r2, a2), (function(t3, e3) {
+      const { rows: i2, bounds: s2 } = t3, n3 = i2.length, { __lineHeight: o3, __baseLine: r3, __letterSpacing: a3, __clipText: h3, textAlign: l3, verticalAlign: c2, paraSpacing: d2, autoSizeAlign: u2 } = e3;
       let { x: f2, y: p2, width: g2, height: w2 } = s2, _2 = o3 * n3 + (d2 ? d2 * (t3.paraNumber - 1) : 0), m2 = r3;
-      if (h2 && _2 > w2) _2 = Math.max(e3.__autoHeight ? _2 : w2, o3), n3 > 1 && (t3.overflow = n3);
-      else if (w2 || u2) switch (c) {
+      if (h3 && _2 > w2) _2 = Math.max(e3.__autoHeight ? _2 : w2, o3), n3 > 1 && (t3.overflow = n3);
+      else if (w2 || u2) switch (c2) {
         case "middle":
           p2 += (w2 - _2) / 2;
           break;
@@ -11097,57 +11091,57 @@ var LiteGraphTSMigration = (function(exports) {
       }
       m2 += p2;
       let v2, y2, x2, b2 = g2 || u2 ? g2 : t3.maxWidth;
-      for (let r4 = 0, c2 = n3; r4 < c2; r4++) {
-        if (v2 = i2[r4], v2.x = f2, v2.width < g2 || v2.width > g2 && !h2) switch (l3) {
+      for (let r4 = 0, c3 = n3; r4 < c3; r4++) {
+        if (v2 = i2[r4], v2.x = f2, v2.width < g2 || v2.width > g2 && !h3) switch (l3) {
           case "center":
             v2.x += (b2 - v2.width) / 2;
             break;
           case "right":
             v2.x += b2 - v2.width;
         }
-        v2.paraStart && d2 && r4 > 0 && (m2 += d2), v2.y = m2, m2 += o3, t3.overflow > r4 && m2 > _2 && (v2.isOverflow = true, t3.overflow = r4 + 1), y2 = v2.x, x2 = v2.width, a2 < 0 && (v2.width < 0 ? (x2 = -v2.width + e3.fontSize + a2, y2 -= x2, x2 += e3.fontSize) : x2 -= a2), y2 < s2.x && (s2.x = y2), x2 > s2.width && (s2.width = x2), h2 && g2 && g2 < x2 && (v2.isOverflow = true, t3.overflow || (t3.overflow = i2.length));
+        v2.paraStart && d2 && r4 > 0 && (m2 += d2), v2.y = m2, m2 += o3, t3.overflow > r4 && m2 > _2 && (v2.isOverflow = true, t3.overflow = r4 + 1), y2 = v2.x, x2 = v2.width, a3 < 0 && (v2.width < 0 ? (x2 = -v2.width + e3.fontSize + a3, y2 -= x2, x2 += e3.fontSize) : x2 -= a3), y2 < s2.x && (s2.x = y2), x2 > s2.width && (s2.width = x2), h3 && g2 && g2 < x2 && (v2.isOverflow = true, t3.overflow || (t3.overflow = i2.length));
       }
       s2.y = p2, s2.height = _2;
     })(l2, e2), e2.__isCharMode && (function(t3, e3, i2) {
-      const { rows: s2 } = t3, { textAlign: n3, paraIndent: o3, __letterSpacing: r3 } = e3, a2 = i2 && n3.includes("both"), h2 = a2 || i2 && n3.includes("justify"), l3 = h2 && n3.includes("letter");
-      let c, d2, u2, f2, p2, g2, w2, _2, m2, v2;
+      const { rows: s2 } = t3, { textAlign: n3, paraIndent: o3, __letterSpacing: r3 } = e3, a3 = i2 && n3.includes("both"), h3 = a3 || i2 && n3.includes("justify"), l3 = h3 && n3.includes("letter");
+      let c2, d2, u2, f2, p2, g2, w2, _2, m2, v2;
       s2.forEach((t4) => {
-        t4.words && (p2 = o3 && t4.paraStart ? o3 : 0, _2 = t4.words.length, h2 && (v2 = !t4.paraEnd || a2, d2 = i2 - t4.width - p2, l3 ? f2 = d2 / (t4.words.reduce((t5, e4) => t5 + e4.data.length, 0) - 1) : u2 = _2 > 1 ? d2 / (_2 - 1) : 0), g2 = r3 || t4.isOverflow || l3 ? 0 : u2 ? 1 : 2, t4.isOverflow && !r3 && (t4.textMode = true), 2 === g2 ? (t4.x += p2, (function(t5) {
+        t4.words && (p2 = o3 && t4.paraStart ? o3 : 0, _2 = t4.words.length, h3 && (v2 = !t4.paraEnd || a3, d2 = i2 - t4.width - p2, l3 ? f2 = d2 / (t4.words.reduce((t5, e4) => t5 + e4.data.length, 0) - 1) : u2 = _2 > 1 ? d2 / (_2 - 1) : 0), g2 = r3 || t4.isOverflow || l3 ? 0 : u2 ? 1 : 2, t4.isOverflow && !r3 && (t4.textMode = true), 2 === g2 ? (t4.x += p2, (function(t5) {
           t5.text = "", t5.words.forEach((e4) => {
             e4.data.forEach((e5) => {
               t5.text += e5.char;
             });
           });
-        })(t4)) : (t4.x += p2, c = t4.x, t4.data = [], t4.words.forEach((e4, i3) => {
-          1 === g2 ? (w2 = { char: "", x: c }, c = (function(t5, e5, i4) {
+        })(t4)) : (t4.x += p2, c2 = t4.x, t4.data = [], t4.words.forEach((e4, i3) => {
+          1 === g2 ? (w2 = { char: "", x: c2 }, c2 = (function(t5, e5, i4) {
             return t5.forEach((t6) => {
               i4.char += t6.char, e5 += t6.width;
             }), e5;
-          })(e4.data, c, w2), (t4.isOverflow || " " !== w2.char) && t4.data.push(w2)) : c = (function(t5, e5, i4, s3, n4) {
+          })(e4.data, c2, w2), (t4.isOverflow || " " !== w2.char) && t4.data.push(w2)) : c2 = (function(t5, e5, i4, s3, n4) {
             return t5.forEach((t6) => {
               (s3 || " " !== t6.char) && (t6.x = e5, i4.push(t6)), e5 += t6.width, n4 && (e5 += n4);
             }), e5;
-          })(e4.data, c, t4.data, t4.isOverflow, v2 && f2), v2 && (m2 = i3 === _2 - 1, u2 ? m2 || (c += u2, t4.width += u2) : f2 && (t4.width += f2 * (e4.data.length - (m2 ? 1 : 0))));
+          })(e4.data, c2, t4.data, t4.isOverflow, v2 && f2), v2 && (m2 = i3 === _2 - 1, u2 ? m2 || (c2 += u2, t4.width += u2) : f2 && (t4.width += f2 * (e4.data.length - (m2 ? 1 : 0))));
         })), t4.words = null);
       });
     })(l2, e2, r2), l2.overflow && (function(t3, e3, s2, n3) {
       const { rows: o3, overflow: r3 } = t3;
-      let { textOverflow: a2 } = e3;
-      if (r3 && o3.splice(r3), n3 && a2 && "show" !== a2) {
-        let t4, h2;
-        "hide" === a2 ? a2 = "" : "ellipsis" === a2 && (a2 = "...");
-        const l3 = a2 ? $t$2.canvas.measureText(a2).width : 0, c = s2 + n3 - l3;
+      let { textOverflow: a3 } = e3;
+      if (r3 && o3.splice(r3), n3 && a3 && "show" !== a3) {
+        let t4, h3;
+        "hide" === a3 ? a3 = "" : "ellipsis" === a3 && (a3 = "...");
+        const l3 = a3 ? $t$2.canvas.measureText(a3).width : 0, c2 = s2 + n3 - l3;
         ("none" === e3.textWrap ? o3 : [o3[r3 - 1]]).forEach((e4) => {
           if (e4.isOverflow && e4.data) {
             let i2 = e4.data.length - 1;
-            for (let s3 = i2; s3 > -1 && (t4 = e4.data[s3], h2 = t4.x + t4.width, !(s3 === i2 && h2 < c)); s3--) {
-              if (h2 < c && " " !== t4.char || !s3) {
+            for (let s3 = i2; s3 > -1 && (t4 = e4.data[s3], h3 = t4.x + t4.width, !(s3 === i2 && h3 < c2)); s3--) {
+              if (h3 < c2 && " " !== t4.char || !s3) {
                 e4.data.splice(s3 + 1), e4.width -= t4.width;
                 break;
               }
               e4.width -= t4.width;
             }
-            e4.width += l3, e4.data.push({ char: a2, x: h2 }), e4.textMode && (function(t5) {
+            e4.width += l3, e4.data.push({ char: a3, x: h3 }), e4.textMode && (function(t5) {
               t5.text = "", t5.data.forEach((e5) => {
                 t5.text += e5.char;
               }), t5.data = null;
@@ -11183,7 +11177,296 @@ var LiteGraphTSMigration = (function(exports) {
     return 1 === n2 ? "rgb(" + o$1 + ")" : "rgba(" + o$1 + "," + n2 + ")";
   } };
   Object.assign(At$2, rs), Object.assign(Ct$2, as), Object.assign(Ft$2, Yt), Object.assign(Wt$2, be), Object.assign(Et$2, Ue), Object.assign(Tt$2, ei), Object.assign(le$2, { interaction: (t2, e2, i2, s2) => new Tt(t2, e2, i2, s2), hitCanvas: (t2, e2) => new et(t2, e2), hitCanvasManager: () => new At$1() }), it();
-  function toFiniteNumber$2(value, fallback = 0) {
+  const leafer = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+    __proto__: null,
+    AlignHelper: kt$3,
+    get Answer() {
+      return t;
+    },
+    get App() {
+      return N$1;
+    },
+    AroundHelper: bt$3,
+    AutoBounds: Gt$2,
+    BezierHelper: hs,
+    Bounds: Vt$3,
+    BoundsEvent: Ho,
+    BoundsHelper: zt$2,
+    get Box() {
+      return Ae$1;
+    },
+    BoxData: Jt$1,
+    get Branch() {
+      return vh;
+    },
+    BranchHelper: vo,
+    BranchRender: za,
+    get Canvas() {
+      return si$1;
+    },
+    CanvasData: ae$1,
+    CanvasManager: ge$2,
+    ChildEvent: zo,
+    ColorConvert: Ct$2,
+    Creator: le$2,
+    Cursor: St$1,
+    DataHelper: _$1,
+    Debug: ee$2,
+    get Direction4() {
+      return mt$3;
+    },
+    get Direction9() {
+      return xt$2;
+    },
+    DragBoundsHelper: tt$1,
+    get DragEvent() {
+      return nt$1;
+    },
+    Dragger: Dt$1,
+    get DropEvent() {
+      return ht$1;
+    },
+    Effect: Tt$2,
+    get Ellipse() {
+      return We$1;
+    },
+    EllipseData: Qt$1,
+    EllipseHelper: ys,
+    Event: Xo,
+    EventCreator: pe$2,
+    Eventer: la,
+    Export: It$2,
+    FileHelper: Gi$1,
+    Filter: Dt$2,
+    FourNumberHelper: v,
+    get Frame() {
+      return Ce$1;
+    },
+    FrameData: Gt$1,
+    get Group() {
+      return ye$1;
+    },
+    GroupData: jt$2,
+    HitCanvasManager: At$1,
+    get Image() {
+      return ei$1;
+    },
+    ImageData: re$1,
+    ImageEvent: Vo,
+    ImageManager: en,
+    IncrementId: g,
+    Interaction: Tt,
+    InteractionBase: Mt$1,
+    InteractionHelper: _t$1,
+    get KeyEvent() {
+      return pt$1;
+    },
+    Keyboard: W$1,
+    LayoutEvent: ta,
+    Layouter: gt,
+    get Leaf() {
+      return _h;
+    },
+    LeafBounds: Na,
+    LeafBoundsHelper: xo,
+    LeafData: f,
+    LeafDataProxy: Ba,
+    LeafEventer: wa,
+    LeafHelper: co,
+    LeafLayout: Do,
+    LeafLevelList: Ch,
+    LeafList: kh,
+    LeafMatrix: Sa,
+    LeafRender: Ya,
+    get Leafer() {
+      return we$1;
+    },
+    LeaferCanvas: et,
+    LeaferCanvasBase: Ee$2,
+    LeaferData: qt$1,
+    LeaferEvent: sa,
+    LeaferFilm: an,
+    LeaferImage: on,
+    LeaferVideo: hn,
+    get Line() {
+      return ti$1;
+    },
+    LineData: $t$1,
+    MathHelper: I$2,
+    Matrix: pt$2,
+    MatrixHelper: q$1,
+    get MoveEvent() {
+      return ot$1;
+    },
+    MyDragEvent: rt$1,
+    MyImage: ii$1,
+    MyPointerEvent: st$1,
+    MyTouchEvent: gt$1,
+    NeedConvertToCanvasCommandMap: Ne$2,
+    OneRadian: A$1,
+    PI2: W$2,
+    PI_2: N$2,
+    Paint: Ft$2,
+    PaintGradient: Et$2,
+    PaintImage: Wt$2,
+    get Path() {
+      return di$1;
+    },
+    PathArrow: Pt$2,
+    PathBounds: Ai$1,
+    PathCommandDataHelper: Cr,
+    PathCommandMap: Ae$2,
+    PathCommandNodeHelper: ms,
+    PathConvert: sr,
+    PathCorner: Fi$1,
+    PathCreator: Fr,
+    PathData: ee$1,
+    PathDrawer: ri$2,
+    PathHelper: Ie$2,
+    get PathNodeHandleType() {
+      return Z$1;
+    },
+    PathNumberCommandLengthMap: ze$2,
+    PathNumberCommandMap: Xe$2,
+    get Pen() {
+      return li$1;
+    },
+    PenData: ie$1,
+    Picker: xt,
+    Platform: $t$2,
+    Plugin: he$2,
+    Point: ut$2,
+    PointHelper: ot$2,
+    PointerButton: K$1,
+    get PointerEvent() {
+      return it$1;
+    },
+    get Polygon() {
+      return Oe$1;
+    },
+    PolygonData: Zt$1,
+    PropertyEvent: Uo,
+    get Rect() {
+      return xe$1;
+    },
+    RectData: Kt$2,
+    RectHelper: Fe$2,
+    RectRender: ue$1,
+    RenderEvent: ea,
+    Renderer: _t,
+    ResizeEvent: $o,
+    Resource: Ki$1,
+    get RotateEvent() {
+      return lt$1;
+    },
+    Run: ne$2,
+    Selector: bt,
+    get Star() {
+      return je$1;
+    },
+    StarData: te$1,
+    State: Lt$2,
+    StringNumberMap: Qt$2,
+    get SwipeEvent() {
+      return ct$1;
+    },
+    TaskItem: Ji$1,
+    TaskProcessor: Zi$1,
+    get Text() {
+      return hi$1;
+    },
+    TextConvert: At$2,
+    TextData: oe$1,
+    get TouchEvent() {
+      return dt$1;
+    },
+    Transition: zt$1,
+    TwoPointBoundsHelper: gt$2,
+    get UI() {
+      return ge$1;
+    },
+    UIBounds: he$1,
+    UICreator: ce$2,
+    UIData: Ut$2,
+    UIEvent: V$1,
+    UIRender: le$1,
+    UnitConvert: bt$2,
+    UnitConvertHelper: qt$2,
+    WaitHelper: So,
+    WatchEvent: Ko,
+    Watcher: nt,
+    get ZoomEvent() {
+      return ut$1;
+    },
+    affectRenderBoundsType: Sn,
+    affectStrokeBoundsType: On,
+    attr: _n,
+    autoLayoutType: mn,
+    boundsType: bn,
+    canvasPatch: Hi$1,
+    canvasSizeAttrs: Re$2,
+    createAttr: Bt$2,
+    createDescriptor: cn,
+    cursorType: Xn,
+    dataProcessor: zn,
+    dataType: fn,
+    decorateLeafAttr: un,
+    defineDataProcessor: Un,
+    defineKey: ln,
+    defineLeafAttr: pn,
+    dimType: Rn,
+    doBoundsType: vn,
+    doStrokeType: Tn,
+    effectType: mt$2,
+    emptyData: e,
+    eraserType: Yn,
+    extraPropertyEventMap: jo,
+    getBoundsData: D$1,
+    getDescriptor: dn,
+    getMatrixData: X$2,
+    getPointData: Y$2,
+    hitType: Dn,
+    isArray: l,
+    isData: c,
+    isEmptyData: u,
+    isFinite: n,
+    isNull: r,
+    isNumber: o,
+    isObject: d,
+    isString: i,
+    isUndefined: s,
+    layoutProcessor: Fn,
+    leaferTransformAttrMap: aa,
+    maskType: Nn,
+    naturalBoundsType: Bn,
+    opacityType: En,
+    path: Ui$1,
+    pathInputType: kn,
+    pathType: Cn,
+    pen: ji$1,
+    positionType: gn,
+    registerUI: Zn,
+    registerUIEvent: $n,
+    resizeType: Rt$2,
+    rewrite: Gn,
+    rewriteAble: qn,
+    rotationType: wn,
+    scaleType: xn,
+    scrollType: yn,
+    sortType: Wn,
+    strokeType: Pn,
+    surfaceType: Ln,
+    tempBounds: Ht$3,
+    tempMatrix: ft$2,
+    tempPoint: _t$2,
+    tryToNumber: h,
+    useCanvas: it,
+    useModule: Jn,
+    version: Oh,
+    visibleType: In,
+    zoomLayerType: kt$2
+  }, Symbol.toStringTag, { value: "Module" }));
+  function toFiniteNumber$3(value, fallback = 0) {
     const numericValue = Number(value);
     return Number.isFinite(numericValue) ? numericValue : fallback;
   }
@@ -11245,10 +11528,10 @@ var LiteGraphTSMigration = (function(exports) {
     }
     syncWorldTransform() {
       const zoomLayer = this.appHost.treeZoomLayer;
-      this.appHost.overlayWorld.x = toFiniteNumber$2(zoomLayer.x);
-      this.appHost.overlayWorld.y = toFiniteNumber$2(zoomLayer.y);
-      this.appHost.overlayWorld.scaleX = toFiniteNumber$2(zoomLayer.scaleX, 1);
-      this.appHost.overlayWorld.scaleY = toFiniteNumber$2(zoomLayer.scaleY, 1);
+      this.appHost.overlayWorld.x = toFiniteNumber$3(zoomLayer.x);
+      this.appHost.overlayWorld.y = toFiniteNumber$3(zoomLayer.y);
+      this.appHost.overlayWorld.scaleX = toFiniteNumber$3(zoomLayer.scaleX, 1);
+      this.appHost.overlayWorld.scaleY = toFiniteNumber$3(zoomLayer.scaleY, 1);
     }
   }
   function normalizeBounds(startX, startY, endX, endY) {
@@ -11341,7 +11624,7 @@ var LiteGraphTSMigration = (function(exports) {
       return Boolean(this.activeSelection);
     }
   }
-  function toFiniteNumber$1(value) {
+  function toFiniteNumber$2(value) {
     const numericValue = Number(value);
     return Number.isFinite(numericValue) ? numericValue : 0;
   }
@@ -11349,10 +11632,15 @@ var LiteGraphTSMigration = (function(exports) {
     const pos2 = node2 == null ? void 0 : node2.pos;
     return Boolean(node2) && typeof node2 === "object" && Boolean(pos2) && (Array.isArray(pos2) || ArrayBuffer.isView(pos2));
   }
-  function getPointerDistance(a, b2) {
-    const dx = a.x - b2.x;
-    const dy = a.y - b2.y;
+  function getPointerDistance(a2, b2) {
+    const dx = a2.x - b2.x;
+    const dy = a2.y - b2.y;
     return Math.sqrt(dx * dx + dy * dy);
+  }
+  function isLegacyHost(host) {
+    return Boolean(
+      host && host.runtime === "legacy" && "eventRoot" in host && host.eventRoot
+    );
   }
   class InteractionController {
     constructor(graph, canvas, appHost, sceneSyncController) {
@@ -11366,20 +11654,20 @@ var LiteGraphTSMigration = (function(exports) {
       this.session = null;
       this.dragTransactionNode = null;
       this.handleViewPointerDown = (event2) => {
-        var _a3;
+        var _a3, _b2;
         if (!this.shouldHandleLegacyPointerDown(event2)) {
           return;
         }
         const source = this.createPointerSource(event2);
         const pagePoint = source.getPagePoint();
-        const worldPoint = source.getInnerPoint();
+        const graphPoint = source.getInnerPoint();
         const normalizedPagePoint = {
-          x: toFiniteNumber$1(pagePoint.x),
-          y: toFiniteNumber$1(pagePoint.y)
+          x: toFiniteNumber$2(pagePoint.x),
+          y: toFiniteNumber$2(pagePoint.y)
         };
-        const normalizedWorldPoint = {
-          x: toFiniteNumber$1(worldPoint.x),
-          y: toFiniteNumber$1(worldPoint.y)
+        const normalizedGraphPoint = {
+          x: toFiniteNumber$2(graphPoint.x),
+          y: toFiniteNumber$2(graphPoint.y)
         };
         this.pointerIsDown = true;
         this.pointerDownAt = Date.now();
@@ -11387,8 +11675,8 @@ var LiteGraphTSMigration = (function(exports) {
         this.lastPagePoint = normalizedPagePoint;
         this.attachDocumentTracking();
         const portHit = this.connectionController.begin(
-          normalizedWorldPoint.x,
-          normalizedWorldPoint.y
+          normalizedGraphPoint.x,
+          normalizedGraphPoint.y
         );
         if (portHit) {
           this.session = {
@@ -11397,36 +11685,54 @@ var LiteGraphTSMigration = (function(exports) {
           this.stopEvent(event2, true);
           return;
         }
-        const hit = this.hitTestService.hitLegacyNodeAt(
-          normalizedWorldPoint.x,
-          normalizedWorldPoint.y
+        const hit = this.hitTestService.hitNodeAt(
+          normalizedGraphPoint.x,
+          normalizedGraphPoint.y
         );
         if (!(hit == null ? void 0 : hit.host)) {
           this.session = {
             kind: "background-press",
             additive: Boolean(event2.ctrlKey || event2.metaKey || event2.shiftKey),
-            startWorldPoint: normalizedWorldPoint
+            startGraphPoint: normalizedGraphPoint
           };
           this.stopEvent(event2);
           return;
         }
-        const targets = this.collectTargets(hit.host);
-        const legacyEvent = createLegacyPointerEvent({
-          event: source,
-          type: "down",
-          hostElement: this.appHost.view,
-          targets,
-          clickTime: 0,
-          dragging: false,
-          deltaX: 0,
-          deltaY: 0
-        });
-        this.canvas.processMouseDown(legacyEvent);
-        (_a3 = this.canvas.sceneSyncController) == null ? void 0 : _a3.repaintAllNodeHosts();
-        if (!this.hasLegacyInteractiveCapture() && this.canStartNodeDrag(hit.node)) {
+        const additiveSelection = Boolean(
+          event2.ctrlKey || event2.metaKey || event2.shiftKey
+        );
+        const selectedNodes = this.canvas.selected_nodes || {};
+        const isAlreadySelected = Boolean(selectedNodes[String(hit.node.id)]);
+        const legacyHost = isLegacyHost(hit.host) ? hit.host : null;
+        if (legacyHost) {
+          const targets = this.collectTargets(legacyHost);
+          const legacyEvent = createLegacyPointerEvent({
+            event: source,
+            type: "down",
+            hostElement: this.appHost.view,
+            targets,
+            clickTime: 0,
+            dragging: false,
+            deltaX: 0,
+            deltaY: 0
+          });
+          this.canvas.processMouseDown(legacyEvent);
+          (_a3 = this.canvas.sceneSyncController) == null ? void 0 : _a3.repaintAllNodeHosts();
+        } else if (!isAlreadySelected || additiveSelection) {
+          this.canvas.selectNodes([hit.node], additiveSelection);
+          (_b2 = this.canvas.sceneSyncController) == null ? void 0 : _b2.repaintAllNodeHosts();
+        }
+        if (!legacyHost && !this.canStartNodeDrag(hit.node)) {
+          this.session = {
+            kind: "background-press",
+            additive: additiveSelection,
+            startGraphPoint: normalizedGraphPoint
+          };
+        } else if ((!legacyHost || !this.hasLegacyInteractiveCapture()) && this.canStartNodeDrag(hit.node)) {
           this.session = {
             kind: "node-press",
-            node: hit.node
+            node: hit.node,
+            legacyPointerUp: Boolean(legacyHost)
           };
         } else {
           this.session = {
@@ -11445,7 +11751,7 @@ var LiteGraphTSMigration = (function(exports) {
         this.dispatchPointerMoveWhileDown(event2);
       };
       this.handleDocumentPointerUp = (event2) => {
-        var _a3, _b2, _c2, _d2, _e2;
+        var _a3, _b2, _c2, _d2, _e2, _f;
         if (!this.pointerIsDown && event2.button !== 0) {
           return;
         }
@@ -11454,25 +11760,25 @@ var LiteGraphTSMigration = (function(exports) {
         }
         const source = this.createPointerSource(event2);
         const pagePoint = source.getPagePoint();
-        const worldPoint = source.getInnerPoint();
+        const graphPoint = source.getInnerPoint();
         const normalizedPagePoint = {
-          x: toFiniteNumber$1(pagePoint.x),
-          y: toFiniteNumber$1(pagePoint.y)
+          x: toFiniteNumber$2(pagePoint.x),
+          y: toFiniteNumber$2(pagePoint.y)
         };
-        const normalizedWorldPoint = {
-          x: toFiniteNumber$1(worldPoint.x),
-          y: toFiniteNumber$1(worldPoint.y)
+        const normalizedGraphPoint = {
+          x: toFiniteNumber$2(graphPoint.x),
+          y: toFiniteNumber$2(graphPoint.y)
         };
         if (((_a3 = this.session) == null ? void 0 : _a3.kind) === "connection") {
           this.connectionController.finish(
-            normalizedWorldPoint.x,
-            normalizedWorldPoint.y
+            normalizedGraphPoint.x,
+            normalizedGraphPoint.y
           );
           this.stopEvent(event2, true);
         } else if (((_b2 = this.session) == null ? void 0 : _b2.kind) === "selection") {
           this.selectionController.finish(
-            normalizedWorldPoint.x,
-            normalizedWorldPoint.y
+            normalizedGraphPoint.x,
+            normalizedGraphPoint.y
           );
           this.stopEvent(event2);
         } else if (((_c2 = this.session) == null ? void 0 : _c2.kind) === "background-press") {
@@ -11481,7 +11787,13 @@ var LiteGraphTSMigration = (function(exports) {
             (_d2 = this.canvas.sceneSyncController) == null ? void 0 : _d2.repaintAllNodeHosts();
           }
           this.stopEvent(event2);
-        } else if (((_e2 = this.session) == null ? void 0 : _e2.kind) === "node-drag") {
+        } else if (((_e2 = this.session) == null ? void 0 : _e2.kind) === "node-press") {
+          if (this.session.legacyPointerUp) {
+            this.dispatchLegacyPointerUp(source, normalizedPagePoint, event2);
+          } else {
+            this.stopEvent(event2);
+          }
+        } else if (((_f = this.session) == null ? void 0 : _f.kind) === "node-drag") {
           this.finishNodeDrag(this.session);
           this.stopEvent(event2);
         } else {
@@ -11498,7 +11810,10 @@ var LiteGraphTSMigration = (function(exports) {
       this.graphRef = graph;
       this.hitTestService = new HitTestService(graph, sceneSyncController);
       this.nodePortAdapter = new NodePortAdapter(
-        graph
+        graph,
+        {
+          resolveNodeHost: (nodeId) => sceneSyncController.nodeHosts.get(nodeId) || null
+        }
       );
       this.overlayPrimitives = new OverlayPrimitives(this.appHost);
       this.connectionController = new ConnectionController(
@@ -11546,13 +11861,13 @@ var LiteGraphTSMigration = (function(exports) {
       }
       const source = this.createPointerSource(event2);
       const pagePoint = source.getPagePoint();
-      const worldPoint = source.getInnerPoint();
-      const hit = this.hitTestService.hitLegacyNodeAt(worldPoint.x, worldPoint.y);
-      const targets = this.collectTargets((hit == null ? void 0 : hit.host) || null);
+      const graphPoint = source.getInnerPoint();
+      const hit = this.hitTestService.hitNodeAt(graphPoint.x, graphPoint.y);
+      const targets = this.collectTargets(this.toLegacyHost((hit == null ? void 0 : hit.host) || null));
       const shouldDispatch = targets.length > 0 || Boolean(this.canvas.node_widget) || Boolean(this.canvas.node_over) || Boolean(this.canvas.node_capturing_input);
       const normalizedPagePoint = {
-        x: toFiniteNumber$1(pagePoint.x),
-        y: toFiniteNumber$1(pagePoint.y)
+        x: toFiniteNumber$2(pagePoint.x),
+        y: toFiniteNumber$2(pagePoint.y)
       };
       const deltaX2 = this.lastPagePoint ? normalizedPagePoint.x - this.lastPagePoint.x : 0;
       const deltaY = this.lastPagePoint ? normalizedPagePoint.y - this.lastPagePoint.y : 0;
@@ -11580,19 +11895,19 @@ var LiteGraphTSMigration = (function(exports) {
       }
       const source = this.createPointerSource(event2);
       const pagePoint = source.getPagePoint();
-      const worldPoint = source.getInnerPoint();
+      const graphPoint = source.getInnerPoint();
       const normalizedPagePoint = {
-        x: toFiniteNumber$1(pagePoint.x),
-        y: toFiniteNumber$1(pagePoint.y)
+        x: toFiniteNumber$2(pagePoint.x),
+        y: toFiniteNumber$2(pagePoint.y)
       };
-      const normalizedWorldPoint = {
-        x: toFiniteNumber$1(worldPoint.x),
-        y: toFiniteNumber$1(worldPoint.y)
+      const normalizedGraphPoint = {
+        x: toFiniteNumber$2(graphPoint.x),
+        y: toFiniteNumber$2(graphPoint.y)
       };
       if (this.session.kind === "connection") {
         this.connectionController.update(
-          normalizedWorldPoint.x,
-          normalizedWorldPoint.y
+          normalizedGraphPoint.x,
+          normalizedGraphPoint.y
         );
         this.lastPagePoint = normalizedPagePoint;
         this.stopEvent(event2, true);
@@ -11604,8 +11919,8 @@ var LiteGraphTSMigration = (function(exports) {
           normalizedPagePoint
         ) >= 4) {
           this.selectionController.begin(
-            this.session.startWorldPoint.x,
-            this.session.startWorldPoint.y,
+            this.session.startGraphPoint.x,
+            this.session.startGraphPoint.y,
             this.session.additive
           );
           this.session = {
@@ -11618,8 +11933,8 @@ var LiteGraphTSMigration = (function(exports) {
       }
       if (this.session.kind === "selection") {
         this.selectionController.update(
-          normalizedWorldPoint.x,
-          normalizedWorldPoint.y
+          normalizedGraphPoint.x,
+          normalizedGraphPoint.y
         );
         this.lastPagePoint = normalizedPagePoint;
         this.stopEvent(event2);
@@ -11634,7 +11949,7 @@ var LiteGraphTSMigration = (function(exports) {
         return;
       }
       if (this.session.kind === "node-press") {
-        if (this.hasLegacyInteractiveCapture()) {
+        if (this.session.legacyPointerUp && this.hasLegacyInteractiveCapture()) {
           this.session = {
             kind: "legacy-press"
           };
@@ -11656,7 +11971,7 @@ var LiteGraphTSMigration = (function(exports) {
             kind: "node-drag",
             node: this.session.node,
             dragNodes,
-            lastWorldPoint: normalizedWorldPoint
+            lastGraphPoint: normalizedGraphPoint
           };
         } else {
           this.lastPagePoint = normalizedPagePoint;
@@ -11664,8 +11979,8 @@ var LiteGraphTSMigration = (function(exports) {
         }
       }
       if (this.session.kind === "node-drag") {
-        const deltaX2 = normalizedWorldPoint.x - this.session.lastWorldPoint.x;
-        const deltaY = normalizedWorldPoint.y - this.session.lastWorldPoint.y;
+        const deltaX2 = normalizedGraphPoint.x - this.session.lastGraphPoint.x;
+        const deltaY = normalizedGraphPoint.y - this.session.lastGraphPoint.y;
         if (deltaX2 || deltaY) {
           for (let i2 = 0; i2 < this.session.dragNodes.length; ++i2) {
             const node2 = this.session.dragNodes[i2];
@@ -11673,16 +11988,16 @@ var LiteGraphTSMigration = (function(exports) {
             node2.pos[1] += deltaY;
             this.emitNodeMoved(node2);
           }
-          this.session.lastWorldPoint = normalizedWorldPoint;
+          this.session.lastGraphPoint = normalizedGraphPoint;
         }
         this.lastPagePoint = normalizedPagePoint;
         this.stopEvent(event2);
       }
     }
     dispatchLegacyPointerMoveActive(source, pagePoint, event2) {
-      const worldPoint = source.getInnerPoint();
-      const hit = this.hitTestService.hitLegacyNodeAt(worldPoint.x, worldPoint.y);
-      const targets = this.collectTargets((hit == null ? void 0 : hit.host) || null);
+      const graphPoint = source.getInnerPoint();
+      const hit = this.hitTestService.hitNodeAt(graphPoint.x, graphPoint.y);
+      const targets = this.collectTargets(this.toLegacyHost((hit == null ? void 0 : hit.host) || null));
       const shouldDispatch = targets.length > 0 || Boolean(this.canvas.node_widget) || Boolean(this.canvas.node_over) || Boolean(this.canvas.node_capturing_input);
       const deltaX2 = this.lastPagePoint ? pagePoint.x - this.lastPagePoint.x : 0;
       const deltaY = this.lastPagePoint ? pagePoint.y - this.lastPagePoint.y : 0;
@@ -11704,9 +12019,9 @@ var LiteGraphTSMigration = (function(exports) {
       this.stopEvent(event2);
     }
     dispatchLegacyPointerUp(source, pagePoint, event2) {
-      const worldPoint = source.getInnerPoint();
-      const hit = this.hitTestService.hitLegacyNodeAt(worldPoint.x, worldPoint.y);
-      const targets = this.collectTargets((hit == null ? void 0 : hit.host) || null);
+      const graphPoint = source.getInnerPoint();
+      const hit = this.hitTestService.hitNodeAt(graphPoint.x, graphPoint.y);
+      const targets = this.collectTargets(this.toLegacyHost((hit == null ? void 0 : hit.host) || null));
       const shouldDispatch = this.pointerIsDown || targets.length > 0 || Boolean(this.canvas.node_widget) || Boolean(this.canvas.node_over) || Boolean(this.canvas.node_capturing_input);
       const deltaX2 = this.lastPagePoint ? pagePoint.x - this.lastPagePoint.x : 0;
       const deltaY = this.lastPagePoint ? pagePoint.y - this.lastPagePoint.y : 0;
@@ -11777,7 +12092,8 @@ var LiteGraphTSMigration = (function(exports) {
         }
         targets.set(String(nodeId), {
           nodeId,
-          nodeRoot: host.eventRoot
+          nodeRoot: host.eventRoot,
+          nodePosition: this.resolveNodePosition(host.node)
         });
       };
       if (hitHost) {
@@ -11785,26 +12101,38 @@ var LiteGraphTSMigration = (function(exports) {
       }
       const hoveredNode = this.canvas.node_over;
       if (hoveredNode) {
+        const hoveredHost = this.toLegacyHost(
+          this.hitTestService.getHostForNode(hoveredNode)
+        );
         pushHost(
           hoveredNode.id,
-          this.hitTestService.getLegacyHostForNode(hoveredNode)
+          hoveredHost
         );
       }
       const capturedNode = this.canvas.node_capturing_input;
       if (capturedNode) {
+        const capturedHost = this.toLegacyHost(
+          this.hitTestService.getHostForNode(capturedNode)
+        );
         pushHost(
           capturedNode.id,
-          this.hitTestService.getLegacyHostForNode(capturedNode)
+          capturedHost
         );
       }
       const widgetNode = (_a3 = this.canvas.node_widget) == null ? void 0 : _a3[0];
       if (widgetNode) {
+        const widgetHost = this.toLegacyHost(
+          this.hitTestService.getHostForNode(widgetNode)
+        );
         pushHost(
           widgetNode.id,
-          this.hitTestService.getLegacyHostForNode(widgetNode)
+          widgetHost
         );
       }
       return Array.from(targets.values());
+    }
+    toLegacyHost(host) {
+      return isLegacyHost(host) ? host : null;
     }
     createPointerSource(event2) {
       const clientPoint = {
@@ -11822,13 +12150,19 @@ var LiteGraphTSMigration = (function(exports) {
         target: event2.target,
         current: event2.currentTarget,
         time: Date.now(),
+        clientX: event2.clientX,
+        clientY: event2.clientY,
+        pageX: event2.pageX,
+        pageY: event2.pageY,
+        screenX: event2.screenX,
+        screenY: event2.screenY,
         left: event2.button === 0 || Boolean(event2.buttons & 1),
         middle: event2.button === 1 || Boolean(event2.buttons & 4),
         right: event2.button === 2 || Boolean(event2.buttons & 2),
         getPagePoint: () => pagePoint,
         getInnerPoint: (relative) => {
           if (!relative) {
-            return worldPoint;
+            return pagePoint;
           }
           return relative.getInnerPoint(worldPoint);
         },
@@ -11839,6 +12173,14 @@ var LiteGraphTSMigration = (function(exports) {
           event2.stopImmediatePropagation();
         }
       };
+    }
+    resolveNodePosition(node2) {
+      const rawPos = node2.pos;
+      if (!rawPos || !Array.isArray(rawPos) && !ArrayBuffer.isView(rawPos)) {
+        return void 0;
+      }
+      const pos2 = rawPos;
+      return [toFiniteNumber$2(pos2[0]), toFiniteNumber$2(pos2[1])];
     }
     attachDocumentTracking() {
       if (this.documentTrackingBound) {
@@ -12075,6 +12417,7 @@ var LiteGraphTSMigration = (function(exports) {
   }
   class LegacyNodeHost {
     constructor(node2, renderHost) {
+      this.runtime = "legacy";
       this.lastBounds = null;
       this.positionOffsetX = 0;
       this.positionOffsetY = 0;
@@ -12168,21 +12511,215 @@ var LiteGraphTSMigration = (function(exports) {
       }
     }
   }
+  class LinkViewHost {
+    constructor(name) {
+      this.view = new di$1({
+        name,
+        hittable: false,
+        visible: true,
+        stroke: "#9A9",
+        strokeWidth: 3,
+        fill: "none",
+        data: {
+          litegraphPlaceholderKind: "link-view"
+        }
+      });
+    }
+    update(presentation) {
+      this.view.path = presentation.path;
+      if (presentation.stroke != null) {
+        this.view.stroke = presentation.stroke;
+      }
+      if (presentation.visible != null) {
+        this.view.visible = presentation.visible;
+      }
+    }
+    destroy() {
+      this.view.destroy();
+    }
+  }
+  function toFiniteNumber$1(value, fallback = 0) {
+    const numericValue = Number(value);
+    return Number.isFinite(numericValue) ? numericValue : fallback;
+  }
+  function toPoint(value) {
+    if (value && typeof value === "object" && ("0" in value || ArrayBuffer.isView(value))) {
+      const indexed = value;
+      return [toFiniteNumber$1(indexed[0]), toFiniteNumber$1(indexed[1])];
+    }
+    if (value && typeof value === "object" && "x" in value && "y" in value) {
+      const point = value;
+      return [toFiniteNumber$1(point.x), toFiniteNumber$1(point.y)];
+    }
+    return null;
+  }
+  function createFallbackContent(node2) {
+    var _a3, _b2;
+    const width2 = Math.max(toFiniteNumber$1((_a3 = node2.size) == null ? void 0 : _a3[0], 160), 120);
+    const height = Math.max(toFiniteNumber$1((_b2 = node2.size) == null ? void 0 : _b2[1], 80), 60);
+    const group = new ye$1({
+      name: `litegraph-modern-node-fallback:${String(node2.id)}`,
+      hittable: false
+    });
+    group.add([
+      new xe$1({
+        x: 0,
+        y: 0,
+        width: width2,
+        height,
+        cornerRadius: 14,
+        fill: "#1F2733",
+        stroke: "#87B6FF",
+        strokeWidth: 2,
+        hittable: false
+      }),
+      new hi$1({
+        x: 14,
+        y: 12,
+        text: String(node2.title || node2.id || "Modern Node"),
+        fontSize: 16,
+        fontWeight: "bold",
+        fill: "#F7FAFF",
+        hittable: false
+      })
+    ]);
+    return group;
+  }
+  function toUI(result, node2) {
+    if (result instanceof ge$1) {
+      return result;
+    }
+    if (result && typeof result === "object") {
+      return new ye$1(result);
+    }
+    return createFallbackContent(node2);
+  }
+  class ModernNodeHost {
+    constructor(node2) {
+      this.runtime = "modern";
+      this.content = null;
+      this.node = node2;
+      this.root = new ye$1({
+        name: `litegraph-modern-node:${String(node2.id)}`,
+        hittable: true,
+        data: {
+          litegraphNodeId: String(node2.id),
+          litegraphRuntime: "modern"
+        }
+      });
+      this.repaint();
+    }
+    repaint() {
+      var _a3, _b2, _c2, _d2;
+      if (!this.content) {
+        const built = ((_b2 = (_a3 = this.node).buildUI) == null ? void 0 : _b2.call(_a3, this.createContext())) || null;
+        this.content = toUI(built, this.node);
+        this.root.add(this.content);
+      }
+      (_d2 = (_c2 = this.node).updateUI) == null ? void 0 : _d2.call(_c2, this.createContext());
+      this.syncPosition();
+    }
+    syncPosition() {
+      var _a3, _b2;
+      this.root.x = toFiniteNumber$1((_a3 = this.node.pos) == null ? void 0 : _a3[0]);
+      this.root.y = toFiniteNumber$1((_b2 = this.node.pos) == null ? void 0 : _b2[1]);
+    }
+    destroy() {
+      this.root.destroy();
+    }
+    getPortAnchor(kind, slotIndex) {
+      var _a3, _b2, _c2, _d2;
+      const layout = this.resolvePortLayout(kind, slotIndex);
+      if (layout) {
+        if (layout.space === "world") {
+          return [layout.x, layout.y];
+        }
+        return [
+          toFiniteNumber$1((_a3 = this.node.pos) == null ? void 0 : _a3[0]) + layout.x,
+          toFiniteNumber$1((_b2 = this.node.pos) == null ? void 0 : _b2[1]) + layout.y
+        ];
+      }
+      const fallbackPoint = toPoint(
+        (_d2 = (_c2 = this.node).getConnectionPos) == null ? void 0 : _d2.call(_c2, kind === "input", slotIndex)
+      );
+      return fallbackPoint || null;
+    }
+    getPortDirection(kind, slotIndex) {
+      const layout = this.resolvePortLayout(kind, slotIndex);
+      if ((layout == null ? void 0 : layout.dir) != null) {
+        return toFiniteNumber$1(layout.dir);
+      }
+      return kind === "input" ? PORT_DIRECTION_LEFT : PORT_DIRECTION_RIGHT;
+    }
+    hitPortAt(worldX, worldY) {
+      var _a3, _b2;
+      let bestHit = null;
+      const kinds = ["output", "input"];
+      for (let kindIndex = 0; kindIndex < kinds.length; ++kindIndex) {
+        const kind = kinds[kindIndex];
+        const slotCount = this.getSlotCount(kind);
+        for (let slotIndex = 0; slotIndex < slotCount; ++slotIndex) {
+          const anchor = this.getPortAnchor(kind, slotIndex);
+          if (!anchor) {
+            continue;
+          }
+          const radius = (_b2 = (_a3 = this.resolvePortLayout(kind, slotIndex)) == null ? void 0 : _a3.radius) != null ? _b2 : 12;
+          const dx = worldX - anchor[0];
+          const dy = worldY - anchor[1];
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist > radius) {
+            continue;
+          }
+          if (!bestHit || dist < bestHit.distance) {
+            bestHit = {
+              kind,
+              slotIndex,
+              anchor,
+              dir: this.getPortDirection(kind, slotIndex) || void 0,
+              distance: dist
+            };
+          }
+        }
+      }
+      if (!bestHit) {
+        return null;
+      }
+      return {
+        kind: bestHit.kind,
+        slotIndex: bestHit.slotIndex,
+        anchor: bestHit.anchor,
+        dir: bestHit.dir
+      };
+    }
+    createContext() {
+      return {
+        node: this.node,
+        host: this,
+        root: this.root,
+        content: this.content,
+        leafer
+      };
+    }
+    getSlotCount(kind) {
+      const list = kind === "input" ? this.node.inputs : this.node.outputs;
+      return Array.isArray(list) ? list.length : 0;
+    }
+    resolvePortLayout(kind, slotIndex) {
+      var _a3, _b2;
+      return ((_b2 = (_a3 = this.node).getPortLayout) == null ? void 0 : _b2.call(_a3, kind, slotIndex, this.createContext())) || null;
+    }
+  }
+  function discriminateNodeRuntime(node2) {
+    if (node2.renderRuntime === "legacy" || node2.renderRuntime === "modern") {
+      return node2.renderRuntime;
+    }
+    if (typeof node2.buildUI === "function" || typeof node2.updateUI === "function" || typeof node2.renderLeafer === "function" || typeof node2.getPortLayout === "function") {
+      return "modern";
+    }
+    return "legacy";
+  }
   function toMutationKey(id) {
     return String(id);
-  }
-  function createLinkView(name) {
-    return new di$1({
-      name,
-      hittable: false,
-      visible: true,
-      stroke: "#9A9",
-      strokeWidth: 3,
-      fill: "none",
-      data: {
-        litegraphPlaceholderKind: "link-view"
-      }
-    });
   }
   class SceneSyncController {
     constructor(graph, bus, appHost, renderHost) {
@@ -12198,7 +12735,10 @@ var LiteGraphTSMigration = (function(exports) {
       this.linksById = /* @__PURE__ */ new Map();
       this.dirtyBridgeUninstallers = /* @__PURE__ */ new Map();
       this.nodePortAdapter = new NodePortAdapter(
-        graph
+        graph,
+        {
+          resolveNodeHost: (nodeId) => this.nodeHosts.get(nodeId) || null
+        }
       );
       this.unsubscribers.push(
         this.bus.on("graph:clear", () => {
@@ -12235,6 +12775,7 @@ var LiteGraphTSMigration = (function(exports) {
     repaintNodeHost(nodeId) {
       var _a3;
       (_a3 = this.nodeHosts.get(nodeId)) == null ? void 0 : _a3.repaint();
+      this.updateIncidentLinks(nodeId);
     }
     repaintNodeHosts(nodeIds) {
       for (let i2 = 0; i2 < nodeIds.length; ++i2) {
@@ -12242,8 +12783,18 @@ var LiteGraphTSMigration = (function(exports) {
       }
     }
     repaintAllNodeHosts() {
-      for (const host of this.nodeHosts.values()) {
+      for (const [nodeId, host] of this.nodeHosts.entries()) {
         host.repaint();
+        this.updateIncidentLinks(nodeId);
+      }
+    }
+    repaintLegacyNodeHosts() {
+      for (const [nodeId, host] of this.nodeHosts.entries()) {
+        if (host.runtime !== "legacy") {
+          continue;
+        }
+        host.repaint();
+        this.updateIncidentLinks(nodeId);
       }
     }
     syncNodeMoved(nodeId, node2) {
@@ -12282,31 +12833,45 @@ var LiteGraphTSMigration = (function(exports) {
     }
     ensureNodeHost(node2) {
       const nodeId = node2.id;
+      const runtime2 = discriminateNodeRuntime(node2);
       const existingHost = this.nodeHosts.get(nodeId);
       this.nodesById.set(nodeId, node2);
       this.ensureTrackedNodeId(nodeId);
       this.installNodeDirtyBridge(node2);
-      if (existingHost) {
+      if (existingHost && existingHost.runtime === runtime2) {
         existingHost.syncPosition();
         this.updateIncidentLinks(nodeId);
         return existingHost;
+      }
+      if (existingHost) {
+        existingHost.destroy();
+        this.nodeHosts.delete(nodeId);
+      }
+      const nodeHost = this.createNodeHost(runtime2, node2);
+      this.nodeHosts.set(nodeId, nodeHost);
+      nodeHost.syncPosition();
+      nodeHost.repaint();
+      this.updateIncidentLinks(nodeId);
+      return nodeHost;
+    }
+    createNodeHost(runtime2, node2) {
+      if (runtime2 === "modern") {
+        const nodeHost2 = new ModernNodeHost(node2);
+        this.appHost.modernNodeLayer.add(nodeHost2.root);
+        return nodeHost2;
       }
       const nodeHost = new LegacyNodeHost(
         node2,
         this.renderHost
       );
       this.appHost.legacyNodeLayer.add(nodeHost.root);
-      this.nodeHosts.set(nodeId, nodeHost);
-      nodeHost.syncPosition();
-      this.updateIncidentLinks(nodeId);
       return nodeHost;
     }
     removeNodeHost(nodeId) {
       var _a3;
       const incidentLinks = Array.from(this.linksByNodeId.get(nodeId) || []);
       for (let i2 = 0; i2 < incidentLinks.length; ++i2) {
-        const linkId = incidentLinks[i2];
-        this.removeLinkView(linkId);
+        this.removeLinkView(incidentLinks[i2]);
       }
       const nodeHost = this.nodeHosts.get(nodeId);
       if (nodeHost) {
@@ -12337,10 +12902,10 @@ var LiteGraphTSMigration = (function(exports) {
       } else {
         this.ensureTrackedNodeId(link.target_id);
       }
-      const linkView = createLinkView(
+      const linkView = new LinkViewHost(
         `litegraph-link-view:${toMutationKey(linkId)}`
       );
-      this.appHost.linkLayerBack.add(linkView);
+      this.appHost.linkLayerBack.add(linkView.view);
       this.linkViews.set(linkId, linkView);
       this.linksById.set(linkId, link);
       this.trackLinkOnNode(link.origin_id, linkId);
@@ -12369,6 +12934,7 @@ var LiteGraphTSMigration = (function(exports) {
         this.nodesById.set(nodeId, node2);
       }
       (_a3 = this.nodeHosts.get(nodeId)) == null ? void 0 : _a3.repaint();
+      this.updateIncidentLinks(nodeId);
     }
     installNodeDirtyBridge(node2) {
       if (this.dirtyBridgeUninstallers.has(node2.id)) {
@@ -12439,31 +13005,36 @@ var LiteGraphTSMigration = (function(exports) {
       }
       const layout = this.nodePortAdapter.getLinkLayout(link);
       if (!layout) {
-        view.visible = false;
+        view.update({
+          path: "M 0 0 L 0 0",
+          visible: false
+        });
         return;
       }
-      view.path = this.nodePortAdapter.buildLinkPath(
-        layout.start,
-        layout.end,
-        layout.startDir,
-        layout.endDir
-      );
-      view.stroke = link.color || "#9A9";
-      view.visible = true;
+      view.update({
+        path: this.nodePortAdapter.buildLinkPath(
+          layout.start,
+          layout.end,
+          layout.startDir,
+          layout.endDir
+        ),
+        stroke: link.color || "#9A9",
+        visible: true
+      });
     }
   }
   function D(t2) {
-    const { scroll: e2, disabled: a } = t2.app.config.move;
-    return !e2 || a ? "" : true === e2 ? "free" : e2;
+    const { scroll: e2, disabled: a2 } = t2.app.config.move;
+    return !e2 || a2 ? "" : true === e2 ? "free" : e2;
   }
   function O(o2, n2, i2) {
     M(o2.parentApp ? o2.parentApp : o2, n2), o2.isApp || i2 || o2.__eventIds.push(o2.on_(ot$1.BEFORE_MOVE, (t2) => {
       const e2 = o2.getValidMove(t2.moveX, t2.moveY, false);
       if (D(o2).includes("limit")) {
-        const a = o2.getValidMove(0, 0);
-        if (a.x || a.y) {
+        const a2 = o2.getValidMove(0, 0);
+        if (a2.x || a2.y) {
           const o3 = 100, n3 = 200, i3 = "drag" === t2.moveType ? 0.3 : 0.05;
-          Math.abs(a.x) > o3 ? e2.x = 0 : e2.x *= i3, Math.abs(a.y) > n3 ? e2.y = 0 : e2.y *= i3;
+          Math.abs(a2.x) > o3 ? e2.x = 0 : e2.x *= i3, Math.abs(a2.y) > n3 ? e2.y = 0 : e2.y *= i3;
         }
       }
       o2.zoomLayer.move(e2);
@@ -12473,19 +13044,19 @@ var LiteGraphTSMigration = (function(exports) {
     }), o2.on_(ot$1.END, (t2) => {
       co.animateMove(o2.zoomLayer, o2.getValidMove(t2.moveX, t2.moveY));
     }), o2.on_(ut$1.BEFORE_ZOOM, (t2) => {
-      const { zoomLayer: a, layouter: n3 } = o2, i3 = o2.getValidScale(t2.scale);
-      1 !== i3 && (n3.stop(), co.updateMatrix(o2), a.scaleOfWorld(t2, i3), n3.start());
+      const { zoomLayer: a2, layouter: n3 } = o2, i3 = o2.getValidScale(t2.scale);
+      1 !== i3 && (n3.stop(), co.updateMatrix(o2), a2.scaleOfWorld(t2, i3), n3.start());
     }));
   }
   function M(t2, e2) {
-    const a = { wheel: { preventDefault: true }, touch: { preventDefault: true }, pointer: { preventDefaultMenu: true } };
-    e2 && _$1.assign(a, e2), _$1.assign(t2.config, a, t2.userConfig);
+    const a2 = { wheel: { preventDefault: true }, touch: { preventDefault: true }, pointer: { preventDefaultMenu: true } };
+    e2 && _$1.assign(a2, e2), _$1.assign(t2.config, a2, t2.userConfig);
   }
   const b = ee$2.get("LeaferTypeCreator"), T = { list: {}, register(t2, e2) {
     x[t2] && b.repeat(t2), x[t2] = e2;
   }, run(t2, e2) {
-    const a = x[t2];
-    a && a(e2);
+    const a2 = x[t2];
+    a2 && a2(e2);
   } }, { list: x, register: E } = T;
   E("viewport", O), E("custom", function(t2) {
     O(t2, null, true);
@@ -12495,33 +13066,33 @@ var LiteGraphTSMigration = (function(exports) {
     O(t2, { zoom: { min: 1 }, move: { scroll: "limit" } });
   });
   const z = { state: { type: "none", typeCount: 0, startTime: 0, totalData: null, center: {} }, getData(t2) {
-    const e2 = t2[0], a = t2[1], o2 = ot$2.getCenter(e2.from, a.from), n2 = ot$2.getCenter(e2.to, a.to), s2 = { x: n2.x - o2.x, y: n2.y - o2.y }, r2 = ot$2.getDistance(e2.from, a.from);
-    return { move: s2, scale: ot$2.getDistance(e2.to, a.to) / r2, rotation: ot$2.getRotation(e2.from, a.from, e2.to, a.to), center: n2 };
+    const e2 = t2[0], a2 = t2[1], o2 = ot$2.getCenter(e2.from, a2.from), n2 = ot$2.getCenter(e2.to, a2.to), s2 = { x: n2.x - o2.x, y: n2.y - o2.y }, r2 = ot$2.getDistance(e2.from, a2.from);
+    return { move: s2, scale: ot$2.getDistance(e2.to, a2.to) / r2, rotation: ot$2.getRotation(e2.from, a2.from, e2.to, a2.to), center: n2 };
   }, getType(t2, e2) {
-    const a = Math.hypot(t2.move.x, t2.move.y) / (e2.move || 5), o2 = Math.abs(t2.scale - 1) / (e2.scale || 0.03), n2 = Math.abs(t2.rotation) / (e2.rotation || 2);
-    return a < 1 && o2 < 1 && n2 < 1 ? "none" : a >= o2 && a >= n2 ? "move" : o2 >= n2 ? "zoom" : "rotate";
+    const a2 = Math.hypot(t2.move.x, t2.move.y) / (e2.move || 5), o2 = Math.abs(t2.scale - 1) / (e2.scale || 0.03), n2 = Math.abs(t2.rotation) / (e2.rotation || 2);
+    return a2 < 1 && o2 < 1 && n2 < 1 ? "none" : a2 >= o2 && a2 >= n2 ? "move" : o2 >= n2 ? "zoom" : "rotate";
   }, detect(t2, e2) {
-    const { state: a } = j, o2 = j.getType(t2, e2);
-    if (a.totalData || (a.startTime = Date.now(), a.center = t2.center), j.add(t2, a.totalData), a.totalData = t2, o2 === a.type) {
-      if (a.typeCount++, a.typeCount >= (e2.count || 3) && "none" !== o2) return o2;
-    } else a.type = o2, a.typeCount = 1;
-    return Date.now() - a.startTime >= (e2.time || 160) ? j.getType(a.totalData, e2) : "none";
+    const { state: a2 } = j, o2 = j.getType(t2, e2);
+    if (a2.totalData || (a2.startTime = Date.now(), a2.center = t2.center), j.add(t2, a2.totalData), a2.totalData = t2, o2 === a2.type) {
+      if (a2.typeCount++, a2.typeCount >= (e2.count || 3) && "none" !== o2) return o2;
+    } else a2.type = o2, a2.typeCount = 1;
+    return Date.now() - a2.startTime >= (e2.time || 160) ? j.getType(a2.totalData, e2) : "none";
   }, add(t2, e2) {
     e2 && (ot$2.move(t2.move, e2.move), t2.scale *= e2.scale, t2.rotation += e2.rotation, t2.center = e2.center);
   }, reset() {
     const { state: t2 } = j;
     t2.type = "none", t2.typeCount = 0, t2.startTime = 0, t2.totalData = null;
   } }, j = z, { abs: R, max: X } = Math, { sign: Y, within: A } = I$2, S = { getMove(t2, e2) {
-    let { moveSpeed: a } = e2, { deltaX: o2, deltaY: n2 } = t2;
+    let { moveSpeed: a2 } = e2, { deltaX: o2, deltaY: n2 } = t2;
     t2.shiftKey && !o2 && (o2 = n2, n2 = 0);
     const i2 = R(o2), s2 = R(n2);
-    return i2 > 50 && (o2 = X(50, i2 / 3) * Y(o2)), s2 > 50 && (n2 = X(50, s2 / 3) * Y(n2)), { x: -o2 * a * 2, y: -n2 * a * 2 };
+    return i2 > 50 && (o2 = X(50, i2 / 3) * Y(o2)), s2 > 50 && (n2 = X(50, s2 / 3) * Y(n2)), { x: -o2 * a2 * 2, y: -n2 * a2 * 2 };
   }, getScale(t2, e2) {
-    let a, o2 = 1, { zoomMode: n2, zoomSpeed: i2 } = e2;
+    let a2, o2 = 1, { zoomMode: n2, zoomSpeed: i2 } = e2;
     const s2 = t2.deltaY || t2.deltaX;
-    if (n2 ? (a = "mouse" === n2 || !t2.deltaX && ($t$2.intWheelDeltaY ? Math.abs(s2) > 17 : Math.ceil(s2) !== s2), (t2.shiftKey || t2.metaKey || t2.ctrlKey) && (a = true)) : a = !t2.shiftKey && (t2.metaKey || t2.ctrlKey), a) {
+    if (n2 ? (a2 = "mouse" === n2 || !t2.deltaX && ($t$2.intWheelDeltaY ? Math.abs(s2) > 17 : Math.ceil(s2) !== s2), (t2.shiftKey || t2.metaKey || t2.ctrlKey) && (a2 = true)) : a2 = !t2.shiftKey && (t2.metaKey || t2.ctrlKey), a2) {
       i2 = A(i2, 0, 1);
-      const a2 = t2.deltaY ? e2.delta.y : e2.delta.x, n3 = A(1 - R(s2) / (4 * a2) * i2, 0.5, 2);
+      const a3 = t2.deltaY ? e2.delta.y : e2.delta.x, n3 = A(1 - R(s2) / (4 * a3) * i2, 0.5, 2);
       o2 = s2 > 0 ? n3 : 1 / n3;
     }
     return o2;
@@ -12544,8 +13115,8 @@ var LiteGraphTSMigration = (function(exports) {
       this.interaction = t2;
     }
     move(e2) {
-      const { interaction: a } = this;
-      e2.moveType || (e2.moveType = "move"), this.moveData || (this.setPath(e2), _ = 0, w = 0, this.moveData = Object.assign(Object.assign({}, e2), { moveX: 0, moveY: 0, totalX: _, totalY: w }), a.emit(ot$1.START, this.moveData)), e2.path = this.moveData.path, e2.totalX = _ += e2.moveX, e2.totalY = w += e2.moveY, a.emit(ot$1.BEFORE_MOVE, e2), a.emit(ot$1.MOVE, e2), this.transformEndWait();
+      const { interaction: a2 } = this;
+      e2.moveType || (e2.moveType = "move"), this.moveData || (this.setPath(e2), _ = 0, w = 0, this.moveData = Object.assign(Object.assign({}, e2), { moveX: 0, moveY: 0, totalX: _, totalY: w }), a2.emit(ot$1.START, this.moveData)), e2.path = this.moveData.path, e2.totalX = _ += e2.moveX, e2.totalY = w += e2.moveY, a2.emit(ot$1.BEFORE_MOVE, e2), a2.emit(ot$1.MOVE, e2), this.transformEndWait();
     }
     zoom(t2) {
       const { interaction: e2 } = this;
@@ -12556,8 +13127,8 @@ var LiteGraphTSMigration = (function(exports) {
       this.rotateData || (this.setPath(t2), V = 0, this.rotateData = Object.assign(Object.assign({}, t2), { rotation: 0, totalRotation: V }), e2.emit(lt$1.START, this.rotateData)), t2.path = this.rotateData.path, t2.totalRotation = V += t2.rotation, e2.emit(lt$1.BEFORE_ROTATE, t2), e2.emit(lt$1.ROTATE, t2), this.transformEndWait();
     }
     setPath(t2) {
-      const { interaction: e2 } = this, { path: a } = e2.selector.getByPoint(t2, e2.hitRadius);
-      t2.path = a, e2.cancelHover();
+      const { interaction: e2 } = this, { path: a2 } = e2.selector.getByPoint(t2, e2.hitRadius);
+      t2.path = a2, e2.cancelHover();
     }
     transformEndWait() {
       clearTimeout(this.transformTimer), this.transformTimer = setTimeout(() => {
@@ -12584,14 +13155,14 @@ var LiteGraphTSMigration = (function(exports) {
   }
   W.initType = function(t2) {
     T.run(t2, this);
-  }, W.getValidMove = function(t2, e2, a = true) {
+  }, W.getValidMove = function(t2, e2, a2 = true) {
     const { disabled: o2, scrollSpread: n2 } = this.app.config.move;
     k.set(t2, e2);
     const i2 = D(this);
-    return i2 && (i2.includes("x") ? k.y = 0 : i2.includes("y") ? k.x = 0 : Math.abs(k.x) > Math.abs(k.y) ? k.y = 0 : k.x = 0, a && i2.includes("limit") && (B.set(this.__world).addPoint(this.zoomLayer), n2 && B.spread(n2), tt$1.getValidMove(B, this.canvas.bounds, "auto", k, true), i2.includes("x") ? k.y = 0 : i2.includes("y") && (k.x = 0))), { x: o2 ? 0 : k.x, y: o2 ? 0 : k.y };
+    return i2 && (i2.includes("x") ? k.y = 0 : i2.includes("y") ? k.x = 0 : Math.abs(k.x) > Math.abs(k.y) ? k.y = 0 : k.x = 0, a2 && i2.includes("limit") && (B.set(this.__world).addPoint(this.zoomLayer), n2 && B.spread(n2), tt$1.getValidMove(B, this.canvas.bounds, "auto", k, true), i2.includes("x") ? k.y = 0 : i2.includes("y") && (k.x = 0))), { x: o2 ? 0 : k.x, y: o2 ? 0 : k.y };
   }, W.getValidScale = function(t2) {
-    const { scaleX: e2 } = this.zoomLayer.__, { min: a, max: o2, disabled: n2 } = this.app.config.zoom, i2 = Math.abs(e2 * t2);
-    return a && i2 < a ? t2 = a / e2 : o2 && i2 > o2 && (t2 = o2 / e2), n2 ? 1 : t2;
+    const { scaleX: e2 } = this.zoomLayer.__, { min: a2, max: o2, disabled: n2 } = this.app.config.zoom, i2 = Math.abs(e2 * t2);
+    return a2 && i2 < a2 ? t2 = a2 / e2 : o2 && i2 > o2 && (t2 = o2 / e2), n2 ? 1 : t2;
   };
   const N = Mt$1.prototype;
   N.createTransformer = function() {
@@ -12605,18 +13176,18 @@ var LiteGraphTSMigration = (function(exports) {
   }, N.transformEnd = function() {
     this.transformer.transformEnd();
   }, N.wheel = function(t2) {
-    const { wheel: e2, pointer: a } = this.config, { posDeltaSpeed: o2, negDeltaSpeed: n2 } = e2;
+    const { wheel: e2, pointer: a2 } = this.config, { posDeltaSpeed: o2, negDeltaSpeed: n2 } = e2;
     if (e2.disabled) return;
     t2.deltaX > 0 ? o2 && (t2.deltaX *= o2) : n2 && (t2.deltaX *= n2), t2.deltaY > 0 ? o2 && (t2.deltaY *= o2) : n2 && (t2.deltaY *= n2);
     const s2 = e2.getScale ? e2.getScale(t2, e2) : S.getScale(t2, e2);
     if (1 !== s2) this.zoom(P(s2, t2));
     else {
       const o3 = e2.getMove ? e2.getMove(t2, e2) : S.getMove(t2, e2);
-      a.snap && ot$2.round(o3), this.move(L(o3, t2));
+      a2.snap && ot$2.round(o3), this.move(L(o3, t2));
     }
   }, N.multiTouch = function(t2, e2) {
-    const { disabled: a, singleGesture: o2 } = this.config.multiTouch;
-    if (a) return;
+    const { disabled: a2, singleGesture: o2 } = this.config.multiTouch;
+    if (a2) return;
     this.pointerWaitCancel();
     let n2 = z.getData(e2), { moving: i2, zooming: s2, rotating: r2 } = this.transformer;
     if (o2) {
@@ -12638,33 +13209,33 @@ var LiteGraphTSMigration = (function(exports) {
       }
       i2 || (n2.center = z.state.center);
     } else i2 = s2 = r2 = true;
-    var c, m2;
-    Object.assign(t2, n2.center), t2.multiTouch = true, r2 && this.rotate((c = n2.rotation, m2 = t2, Object.assign(Object.assign({}, m2), { rotation: c }))), s2 && this.zoom(P(n2.scale, t2)), i2 && this.move(L(n2.move, t2));
+    var c2, m2;
+    Object.assign(t2, n2.center), t2.multiTouch = true, r2 && this.rotate((c2 = n2.rotation, m2 = t2, Object.assign(Object.assign({}, m2), { rotation: c2 }))), s2 && this.zoom(P(n2.scale, t2)), i2 && this.move(L(n2.move, t2));
   };
   const F = Dt$1.prototype, { abs: I, min: G, max: Z, hypot: H } = Math;
   F.checkDragEndAnimate = function(e2) {
-    const { interaction: a } = this, o$1 = this.canAnimate && this.moving && a.m.dragAnimate;
+    const { interaction: a2 } = this, o$1 = this.canAnimate && this.moving && a2.m.dragAnimate;
     if (o$1) {
       const n2 = o(o$1) ? o$1 : 0.95, s2 = 0.15, r2 = 150;
-      let c, m2, l2, h = 0, u2 = 0, g2 = 0, d2 = 0, v2 = 3;
+      let c2, m2, l2, h2 = 0, u2 = 0, g2 = 0, d2 = 0, v2 = 3;
       const { dragDataList: p2 } = this, y2 = p2.length;
-      for (let t2 = y2 - 1; t2 >= Z(y2 - 3, 0) && (l2 = p2[t2], !(l2.time && Date.now() - l2.time > 100)); t2--) c = v2--, h += l2.moveX * c, u2 += l2.moveY * c, d2 += c, m2 = H(l2.moveX, l2.moveY), m2 > g2 && (g2 = m2);
-      if (d2 && (h /= d2, u2 /= d2), g2 > 8) {
+      for (let t2 = y2 - 1; t2 >= Z(y2 - 3, 0) && (l2 = p2[t2], !(l2.time && Date.now() - l2.time > 100)); t2--) c2 = v2--, h2 += l2.moveX * c2, u2 += l2.moveY * c2, d2 += c2, m2 = H(l2.moveX, l2.moveY), m2 > g2 && (g2 = m2);
+      if (d2 && (h2 /= d2, u2 /= d2), g2 > 8) {
         const t2 = 1.15 + G((g2 - 8) / 17, 1) * (1.6 - 1.15);
-        h *= t2, u2 *= t2;
+        h2 *= t2, u2 *= t2;
       }
-      const D2 = Z(I(h), I(u2));
-      D2 > r2 && (m2 = r2 / D2, h *= m2, u2 *= m2);
+      const D2 = Z(I(h2), I(u2));
+      D2 > r2 && (m2 = r2 / D2, h2 *= m2, u2 *= m2);
       const O2 = () => {
-        if (h *= n2, u2 *= n2, e2 = Object.assign({}, e2), I(h) < s2 && I(u2) < s2) return this.dragEndReal(e2);
-        ot$2.move(e2, h, u2), this.drag(e2), this.animate(O2), a.emit(ot$1.DRAG_ANIMATE, e2);
+        if (h2 *= n2, u2 *= n2, e2 = Object.assign({}, e2), I(h2) < s2 && I(u2) < s2) return this.dragEndReal(e2);
+        ot$2.move(e2, h2, u2), this.drag(e2), this.animate(O2), a2.emit(ot$1.DRAG_ANIMATE, e2);
       };
       this.animate(O2);
     }
     return o$1;
   }, F.animate = function(t2, e2) {
-    const a = t2 || this.animateWait;
-    a && this.interaction.target.nextRender(a, null, e2), this.animateWait = t2;
+    const a2 = t2 || this.animateWait;
+    a2 && this.interaction.target.nextRender(a2, null, e2), this.animateWait = t2;
   }, F.stopAnimate = function() {
     this.animate(null, "off"), this.interaction.target.nextRender(() => {
       this.dragData && this.dragEndReal(this.dragData);
@@ -12673,12 +13244,12 @@ var LiteGraphTSMigration = (function(exports) {
     const { interaction: e2 } = this;
     this.autoMoveCancel(), this.dragging && !e2.shrinkCanvasBounds.hitPoint(t2) && this.autoMoveOnDragOut(t2);
   }, F.autoMoveOnDragOut = function(t2) {
-    const { interaction: e2, downData: a, canDragOut: o2 } = this, { autoDistance: n2, dragOut: s2 } = e2.m;
+    const { interaction: e2, downData: a2, canDragOut: o2 } = this, { autoDistance: n2, dragOut: s2 } = e2.m;
     if (!s2 || !o2 || !n2) return;
-    const r2 = e2.shrinkCanvasBounds, { x: c, y: m2 } = r2, l2 = zt$1.maxX(r2), h = zt$1.maxY(r2), u2 = t2.x < c ? n2 : l2 < t2.x ? -n2 : 0, g2 = t2.y < m2 ? n2 : h < t2.y ? -n2 : 0;
+    const r2 = e2.shrinkCanvasBounds, { x: c2, y: m2 } = r2, l2 = zt$2.maxX(r2), h2 = zt$2.maxY(r2), u2 = t2.x < c2 ? n2 : l2 < t2.x ? -n2 : 0, g2 = t2.y < m2 ? n2 : h2 < t2.y ? -n2 : 0;
     let d2 = 0, v2 = 0;
     this.autoMoveTimer = setInterval(() => {
-      d2 += u2, v2 += g2, ot$2.move(a, u2, g2), ot$2.move(this.dragData, u2, g2), e2.move(Object.assign(Object.assign({}, t2), { moveX: u2, moveY: g2, totalX: d2, totalY: v2, moveType: "drag" })), e2.pointerMoveReal(t2);
+      d2 += u2, v2 += g2, ot$2.move(a2, u2, g2), ot$2.move(this.dragData, u2, g2), e2.move(Object.assign(Object.assign({}, t2), { moveX: u2, moveY: g2, totalX: d2, totalY: v2, moveType: "drag" })), e2.pointerMoveReal(t2);
     }, 10);
   }, F.autoMoveCancel = function() {
     this.autoMoveTimer && (clearInterval(this.autoMoveTimer), this.autoMoveTimer = 0);
@@ -12691,6 +13262,18 @@ var LiteGraphTSMigration = (function(exports) {
     constructor(appHost, dragAndScale) {
       this.appHost = appHost;
       this.dragAndScale = dragAndScale;
+      this.scaleListenerId = null;
+      this.sceneSyncController = null;
+      this.queuedScaleRepaintFrame = null;
+      this.lastScale = 1;
+      this.handleTreeScale = () => {
+        const nextScale = this.getScale();
+        if (Math.abs(nextScale - this.lastScale) < 1e-4) {
+          return;
+        }
+        this.lastScale = nextScale;
+        this.queueLegacyScaleRepaint();
+      };
       O(this.appHost.tree, {
         wheel: {
           zoomMode: true,
@@ -12714,10 +13297,29 @@ var LiteGraphTSMigration = (function(exports) {
           holdMiddleKey: true
         }
       });
+      this.lastScale = this.getScale();
+      this.scaleListenerId = this.appHost.tree.on_(
+        "leafer.scale",
+        this.handleTreeScale
+      );
       this.dragAndScale.attachViewportPort(this);
     }
     destroy() {
+      var _a3;
+      this.sceneSyncController = null;
+      if (this.scaleListenerId) {
+        this.appHost.tree.off_(this.scaleListenerId);
+        this.scaleListenerId = null;
+      }
+      if (this.queuedScaleRepaintFrame !== null) {
+        const windowRef = ((_a3 = this.appHost.view.ownerDocument) == null ? void 0 : _a3.defaultView) || window;
+        windowRef.cancelAnimationFrame(this.queuedScaleRepaintFrame);
+        this.queuedScaleRepaintFrame = null;
+      }
       this.dragAndScale.detachViewportPort(this);
+    }
+    setSceneSyncController(sceneSyncController) {
+      this.sceneSyncController = sceneSyncController;
     }
     getScale() {
       const scale = toFiniteNumber(
@@ -12747,6 +13349,8 @@ var LiteGraphTSMigration = (function(exports) {
         worldOrigin,
         nextScale / currentScale
       );
+      this.lastScale = nextScale;
+      this.queueLegacyScaleRepaint();
     }
     setOffset(x2, y2) {
       const scale = this.getScale();
@@ -12763,6 +13367,20 @@ var LiteGraphTSMigration = (function(exports) {
       this.appHost.treeZoomLayer.x = 0;
       this.appHost.treeZoomLayer.y = 0;
       this.appHost.treeZoomLayer.scale = 1;
+      this.lastScale = 1;
+      this.queueLegacyScaleRepaint();
+    }
+    queueLegacyScaleRepaint() {
+      var _a3;
+      if (!this.sceneSyncController || this.queuedScaleRepaintFrame !== null) {
+        return;
+      }
+      const windowRef = ((_a3 = this.appHost.view.ownerDocument) == null ? void 0 : _a3.defaultView) || window;
+      this.queuedScaleRepaintFrame = windowRef.requestAnimationFrame(() => {
+        var _a4;
+        this.queuedScaleRepaintFrame = null;
+        (_a4 = this.sceneSyncController) == null ? void 0 : _a4.repaintLegacyNodeHosts();
+      });
     }
     clampScale(value) {
       const numericValue = toFiniteNumber(value, 1);
@@ -13762,9 +14380,12 @@ var LiteGraphTSMigration = (function(exports) {
         this.ds
       );
       this.attachSceneSyncBackbone();
+      this.viewportController.setSceneSyncController(this.sceneSyncController);
       console.info("LGraphCanvas: Leafer App shell initialized.");
     }
     destroySceneSyncBackbone() {
+      var _a3;
+      (_a3 = this.viewportController) == null ? void 0 : _a3.setSceneSyncController(null);
       if (this.interactionController) {
         this.interactionController.destroy();
         this.interactionController = null;
@@ -13779,6 +14400,7 @@ var LiteGraphTSMigration = (function(exports) {
       }
     }
     attachSceneSyncBackbone() {
+      var _a3;
       this.destroySceneSyncBackbone();
       if (this.renderRuntime !== "leafer" || !this.leaferAppHost || !this.graph) {
         return;
@@ -13797,6 +14419,7 @@ var LiteGraphTSMigration = (function(exports) {
         this.leaferAppHost,
         this.sceneSyncController
       );
+      (_a3 = this.viewportController) == null ? void 0 : _a3.setSceneSyncController(this.sceneSyncController);
     }
     setCanvas(canvas, skip_events) {
       let targetCanvas = canvas;
@@ -14156,6 +14779,7 @@ var LiteGraphTSMigration = (function(exports) {
       const doc = this.canvas.ownerDocument;
       return doc.defaultView || doc.parentWindow;
     }
+    /** @deprecated Use `requestRuntimeRender()` or node-level dirty signals instead of manual full-canvas invalidation. */
     setDirty(fgcanvas, bgcanvas) {
       if (fgcanvas) {
         this.dirty_canvas = true;
@@ -14163,6 +14787,21 @@ var LiteGraphTSMigration = (function(exports) {
       if (bgcanvas) {
         this.dirty_bgcanvas = true;
       }
+    }
+    requestRuntimeRender(forceNodeRepaint = false) {
+      var _a3, _b2, _c2;
+      if (this.renderRuntime === "leafer") {
+        if (forceNodeRepaint) {
+          (_a3 = this.sceneSyncController) == null ? void 0 : _a3.repaintAllNodeHosts();
+        }
+        if (typeof ((_b2 = this.leaferAppHost) == null ? void 0 : _b2.app.requestRender) === "function") {
+          this.leaferAppHost.app.requestRender();
+        } else {
+          (_c2 = this.leaferAppHost) == null ? void 0 : _c2.app.forceRender();
+        }
+        return;
+      }
+      this.draw(forceNodeRepaint, forceNodeRepaint);
     }
     notifyDirtySignal(fgcanvas, bgcanvas) {
       this.setDirty(Boolean(fgcanvas), Boolean(bgcanvas));
@@ -14412,7 +15051,7 @@ var LiteGraphTSMigration = (function(exports) {
             this.bringToFront(node2);
           }
           if (this.allow_interaction && !this.connecting_node && !node2.flags.collapsed && !this.live_mode) {
-            if (!skip_action && node2.resizable !== false && isInsideRectangle$2(
+            if (!skip_action && node2.resizable !== false && isInsideRectangle$1(
               e2.canvasX,
               e2.canvasY,
               node2.pos[0] + node2.size[0] - 5,
@@ -14431,7 +15070,7 @@ var LiteGraphTSMigration = (function(exports) {
                 for (let i2 = 0, l2 = node2.outputs.length; i2 < l2; ++i2) {
                   const output = node2.outputs[i2];
                   const link_pos = node2.getConnectionPos(false, i2);
-                  if (isInsideRectangle$2(
+                  if (isInsideRectangle$1(
                     e2.canvasX,
                     e2.canvasY,
                     link_pos[0] - 15,
@@ -14465,7 +15104,7 @@ var LiteGraphTSMigration = (function(exports) {
                 for (let i2 = 0, l2 = node2.inputs.length; i2 < l2; ++i2) {
                   const input = node2.inputs[i2];
                   const link_pos = node2.getConnectionPos(true, i2);
-                  if (isInsideRectangle$2(
+                  if (isInsideRectangle$1(
                     e2.canvasX,
                     e2.canvasY,
                     link_pos[0] - 15,
@@ -14582,7 +15221,7 @@ var LiteGraphTSMigration = (function(exports) {
               if (e2.ctrlKey) {
                 this.dragging_rectangle = null;
               }
-              const dist = distance$2(
+              const dist = distance$1(
                 [e2.canvasX, e2.canvasY],
                 [
                   this.selected_group.pos[0] + this.selected_group.size[0],
@@ -14617,7 +15256,7 @@ var LiteGraphTSMigration = (function(exports) {
                 for (let i2 = 0, l2 = node2.outputs.length; i2 < l2; ++i2) {
                   const output = node2.outputs[i2];
                   const link_pos = node2.getConnectionPos(false, i2);
-                  if (isInsideRectangle$2(e2.canvasX, e2.canvasY, link_pos[0] - 15, link_pos[1] - 10, 30, 20)) {
+                  if (isInsideRectangle$1(e2.canvasX, e2.canvasY, link_pos[0] - 15, link_pos[1] - 10, 30, 20)) {
                     mClikSlot = output;
                     mClikSlot_index = i2;
                     mClikSlot_isOut = true;
@@ -14629,7 +15268,7 @@ var LiteGraphTSMigration = (function(exports) {
                 for (let i2 = 0, l2 = node2.inputs.length; i2 < l2; ++i2) {
                   const input = node2.inputs[i2];
                   const link_pos = node2.getConnectionPos(true, i2);
-                  if (isInsideRectangle$2(e2.canvasX, e2.canvasY, link_pos[0] - 15, link_pos[1] - 10, 30, 20)) {
+                  if (isInsideRectangle$1(e2.canvasX, e2.canvasY, link_pos[0] - 15, link_pos[1] - 10, 30, 20)) {
                     mClikSlot = input;
                     mClikSlot_index = i2;
                     mClikSlot_isOut = false;
@@ -14820,7 +15459,7 @@ var LiteGraphTSMigration = (function(exports) {
             }
           }
           if (this.canvas) {
-            if (isInsideRectangle$2(
+            if (isInsideRectangle$1(
               e2.canvasX,
               e2.canvasY,
               node2.pos[0] + node2.size[0] - 5,
@@ -14970,14 +15609,14 @@ var LiteGraphTSMigration = (function(exports) {
           const nodes = graph._nodes;
           const node_bounding = new Float32Array(4);
           const w2 = Math.abs(this.dragging_rectangle[2]);
-          const h = Math.abs(this.dragging_rectangle[3]);
+          const h2 = Math.abs(this.dragging_rectangle[3]);
           const startx = this.dragging_rectangle[2] < 0 ? this.dragging_rectangle[0] - w2 : this.dragging_rectangle[0];
-          const starty = this.dragging_rectangle[3] < 0 ? this.dragging_rectangle[1] - h : this.dragging_rectangle[1];
+          const starty = this.dragging_rectangle[3] < 0 ? this.dragging_rectangle[1] - h2 : this.dragging_rectangle[1];
           this.dragging_rectangle[0] = startx;
           this.dragging_rectangle[1] = starty;
           this.dragging_rectangle[2] = w2;
-          this.dragging_rectangle[3] = h;
-          if (!node2 || w2 > 10 && h > 10) {
+          this.dragging_rectangle[3] = h2;
+          if (!node2 || w2 > 10 && h2 > 10) {
             const to_select = [];
             for (let i2 = 0; i2 < nodes.length; ++i2) {
               const nodeX = nodes[i2];
@@ -15060,7 +15699,7 @@ var LiteGraphTSMigration = (function(exports) {
           this.resizing_node = null;
         } else if (this.node_dragged) {
           const node_dragged = this.node_dragged;
-          if (node_dragged && e2.click_time < 300 && isInsideRectangle$2(
+          if (node_dragged && e2.click_time < 300 && isInsideRectangle$1(
             e2.canvasX,
             e2.canvasY,
             node_dragged.pos[0],
@@ -15335,7 +15974,7 @@ var LiteGraphTSMigration = (function(exports) {
      **/
     isOverNodeBox(node2, canvasx, canvasy) {
       const title_height = this.getLiteGraphHost().NODE_TITLE_HEIGHT;
-      if (isInsideRectangle$2(
+      if (isInsideRectangle$1(
         canvasx,
         canvasy,
         node2.pos[0] + 2,
@@ -15357,9 +15996,9 @@ var LiteGraphTSMigration = (function(exports) {
           const link_pos = node2.getConnectionPos(true, i2);
           let is_inside = false;
           if (node2.horizontal) {
-            is_inside = isInsideRectangle$2(canvasx, canvasy, link_pos[0] - 5, link_pos[1] - 10, 10, 20);
+            is_inside = isInsideRectangle$1(canvasx, canvasy, link_pos[0] - 5, link_pos[1] - 10, 10, 20);
           } else {
-            is_inside = isInsideRectangle$2(canvasx, canvasy, link_pos[0] - 10, link_pos[1] - 5, 40, 10);
+            is_inside = isInsideRectangle$1(canvasx, canvasy, link_pos[0] - 10, link_pos[1] - 5, 40, 10);
           }
           if (is_inside) {
             if (slot_pos) {
@@ -15382,9 +16021,9 @@ var LiteGraphTSMigration = (function(exports) {
           const link_pos = node2.getConnectionPos(false, i2);
           let is_inside = false;
           if (node2.horizontal) {
-            is_inside = isInsideRectangle$2(canvasx, canvasy, link_pos[0] - 5, link_pos[1] - 10, 10, 20);
+            is_inside = isInsideRectangle$1(canvasx, canvasy, link_pos[0] - 5, link_pos[1] - 10, 10, 20);
           } else {
-            is_inside = isInsideRectangle$2(canvasx, canvasy, link_pos[0] - 10, link_pos[1] - 5, 40, 10);
+            is_inside = isInsideRectangle$1(canvasx, canvasy, link_pos[0] - 10, link_pos[1] - 5, 40, 10);
           }
           if (is_inside) {
             if (slot_pos) {
@@ -15976,13 +16615,14 @@ var LiteGraphTSMigration = (function(exports) {
         node_box_coloured_by_mode: !!host.node_box_coloured_by_mode,
         node_box_coloured_when_on: !!host.node_box_coloured_when_on,
         NODE_MODES_COLORS: host.NODE_MODES_COLORS || {},
-        isInsideRectangle: host.isInsideRectangle || ((x2, y2, left, top, width2, height) => isInsideRectangle$2(x2, y2, left, top, width2, height)),
+        isInsideRectangle: host.isInsideRectangle || ((x2, y2, left, top, width2, height) => isInsideRectangle$1(x2, y2, left, top, width2, height)),
         getTime: host.getTime || (() => Date.now())
       };
     }
     /**
      * renders the whole canvas content, by rendering in two separated canvas, one containing the background grid and the connections, and one containing the nodes)
      * @method draw
+     * @deprecated Use `requestRuntimeRender()` from the host side. Leafer runtime does not support direct canvas redraw calls.
      **/
     draw(force_canvas, force_bgcanvas) {
       var _a3;
@@ -16011,6 +16651,7 @@ var LiteGraphTSMigration = (function(exports) {
     /**
      * draws the front canvas (the one containing all the nodes)
      * @method drawFrontCanvas
+     * @deprecated Legacy canvas compatibility path only. Leafer runtime uses retained overlay primitives instead.
      **/
     drawFrontCanvas() {
       var _a3, _b2, _c2;
@@ -16165,6 +16806,7 @@ var LiteGraphTSMigration = (function(exports) {
     /**
      * draws the back canvas (the one containing the background and the connections)
      * @method drawBackCanvas
+     * @deprecated Legacy canvas compatibility path only. Leafer runtime uses retained scene graph layers instead.
      **/
     drawBackCanvas() {
       var _a3, _b2;
@@ -16631,14 +17273,14 @@ var LiteGraphTSMigration = (function(exports) {
       ctx.font = "14px Courier New";
       const info = ctx.measureText(text);
       const w2 = info.width + 20;
-      const h = 24;
+      const h2 = 24;
       ctx.shadowColor = "black";
       ctx.shadowOffsetX = 2;
       ctx.shadowOffsetY = 2;
       ctx.shadowBlur = 3;
       ctx.fillStyle = "#454";
       ctx.beginPath();
-      ctx.roundRect(pos2[0] - w2 * 0.5, pos2[1] - 15 - h, w2, h, [3]);
+      ctx.roundRect(pos2[0] - w2 * 0.5, pos2[1] - 15 - h2, w2, h2, [3]);
       ctx.moveTo(pos2[0] - 10, pos2[1] - 15);
       ctx.lineTo(pos2[0] + 10, pos2[1] - 15);
       ctx.lineTo(pos2[0], pos2[1] - 5);
@@ -16646,7 +17288,7 @@ var LiteGraphTSMigration = (function(exports) {
       ctx.shadowColor = "transparent";
       ctx.textAlign = "center";
       ctx.fillStyle = "#CEC";
-      ctx.fillText(text, pos2[0], pos2[1] - 15 - h * 0.3);
+      ctx.fillText(text, pos2[0], pos2[1] - 15 - h2 * 0.3);
     }
     drawSlotGraphic(ctx, pos2, shape, _horizontal) {
       const LiteGraph2 = this.constants();
@@ -17050,7 +17692,7 @@ var LiteGraphTSMigration = (function(exports) {
      * draws a link between two points
      * @method renderLink
      **/
-    renderLink(ctx, a, b2, link, skip_border, flow, color, start_dir, end_dir, num_sublines) {
+    renderLink(ctx, a2, b2, link, skip_border, flow, color, start_dir, end_dir, num_sublines) {
       var _a3;
       const LiteGraph2 = this.constants();
       if (link) {
@@ -17067,7 +17709,7 @@ var LiteGraphTSMigration = (function(exports) {
       }
       start_dir = start_dir || LiteGraph2.RIGHT;
       end_dir = end_dir || LiteGraph2.LEFT;
-      const dist = distance$2(a, b2);
+      const dist = distance$1(a2, b2);
       if (this.render_connections_border && this.ds.scale > 0.6) {
         ctx.lineWidth = this.connections_width + 4;
       }
@@ -17079,20 +17721,20 @@ var LiteGraphTSMigration = (function(exports) {
       ctx.beginPath();
       for (let i2 = 0; i2 < num_sublines; i2 += 1) {
         const offsety = (i2 - (num_sublines - 1) * 0.5) * 5;
-        ctx.moveTo(a[0], a[1] + offsety);
+        ctx.moveTo(a2[0], a2[1] + offsety);
         const start_offset_x = start_dir == LiteGraph2.LEFT ? dist * -0.25 : start_dir == LiteGraph2.RIGHT ? dist * 0.25 : 0;
         const start_offset_y = start_dir == LiteGraph2.UP ? dist * -0.25 : start_dir == LiteGraph2.DOWN ? dist * 0.25 : 0;
         const end_offset_x = end_dir == LiteGraph2.LEFT ? dist * -0.25 : end_dir == LiteGraph2.RIGHT ? dist * 0.25 : 0;
         const end_offset_y = end_dir == LiteGraph2.UP ? dist * -0.25 : end_dir == LiteGraph2.DOWN ? dist * 0.25 : 0;
         if (this.links_render_mode == LiteGraph2.LINEAR_LINK) {
           const l2 = 15;
-          ctx.lineTo(a[0] + Math.sign(start_offset_x || 1) * l2, a[1] + Math.sign(start_offset_y || 1) * l2 + offsety);
+          ctx.lineTo(a2[0] + Math.sign(start_offset_x || 1) * l2, a2[1] + Math.sign(start_offset_y || 1) * l2 + offsety);
           ctx.lineTo(b2[0] + Math.sign(end_offset_x || 1) * l2, b2[1] + Math.sign(end_offset_y || 1) * l2 + offsety);
           ctx.lineTo(b2[0], b2[1] + offsety);
         } else {
           ctx.bezierCurveTo(
-            a[0] + start_offset_x,
-            a[1] + start_offset_y + offsety,
+            a2[0] + start_offset_x,
+            a2[1] + start_offset_y + offsety,
             b2[0] + end_offset_x,
             b2[1] + end_offset_y + offsety,
             b2[0],
@@ -17107,7 +17749,7 @@ var LiteGraphTSMigration = (function(exports) {
       ctx.lineWidth = this.connections_width;
       ctx.fillStyle = ctx.strokeStyle = color;
       ctx.stroke();
-      const pos2 = this.computeConnectionPoint(a, b2, 0.5, start_dir, end_dir);
+      const pos2 = this.computeConnectionPoint(a2, b2, 0.5, start_dir, end_dir);
       if (link && link._pos) {
         link._pos[0] = pos2[0];
         link._pos[1] = pos2[1];
@@ -17116,20 +17758,20 @@ var LiteGraphTSMigration = (function(exports) {
         ctx.fillStyle = color;
         for (let i2 = 0; i2 < 5; ++i2) {
           const f2 = (LiteGraph2.getTime() * 1e-3 + i2 * 0.2) % 1;
-          const p2 = this.computeConnectionPoint(a, b2, f2, start_dir, end_dir);
+          const p2 = this.computeConnectionPoint(a2, b2, f2, start_dir, end_dir);
           ctx.beginPath();
           ctx.arc(p2[0], p2[1], 5, 0, 2 * Math.PI);
           ctx.fill();
         }
       }
     }
-    computeConnectionPoint(a, b2, t2, start_dir, end_dir) {
+    computeConnectionPoint(a2, b2, t2, start_dir, end_dir) {
       const LiteGraph2 = this.constants();
       start_dir = start_dir || LiteGraph2.RIGHT;
       end_dir = end_dir || LiteGraph2.LEFT;
-      const dist = distance$2(a, b2);
-      const p0 = a;
-      const p1 = [a[0], a[1]];
+      const dist = distance$1(a2, b2);
+      const p0 = a2;
+      const p1 = [a2[0], a2[1]];
       const p2 = [b2[0], b2[1]];
       const p3 = b2;
       if (start_dir == LiteGraph2.LEFT) p1[0] += dist * -0.25;
@@ -17690,11 +18332,11 @@ var LiteGraphTSMigration = (function(exports) {
       const LiteGraph2 = this.constants();
       const num = subnode.inputs ? subnode.inputs.length : 0;
       const w2 = 200;
-      const h = Math.floor(LiteGraph2.NODE_SLOT_HEIGHT * 1.6);
+      const h2 = Math.floor(LiteGraph2.NODE_SLOT_HEIGHT * 1.6);
       ctx.fillStyle = "#111";
       ctx.globalAlpha = 0.8;
       ctx.beginPath();
-      ctx.roundRect(10, 10, w2, (num + 1) * h + 50, [8]);
+      ctx.roundRect(10, 10, w2, (num + 1) * h2 + 50, [8]);
       ctx.fill();
       ctx.globalAlpha = 1;
       ctx.fillStyle = "#888";
@@ -17713,7 +18355,7 @@ var LiteGraphTSMigration = (function(exports) {
           if (input.not_subgraph_input) {
             continue;
           }
-          if (this.drawButton(20, y2 + 2, w2 - 20, h - 2)) {
+          if (this.drawButton(20, y2 + 2, w2 - 20, h2 - 2)) {
             const type = subnode.constructor.input_node_type || "graph/input";
             this.graph.beforeChange();
             const newnode = LiteGraph2.createNode(type);
@@ -17735,16 +18377,16 @@ var LiteGraphTSMigration = (function(exports) {
           }
           ctx.fillStyle = "#9C9";
           ctx.beginPath();
-          ctx.arc(w2 - 16, y2 + h * 0.5, 5, 0, 2 * Math.PI);
+          ctx.arc(w2 - 16, y2 + h2 * 0.5, 5, 0, 2 * Math.PI);
           ctx.fill();
           ctx.fillStyle = "#AAA";
-          ctx.fillText(input.name, 30, y2 + h * 0.75);
+          ctx.fillText(input.name, 30, y2 + h2 * 0.75);
           ctx.fillStyle = "#777";
-          ctx.fillText(input.type, 130, y2 + h * 0.75);
-          y2 += h;
+          ctx.fillText(input.type, 130, y2 + h2 * 0.75);
+          y2 += h2;
         }
       }
-      if (this.drawButton(20, y2 + 2, w2 - 20, h - 2, "+", "#151515", "#222")) {
+      if (this.drawButton(20, y2 + 2, w2 - 20, h2 - 2, "+", "#151515", "#222")) {
         this.showSubgraphPropertiesDialog(subnode);
       }
     }
@@ -17757,11 +18399,11 @@ var LiteGraphTSMigration = (function(exports) {
       }
       const canvas_w = bgcanvas.width;
       const w2 = 200;
-      const h = Math.floor(LiteGraph2.NODE_SLOT_HEIGHT * 1.6);
+      const h2 = Math.floor(LiteGraph2.NODE_SLOT_HEIGHT * 1.6);
       ctx.fillStyle = "#111";
       ctx.globalAlpha = 0.8;
       ctx.beginPath();
-      ctx.roundRect(canvas_w - w2 - 10, 10, w2, (num + 1) * h + 50, [8]);
+      ctx.roundRect(canvas_w - w2 - 10, 10, w2, (num + 1) * h2 + 50, [8]);
       ctx.fill();
       ctx.globalAlpha = 1;
       ctx.fillStyle = "#888";
@@ -17782,7 +18424,7 @@ var LiteGraphTSMigration = (function(exports) {
           if (output.not_subgraph_input) {
             continue;
           }
-          if (this.drawButton(canvas_w - w2, y2 + 2, w2 - 20, h - 2)) {
+          if (this.drawButton(canvas_w - w2, y2 + 2, w2 - 20, h2 - 2)) {
             const type = subnode.constructor.output_node_type || "graph/output";
             this.graph.beforeChange();
             const newnode = LiteGraph2.createNode(type);
@@ -17804,20 +18446,20 @@ var LiteGraphTSMigration = (function(exports) {
           }
           ctx.fillStyle = "#9C9";
           ctx.beginPath();
-          ctx.arc(canvas_w - w2 + 16, y2 + h * 0.5, 5, 0, 2 * Math.PI);
+          ctx.arc(canvas_w - w2 + 16, y2 + h2 * 0.5, 5, 0, 2 * Math.PI);
           ctx.fill();
           ctx.fillStyle = "#AAA";
-          ctx.fillText(output.name, canvas_w - w2 + 30, y2 + h * 0.75);
+          ctx.fillText(output.name, canvas_w - w2 + 30, y2 + h2 * 0.75);
           ctx.fillStyle = "#777";
-          ctx.fillText(output.type, canvas_w - w2 + 130, y2 + h * 0.75);
-          y2 += h;
+          ctx.fillText(output.type, canvas_w - w2 + 130, y2 + h2 * 0.75);
+          y2 += h2;
         }
       }
-      if (this.drawButton(canvas_w - w2, y2 + 2, w2 - 20, h - 2, "+", "#151515", "#222")) {
+      if (this.drawButton(canvas_w - w2, y2 + 2, w2 - 20, h2 - 2, "+", "#151515", "#222")) {
         this.showSubgraphPropertiesDialogRight(subnode);
       }
     }
-    drawButton(x2, y2, w2, h, text, bgcolor, hovercolor, textcolor) {
+    drawButton(x2, y2, w2, h2, text, bgcolor, hovercolor, textcolor) {
       var _a3, _b2;
       const LiteGraph2 = this.constants();
       const ctx = this.ctx;
@@ -17828,27 +18470,27 @@ var LiteGraphTSMigration = (function(exports) {
       const resolvedHoverColor = hovercolor != null ? hovercolor : "#555";
       const resolvedTextColor = (_b2 = textcolor != null ? textcolor : LiteGraph2.NODE_TEXT_COLOR) != null ? _b2 : "#AAA";
       const hoverPos = this.ds.convertOffsetToCanvas(this.graph_mouse);
-      const hover = LiteGraph2.isInsideRectangle(hoverPos[0], hoverPos[1], x2, y2, w2, h);
+      const hover = LiteGraph2.isInsideRectangle(hoverPos[0], hoverPos[1], x2, y2, w2, h2);
       let clickPos = this.last_click_position ? [this.last_click_position[0], this.last_click_position[1]] : void 0;
       if (clickPos) {
         const rect = this.canvas.getBoundingClientRect();
         clickPos[0] -= rect.left;
         clickPos[1] -= rect.top;
       }
-      const clicked = !!(clickPos && LiteGraph2.isInsideRectangle(clickPos[0], clickPos[1], x2, y2, w2, h));
+      const clicked = !!(clickPos && LiteGraph2.isInsideRectangle(clickPos[0], clickPos[1], x2, y2, w2, h2));
       ctx.fillStyle = hover ? resolvedHoverColor : resolvedBgColor;
       if (clicked) {
         ctx.fillStyle = "#AAA";
       }
       ctx.beginPath();
-      ctx.roundRect(x2, y2, w2, h, [4]);
+      ctx.roundRect(x2, y2, w2, h2, [4]);
       ctx.fill();
       if (text != null) {
         if (text.constructor == String) {
           ctx.fillStyle = resolvedTextColor;
           ctx.textAlign = "center";
-          ctx.font = (h * 0.65 | 0) + "px Arial";
-          ctx.fillText(text, x2 + w2 * 0.5, y2 + h * 0.75);
+          ctx.font = (h2 * 0.65 | 0) + "px Arial";
+          ctx.fillText(text, x2 + w2 * 0.5, y2 + h2 * 0.75);
           ctx.textAlign = "left";
         }
       }
@@ -18116,7 +18758,7 @@ var LiteGraphTSMigration = (function(exports) {
       return (/* @__PURE__ */ new Date()).getTime();
     };
   }
-  const LiteGraphConstants$1 = {
+  const LiteGraphConstants = {
     VERSION: 0.4,
     CANVAS_GRID_SIZE: 10,
     NODE_TITLE_HEIGHT: 30,
@@ -18225,10 +18867,14 @@ var LiteGraphTSMigration = (function(exports) {
     click_do_break_link_from_key: "shift",
     // "shift"|"alt"|"ctrl"|"meta"|Array<string>
     isBreakLinkModifierPressed: function(e2) {
-      if (!e2 || false) {
+      const shortcutSetting = LiteGraphConstants.shift_click_do_break_link_from;
+      if (!e2 || !shortcutSetting) {
         return false;
       }
-      let breakMod = LiteGraphConstants$1.click_do_break_link_from_key;
+      let breakMod = LiteGraphConstants.click_do_break_link_from_key;
+      if (typeof shortcutSetting !== "boolean") {
+        breakMod = shortcutSetting;
+      }
       const hasModifier = (modifier) => {
         const mod = String(modifier || "").toLowerCase();
         return mod === "shift" && !!e2.shiftKey || mod === "alt" && !!e2.altKey || mod === "ctrl" && !!e2.ctrlKey || mod === "meta" && !!e2.metaKey;
@@ -18236,7 +18882,7 @@ var LiteGraphTSMigration = (function(exports) {
       if (Array.isArray(breakMod)) {
         return breakMod.some(hasModifier);
       }
-      return hasModifier(breakMod);
+      return hasModifier(breakMod || "shift");
     },
     click_do_break_link_to: false,
     // [false!] prefer false, way too easy to break links
@@ -18291,7 +18937,7 @@ var LiteGraphTSMigration = (function(exports) {
     // use this if you must have node IDs that are unique across all graphs and subgraphs.
     use_uuids: false
   };
-  let LiteGraphRegistry$1 = class LiteGraphRegistry {
+  class LiteGraphRegistry {
     constructor(host, lGraphNodePrototype) {
       this.host = host;
       this.lGraphNodePrototype = lGraphNodePrototype;
@@ -18561,7 +19207,7 @@ var LiteGraphTSMigration = (function(exports) {
         }
       }
       if (this.host.auto_sort_node_types) {
-        result.sort((a, b2) => (a.title || "").localeCompare(b2.title || ""));
+        result.sort((a2, b2) => (a2.title || "").localeCompare(b2.title || ""));
       }
       return result;
     }
@@ -18588,8 +19234,8 @@ var LiteGraphTSMigration = (function(exports) {
       }
       return this.host.auto_sort_node_types ? result.sort() : result;
     }
-  };
-  let LiteGraphRuntime$1 = class LiteGraphRuntime {
+  }
+  class LiteGraphRuntime {
     constructor(host) {
       this.host = host;
     }
@@ -18791,7 +19437,7 @@ var LiteGraphTSMigration = (function(exports) {
       const pattern = "10000000-1000-4000-8000-100000000000";
       return pattern.replace(
         /[018]/g,
-        (a) => (Number(a) ^ Math.random() * 16 >> Number(a) / 4).toString(16)
+        (a2) => (Number(a2) ^ Math.random() * 16 >> Number(a2) / 4).toString(16)
       );
     }
     /**
@@ -18917,8 +19563,9 @@ var LiteGraphTSMigration = (function(exports) {
       }
       return null;
     }
-  };
+  }
   function deserializeGraphData(target, data, factories) {
+    var _a3;
     for (const key in data) {
       if (key === "nodes" || key === "groups" || key === "links") {
         continue;
@@ -18951,6 +19598,7 @@ var LiteGraphTSMigration = (function(exports) {
         );
       }
       node2.configure(nodeData);
+      (_a3 = node2.setDirtyCanvas) == null ? void 0 : _a3.call(node2, true, true);
     }
     target._groups.length = 0;
     for (let i2 = 0; i2 < data.groups.length; ++i2) {
@@ -18993,7 +19641,7 @@ var LiteGraphTSMigration = (function(exports) {
       this._pos = new Float32Array(2);
     }
     configure(o2) {
-      const parsed = parseSerializedLLinkInput$1(o2);
+      const parsed = parseSerializedLLinkInput(o2);
       this.id = parsed.id;
       this.type = parsed.type;
       this.origin_id = parsed.origin_id;
@@ -19489,8 +20137,8 @@ var LiteGraphTSMigration = (function(exports) {
           }
         }
       }
-      ancestors.sort(function(a, b2) {
-        return a.order - b2.order;
+      ancestors.sort(function(a2, b2) {
+        return a2.order - b2.order;
       });
       return ancestors;
     }
@@ -19627,7 +20275,7 @@ var LiteGraphTSMigration = (function(exports) {
       if (!skip_compute_order) {
         this.updateExecutionOrder();
       }
-      invokeGraphOnNodeAddedCompatHook$1(
+      invokeGraphOnNodeAddedCompatHook(
         this,
         graphNode
       );
@@ -21879,7 +22527,7 @@ var LiteGraphTSMigration = (function(exports) {
     setDirtyCanvas(_fg, _bg) {
     }
   }
-  function isInsideRectangle$1(x2, y2, left, top, width2, height) {
+  function isInsideRectangle(x2, y2, left, top, width2, height) {
     return left < x2 && left + width2 > x2 && top < y2 && top + height > y2;
   }
   const hostDefaults = {
@@ -21933,7 +22581,7 @@ var LiteGraphTSMigration = (function(exports) {
     /** returns the bounding of the object, used for rendering purposes */
     getBounding(out, compute_outer) {
       var _a3;
-      const h = resolveConnectGeometryHost(this);
+      const h2 = resolveConnectGeometryHost(this);
       const o2 = out || new Float32Array(4);
       const isCollapsed = !!this.flags.collapsed;
       const p2 = this.pos;
@@ -21949,29 +22597,29 @@ var LiteGraphTSMigration = (function(exports) {
         bottom = 5 + top;
       }
       o2[0] = p2[0] - left;
-      o2[1] = p2[1] - h.NODE_TITLE_HEIGHT - top;
-      o2[2] = isCollapsed ? (this._collapsed_width || h.NODE_COLLAPSED_WIDTH) + right : s2[0] + right;
-      o2[3] = isCollapsed ? h.NODE_TITLE_HEIGHT + bottom : s2[1] + h.NODE_TITLE_HEIGHT + bottom;
+      o2[1] = p2[1] - h2.NODE_TITLE_HEIGHT - top;
+      o2[2] = isCollapsed ? (this._collapsed_width || h2.NODE_COLLAPSED_WIDTH) + right : s2[0] + right;
+      o2[3] = isCollapsed ? h2.NODE_TITLE_HEIGHT + bottom : s2[1] + h2.NODE_TITLE_HEIGHT + bottom;
       (_a3 = this.onBounding) == null ? void 0 : _a3.call(this, o2);
       return o2;
     }
     /** checks if a point is inside the shape of a node */
     isPointInside(x2, y2, margin, skip_title) {
       var _a3, _b2, _c2;
-      const h = resolveConnectGeometryHost(this);
+      const h2 = resolveConnectGeometryHost(this);
       const m2 = margin || 0;
-      let margin_top = ((_b2 = (_a3 = this.graphRef()) == null ? void 0 : _a3.isLive) == null ? void 0 : _b2.call(_a3)) ? 0 : h.NODE_TITLE_HEIGHT;
+      let margin_top = ((_b2 = (_a3 = this.graphRef()) == null ? void 0 : _a3.isLive) == null ? void 0 : _b2.call(_a3)) ? 0 : h2.NODE_TITLE_HEIGHT;
       if (skip_title) {
         margin_top = 0;
       }
       if ((_c2 = this.flags) == null ? void 0 : _c2.collapsed) {
-        return isInsideRectangle$1(
+        return isInsideRectangle(
           x2,
           y2,
           this.pos[0] - m2,
-          this.pos[1] - h.NODE_TITLE_HEIGHT - m2,
-          (this._collapsed_width || h.NODE_COLLAPSED_WIDTH) + 2 * m2,
-          h.NODE_TITLE_HEIGHT + 2 * m2
+          this.pos[1] - h2.NODE_TITLE_HEIGHT - m2,
+          (this._collapsed_width || h2.NODE_COLLAPSED_WIDTH) + 2 * m2,
+          h2.NODE_TITLE_HEIGHT + 2 * m2
         );
       }
       return this.pos[0] - 4 - m2 < x2 && this.pos[0] + this.size[0] + 4 + m2 > x2 && this.pos[1] - margin_top - m2 < y2 && this.pos[1] + this.size[1] + m2 > y2;
@@ -21983,7 +22631,7 @@ var LiteGraphTSMigration = (function(exports) {
         for (let i2 = 0; i2 < this.inputs.length; ++i2) {
           const input = this.inputs[i2];
           this.getConnectionPos(true, i2, link_pos);
-          if (isInsideRectangle$1(x2, y2, link_pos[0] - 10, link_pos[1] - 5, 20, 10)) {
+          if (isInsideRectangle(x2, y2, link_pos[0] - 10, link_pos[1] - 5, 20, 10)) {
             return { input, slot: i2, link_pos };
           }
         }
@@ -21992,7 +22640,7 @@ var LiteGraphTSMigration = (function(exports) {
         for (let i2 = 0; i2 < this.outputs.length; ++i2) {
           const output = this.outputs[i2];
           this.getConnectionPos(false, i2, link_pos);
-          if (isInsideRectangle$1(x2, y2, link_pos[0] - 10, link_pos[1] - 5, 20, 10)) {
+          if (isInsideRectangle(x2, y2, link_pos[0] - 10, link_pos[1] - 5, 20, 10)) {
             return { output, slot: i2, link_pos };
           }
         }
@@ -22065,7 +22713,7 @@ var LiteGraphTSMigration = (function(exports) {
     }
     /** returns the output (or input) slot with a given type, -1 if not found */
     findSlotByType(input, type, returnObj, preferFreeSlot, doNotUseOccupied) {
-      const h = resolveConnectGeometryHost(this);
+      const h2 = resolveConnectGeometryHost(this);
       const slots = input ? this.inputs : this.outputs;
       if (!slots) {
         return -1;
@@ -22082,10 +22730,10 @@ var LiteGraphTSMigration = (function(exports) {
         for (let sI = 0; sI < aSource.length; sI++) {
           for (let dI = 0; dI < aDestArr.length; dI++) {
             if (aSource[sI] == "_event_") {
-              aSource[sI] = String(h.EVENT);
+              aSource[sI] = String(h2.EVENT);
             }
             if (aDestArr[sI] == "_event_") {
-              aDestArr[sI] = String(h.EVENT);
+              aDestArr[sI] = String(h2.EVENT);
             }
             if (aSource[sI] == "*") {
               aSource[sI] = "0";
@@ -22126,44 +22774,44 @@ var LiteGraphTSMigration = (function(exports) {
       return -1;
     }
     addOnTriggerInput() {
-      const h = resolveConnectGeometryHost(this);
+      const h2 = resolveConnectGeometryHost(this);
       const triggerSlot = this.findInputSlot("onTrigger");
       if (triggerSlot === -1) {
         const extra = this.markSlotOptional({
           nameLocked: true
         });
-        this.addInput("onTrigger", h.EVENT, extra);
+        this.addInput("onTrigger", h2.EVENT, extra);
         return this.findInputSlot("onTrigger");
       }
       return triggerSlot;
     }
     addOnExecutedOutput() {
-      const h = resolveConnectGeometryHost(this);
+      const h2 = resolveConnectGeometryHost(this);
       const triggerSlot = this.findOutputSlot("onExecuted");
       if (triggerSlot === -1) {
         const extra = this.markSlotOptional({
           nameLocked: true
         });
-        this.addOutput("onExecuted", h.ACTION, extra);
+        this.addOutput("onExecuted", h2.ACTION, extra);
         return this.findOutputSlot("onExecuted");
       }
       return triggerSlot;
     }
     changeMode(modeTo) {
-      const h = resolveConnectGeometryHost(this);
+      const h2 = resolveConnectGeometryHost(this);
       switch (modeTo) {
-        case h.ON_EVENT:
+        case h2.ON_EVENT:
           break;
-        case h.ON_TRIGGER:
+        case h2.ON_TRIGGER:
           this.addOnTriggerInput();
           this.addOnExecutedOutput();
           break;
-        case h.NEVER:
+        case h2.NEVER:
           break;
-        case h.ALWAYS:
+        case h2.ALWAYS:
           break;
         default:
-          if (h.ON_REQUEST == null || modeTo !== h.ON_REQUEST) {
+          if (h2.ON_REQUEST == null || modeTo !== h2.ON_REQUEST) {
             return false;
           }
           break;
@@ -22172,7 +22820,7 @@ var LiteGraphTSMigration = (function(exports) {
       return true;
     }
     connectByType(slot, target_node, target_slotType, optsIn) {
-      const h = resolveConnectGeometryHost(this);
+      const h2 = resolveConnectGeometryHost(this);
       const opts = Object.assign(
         { createEventInCase: true, firstFreeIfOutputGeneralInCase: true, generalTypeInCase: true },
         optsIn || {}
@@ -22188,7 +22836,7 @@ var LiteGraphTSMigration = (function(exports) {
       if (typeof typed === "number" && typed >= 0) {
         return this.connect(slot, target, typed);
       }
-      if (opts.createEventInCase && target_slotType == h.EVENT) {
+      if (opts.createEventInCase && target_slotType == h2.EVENT) {
         return this.connect(slot, target, -1);
       }
       if (opts.generalTypeInCase) {
@@ -22198,7 +22846,7 @@ var LiteGraphTSMigration = (function(exports) {
         }
       }
       if (opts.firstFreeIfOutputGeneralInCase && (target_slotType == 0 || target_slotType == "*" || target_slotType == "") && typeof target.findInputSlotFree === "function") {
-        const free = target.findInputSlotFree({ typesNotAccepted: [h.EVENT] });
+        const free = target.findInputSlotFree({ typesNotAccepted: [h2.EVENT] });
         if (typeof free === "number" && free >= 0) {
           return this.connect(slot, target, free);
         }
@@ -22207,7 +22855,7 @@ var LiteGraphTSMigration = (function(exports) {
       return null;
     }
     connectByTypeOutput(slot, source_node, source_slotType, optsIn) {
-      const h = resolveConnectGeometryHost(this);
+      const h2 = resolveConnectGeometryHost(this);
       const opts = Object.assign(
         { createEventInCase: true, firstFreeIfInputGeneralInCase: true, generalTypeInCase: true },
         optsIn || {}
@@ -22229,11 +22877,11 @@ var LiteGraphTSMigration = (function(exports) {
           return source.connect(generic, this, slot);
         }
       }
-      if (opts.createEventInCase && source_slotType == h.EVENT && h.do_add_triggers_slots && source.addOnExecutedOutput) {
+      if (opts.createEventInCase && source_slotType == h2.EVENT && h2.do_add_triggers_slots && source.addOnExecutedOutput) {
         return source.connect(source.addOnExecutedOutput(), this, slot);
       }
       if (opts.firstFreeIfInputGeneralInCase && (source_slotType == 0 || source_slotType == "*" || source_slotType == "") && typeof source.findOutputSlotFree === "function") {
-        const free = source.findOutputSlotFree({ typesNotAccepted: [h.EVENT] });
+        const free = source.findOutputSlotFree({ typesNotAccepted: [h2.EVENT] });
         if (typeof free === "number" && free >= 0) {
           return source.connect(free, this, slot);
         }
@@ -22244,7 +22892,7 @@ var LiteGraphTSMigration = (function(exports) {
     /** connect this node output to the input of another node */
     connect(slot, target_node, target_slot) {
       var _a3, _b2, _c2, _d2, _e2, _f, _g, _h2, _i2;
-      const h = resolveConnectGeometryHost(this);
+      const h2 = resolveConnectGeometryHost(this);
       const graph = this.graphRef();
       if (!graph) {
         console.log("Connect: Error, node doesn't belong to any graph. Nodes must be added first to a graph before connecting them.");
@@ -22252,7 +22900,7 @@ var LiteGraphTSMigration = (function(exports) {
       }
       let outSlot = typeof slot === "string" ? this.findOutputSlot(slot) : slot;
       if (outSlot === -1 || !this.outputs || outSlot >= this.outputs.length) {
-        if (h.debug) {
+        if (h2.debug) {
           console.log(typeof slot === "string" ? "Connect: Error, no slot of name " + slot : "Connect: Error, slot number not found");
         }
         return null;
@@ -22271,22 +22919,22 @@ var LiteGraphTSMigration = (function(exports) {
         }
         targetSlot = target.findInputSlot(targetSlot);
         if (targetSlot === -1) {
-          if (h.debug) {
+          if (h2.debug) {
             console.log("Connect: Error, no slot of name " + target_slot);
           }
           return null;
         }
-      } else if (targetSlot === h.EVENT) {
-        if (!h.do_add_triggers_slots) {
+      } else if (targetSlot === h2.EVENT) {
+        if (!h2.do_add_triggers_slots) {
           return null;
         }
         if (typeof target.changeMode !== "function" || typeof target.findInputSlot !== "function") {
           return null;
         }
-        target.changeMode(h.ON_TRIGGER);
+        target.changeMode(h2.ON_TRIGGER);
         targetSlot = target.findInputSlot("onTrigger");
       } else if (!target.inputs || targetSlot >= target.inputs.length) {
-        if (h.debug) {
+        if (h2.debug) {
           console.log("Connect: Error, slot number not found");
         }
         return null;
@@ -22301,7 +22949,7 @@ var LiteGraphTSMigration = (function(exports) {
       if (target.onBeforeConnectInput) {
         targetSlot = target.onBeforeConnectInput(targetSlot);
       }
-      if (targetSlot === false || targetSlot === null || !h.isValidConnection(output.type, input.type)) {
+      if (targetSlot === false || targetSlot === null || !h2.isValidConnection(output.type, input.type)) {
         this.setDirtyCanvas(false, true);
         if (changed) {
           (_a3 = graph.connectionChange) == null ? void 0 : _a3.call(graph, this, link_info || void 0);
@@ -22321,12 +22969,12 @@ var LiteGraphTSMigration = (function(exports) {
         }
         changed = true;
       }
-      if (output.links && output.links.length && output.type === h.EVENT && !h.allow_multi_output_for_events) {
+      if (output.links && output.links.length && output.type === h2.EVENT && !h2.allow_multi_output_for_events) {
         (_c2 = graph.beforeChange) == null ? void 0 : _c2.call(graph);
         this.disconnectOutput(outSlot, false, { doProcessChange: false });
         changed = true;
       }
-      const nextId = h.use_uuids ? h.uuidv4() : ++graph.last_link_id;
+      const nextId = h2.use_uuids ? h2.uuidv4() : ++graph.last_link_id;
       link_info = new LLink(
         nextId,
         input.type || output.type,
@@ -22344,10 +22992,10 @@ var LiteGraphTSMigration = (function(exports) {
         target.inputs[targetSlot].link = link_info.id;
       }
       graph._version++;
-      (_d2 = this.onConnectionsChange) == null ? void 0 : _d2.call(this, h.OUTPUT, outSlot, true, link_info, output);
-      (_e2 = target.onConnectionsChange) == null ? void 0 : _e2.call(target, h.INPUT, targetSlot, true, link_info, input);
-      (_f = graph.onNodeConnectionChange) == null ? void 0 : _f.call(graph, h.INPUT, target, targetSlot, this, outSlot);
-      (_g = graph.onNodeConnectionChange) == null ? void 0 : _g.call(graph, h.OUTPUT, this, outSlot, target, targetSlot);
+      (_d2 = this.onConnectionsChange) == null ? void 0 : _d2.call(this, h2.OUTPUT, outSlot, true, link_info, output);
+      (_e2 = target.onConnectionsChange) == null ? void 0 : _e2.call(target, h2.INPUT, targetSlot, true, link_info, input);
+      (_f = graph.onNodeConnectionChange) == null ? void 0 : _f.call(graph, h2.INPUT, target, targetSlot, this, outSlot);
+      (_g = graph.onNodeConnectionChange) == null ? void 0 : _g.call(graph, h2.OUTPUT, this, outSlot, target, targetSlot);
       this.setDirtyCanvas(false, true);
       (_h2 = graph.afterChange) == null ? void 0 : _h2.call(graph);
       (_i2 = graph.connectionChange) == null ? void 0 : _i2.call(graph, this, link_info);
@@ -22356,14 +23004,14 @@ var LiteGraphTSMigration = (function(exports) {
     /** disconnect one output to an specific node */
     disconnectOutput(slot, target_node, _opts) {
       var _a3, _b2, _c2, _d2, _e2, _f, _g, _h2, _i2, _j, _k;
-      const h = resolveConnectGeometryHost(this);
+      const h2 = resolveConnectGeometryHost(this);
       const graph = this.graphRef();
       if (!graph) {
         return false;
       }
       const outSlot = typeof slot === "string" ? this.findOutputSlot(slot) : slot;
       if (!this.outputs || outSlot === -1 || outSlot >= this.outputs.length) {
-        if (h.debug) {
+        if (h2.debug) {
           console.log(typeof slot === "string" ? "Connect: Error, no slot of name " + slot : "Connect: Error, slot number not found");
         }
         return false;
@@ -22386,11 +23034,11 @@ var LiteGraphTSMigration = (function(exports) {
             input.link = null;
             delete graph.links[link_id];
             graph._version++;
-            (_a3 = target.onConnectionsChange) == null ? void 0 : _a3.call(target, h.INPUT, link.target_slot, false, link, input);
-            (_b2 = this.onConnectionsChange) == null ? void 0 : _b2.call(this, h.OUTPUT, outSlot, false, link, output);
-            (_c2 = graph.onNodeConnectionChange) == null ? void 0 : _c2.call(graph, h.OUTPUT, this, outSlot);
-            (_d2 = graph.onNodeConnectionChange) == null ? void 0 : _d2.call(graph, h.OUTPUT, this, outSlot);
-            (_e2 = graph.onNodeConnectionChange) == null ? void 0 : _e2.call(graph, h.INPUT, target, link.target_slot);
+            (_a3 = target.onConnectionsChange) == null ? void 0 : _a3.call(target, h2.INPUT, link.target_slot, false, link, input);
+            (_b2 = this.onConnectionsChange) == null ? void 0 : _b2.call(this, h2.OUTPUT, outSlot, false, link, output);
+            (_c2 = graph.onNodeConnectionChange) == null ? void 0 : _c2.call(graph, h2.OUTPUT, this, outSlot);
+            (_d2 = graph.onNodeConnectionChange) == null ? void 0 : _d2.call(graph, h2.OUTPUT, this, outSlot);
+            (_e2 = graph.onNodeConnectionChange) == null ? void 0 : _e2.call(graph, h2.INPUT, target, link.target_slot);
             break;
           }
         }
@@ -22407,13 +23055,13 @@ var LiteGraphTSMigration = (function(exports) {
           if (target) {
             input = target.inputs[link.target_slot];
             input.link = null;
-            (_f = target.onConnectionsChange) == null ? void 0 : _f.call(target, h.INPUT, link.target_slot, false, link, input);
-            (_g = graph.onNodeConnectionChange) == null ? void 0 : _g.call(graph, h.INPUT, target, link.target_slot);
+            (_f = target.onConnectionsChange) == null ? void 0 : _f.call(target, h2.INPUT, link.target_slot, false, link, input);
+            (_g = graph.onNodeConnectionChange) == null ? void 0 : _g.call(graph, h2.INPUT, target, link.target_slot);
           }
           delete graph.links[link_id];
-          (_h2 = this.onConnectionsChange) == null ? void 0 : _h2.call(this, h.OUTPUT, outSlot, false, link, output);
-          (_i2 = graph.onNodeConnectionChange) == null ? void 0 : _i2.call(graph, h.OUTPUT, this, outSlot);
-          (_j = graph.onNodeConnectionChange) == null ? void 0 : _j.call(graph, h.INPUT, target, link.target_slot);
+          (_h2 = this.onConnectionsChange) == null ? void 0 : _h2.call(this, h2.OUTPUT, outSlot, false, link, output);
+          (_i2 = graph.onNodeConnectionChange) == null ? void 0 : _i2.call(graph, h2.OUTPUT, this, outSlot);
+          (_j = graph.onNodeConnectionChange) == null ? void 0 : _j.call(graph, h2.INPUT, target, link.target_slot);
         }
         output.links = null;
       }
@@ -22424,14 +23072,14 @@ var LiteGraphTSMigration = (function(exports) {
     /** disconnect one input */
     disconnectInput(slot, _opts) {
       var _a3, _b2, _c2, _d2, _e2;
-      const h = resolveConnectGeometryHost(this);
+      const h2 = resolveConnectGeometryHost(this);
       const graph = this.graphRef();
       if (!graph) {
         return false;
       }
       const inSlot = typeof slot === "string" ? this.findInputSlot(slot) : slot;
       if (!this.inputs || inSlot === -1 || inSlot >= this.inputs.length) {
-        if (h.debug) {
+        if (h2.debug) {
           console.log(typeof slot === "string" ? "Connect: Error, no slot of name " + slot : "Connect: Error, slot number not found");
         }
         return false;
@@ -22462,10 +23110,10 @@ var LiteGraphTSMigration = (function(exports) {
           }
           delete graph.links[link_id];
           graph._version++;
-          (_a3 = this.onConnectionsChange) == null ? void 0 : _a3.call(this, h.INPUT, inSlot, false, link, input);
-          (_b2 = originNode.onConnectionsChange) == null ? void 0 : _b2.call(originNode, h.OUTPUT, i2, false, link, output);
-          (_c2 = graph.onNodeConnectionChange) == null ? void 0 : _c2.call(graph, h.OUTPUT, originNode, i2);
-          (_d2 = graph.onNodeConnectionChange) == null ? void 0 : _d2.call(graph, h.INPUT, this, inSlot);
+          (_a3 = this.onConnectionsChange) == null ? void 0 : _a3.call(this, h2.INPUT, inSlot, false, link, input);
+          (_b2 = originNode.onConnectionsChange) == null ? void 0 : _b2.call(originNode, h2.OUTPUT, i2, false, link, output);
+          (_c2 = graph.onNodeConnectionChange) == null ? void 0 : _c2.call(graph, h2.OUTPUT, originNode, i2);
+          (_d2 = graph.onNodeConnectionChange) == null ? void 0 : _d2.call(graph, h2.INPUT, this, inSlot);
         }
       }
       this.setDirtyCanvas(false, true);
@@ -22474,7 +23122,7 @@ var LiteGraphTSMigration = (function(exports) {
     }
     /** returns the center of a connection point in canvas coords */
     getConnectionPos(is_input, slot_number, out) {
-      const h = resolveConnectGeometryHost(this);
+      const h2 = resolveConnectGeometryHost(this);
       const o2 = out || new Float32Array(2);
       let num_slots = 0;
       if (is_input && this.inputs) {
@@ -22483,21 +23131,21 @@ var LiteGraphTSMigration = (function(exports) {
       if (!is_input && this.outputs) {
         num_slots = this.outputs.length;
       }
-      const offset = h.NODE_SLOT_HEIGHT * 0.5;
+      const offset = h2.NODE_SLOT_HEIGHT * 0.5;
       if (this.flags.collapsed) {
-        const w2 = this._collapsed_width || h.NODE_COLLAPSED_WIDTH;
+        const w2 = this._collapsed_width || h2.NODE_COLLAPSED_WIDTH;
         if (this.horizontal) {
           o2[0] = this.pos[0] + w2 * 0.5;
-          o2[1] = is_input ? this.pos[1] - h.NODE_TITLE_HEIGHT : this.pos[1];
+          o2[1] = is_input ? this.pos[1] - h2.NODE_TITLE_HEIGHT : this.pos[1];
         } else {
           o2[0] = is_input ? this.pos[0] : this.pos[0] + w2;
-          o2[1] = this.pos[1] - h.NODE_TITLE_HEIGHT * 0.5;
+          o2[1] = this.pos[1] - h2.NODE_TITLE_HEIGHT * 0.5;
         }
         return o2;
       }
       if (is_input && slot_number == -1) {
-        o2[0] = this.pos[0] + h.NODE_TITLE_HEIGHT * 0.5;
-        o2[1] = this.pos[1] + h.NODE_TITLE_HEIGHT * 0.5;
+        o2[0] = this.pos[0] + h2.NODE_TITLE_HEIGHT * 0.5;
+        o2[1] = this.pos[1] + h2.NODE_TITLE_HEIGHT * 0.5;
         return o2;
       }
       if (is_input && this.inputs && num_slots > slot_number && this.inputs[slot_number].pos) {
@@ -22513,12 +23161,12 @@ var LiteGraphTSMigration = (function(exports) {
       }
       if (this.horizontal) {
         o2[0] = this.pos[0] + (slot_number + 0.5) * (this.size[0] / num_slots);
-        o2[1] = is_input ? this.pos[1] - h.NODE_TITLE_HEIGHT : this.pos[1] + this.size[1];
+        o2[1] = is_input ? this.pos[1] - h2.NODE_TITLE_HEIGHT : this.pos[1] + this.size[1];
         return o2;
       }
       o2[0] = is_input ? this.pos[0] + offset : this.pos[0] + this.size[0] + 1 - offset;
       const cls = this.constructor;
-      o2[1] = this.pos[1] + (slot_number + 0.7) * h.NODE_SLOT_HEIGHT + (cls.slot_start_y || 0);
+      o2[1] = this.pos[1] + (slot_number + 0.7) * h2.NODE_SLOT_HEIGHT + (cls.slot_start_y || 0);
       return o2;
     }
     // placeholder to keep this module self-contained during incremental migration.
@@ -22626,11 +23274,11 @@ var LiteGraphTSMigration = (function(exports) {
       }
       const list = graph.list_of_graphcanvas;
       for (let i2 = 0; i2 < list.length; ++i2) {
-        const c = list[i2];
-        if (!v2 && c.node_capturing_input != this) {
+        const c2 = list[i2];
+        if (!v2 && c2.node_capturing_input != this) {
           continue;
         }
-        c.node_capturing_input = v2 ? this : null;
+        c2.node_capturing_input = v2 ? this : null;
       }
     }
     /**
@@ -22727,7 +23375,7 @@ var LiteGraphTSMigration = (function(exports) {
       });
     }
     configure(o2) {
-      const normalized = parseSerializedLGraphGroupInput$1(o2, this.font_size);
+      const normalized = parseSerializedLGraphGroupInput(o2, this.font_size);
       this.title = normalized.title;
       this._bounding.set(normalized.bounding);
       this.color = normalized.color;
@@ -23203,17 +23851,17 @@ var LiteGraphTSMigration = (function(exports) {
       }
       this.size = size;
       const w2 = size[0] - this.margin * 2;
-      const h = size[1] - this.margin * 2;
+      const h2 = size[1] - this.margin * 2;
       const resolvedLineColor = line_color || "#666";
       ctx.save();
       ctx.translate(this.margin, this.margin);
       if (background_color) {
         ctx.fillStyle = "#111";
-        ctx.fillRect(0, 0, w2, h);
+        ctx.fillRect(0, 0, w2, h2);
         ctx.fillStyle = "#222";
-        ctx.fillRect(w2 * 0.5, 0, 1, h);
+        ctx.fillRect(w2 * 0.5, 0, 1, h2);
         ctx.strokeStyle = "#333";
-        ctx.strokeRect(0, 0, w2, h);
+        ctx.strokeRect(0, 0, w2, h2);
       }
       ctx.strokeStyle = resolvedLineColor;
       if (inactive) {
@@ -23222,7 +23870,7 @@ var LiteGraphTSMigration = (function(exports) {
       ctx.beginPath();
       for (let i2 = 0; i2 < points.length; ++i2) {
         const p2 = points[i2];
-        ctx.lineTo(p2[0] * w2, (1 - p2[1]) * h);
+        ctx.lineTo(p2[0] * w2, (1 - p2[1]) * h2);
       }
       ctx.stroke();
       ctx.globalAlpha = 1;
@@ -23231,7 +23879,7 @@ var LiteGraphTSMigration = (function(exports) {
           const p2 = points[i2];
           ctx.fillStyle = this.selected == i2 ? "#FFF" : this.nearest == i2 ? "#DDD" : "#AAA";
           ctx.beginPath();
-          ctx.arc(p2[0] * w2, (1 - p2[1]) * h, 2, 0, Math.PI * 2);
+          ctx.arc(p2[0] * w2, (1 - p2[1]) * h2, 2, 0, Math.PI * 2);
           ctx.fill();
         }
       }
@@ -23250,16 +23898,16 @@ var LiteGraphTSMigration = (function(exports) {
         return;
       }
       const w2 = this.size[0] - this.margin * 2;
-      const h = this.size[1] - this.margin * 2;
+      const h2 = this.size[1] - this.margin * 2;
       const x2 = localpos[0] - this.margin;
       const y2 = localpos[1] - this.margin;
       const pos2 = [x2, y2];
       const max_dist = 30 / graphcanvas.ds.scale;
       this.selected = this.getCloserPoint(pos2, max_dist);
       if (this.selected == -1) {
-        const point = [x2 / w2, 1 - y2 / h];
+        const point = [x2 / w2, 1 - y2 / h2];
         points.push(point);
-        points.sort((a, b2) => a[0] - b2[0]);
+        points.sort((a2, b2) => a2[0] - b2[0]);
         this.selected = points.indexOf(point);
         this.must_update = true;
       }
@@ -23301,7 +23949,7 @@ var LiteGraphTSMigration = (function(exports) {
           point[0] = s2 == 0 ? 0 : 1;
         }
         point[1] = 1 - clamp(y2, 0, 1);
-        points.sort((a, b2) => a[0] - b2[0]);
+        points.sort((a2, b2) => a2[0] - b2[0]);
         this.selected = points.indexOf(point);
         this.must_update = true;
       }
@@ -23320,7 +23968,7 @@ var LiteGraphTSMigration = (function(exports) {
       }
       max_dist = max_dist || 30;
       const w2 = this.size[0] - this.margin * 2;
-      const h = this.size[1] - this.margin * 2;
+      const h2 = this.size[1] - this.margin * 2;
       const num = points.length;
       const p2 = [0, 0];
       let min_dist = 1e6;
@@ -23328,9 +23976,9 @@ var LiteGraphTSMigration = (function(exports) {
       for (let i2 = 0; i2 < num; ++i2) {
         const p3 = points[i2];
         p2[0] = p3[0] * w2;
-        p2[1] = (1 - p3[1]) * h;
+        p2[1] = (1 - p3[1]) * h2;
         if (p2[0] < pos2[0]) ;
-        const dist = distance$2(pos2, p2);
+        const dist = distance$1(pos2, p2);
         if (dist > min_dist || dist > max_dist) {
           continue;
         }
@@ -23340,11 +23988,11 @@ var LiteGraphTSMigration = (function(exports) {
       return closest;
     }
   }
-  function colorToString$1(c) {
-    const source = c;
+  function colorToString(c2) {
+    const source = c2;
     return "rgba(" + Math.round(source[0] * 255).toFixed() + "," + Math.round(source[1] * 255).toFixed() + "," + Math.round(source[2] * 255).toFixed() + "," + (source.length == 4 ? source[3].toFixed(2) : "1.0") + ")";
   }
-  function hex2num$1(hex) {
+  function hex2num(hex) {
     if (hex.charAt(0) == "#") {
       hex = hex.slice(1);
     }
@@ -23362,7 +24010,7 @@ var LiteGraphTSMigration = (function(exports) {
     }
     return value;
   }
-  function num2hex$1(triplet) {
+  function num2hex(triplet) {
     const hexAlphabets = "0123456789ABCDEF";
     let hex = "#";
     let int1;
@@ -23374,7 +24022,7 @@ var LiteGraphTSMigration = (function(exports) {
     }
     return hex;
   }
-  function getParameterNames$1(func) {
+  function getParameterNames(func) {
     return (func + "").replace(/[/][/].*$/gm, "").replace(/\s+/g, "").replace(/[/][*][^/*]*[*][/]/g, "").split("){", 1)[0].replace(/^[^(]*[(]/, "").replace(/=[^,]+/g, "").split(",").filter(Boolean);
   }
   const LGraph = LGraphPersistence;
@@ -23435,21 +24083,21 @@ var LiteGraphTSMigration = (function(exports) {
     };
   }
   function createLiteGraphNamespace() {
-    const liteGraph = { ...LiteGraphConstants$1 };
-    applyGridSquareShapeAlias$1(liteGraph);
+    const liteGraph = { ...LiteGraphConstants };
+    applyGridSquareShapeAlias(liteGraph);
     const pointerCompat = createDynamicPointerListenerCompat(
       () => String(liteGraph.pointerevents_method || "mouse")
     );
     liteGraph.getTime = createTimeSource();
-    liteGraph.getParameterNames = getParameterNames$1;
-    liteGraph.compareObjects = compareObjects$1;
-    liteGraph.distance = distance$2;
-    liteGraph.colorToString = colorToString$1;
-    liteGraph.isInsideRectangle = isInsideRectangle$2;
-    liteGraph.growBounding = growBounding$1;
-    liteGraph.isInsideBounding = isInsideBounding$1;
-    liteGraph.hex2num = hex2num$1;
-    liteGraph.num2hex = num2hex$1;
+    liteGraph.getParameterNames = getParameterNames;
+    liteGraph.compareObjects = compareObjects;
+    liteGraph.distance = distance$1;
+    liteGraph.colorToString = colorToString;
+    liteGraph.isInsideRectangle = isInsideRectangle$1;
+    liteGraph.growBounding = growBounding;
+    liteGraph.isInsideBounding = isInsideBounding;
+    liteGraph.hex2num = hex2num;
+    liteGraph.num2hex = num2hex;
     liteGraph.extendClass = extendClass;
     liteGraph.pointerListenerAdd = pointerCompat.add;
     liteGraph.pointerListenerRemove = pointerCompat.remove;
@@ -23462,7 +24110,7 @@ var LiteGraphTSMigration = (function(exports) {
     liteGraph.LGraphCanvas = LGraphCanvas;
     liteGraph.ContextMenu = ContextMenu;
     liteGraph.CurveEditor = CurveEditor;
-    const registry2 = new LiteGraphRegistry$1(
+    const registry2 = new LiteGraphRegistry(
       liteGraph,
       LGraphNode.prototype
     );
@@ -23474,10 +24122,10 @@ var LiteGraphTSMigration = (function(exports) {
     liteGraph.getNodeType = registry2.getNodeType.bind(registry2);
     liteGraph.getNodeTypesInCategory = registry2.getNodeTypesInCategory.bind(registry2);
     liteGraph.getNodeTypesCategories = registry2.getNodeTypesCategories.bind(registry2);
-    const runtime2 = new LiteGraphRuntime$1({
+    const runtime2 = new LiteGraphRuntime({
       ...liteGraph,
       registerNodeType: registry2.registerNodeType.bind(registry2),
-      getParameterNames: getParameterNames$1
+      getParameterNames
     });
     liteGraph.registerNodeAndSlotType = runtime2.registerNodeAndSlotType.bind(runtime2);
     liteGraph.buildNodeClassFromObject = runtime2.buildNodeClassFromObject.bind(runtime2);
@@ -23490,1078 +24138,6 @@ var LiteGraphTSMigration = (function(exports) {
     liteGraph.fetchFile = runtime2.fetchFile.bind(runtime2);
     bindRuntimeIntoClasses(liteGraph);
     return { liteGraph, registry: registry2, runtime: runtime2 };
-  }
-  const LiteGraphConstants = {
-    VERSION: 0.4,
-    CANVAS_GRID_SIZE: 10,
-    NODE_TITLE_HEIGHT: 30,
-    NODE_TITLE_TEXT_Y: 20,
-    NODE_SLOT_HEIGHT: 20,
-    NODE_WIDGET_HEIGHT: 20,
-    NODE_WIDTH: 140,
-    NODE_MIN_WIDTH: 50,
-    NODE_COLLAPSED_RADIUS: 10,
-    NODE_COLLAPSED_WIDTH: 80,
-    NODE_TITLE_COLOR: "#999",
-    NODE_SELECTED_TITLE_COLOR: "#FFF",
-    NODE_TEXT_SIZE: 14,
-    NODE_TEXT_COLOR: "#AAA",
-    NODE_SUBTEXT_SIZE: 12,
-    NODE_DEFAULT_COLOR: "#333",
-    NODE_DEFAULT_BGCOLOR: "#353535",
-    NODE_DEFAULT_BOXCOLOR: "#666",
-    NODE_DEFAULT_SHAPE: "box",
-    NODE_BOX_OUTLINE_COLOR: "#FFF",
-    DEFAULT_SHADOW_COLOR: "rgba(0,0,0,0.5)",
-    DEFAULT_GROUP_FONT: 24,
-    WIDGET_BGCOLOR: "#222",
-    WIDGET_OUTLINE_COLOR: "#666",
-    WIDGET_TEXT_COLOR: "#DDD",
-    WIDGET_SECONDARY_TEXT_COLOR: "#999",
-    LINK_COLOR: "#9A9",
-    EVENT_LINK_COLOR: "#A86",
-    CONNECTING_LINK_COLOR: "#AFA",
-    MAX_NUMBER_OF_NODES: 1e3,
-    // avoid infinite loops
-    DEFAULT_POSITION: [100, 100],
-    // default node position
-    VALID_SHAPES: ["default", "box", "round", "card"],
-    // , "circle"
-    // shapes are used for nodes but also for slots
-    BOX_SHAPE: 1,
-    ROUND_SHAPE: 2,
-    CIRCLE_SHAPE: 3,
-    CARD_SHAPE: 4,
-    ARROW_SHAPE: 5,
-    GRID_SHAPE: 6,
-    // intended for slot arrays
-    // enums
-    INPUT: 1,
-    OUTPUT: 2,
-    EVENT: -1,
-    // for outputs
-    ACTION: -1,
-    // for inputs
-    NODE_MODES: ["Always", "On Event", "Never", "On Trigger"],
-    // helper, will add "On Request" and more in the future
-    NODE_MODES_COLORS: ["#666", "#422", "#333", "#224", "#626"],
-    // use with node_box_coloured_by_mode
-    ALWAYS: 0,
-    ON_EVENT: 1,
-    NEVER: 2,
-    ON_TRIGGER: 3,
-    UP: 1,
-    DOWN: 2,
-    LEFT: 3,
-    RIGHT: 4,
-    CENTER: 5,
-    LINK_RENDER_MODES: ["Straight", "Linear", "Spline"],
-    // helper
-    STRAIGHT_LINK: 0,
-    LINEAR_LINK: 1,
-    SPLINE_LINK: 2,
-    NORMAL_TITLE: 0,
-    NO_TITLE: 1,
-    TRANSPARENT_TITLE: 2,
-    AUTOHIDE_TITLE: 3,
-    VERTICAL_LAYOUT: "vertical",
-    // arrange nodes vertically
-    proxy: null,
-    // used to redirect calls
-    node_images_path: "",
-    debug: false,
-    catch_exceptions: true,
-    throw_errors: true,
-    allow_scripts: false,
-    // if set to true some nodes like Formula would be allowed to evaluate code that comes from unsafe sources (like node configuration), which could lead to exploits
-    use_deferred_actions: true,
-    // executes actions during the graph execution flow
-    registered_node_types: {},
-    // nodetypes by string
-    node_types_by_file_extension: {},
-    // used for dropping files in the canvas
-    Nodes: {},
-    // node types by classname
-    Globals: {},
-    // used to store vars between graphs
-    searchbox_extras: {},
-    // used to add extra features to the search box
-    auto_sort_node_types: false,
-    // [true!] If set to true, will automatically sort node types / categories in the context menus
-    node_box_coloured_when_on: false,
-    // [true!] this make the nodes box (top left circle) coloured when triggered (execute/action), visual feedback
-    node_box_coloured_by_mode: false,
-    // [true!] nodebox based on node mode, visual feedback
-    dialog_close_on_mouse_leave: true,
-    // [false on mobile] better true if not touch device
-    dialog_close_on_mouse_leave_delay: 500,
-    shift_click_do_break_link_from: true,
-    // [false!] set true to enable disconnect shortcut from output slots
-    click_do_break_link_from_key: "shift",
-    // "shift"|"alt"|"ctrl"|"meta"|Array<string>
-    isBreakLinkModifierPressed: function(e2) {
-      const shortcutSetting = LiteGraphConstants.shift_click_do_break_link_from;
-      if (!e2 || !shortcutSetting) {
-        return false;
-      }
-      let breakMod = LiteGraphConstants.click_do_break_link_from_key;
-      if (typeof shortcutSetting !== "boolean") {
-        breakMod = shortcutSetting;
-      }
-      const hasModifier = (modifier) => {
-        const mod = String(modifier || "").toLowerCase();
-        return mod === "shift" && !!e2.shiftKey || mod === "alt" && !!e2.altKey || mod === "ctrl" && !!e2.ctrlKey || mod === "meta" && !!e2.metaKey;
-      };
-      if (Array.isArray(breakMod)) {
-        return breakMod.some(hasModifier);
-      }
-      return hasModifier(breakMod || "shift");
-    },
-    click_do_break_link_to: false,
-    // [false!] prefer false, way too easy to break links
-    search_hide_on_mouse_leave: true,
-    // [false on mobile] better true if not touch device
-    search_filter_enabled: false,
-    // [true!] enable filtering slots type in the search widget, !requires auto_load_slot_types or manual set registered_slot_[in/out]_types and slot_types_[in/out]
-    search_show_all_on_open: true,
-    // [true!] opens the results list when opening the search widget
-    auto_load_slot_types: false,
-    // [if want false, use true, run, get vars values to be statically set, than disable] nodes types and nodeclass association with node types need to be calculated, if dont want this, calculate once and set registered_slot_[in/out]_types and slot_types_[in/out]
-    // set these values if not using auto_load_slot_types
-    registered_slot_in_types: {},
-    // slot types for nodeclass
-    registered_slot_out_types: {},
-    // slot types for nodeclass
-    slot_types_in: [],
-    // slot types IN
-    slot_types_out: [],
-    // slot types OUT
-    slot_types_default_in: [],
-    // specify for each IN slot type a(/many) default node(s), use single string, array, or object (with node, title, parameters, ..) like for search
-    slot_types_default_out: [],
-    // specify for each OUT slot type a(/many) default node(s), use single string, array, or object (with node, title, parameters, ..) like for search
-    alt_drag_do_clone_nodes: false,
-    // [true!] very handy, ALT click to clone and drag the new node
-    do_add_triggers_slots: false,
-    // [true!] will create and connect event slots when using action/events connections, !WILL CHANGE node mode when using onTrigger (enable mode colors), onExecuted does not need this
-    allow_multi_output_for_events: true,
-    // [false!] being events, it is strongly reccomended to use them sequentially, one by one
-    middle_click_slot_add_default_node: false,
-    // [true!] allows to create and connect a ndoe clicking with the third button (wheel)
-    release_link_on_empty_shows_menu: false,
-    // [true!] dragging a link to empty space will open a menu, add from list, search or defaults
-    pointerevents_method: "mouse",
-    // "mouse"|"pointer"|"touch"
-    isTouchDevice: function() {
-      if (typeof navigator === "undefined" || typeof window === "undefined") {
-        return false;
-      }
-      if (navigator.maxTouchPoints && navigator.maxTouchPoints > 0) {
-        return true;
-      }
-      if (window.matchMedia && window.matchMedia("(pointer: coarse)").matches) {
-        return true;
-      }
-      return "ontouchstart" in window;
-    },
-    ctrl_shift_v_paste_connect_unselected_outputs: false,
-    // [true!] allows ctrl + shift + v to paste nodes with the outputs of the unselected nodes connected with the inputs of the newly pasted nodes
-    // if true, all newly created nodes/links will use string UUIDs for their id fields instead of integers.
-    // use this if you must have node IDs that are unique across all graphs and subgraphs.
-    use_uuids: false
-  };
-  class LiteGraphRegistry {
-    constructor(host, lGraphNodePrototype) {
-      this.host = host;
-      this.lGraphNodePrototype = lGraphNodePrototype;
-    }
-    /**
-     * Register a node class so it can be listed when the user wants to create a new one
-     * @method registerNodeType
-     * @param {String} type name of the node and path
-     * @param {Class} base_class class containing the structure of a node
-     */
-    registerNodeType(type, baseClass) {
-      var _a3;
-      if (!baseClass.prototype) {
-        throw "Cannot register a simple object, it must be a class with a prototype";
-      }
-      baseClass.type = type;
-      if (this.host.debug) {
-        console.log("Node registered: " + type);
-      }
-      const className = baseClass.name;
-      const pos2 = type.lastIndexOf("/");
-      baseClass.category = type.substring(0, pos2);
-      if (!baseClass.title) {
-        baseClass.title = className;
-      }
-      const basePrototype = baseClass.prototype;
-      const visited = /* @__PURE__ */ new Set();
-      let cursor = this.lGraphNodePrototype;
-      while (cursor && cursor !== Object.prototype) {
-        const names = Object.getOwnPropertyNames(cursor);
-        for (const name of names) {
-          if (name === "constructor" || name === "__proto__" || visited.has(name)) {
-            continue;
-          }
-          visited.add(name);
-          if (basePrototype[name] !== void 0) {
-            continue;
-          }
-          const descriptor = Object.getOwnPropertyDescriptor(cursor, name);
-          if (!descriptor) {
-            continue;
-          }
-          Object.defineProperty(basePrototype, name, descriptor);
-        }
-        cursor = Object.getPrototypeOf(cursor);
-      }
-      const prev = this.host.registered_node_types[type];
-      if (prev) {
-        console.log("replacing node type: " + type);
-      }
-      const host = this.host;
-      if (!Object.prototype.hasOwnProperty.call(basePrototype, "shape")) {
-        Object.defineProperty(basePrototype, "shape", {
-          set: function(v2) {
-            switch (v2) {
-              case "default":
-                delete this._shape;
-                break;
-              case "box":
-                this._shape = host.BOX_SHAPE;
-                break;
-              case "round":
-                this._shape = host.ROUND_SHAPE;
-                break;
-              case "circle":
-                this._shape = host.CIRCLE_SHAPE;
-                break;
-              case "card":
-                this._shape = host.CARD_SHAPE;
-                break;
-              default:
-                this._shape = v2;
-            }
-          },
-          get: function() {
-            return this._shape;
-          },
-          enumerable: true,
-          configurable: true
-        });
-        if (baseClass.supported_extensions) {
-          for (const ext of baseClass.supported_extensions) {
-            if (ext && typeof ext === "string") {
-              this.host.node_types_by_file_extension[ext.toLowerCase()] = baseClass;
-            }
-          }
-        }
-      }
-      this.host.registered_node_types[type] = baseClass;
-      if ((_a3 = baseClass.constructor) == null ? void 0 : _a3.name) {
-        this.host.Nodes[className] = baseClass;
-      }
-      if (this.host.onNodeTypeRegistered) {
-        this.host.onNodeTypeRegistered(type, baseClass);
-      }
-      if (prev && this.host.onNodeTypeReplaced) {
-        this.host.onNodeTypeReplaced(type, baseClass, prev);
-      }
-      if (baseClass.prototype.onPropertyChange) {
-        console.warn(
-          "LiteGraph node class " + type + " has onPropertyChange method, it must be called onPropertyChanged with d at the end"
-        );
-      }
-      if (this.host.auto_load_slot_types) {
-        try {
-          const tempNode = new baseClass(baseClass.title || "tmpnode");
-          if (tempNode && tempNode.inputs && this.host.registerNodeAndSlotType) {
-            for (let i2 = 0; i2 < tempNode.inputs.length; ++i2) {
-              this.host.registerNodeAndSlotType(
-                tempNode,
-                tempNode.inputs[i2] ? tempNode.inputs[i2].type : 0
-              );
-            }
-          }
-          if (tempNode && tempNode.outputs && this.host.registerNodeAndSlotType) {
-            for (let i2 = 0; i2 < tempNode.outputs.length; ++i2) {
-              this.host.registerNodeAndSlotType(
-                tempNode,
-                tempNode.outputs[i2] ? tempNode.outputs[i2].type : 0,
-                true
-              );
-            }
-          }
-        } catch (err) {
-          if (this.host.debug) {
-            console.warn(
-              "Error while probing slots for node type: " + type,
-              err
-            );
-          }
-        }
-      }
-    }
-    /**
-     * removes a node type from the system
-     * @method unregisterNodeType
-     * @param {String|Object} type name of the node or the node constructor itself
-     */
-    unregisterNodeType(type) {
-      var _a3;
-      const baseClass = typeof type === "string" ? this.host.registered_node_types[type] : type;
-      if (!baseClass) {
-        throw "node type not found: " + type;
-      }
-      if (baseClass.type) {
-        delete this.host.registered_node_types[baseClass.type];
-      }
-      const constructorName = (_a3 = baseClass.constructor) == null ? void 0 : _a3.name;
-      if (constructorName) {
-        delete this.host.Nodes[constructorName];
-      }
-    }
-    /**
-     * Removes all previously registered node's types
-     */
-    clearRegisteredTypes() {
-      this.host.registered_node_types = {};
-      this.host.node_types_by_file_extension = {};
-      this.host.Nodes = {};
-      this.host.searchbox_extras = {};
-    }
-    /**
-     * Adds this method to all nodetypes, existing and to be created
-     * (You can add it to LGraphNode.prototype but then existing node types wont have it)
-     * @method addNodeMethod
-     * @param {Function} func
-     */
-    addNodeMethod(name, func) {
-      this.lGraphNodePrototype[name] = func;
-      for (const i2 in this.host.registered_node_types) {
-        const type = this.host.registered_node_types[i2];
-        const prototype = type.prototype;
-        if (prototype[name]) {
-          prototype["_" + name] = prototype[name];
-        }
-        prototype[name] = func;
-      }
-    }
-    /**
-     * Create a node of a given type with a name. The node is not attached to any graph yet.
-     * @method createNode
-     * @param {String} type full name of the node class. p.e. "math/sin"
-     * @param {String} name a name to distinguish from other nodes
-     * @param {Object} options to set options
-     */
-    createNode(type, title, options) {
-      const baseClass = this.host.registered_node_types[type];
-      if (!baseClass) {
-        if (this.host.debug) {
-          console.log('GraphNode type "' + type + '" not registered.');
-        }
-        return null;
-      }
-      title = title || baseClass.title || type;
-      let node2;
-      if (this.host.catch_exceptions) {
-        try {
-          node2 = new baseClass(title);
-        } catch (err) {
-          console.error(err);
-          return null;
-        }
-      } else {
-        node2 = new baseClass(title);
-      }
-      node2.type = type;
-      if (!node2.title && title) {
-        node2.title = title;
-      }
-      if (!node2.properties) {
-        node2.properties = {};
-      }
-      if (!node2.properties_info) {
-        node2.properties_info = [];
-      }
-      if (!node2.flags) {
-        node2.flags = {};
-      }
-      if (!node2.size) {
-        node2.size = node2.computeSize();
-      }
-      if (!node2.pos) {
-        node2.pos = this.host.DEFAULT_POSITION.concat();
-      }
-      if (!node2.mode) {
-        node2.mode = this.host.ALWAYS;
-      }
-      if (options) {
-        const mutableNode = node2;
-        for (const i2 in options) {
-          mutableNode[i2] = options[i2];
-        }
-      }
-      if (node2.onNodeCreated) {
-        node2.onNodeCreated();
-      }
-      return node2;
-    }
-    /**
-     * Returns a registered node type with a given name
-     * @method getNodeType
-     * @param {String} type full name of the node class. p.e. "math/sin"
-     * @return {Class} the node class
-     */
-    getNodeType(type) {
-      return this.host.registered_node_types[type];
-    }
-    /**
-     * Returns a list of node types matching one category
-     * @method getNodeType
-     * @param {String} category category name
-     * @return {Array} array with all the node classes
-     */
-    getNodeTypesInCategory(category, filter) {
-      const result = [];
-      for (const i2 in this.host.registered_node_types) {
-        const type = this.host.registered_node_types[i2];
-        if (type.filter != filter) {
-          continue;
-        }
-        if (category === "") {
-          if (type.category == null) {
-            result.push(type);
-          }
-        } else if (type.category === category) {
-          result.push(type);
-        }
-      }
-      if (this.host.auto_sort_node_types) {
-        result.sort((a, b2) => (a.title || "").localeCompare(b2.title || ""));
-      }
-      return result;
-    }
-    /**
-     * Returns a list with all the node type categories
-     * @method getNodeTypesCategories
-     * @param {String} filter only nodes with ctor.filter equal can be shown
-     * @return {Array} array with all the names of the categories
-     */
-    getNodeTypesCategories(filter) {
-      const categories = { "": 1 };
-      for (const i2 in this.host.registered_node_types) {
-        const type = this.host.registered_node_types[i2];
-        if (type.category && !type.skip_list) {
-          if (type.filter != filter) {
-            continue;
-          }
-          categories[type.category] = 1;
-        }
-      }
-      const result = [];
-      for (const i2 in categories) {
-        result.push(i2);
-      }
-      return this.host.auto_sort_node_types ? result.sort() : result;
-    }
-  }
-  class LiteGraphRuntime {
-    constructor(host) {
-      this.host = host;
-    }
-    /**
-    * Save a slot type and his node
-    * @method registerSlotType
-    * @param {String|Object} type name of the node or the node constructor itself
-    * @param {String} slot_type name of the slot type (variable type), eg. string, number, array, boolean, ..
-    */
-    registerNodeAndSlotType(type, slotType, out) {
-      out = out || false;
-      const registeredType = this.host.registered_node_types[String(type)];
-      const baseClass = typeof type === "string" && registeredType != "anonymous" ? registeredType : type;
-      const classType = baseClass.constructor.type;
-      let allTypes = [];
-      if (typeof slotType === "string") {
-        allTypes = slotType.split(",");
-      } else if (slotType == this.host.EVENT || slotType == this.host.ACTION) {
-        allTypes = ["_event_"];
-      } else {
-        allTypes = ["*"];
-      }
-      for (let i2 = 0; i2 < allTypes.length; ++i2) {
-        let normalizedSlotType = allTypes[i2];
-        if (normalizedSlotType === "") {
-          normalizedSlotType = "*";
-        }
-        const registerTo = out ? this.host.registered_slot_out_types : this.host.registered_slot_in_types;
-        if (registerTo[normalizedSlotType] === void 0) {
-          registerTo[normalizedSlotType] = { nodes: [] };
-        }
-        if (!registerTo[normalizedSlotType].nodes.includes(classType)) {
-          registerTo[normalizedSlotType].nodes.push(classType);
-        }
-        if (!out) {
-          if (!this.host.slot_types_in.includes(
-            normalizedSlotType.toLowerCase()
-          )) {
-            this.host.slot_types_in.push(normalizedSlotType.toLowerCase());
-            this.host.slot_types_in.sort();
-          }
-        } else if (!this.host.slot_types_out.includes(normalizedSlotType.toLowerCase())) {
-          this.host.slot_types_out.push(normalizedSlotType.toLowerCase());
-          this.host.slot_types_out.sort();
-        }
-      }
-    }
-    /**
-     * Create a new nodetype by passing an object with some properties
-     * like onCreate, inputs:Array, outputs:Array, properties, onExecute
-     * @method buildNodeClassFromObject
-     * @param {String} name node name with namespace (p.e.: 'math/sum')
-     * @param {Object} object methods expected onCreate, inputs, outputs, properties, onExecute
-     */
-    buildNodeClassFromObject(name, object) {
-      let ctorCode = "";
-      if (object.inputs) {
-        for (let i2 = 0; i2 < object.inputs.length; ++i2) {
-          const inputName = object.inputs[i2][0];
-          let inputType = object.inputs[i2][1];
-          if (inputType && inputType.constructor === String) {
-            inputType = '"' + inputType + '"';
-          }
-          ctorCode += "this.addInput('" + inputName + "'," + inputType + ");\n";
-        }
-      }
-      if (object.outputs) {
-        for (let i2 = 0; i2 < object.outputs.length; ++i2) {
-          const outputName = object.outputs[i2][0];
-          let outputType = object.outputs[i2][1];
-          if (outputType && outputType.constructor === String) {
-            outputType = '"' + outputType + '"';
-          }
-          ctorCode += "this.addOutput('" + outputName + "'," + outputType + ");\n";
-        }
-      }
-      if (object.properties) {
-        for (const key in object.properties) {
-          let prop = object.properties[key];
-          if (prop && prop.constructor === String) {
-            prop = '"' + prop + '"';
-          }
-          ctorCode += "this.addProperty('" + key + "'," + prop + ");\n";
-        }
-      }
-      ctorCode += "if(this.onCreate)this.onCreate()";
-      const classObject = Function(ctorCode);
-      for (const key in object) {
-        if (key !== "inputs" && key !== "outputs" && key !== "properties") {
-          classObject.prototype[key] = object[key];
-        }
-      }
-      classObject.title = object.title || name.split("/").pop();
-      classObject.desc = object.desc || "Generated from object";
-      this.host.registerNodeType(name, classObject);
-      return classObject;
-    }
-    /**
-     * Create a new nodetype by passing a function, it wraps it with a proper class and generates inputs according to the parameters of the function.
-     * Useful to wrap simple methods that do not require properties, and that only process some input to generate an output.
-     * @method wrapFunctionAsNode
-     * @param {String} name node name with namespace (p.e.: 'math/sum')
-     * @param {Function} func
-     * @param {Array} param_types [optional] an array containing the type of every parameter, otherwise parameters will accept any type
-     * @param {String} return_type [optional] string with the return type, otherwise it will be generic
-     * @param {Object} properties [optional] properties to be configurable
-     */
-    wrapFunctionAsNode(name, func, paramTypes, returnType, properties) {
-      var _a3;
-      const params = Array(func.length);
-      let code = "";
-      if (paramTypes !== null) {
-        const names = this.host.getParameterNames(func);
-        for (let i2 = 0; i2 < names.length; ++i2) {
-          let type = 0;
-          if (paramTypes) {
-            if (paramTypes[i2] != null && ((_a3 = paramTypes[i2]) == null ? void 0 : _a3.constructor) === String) {
-              type = "'" + paramTypes[i2] + "'";
-            } else if (paramTypes[i2] != null) {
-              type = paramTypes[i2];
-            }
-          }
-          code += "this.addInput('" + names[i2] + "'," + type + ");\n";
-        }
-      }
-      if (returnType !== null) {
-        code += "this.addOutput('out'," + (returnType != null ? returnType.constructor === String ? "'" + returnType + "'" : returnType : 0) + ");\n";
-      }
-      if (properties) {
-        code += "this.properties = " + JSON.stringify(properties) + ";\n";
-      }
-      const classObject = Function(code);
-      classObject.title = name.split("/").pop();
-      classObject.desc = "Generated from " + func.name;
-      classObject.prototype.onExecute = function onExecute() {
-        for (let i2 = 0; i2 < params.length; ++i2) {
-          params[i2] = this.getInputData(i2);
-        }
-        const result = func.apply(this, params);
-        this.setOutputData(0, result);
-      };
-      this.host.registerNodeType(name, classObject);
-      return classObject;
-    }
-    // debug purposes: reloads all the js scripts that matches a wildcard
-    reloadNodes(folderWildcard) {
-      const scripts = document.getElementsByTagName("script");
-      const scriptFiles = [];
-      for (let i2 = 0; i2 < scripts.length; i2++) {
-        scriptFiles.push(scripts[i2]);
-      }
-      const docHeadObj = document.getElementsByTagName("head")[0];
-      folderWildcard = document.location.href + folderWildcard;
-      for (let i2 = 0; i2 < scriptFiles.length; i2++) {
-        const src = scriptFiles[i2].src;
-        if (!src || src.substr(0, folderWildcard.length) !== folderWildcard) {
-          continue;
-        }
-        try {
-          if (this.host.debug) {
-            console.log("Reloading: " + src);
-          }
-          const dynamicScript = document.createElement("script");
-          dynamicScript.type = "text/javascript";
-          dynamicScript.src = src;
-          docHeadObj.appendChild(dynamicScript);
-          docHeadObj.removeChild(scriptFiles[i2]);
-        } catch (err) {
-          if (this.host.throw_errors) {
-            throw err;
-          }
-          if (this.host.debug) {
-            console.log("Error while reloading " + src);
-          }
-        }
-      }
-      if (this.host.debug) {
-        console.log("Nodes reloaded");
-      }
-    }
-    // separated just to improve if it does not work
-    cloneObject(obj, target) {
-      if (obj == null) {
-        return null;
-      }
-      const cloned = JSON.parse(JSON.stringify(obj));
-      if (!target) {
-        return cloned;
-      }
-      for (const key in cloned) {
-        target[key] = cloned[key];
-      }
-      return target;
-    }
-    /*
-     * https://gist.github.com/jed/982883?permalink_comment_id=852670#gistcomment-852670
-     */
-    uuidv4() {
-      const pattern = "10000000-1000-4000-8000-100000000000";
-      return pattern.replace(
-        /[018]/g,
-        (a) => (Number(a) ^ Math.random() * 16 >> Number(a) / 4).toString(16)
-      );
-    }
-    /**
-     * Returns if the types of two slots are compatible (taking into account wildcards, etc)
-     * @method isValidConnection
-     * @param {String} type_a
-     * @param {String} type_b
-     * @return {Boolean} true if they can be connected
-     */
-    isValidConnection(typeA, typeB) {
-      if (typeA == "" || typeA === "*") {
-        typeA = 0;
-      }
-      if (typeB == "" || typeB === "*") {
-        typeB = 0;
-      }
-      if (!typeA || // generic output
-      !typeB || // generic input
-      typeA == typeB || // same type (is valid for triggers)
-      typeA == this.host.EVENT && typeB == this.host.ACTION) {
-        return true;
-      }
-      let normalizedA = String(typeA).toLowerCase();
-      let normalizedB = String(typeB).toLowerCase();
-      if (normalizedA.indexOf(",") === -1 && normalizedB.indexOf(",") === -1) {
-        return normalizedA === normalizedB;
-      }
-      const supportedTypesA = normalizedA.split(",");
-      const supportedTypesB = normalizedB.split(",");
-      for (let i2 = 0; i2 < supportedTypesA.length; ++i2) {
-        for (let j2 = 0; j2 < supportedTypesB.length; ++j2) {
-          if (this.isValidConnection(
-            supportedTypesA[i2],
-            supportedTypesB[j2]
-          )) {
-            return true;
-          }
-        }
-      }
-      return false;
-    }
-    /**
-     * Register a string in the search box so when the user types it it will recommend this node
-     * @method registerSearchboxExtra
-     * @param {String} node_type the node recommended
-     * @param {String} description text to show next to it
-     * @param {Object} data it could contain info of how the node should be configured
-     * @return {Boolean} true if they can be connected
-     */
-    registerSearchboxExtra(nodeType, description, data) {
-      this.host.searchbox_extras[description.toLowerCase()] = {
-        type: nodeType,
-        desc: description,
-        data
-      };
-    }
-    /**
-     * Wrapper to load files (from url using fetch or from file using FileReader)
-     * @method fetchFile
-     * @param {String|File|Blob} url the url of the file (or the file itself)
-     * @param {String} type an string to know how to fetch it: "text","arraybuffer","json","blob"
-     * @param {Function} on_complete callback(data)
-     * @param {Function} on_error in case of an error
-     * @return {FileReader|Promise} returns the object used to
-     */
-    fetchFile(url, type = "text", onComplete, onError) {
-      if (!url) {
-        return null;
-      }
-      if (url.constructor === String) {
-        let normalizedUrl = url;
-        if (normalizedUrl.substr(0, 4) === "http" && this.host.proxy) {
-          normalizedUrl = this.host.proxy + normalizedUrl.substr(normalizedUrl.indexOf(":") + 3);
-        }
-        return fetch(normalizedUrl).then((response) => {
-          if (!response.ok) {
-            throw new Error("File not found");
-          }
-          if (type === "arraybuffer") {
-            return response.arrayBuffer();
-          }
-          if (type === "text" || type === "string") {
-            return response.text();
-          }
-          if (type === "json") {
-            return response.json();
-          }
-          if (type === "blob") {
-            return response.blob();
-          }
-        }).then((data) => {
-          if (onComplete) {
-            onComplete(data);
-          }
-        }).catch((error) => {
-          console.error("error fetching file:", normalizedUrl);
-          if (onError) {
-            onError(error);
-          }
-        });
-      }
-      if (url.constructor === File || url.constructor === Blob) {
-        const reader = new FileReader();
-        reader.onload = (event2) => {
-          var _a3;
-          let value = (_a3 = event2.target) == null ? void 0 : _a3.result;
-          if (type === "json") {
-            value = JSON.parse(String(value));
-          }
-          if (onComplete) {
-            onComplete(value);
-          }
-        };
-        if (type === "arraybuffer") {
-          return reader.readAsArrayBuffer(url);
-        }
-        if (type === "text" || type === "json") {
-          return reader.readAsText(url);
-        }
-        if (type === "blob") {
-          return reader.readAsBinaryString(url);
-        }
-      }
-      return null;
-    }
-  }
-  const LGRAPH_ON_NODE_ADDED_DIFF_ID = LITEGRAPH_COMPAT_DIFF_IDS.graphHooksOnNodeAdded;
-  function hasGraphOnNodeAddedCompatHook(graph) {
-    return typeof graph.onNodeAdded === "function";
-  }
-  function invokeGraphOnNodeAddedCompatHook(graph, node2) {
-    const rawHook = graph.onNodeAdded;
-    if (!rawHook) {
-      return false;
-    }
-    rawHook(node2);
-    return true;
-  }
-  const LGRAPHGROUP_SERIALIZATION_DIFF_ID = LITEGRAPH_COMPAT_DIFF_IDS.serializationGroupFontField;
-  function normalizeSerializedLGraphGroup(group, defaultFontSize = 24) {
-    const anyGroup = group;
-    let fontSize = parseNumber(anyGroup.font_size);
-    if (fontSize == null) {
-      fontSize = parseNumber(anyGroup.font);
-    }
-    if (fontSize == null) {
-      fontSize = defaultFontSize;
-    }
-    return {
-      title: anyGroup.title,
-      bounding: anyGroup.bounding,
-      color: anyGroup.color,
-      font_size: fontSize
-    };
-  }
-  function denormalizeSerializedLGraphGroup(group) {
-    return {
-      title: group.title,
-      bounding: group.bounding,
-      color: group.color,
-      font: String(group.font_size)
-    };
-  }
-  function parseSerializedLGraphGroupInput(input, defaultFontSize = 24) {
-    return normalizeSerializedLGraphGroup(input, defaultFontSize);
-  }
-  function serializeLGraphGroupShape(shape, order = "runtime") {
-    const runtimeShape = {
-      title: shape.title,
-      bounding: shape.bounding,
-      color: shape.color,
-      font_size: shape.font_size
-    };
-    if (order === "runtime") {
-      return runtimeShape;
-    }
-    return denormalizeSerializedLGraphGroup(runtimeShape);
-  }
-  function parseNumber(v2) {
-    if (typeof v2 === "number" && Number.isFinite(v2)) {
-      return v2;
-    }
-    if (typeof v2 === "string" && v2.trim() !== "") {
-      const parsed = Number(v2);
-      if (Number.isFinite(parsed)) {
-        return parsed;
-      }
-    }
-    return null;
-  }
-  const LLINK_SERIALIZATION_DIFF_ID = LITEGRAPH_COMPAT_DIFF_IDS.serializationLinkTupleOrder;
-  function isSerializedLLinkDtsOrder(tuple) {
-    return typeof tuple[1] === "string";
-  }
-  function normalizeSerializedLLinkTuple(tuple) {
-    var _a3, _b2, _c2, _d2, _e2, _f, _g, _h2, _i2, _j, _k, _l;
-    const source = tuple;
-    if (isSerializedLLinkDtsOrder(source)) {
-      return [
-        Number((_a3 = source[0]) != null ? _a3 : 0),
-        Number((_b2 = source[2]) != null ? _b2 : 0),
-        Number((_c2 = source[3]) != null ? _c2 : 0),
-        Number((_d2 = source[4]) != null ? _d2 : 0),
-        Number((_e2 = source[5]) != null ? _e2 : 0),
-        String((_f = source[1]) != null ? _f : "")
-      ];
-    }
-    return [
-      Number((_g = source[0]) != null ? _g : 0),
-      Number((_h2 = source[1]) != null ? _h2 : 0),
-      Number((_i2 = source[2]) != null ? _i2 : 0),
-      Number((_j = source[3]) != null ? _j : 0),
-      Number((_k = source[4]) != null ? _k : 0),
-      String((_l = source[5]) != null ? _l : "")
-    ];
-  }
-  function denormalizeSerializedLLinkTuple(tuple, order = "runtime") {
-    if (order === "runtime") {
-      return [tuple[0], tuple[1], tuple[2], tuple[3], tuple[4], tuple[5]];
-    }
-    return [
-      tuple[0],
-      tuple[5],
-      tuple[1],
-      tuple[2],
-      tuple[3],
-      tuple[4]
-    ];
-  }
-  function parseSerializedLLinkInput(input) {
-    var _a3, _b2, _c2, _d2, _e2, _f;
-    if (Array.isArray(input)) {
-      const normalized = normalizeSerializedLLinkTuple(input);
-      return {
-        id: normalized[0],
-        origin_id: normalized[1],
-        origin_slot: normalized[2],
-        target_id: normalized[3],
-        target_slot: normalized[4],
-        type: normalized[5]
-      };
-    }
-    const shape = input;
-    return {
-      id: Number((_a3 = shape.id) != null ? _a3 : 0),
-      type: String((_b2 = shape.type) != null ? _b2 : ""),
-      origin_id: Number((_c2 = shape.origin_id) != null ? _c2 : 0),
-      origin_slot: Number((_d2 = shape.origin_slot) != null ? _d2 : 0),
-      target_id: Number((_e2 = shape.target_id) != null ? _e2 : 0),
-      target_slot: Number((_f = shape.target_slot) != null ? _f : 0)
-    };
-  }
-  function serializeLLinkShape(shape, order = "runtime") {
-    var _a3, _b2, _c2, _d2, _e2, _f;
-    const runtimeTuple = [
-      Number((_a3 = shape.id) != null ? _a3 : 0),
-      Number((_b2 = shape.origin_id) != null ? _b2 : 0),
-      Number((_c2 = shape.origin_slot) != null ? _c2 : 0),
-      Number((_d2 = shape.target_id) != null ? _d2 : 0),
-      Number((_e2 = shape.target_slot) != null ? _e2 : 0),
-      String((_f = shape.type) != null ? _f : "")
-    ];
-    return denormalizeSerializedLLinkTuple(runtimeTuple, order);
-  }
-  const CONTEXT_MENU_CLOSE_ALL_DIFF_ID = LITEGRAPH_COMPAT_DIFF_IDS.uiCloseAllContextMenus;
-  function applyContextMenuCloseAllCompat(liteGraph, fallback) {
-    var _a3;
-    const beforeLiteGraph = liteGraph.closeAllContextMenus;
-    const beforeContextMenu = (_a3 = liteGraph.ContextMenu) == null ? void 0 : _a3.closeAllContextMenus;
-    const resolved = resolveContextMenuCloseAll(liteGraph, fallback);
-    if (!resolved.fn) {
-      return {
-        diffId: CONTEXT_MENU_CLOSE_ALL_DIFF_ID,
-        source: "none",
-        changed: false,
-        synced: false
-      };
-    }
-    liteGraph.closeAllContextMenus = resolved.fn;
-    if (!liteGraph.ContextMenu) {
-      liteGraph.ContextMenu = {};
-    }
-    liteGraph.ContextMenu.closeAllContextMenus = resolved.fn;
-    const synced = isContextMenuCloseAllCompatSynced(liteGraph);
-    return {
-      diffId: CONTEXT_MENU_CLOSE_ALL_DIFF_ID,
-      source: resolved.source,
-      resolved: resolved.fn,
-      changed: beforeLiteGraph !== liteGraph.closeAllContextMenus || beforeContextMenu !== liteGraph.ContextMenu.closeAllContextMenus,
-      synced
-    };
-  }
-  function isContextMenuCloseAllCompatSynced(liteGraph) {
-    var _a3;
-    return !!(liteGraph.closeAllContextMenus && ((_a3 = liteGraph.ContextMenu) == null ? void 0 : _a3.closeAllContextMenus) && liteGraph.closeAllContextMenus === liteGraph.ContextMenu.closeAllContextMenus);
-  }
-  function resolveContextMenuCloseAll(liteGraph, fallback) {
-    var _a3;
-    if (liteGraph.closeAllContextMenus) {
-      return { source: "LiteGraph", fn: liteGraph.closeAllContextMenus };
-    }
-    if ((_a3 = liteGraph.ContextMenu) == null ? void 0 : _a3.closeAllContextMenus) {
-      return { source: "ContextMenu", fn: liteGraph.ContextMenu.closeAllContextMenus };
-    }
-    if (fallback) {
-      return { source: "fallback", fn: fallback };
-    }
-    return { source: "none" };
-  }
-  function colorToString(c) {
-    const source = c;
-    return "rgba(" + Math.round(source[0] * 255).toFixed() + "," + Math.round(source[1] * 255).toFixed() + "," + Math.round(source[2] * 255).toFixed() + "," + (source.length == 4 ? source[3].toFixed(2) : "1.0") + ")";
-  }
-  function hex2num(hex) {
-    if (hex.charAt(0) == "#") {
-      hex = hex.slice(1);
-    }
-    hex = hex.toUpperCase();
-    const hexAlphabets = "0123456789ABCDEF";
-    const value = [0, 0, 0];
-    let k2 = 0;
-    let int1;
-    let int2;
-    for (let i2 = 0; i2 < 6; i2 += 2) {
-      int1 = hexAlphabets.indexOf(hex.charAt(i2));
-      int2 = hexAlphabets.indexOf(hex.charAt(i2 + 1));
-      value[k2] = int1 * 16 + int2;
-      k2++;
-    }
-    return value;
-  }
-  function num2hex(triplet) {
-    const hexAlphabets = "0123456789ABCDEF";
-    let hex = "#";
-    let int1;
-    let int2;
-    for (let i2 = 0; i2 < 3; i2++) {
-      int1 = triplet[i2] / 16;
-      int2 = triplet[i2] % 16;
-      hex += hexAlphabets.charAt(int1) + hexAlphabets.charAt(int2);
-    }
-    return hex;
-  }
-  function getParameterNames(func) {
-    return (func + "").replace(/[/][/].*$/gm, "").replace(/\s+/g, "").replace(/[/][*][^/*]*[*][/]/g, "").split("){", 1)[0].replace(/^[^(]*[(]/, "").replace(/=[^,]+/g, "").split(",").filter(Boolean);
-  }
-  function compareObjects(a, b2) {
-    for (const i2 in a) {
-      if (a[i2] != b2[i2]) {
-        return false;
-      }
-    }
-    return true;
-  }
-  function distance(a, b2) {
-    return Math.sqrt(
-      (b2[0] - a[0]) * (b2[0] - a[0]) + (b2[1] - a[1]) * (b2[1] - a[1])
-    );
-  }
-  function isInsideRectangle(x2, y2, left, top, width2, height) {
-    if (left < x2 && left + width2 > x2 && top < y2 && top + height > y2) {
-      return true;
-    }
-    return false;
-  }
-  function growBounding(bounding, x2, y2) {
-    if (x2 < bounding[0]) {
-      bounding[0] = x2;
-    } else if (x2 > bounding[2]) {
-      bounding[2] = x2;
-    }
-    if (y2 < bounding[1]) {
-      bounding[1] = y2;
-    } else if (y2 > bounding[3]) {
-      bounding[3] = y2;
-    }
-    return bounding;
-  }
-  function isInsideBounding(p2, bb) {
-    if (Array.isArray(bb[0])) {
-      const corners = bb;
-      if (p2[0] < corners[0][0] || p2[1] < corners[0][1] || p2[0] > corners[1][0] || p2[1] > corners[1][1]) {
-        return false;
-      }
-      return true;
-    }
-    const flat = bb;
-    if (p2[0] < flat[0] || p2[1] < flat[1] || p2[0] > flat[2] || p2[1] > flat[3]) {
-      return false;
-    }
-    return true;
   }
   function createAssemblyBundle(liteGraph, registry2, runtime2) {
     return {
@@ -24600,7 +24176,7 @@ var LiteGraphTSMigration = (function(exports) {
   exports.DragAndScale = DragAndScale;
   exports.GRID_SQUARE_SHAPE_DEFAULT = GRID_SQUARE_SHAPE_DEFAULT;
   exports.GRID_SQUARE_SHAPE_DIFF_ID = GRID_SQUARE_SHAPE_DIFF_ID;
-  exports.LGRAPHCANVAS_STATIC_MISSING_APIS_DIFF_ID = LGRAPHCANVAS_STATIC_MISSING_APIS_DIFF_ID$1;
+  exports.LGRAPHCANVAS_STATIC_MISSING_APIS_DIFF_ID = LGRAPHCANVAS_STATIC_MISSING_APIS_DIFF_ID;
   exports.LGRAPHCANVAS_STATIC_RESIZE_DIFF_ID = LGRAPHCANVAS_STATIC_RESIZE_DIFF_ID;
   exports.LGRAPHCANVAS_STATIC_SUBGRAPH_MENU_DIFF_ID = LGRAPHCANVAS_STATIC_SUBGRAPH_MENU_DIFF_ID;
   exports.LGRAPHGROUP_SERIALIZATION_DIFF_ID = LGRAPHGROUP_SERIALIZATION_DIFF_ID;
@@ -24615,21 +24191,21 @@ var LiteGraphTSMigration = (function(exports) {
   exports.LiteGraphConstants = LiteGraphConstants;
   exports.LiteGraphRegistry = LiteGraphRegistry;
   exports.LiteGraphRuntime = LiteGraphRuntime;
-  exports.applyContextMenuCloseAllCompatUi = applyContextMenuCloseAllCompat;
+  exports.applyContextMenuCloseAllCompatUi = applyContextMenuCloseAllCompat$1;
   exports.applyGridSquareShapeAlias = applyGridSquareShapeAlias;
-  exports.applyLGraphCanvasStaticCompatAliasesLayer = applyLGraphCanvasStaticCompatAliases$1;
-  exports.applyLGraphCanvasStaticCompatLayer = applyLGraphCanvasStaticCompat$2;
-  exports.applyLGraphCanvasStaticMissingApiGuards = applyLGraphCanvasStaticMissingApiGuards$1;
+  exports.applyLGraphCanvasStaticCompatAliasesLayer = applyLGraphCanvasStaticCompatAliases;
+  exports.applyLGraphCanvasStaticCompatLayer = applyLGraphCanvasStaticCompat$1;
+  exports.applyLGraphCanvasStaticMissingApiGuards = applyLGraphCanvasStaticMissingApiGuards;
   exports.applyLiteGraphAssemblyCompat = applyLiteGraphAssemblyCompat;
   exports.assembleLiteGraph = assembleLiteGraph;
   exports.attachLiteGraphAssemblyBridges = attachLiteGraphAssemblyBridges;
-  exports.attachLiteGraphCommonJsExports = attachLiteGraphCommonJsExports$1;
+  exports.attachLiteGraphCommonJsExports = attachLiteGraphCommonJsExports;
   exports.attachLiteGraphGlobalBridge = attachLiteGraphGlobalBridge;
   exports.colorToString = colorToString;
   exports.compareObjects = compareObjects;
   exports.denormalizeSerializedLGraphGroupCompatShape = denormalizeSerializedLGraphGroup;
   exports.denormalizeSerializedLLinkCompatTuple = denormalizeSerializedLLinkTuple;
-  exports.distance = distance;
+  exports.distance = distance$1;
   exports.getParameterNames = getParameterNames;
   exports.growBounding = growBounding;
   exports.hasGraphOnNodeAddedCompatHook = hasGraphOnNodeAddedCompatHook;
@@ -24639,7 +24215,7 @@ var LiteGraphTSMigration = (function(exports) {
   exports.isContextMenuCloseAllCompatSynced = isContextMenuCloseAllCompatSynced;
   exports.isGridSquareShapeAliasSynced = isGridSquareShapeAliasSynced;
   exports.isInsideBounding = isInsideBounding;
-  exports.isInsideRectangle = isInsideRectangle;
+  exports.isInsideRectangle = isInsideRectangle$1;
   exports.isSerializedLLinkDtsOrderCompat = isSerializedLLinkDtsOrder;
   exports.liteGraphMigrationBundle = liteGraphMigrationBundle;
   exports.normalizeSerializedLGraphGroupCompatShape = normalizeSerializedLGraphGroup;

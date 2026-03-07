@@ -20,16 +20,23 @@ window.onbeforeunload = function(){
 }
 
 function updateEditorHiPPICanvas() {
+  if(editor.graphcanvas && editor.graphcanvas.renderRuntime === "leafer") {
+    if (editor.graphcanvas.leaferAppHost && editor.graphcanvas.leaferAppHost.resize) {
+      editor.graphcanvas.leaferAppHost.resize();
+    }
+    return editor.graphview;
+  }
+  var canvas = editor.graphcanvas && editor.graphcanvas.canvas ? editor.graphcanvas.canvas : editor.canvas;
   const ratio = window.devicePixelRatio;
   if(ratio == 1) { return }
-  const rect = editor.canvas.parentNode.getBoundingClientRect();
+  const rect = canvas.parentNode.getBoundingClientRect();
   const { width, height } = rect;
-  editor.canvas.width = width * ratio;
-  editor.canvas.height = height * ratio;
-  editor.canvas.style.width = width + "px";
-  editor.canvas.style.height = height + "px";
-  editor.canvas.getContext("2d").scale(ratio, ratio);
-  return editor.canvas;
+  canvas.width = width * ratio;
+  canvas.height = height * ratio;
+  canvas.style.width = width + "px";
+  canvas.style.height = height + "px";
+  canvas.getContext("2d").scale(ratio, ratio);
+  return canvas;
 }
 
 //enable scripting

@@ -87,6 +87,7 @@ export class LGraphCanvasRender extends LGraphCanvasInput {
     /**
      * renders the whole canvas content, by rendering in two separated canvas, one containing the background grid and the connections, and one containing the nodes)
      * @method draw
+     * @deprecated Use `requestRuntimeRender()` from the host side. Leafer runtime does not support direct canvas redraw calls.
      **/
     draw(force_canvas?: boolean, force_bgcanvas?: boolean): void {
         if (this.renderRuntime === "leafer") {
@@ -125,6 +126,7 @@ export class LGraphCanvasRender extends LGraphCanvasInput {
     /**
      * draws the front canvas (the one containing all the nodes)
      * @method drawFrontCanvas
+     * @deprecated Legacy canvas compatibility path only. Leafer runtime uses retained overlay primitives instead.
      **/
     drawFrontCanvas(): void {
         this.dirty_canvas = false;
@@ -307,6 +309,7 @@ export class LGraphCanvasRender extends LGraphCanvasInput {
     /**
      * draws the back canvas (the one containing the background and the connections)
      * @method drawBackCanvas
+     * @deprecated Legacy canvas compatibility path only. Leafer runtime uses retained scene graph layers instead.
      **/
     drawBackCanvas(): void {
         const canvas = this.bgcanvas as HTMLCanvasElement;

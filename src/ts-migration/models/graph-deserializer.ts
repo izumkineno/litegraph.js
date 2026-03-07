@@ -1,9 +1,14 @@
 import type {
     GraphDeserializeTarget,
     GraphDeserializerFactories,
+    GraphNodePersistenceLike,
     SerializedGraphPersistenceLike,
 } from "./graph-persistence.types";
 import type { RepairedSerializedGraphData } from "./serialization-repair";
+
+interface DirtyAwareGraphNode extends GraphNodePersistenceLike {
+    setDirtyCanvas?: (dirtyForeground: boolean, dirtyBackground?: boolean) => void;
+}
 
 export function deserializeGraphData(
     target: GraphDeserializeTarget,
@@ -45,6 +50,10 @@ export function deserializeGraphData(
             );
         }
         node.configure(nodeData);
+        // Nodes are added before serialized position/size is configured.
+        // Legacy Leafer hosts are instantiated during add(), so they need an
+        // explicit dirty signal after configure() to sync their retained view.
+        (node as DirtyAwareGraphNode).setDirtyCanvas?.(true, true);
     }
 
     target._groups.length = 0;

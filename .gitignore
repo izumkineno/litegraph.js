@@ -16,3 +16,4 @@ test-results/
 auth.json
 .codex/config.toml
 tests/playwright/reports/**
+/dogfood-output

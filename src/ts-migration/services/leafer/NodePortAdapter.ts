@@ -4,6 +4,7 @@ import type {
     GraphMutationNodeId,
     GraphMutationNodeLike,
 } from "./GraphMutationBus";
+import type { NodeViewHost } from "./NodeViewHost";
 
 export const PORT_DIRECTION_UP = 1;
 export const PORT_DIRECTION_RIGHT = 2;
@@ -82,6 +83,10 @@ export interface LinkEndpointLayout {
     readonly endDir: number;
 }
 
+export interface NodePortAdapterOptions {
+    resolveNodeHost?: (nodeId: GraphMutationNodeId) => NodeViewHost | null;
+}
+
 function toFiniteNumber(value: unknown, fallback = 0): number {
     const numericValue = Number(value);
     return Number.isFinite(numericValue) ? numericValue : fallback;
@@ -128,7 +133,10 @@ export function getOppositePortDirection(direction: number): number {
 }
 
 export class NodePortAdapter {
-    constructor(private readonly graph: NodePortGraphLike) {}
+    constructor(
+        private readonly graph: NodePortGraphLike,
+        private readonly options: NodePortAdapterOptions = {}
+    ) {}
 
     getNodeById(nodeId: GraphMutationNodeId): NodePortNodeLike | null {
         if (typeof this.graph.getNodeById === "function") {
@@ -175,7 +183,35 @@ export class NodePortAdapter {
 
     hitPortAt(x: number, y: number): NodePortHit | null {
         const node = this.getNodeAt(x, y);
-        if (!node || typeof node.getSlotInPosition !== "function") {
+        if (!node) {
+            return null;
+        }
+
+        const hostHit = this.options.resolveNodeHost?.(node.id)?.hitPortAt?.(x, y);
+        if (hostHit) {
+            const slotList = hostHit.kind === "input" ? node.inputs : node.outputs;
+            const slot =
+                (Array.isArray(slotList) ? slotList[hostHit.slotIndex] : null) ||
+                {};
+            return {
+                node,
+                nodeId: node.id,
+                kind: hostHit.kind,
+                slotIndex: hostHit.slotIndex,
+                slot: slot as NodePortSlotLike,
+                anchor: hostHit.anchor,
+                dir:
+                    hostHit.dir ??
+                    this.getPortDirection(
+                        node,
+                        hostHit.kind,
+                        hostHit.slotIndex,
+                        slot as NodePortSlotLike
+                    ),
+            };
+        }
+
+        if (typeof node.getSlotInPosition !== "function") {
             return null;
         }
 
@@ -206,6 +242,14 @@ export class NodePortAdapter {
         kind: NodePortKind,
         slotIndex: number
     ): [number, number] {
+        const hostAnchor = this.options.resolveNodeHost?.(nodeId)?.getPortAnchor?.(
+            kind,
+            slotIndex
+        );
+        if (hostAnchor) {
+            return [toFiniteNumber(hostAnchor[0]), toFiniteNumber(hostAnchor[1])];
+        }
+
         const node = this.getNodeById(nodeId);
         if (!node || typeof node.getConnectionPos !== "function") {
             return [0, 0];
@@ -238,6 +282,17 @@ export class NodePortAdapter {
         slotIndex: number,
         slot?: NodePortSlotLike | null
     ): number {
+        const hostDirection = this.options.resolveNodeHost?.(node.id)?.getPortDirection?.(
+            kind,
+            slotIndex
+        );
+        if (hostDirection != null) {
+            const normalizedDirection = toFiniteNumber(hostDirection, 0);
+            if (normalizedDirection) {
+                return normalizedDirection;
+            }
+        }
+
         const slotList = kind === "input" ? node.inputs : node.outputs;
         const resolvedSlot = slot || slotList?.[slotIndex] || null;
         const explicitDir = toFiniteNumber(resolvedSlot?.dir, 0);

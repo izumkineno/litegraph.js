@@ -2,7 +2,7 @@ import type {
     GraphMutationGraphLike,
     GraphMutationNodeLike,
 } from "./GraphMutationBus";
-import type { LegacyNodeHost } from "./LegacyNodeHost";
+import type { NodeViewHost } from "./NodeViewHost";
 import type { SceneSyncController } from "./SceneSyncController";
 
 interface GraphHitTestGraphLike extends GraphMutationGraphLike {
@@ -14,9 +14,9 @@ interface GraphHitTestGraphLike extends GraphMutationGraphLike {
     ) => GraphMutationNodeLike | null;
 }
 
-export interface LegacyNodeHitResult {
+export interface NodeHitResult {
     readonly node: GraphMutationNodeLike;
-    readonly host: LegacyNodeHost;
+    readonly host: NodeViewHost;
 }
 
 export class HitTestService {
@@ -25,10 +25,10 @@ export class HitTestService {
         private readonly sceneSyncController: SceneSyncController
     ) {}
 
-    hitLegacyNodeAt(
+    hitNodeAt(
         canvasX: number,
         canvasY: number
-    ): LegacyNodeHitResult | null {
+    ): NodeHitResult | null {
         if (typeof this.graph.getNodeOnPos !== "function") {
             return null;
         }
@@ -46,9 +46,9 @@ export class HitTestService {
         return { node, host };
     }
 
-    getLegacyHostForNode(
+    getHostForNode(
         node: GraphMutationNodeLike | null | undefined
-    ): LegacyNodeHost | null {
+    ): NodeViewHost | null {
         if (!node) {
             return null;
         }

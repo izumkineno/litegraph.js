@@ -6,8 +6,10 @@ import {
     type LegacyNodePainterNodeLike,
     type LegacyNodeRenderHost,
 } from "./LegacyNodePainter";
+import type { NodeViewHost } from "./NodeViewHost";
 
-export class LegacyNodeHost {
+export class LegacyNodeHost implements NodeViewHost {
+    readonly runtime = "legacy" as const;
     readonly node: LegacyNodePainterNodeLike;
     readonly renderHost: LegacyNodeRenderHost;
     readonly root: Group;

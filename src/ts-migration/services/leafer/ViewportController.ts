@@ -3,6 +3,7 @@ import { addViewport } from "@leafer-in/viewport";
 
 import type { Vector2 } from "../../types/core-types";
 import type { LeaferAppHost } from "./LeaferAppHost";
+import type { SceneSyncController } from "./SceneSyncController";
 
 export interface DragAndScaleViewportPort {
     getScale(): number;
@@ -27,6 +28,14 @@ function toFiniteNumber(value: unknown, fallback = 0): number {
 }
 
 export class ViewportController implements DragAndScaleViewportPort {
+    private scaleListenerId: unknown = null;
+    private sceneSyncController: Pick<
+        SceneSyncController,
+        "repaintLegacyNodeHosts"
+    > | null = null;
+    private queuedScaleRepaintFrame: number | null = null;
+    private lastScale = 1;
+
     constructor(
         private readonly appHost: LeaferAppHost,
         private readonly dragAndScale: ViewportDragAndScaleHost
@@ -55,11 +64,33 @@ export class ViewportController implements DragAndScaleViewportPort {
             },
         });
 
+        this.lastScale = this.getScale();
+        this.scaleListenerId = this.appHost.tree.on_(
+            "leafer.scale",
+            this.handleTreeScale
+        );
         this.dragAndScale.attachViewportPort(this);
     }
 
     destroy(): void {
+        this.sceneSyncController = null;
+        if (this.scaleListenerId) {
+            this.appHost.tree.off_(this.scaleListenerId as never);
+            this.scaleListenerId = null;
+        }
+        if (this.queuedScaleRepaintFrame !== null) {
+            const windowRef =
+                this.appHost.view.ownerDocument?.defaultView || window;
+            windowRef.cancelAnimationFrame(this.queuedScaleRepaintFrame);
+            this.queuedScaleRepaintFrame = null;
+        }
         this.dragAndScale.detachViewportPort(this);
+    }
+
+    setSceneSyncController(
+        sceneSyncController: Pick<SceneSyncController, "repaintLegacyNodeHosts"> | null
+    ): void {
+        this.sceneSyncController = sceneSyncController;
     }
 
     getScale(): number {
@@ -94,6 +125,8 @@ export class ViewportController implements DragAndScaleViewportPort {
             worldOrigin,
             nextScale / currentScale
         );
+        this.lastScale = nextScale;
+        this.queueLegacyScaleRepaint();
     }
 
     setOffset(x: number, y: number): void {
@@ -113,6 +146,29 @@ export class ViewportController implements DragAndScaleViewportPort {
         this.appHost.treeZoomLayer.x = 0;
         this.appHost.treeZoomLayer.y = 0;
         this.appHost.treeZoomLayer.scale = 1;
+        this.lastScale = 1;
+        this.queueLegacyScaleRepaint();
+    }
+
+    private readonly handleTreeScale = (): void => {
+        const nextScale = this.getScale();
+        if (Math.abs(nextScale - this.lastScale) < 0.0001) {
+            return;
+        }
+        this.lastScale = nextScale;
+        this.queueLegacyScaleRepaint();
+    };
+
+    private queueLegacyScaleRepaint(): void {
+        if (!this.sceneSyncController || this.queuedScaleRepaintFrame !== null) {
+            return;
+        }
+
+        const windowRef = this.appHost.view.ownerDocument?.defaultView || window;
+        this.queuedScaleRepaintFrame = windowRef.requestAnimationFrame(() => {
+            this.queuedScaleRepaintFrame = null;
+            this.sceneSyncController?.repaintLegacyNodeHosts();
+        });
     }
 
     private clampScale(value: number): number {

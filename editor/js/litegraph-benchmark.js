@@ -285,7 +285,7 @@
         panel.id = "benchmark-panel";
         panel.classList.add("benchmark-panel");
         panel.style.position = "absolute";
-        panel.style.top = "46px";
+        panel.style.top = "200px";
         panel.style.right = "12px";
         panel.style.width = "min(880px, calc(100% - 24px))";
         panel.style.maxHeight = "calc(100% - 96px)";

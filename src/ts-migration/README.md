@@ -21,6 +21,19 @@
 - 全局挂载与 CommonJS 导出方式
 - 旧画布与菜单 API 的兼容行为
 
+当前主运行时已经收敛到 LeaferJS retained mode：
+
+- `LGraphCanvas` 默认以 `renderRuntime: "leafer"` 工作
+- 旧节点内部 API 继续兼容：
+  - `onDrawBackground`
+  - `onDrawForeground`
+  - `onMouseDown / onMouseMove / onMouseUp`
+  - `setDirtyCanvas`
+- 但调用端 Host API 已发生破坏性重构：
+  - 不应再依赖 `graphcanvas.canvas / bgcanvas / ctx / bgctx`
+  - 不应再把 `draw()` / `drawFrontCanvas()` / `drawBackCanvas()` 当成主刷新入口
+  - 调用端应围绕 Leafer runtime、scene sync 和 `requestRuntimeRender()` 工作
+
 在当前仓库里，它已经是最清晰的架构表达，但它并不是唯一运行时来源：
 
 - `src/litegraph.js` 与 `src/nodes/*.js` 仍然参与现有交付链路
@@ -43,6 +56,13 @@
    - `graph-serializer`
    - `graph-deserializer`
    - `LGraph.persistence` façade
+5. 节点渲染现在是双轨制：
+   - legacy node -> `services/leafer/LegacyNodeHost.ts`
+   - modern node -> `services/leafer/ModernNodeHost.ts`
+6. 新旧节点共用同一条连线与端口适配链：
+   - `services/leafer/NodePortAdapter.ts`
+   - `services/leafer/LinkViewHost.ts`
+   - `services/leafer/SceneSyncController.ts`
 
 ## 目录分层
 
@@ -51,8 +71,8 @@
 - `core/`：`LiteGraph` 常量、命名空间、注册表、运行时 API
 - `contracts/`：跨层最小契约，切断 `models -> canvas/ui` 的直接反向依赖
 - `models/`：图、节点、连线、分组与 persistence 相关模型
-- `canvas/`：画布生命周期、输入、渲染、菜单与面板入口
-- `services/`：从 canvas/ui 剥离出来的低频 UI 流程与 resolver
+- `canvas/`：画布生命周期、输入、遗留 canvas 兼容绘制、菜单与面板入口
+- `services/`：从 canvas/ui 剥离出来的低频 UI 流程、resolver 与 Leafer runtime 服务
 - `ui/`：独立 UI 组件
 - `compat/`：兼容 schema、runtime、全局桥和 CommonJS 桥
 - `types/`：核心共享类型、序列化类型、compat façade 类型导出
@@ -188,6 +208,18 @@
 | `services/property-value-dialog-controller.ts` | 属性值编辑弹层 | 处理字符串、数字、数组、对象、枚举、布尔等属性编辑 UI。 |
 | `services/searchbox-controller.ts` | 搜索框控制器 | 负责节点搜索、过滤、自动补全、type filter 和搜索框浮层生命周期。 |
 | `services/subgraph-io-panel-presenter.ts` | 子图 IO 面板 presenter | 负责子图 inputs/outputs 面板的渲染和增删 slot 流程。 |
+
+`services/leafer/` 当前是 retained-mode 主运行时的核心目录，重点文件包括：
+
+- `LeaferAppHost.ts`：创建 `App` 与 `ground/tree/sky` 根层
+- `ViewportController.ts`：接管平移缩放
+- `GraphMutationBus.ts`：graph 结构变更总线
+- `SceneSyncController.ts`：领域模型到 Leafer scene graph 的单向同步
+- `LegacyNodeHost.ts`：旧节点位图镜像宿主
+- `ModernNodeHost.ts`：新节点原生 Leafer UI 宿主
+- `NodePortAdapter.ts`：统一端口与连线路由适配
+- `LinkViewHost.ts`：Leafer 连线视图包装
+- `InteractionController.ts` / `SelectionController.ts` / `ConnectionController.ts`：编辑交互主链
 
 ### `ui/`
 

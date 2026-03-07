@@ -1,10 +1,34 @@
 //Creates an interface to access extra features from a graph (like play, stop, live, etc)
+function editorSupportsLeaferRuntime() {
+    return Boolean(
+        typeof LGraphCanvas !== "undefined" &&
+            LGraphCanvas.prototype &&
+            typeof LGraphCanvas.prototype.requestRuntimeRender === "function" &&
+            typeof LGraphCanvas.prototype.notifyDirtySignal === "function"
+    );
+}
+
 function Editor(container_id, options) {
     options = options || {};
+    var graphcanvasOptions = options.graphcanvas || {};
+    if (
+        options.renderRuntime &&
+        graphcanvasOptions.renderRuntime == null
+    ) {
+        graphcanvasOptions.renderRuntime = options.renderRuntime;
+    }
+    var supportsLeaferRuntime = editorSupportsLeaferRuntime();
+    var usesLeaferRuntime =
+        supportsLeaferRuntime &&
+        graphcanvasOptions.renderRuntime !== "legacy-canvas";
 
     //fill container
     var html = "<div class='header'><div class='tools tools-left'></div><div class='tools tools-right'></div></div>";
-    html += "<div class='content'><div class='editor-area'><div class='graphview'><canvas class='graphcanvas' width='1000' height='500' tabindex=10></canvas></div></div></div>";
+    html +=
+        "<div class='content'><div class='editor-area'><div class='graphview'>" +
+        "<canvas class='graphcanvas' width='1000' height='500' tabindex=10></canvas>" +
+        "<div class='graphcanvas-host' tabindex=10></div>" +
+        "</div></div></div></div>";
     html += "<div class='footer'><div class='tools tools-left'></div><div class='tools tools-right'></div></div>";
 
     var root = document.createElement("div");
@@ -18,13 +42,32 @@ function Editor(container_id, options) {
 
     var graphview = this.graphview = root.querySelector(".graphview");
     var canvas = this.canvas = root.querySelector(".graphcanvas");
+    var graphHost = this.graphHost = root.querySelector(".graphcanvas-host");
+    this.usesLeaferRuntime = usesLeaferRuntime;
+
+    if (usesLeaferRuntime) {
+        canvas.style.display = "none";
+        graphHost.style.display = "block";
+    } else {
+        canvas.style.display = "block";
+        graphHost.style.display = "none";
+    }
 
     //create graph
     var graph = (this.graph = new LGraph());
-    var graphcanvas = this.graphcanvas = new LGraphCanvas(canvas, graph);
+    var graphSurface = usesLeaferRuntime ? graphHost : canvas;
+    var graphcanvas = this.graphcanvas = new LGraphCanvas(
+        graphSurface,
+        graph,
+        graphcanvasOptions
+    );
     graphcanvas.background_image = "imgs/grid.png";
     graph.onAfterExecute = function() {
-        graphcanvas.draw(true);
+        if (graphcanvas.requestRuntimeRender) {
+            graphcanvas.requestRuntimeRender();
+        } else if (graphcanvas.renderRuntime !== "leafer") {
+            graphcanvas.draw(true);
+        }
     };
 
 	graphcanvas.onDropItem = this.onDropItem.bind(this);
@@ -175,6 +218,17 @@ Editor.prototype.onLoadButton = function() {
 
 Editor.prototype.onSaveButton = function() {};
 
+Editor.prototype.requestRuntimeRender = function(forceNodeRepaint) {
+    if (this.graphcanvas.requestRuntimeRender) {
+        this.graphcanvas.requestRuntimeRender(!!forceNodeRepaint);
+        return;
+    }
+
+    if (this.graphcanvas.renderRuntime !== "leafer") {
+        this.graphcanvas.draw(!!forceNodeRepaint, !!forceNodeRepaint);
+    }
+};
+
 Editor.prototype.onPlayButton = function() {
     var graph = this.graph;
 
@@ -189,13 +243,13 @@ Editor.prototype.onPlayButton = function() {
 Editor.prototype.onPlayStepButton = function() {
     var graph = this.graph;
     graph.runStep(1);
-    this.graphcanvas.draw(true, true);
+    this.requestRuntimeRender();
 };
 
 Editor.prototype.onLiveButton = function() {
     var is_live_mode = !this.graphcanvas.live_mode;
     this.graphcanvas.switchLiveMode(true);
-    this.graphcanvas.draw();
+    this.requestRuntimeRender(true);
     this.refreshRuntimeButtons({ live_mode: is_live_mode });
 };
 
@@ -331,6 +385,11 @@ Editor.prototype.addMiniWindow = function(w, h) {
 
 Editor.prototype.addMultiview = function()
 {
+	if(this.graphcanvas.renderRuntime === "leafer")
+	{
+		console.warn("LiteGraph.Editor: addMultiview() is not supported by the Leafer runtime.");
+		return null;
+	}
 	var canvas = this.canvas;
 	this.graphcanvas.ctx.fillStyle = "black";
 	this.graphcanvas.ctx.fillRect(0,0,canvas.width,canvas.height);

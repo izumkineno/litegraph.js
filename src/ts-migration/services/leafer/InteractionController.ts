@@ -12,8 +12,8 @@ import {
     type LegacyPointerEventSource,
     type LegacyPointerTarget,
 } from "./LegacyPointerEventAdapter";
-import type { LegacyNodeHost } from "./LegacyNodeHost";
 import { NodePortAdapter, type NodePortNodeLike } from "./NodePortAdapter";
+import type { NodeViewHost } from "./NodeViewHost";
 import { OverlayPrimitives } from "./OverlayPrimitives";
 import type { SceneSyncController } from "./SceneSyncController";
 import { SelectionController } from "./SelectionController";
@@ -69,17 +69,18 @@ type PointerSession =
     | {
           kind: "node-press";
           node: DraggableNodeLike;
+          legacyPointerUp: boolean;
       }
     | {
           kind: "node-drag";
           node: DraggableNodeLike;
           dragNodes: DraggableNodeLike[];
-          lastWorldPoint: PointLike;
+          lastGraphPoint: PointLike;
       }
     | {
           kind: "background-press";
           additive: boolean;
-          startWorldPoint: PointLike;
+          startGraphPoint: PointLike;
       }
     | {
           kind: "selection";
@@ -107,6 +108,17 @@ function getPointerDistance(a: PointLike, b: PointLike): number {
     const dx = a.x - b.x;
     const dy = a.y - b.y;
     return Math.sqrt(dx * dx + dy * dy);
+}
+
+function isLegacyHost(
+    host: NodeViewHost | null | undefined
+): host is NodeViewHost & { eventRoot: LegacyPointerTarget["nodeRoot"] } {
+    return Boolean(
+        host &&
+            host.runtime === "legacy" &&
+            "eventRoot" in host &&
+            host.eventRoot
+    );
 }
 
 export class InteractionController {
@@ -138,6 +150,10 @@ export class InteractionController {
             graph as GraphMutationGraphLike & {
                 _nodes?: NodePortNodeLike[];
                 getNodeById?: (id: GraphMutationNodeId) => NodePortNodeLike | null;
+            },
+            {
+                resolveNodeHost: (nodeId) =>
+                    sceneSyncController.nodeHosts.get(nodeId) || null,
             }
         );
         this.overlayPrimitives = new OverlayPrimitives(this.appHost);
@@ -190,14 +206,14 @@ export class InteractionController {
 
         const source = this.createPointerSource(event);
         const pagePoint = source.getPagePoint();
-        const worldPoint = source.getInnerPoint();
+        const graphPoint = source.getInnerPoint();
         const normalizedPagePoint = {
             x: toFiniteNumber(pagePoint.x),
             y: toFiniteNumber(pagePoint.y),
         };
-        const normalizedWorldPoint = {
-            x: toFiniteNumber(worldPoint.x),
-            y: toFiniteNumber(worldPoint.y),
+        const normalizedGraphPoint = {
+            x: toFiniteNumber(graphPoint.x),
+            y: toFiniteNumber(graphPoint.y),
         };
 
         this.pointerIsDown = true;
@@ -207,8 +223,8 @@ export class InteractionController {
         this.attachDocumentTracking();
 
         const portHit = this.connectionController.begin(
-            normalizedWorldPoint.x,
-            normalizedWorldPoint.y
+            normalizedGraphPoint.x,
+            normalizedGraphPoint.y
         );
         if (portHit) {
             this.session = {
@@ -218,42 +234,61 @@ export class InteractionController {
             return;
         }
 
-        const hit = this.hitTestService.hitLegacyNodeAt(
-            normalizedWorldPoint.x,
-            normalizedWorldPoint.y
+        const hit = this.hitTestService.hitNodeAt(
+            normalizedGraphPoint.x,
+            normalizedGraphPoint.y
         );
         if (!hit?.host) {
             this.session = {
                 kind: "background-press",
                 additive: Boolean(event.ctrlKey || event.metaKey || event.shiftKey),
-                startWorldPoint: normalizedWorldPoint,
+                startGraphPoint: normalizedGraphPoint,
             };
             this.stopEvent(event);
             return;
         }
 
-        const targets = this.collectTargets(hit.host);
-        const legacyEvent = createLegacyPointerEvent({
-            event: source,
-            type: "down",
-            hostElement: this.appHost.view,
-            targets,
-            clickTime: 0,
-            dragging: false,
-            deltaX: 0,
-            deltaY: 0,
-        });
+        const additiveSelection = Boolean(
+            event.ctrlKey || event.metaKey || event.shiftKey
+        );
+        const selectedNodes = this.canvas.selected_nodes || {};
+        const isAlreadySelected = Boolean(selectedNodes[String(hit.node.id)]);
+        const legacyHost = isLegacyHost(hit.host) ? hit.host : null;
 
-        this.canvas.processMouseDown(legacyEvent);
-        this.canvas.sceneSyncController?.repaintAllNodeHosts();
+        if (legacyHost) {
+            const targets = this.collectTargets(legacyHost);
+            const legacyEvent = createLegacyPointerEvent({
+                event: source,
+                type: "down",
+                hostElement: this.appHost.view,
+                targets,
+                clickTime: 0,
+                dragging: false,
+                deltaX: 0,
+                deltaY: 0,
+            });
 
-        if (
-            !this.hasLegacyInteractiveCapture() &&
+            this.canvas.processMouseDown(legacyEvent);
+            this.canvas.sceneSyncController?.repaintAllNodeHosts();
+        } else if (!isAlreadySelected || additiveSelection) {
+            this.canvas.selectNodes([hit.node], additiveSelection);
+            this.canvas.sceneSyncController?.repaintAllNodeHosts();
+        }
+
+        if (!legacyHost && !this.canStartNodeDrag(hit.node)) {
+            this.session = {
+                kind: "background-press",
+                additive: additiveSelection,
+                startGraphPoint: normalizedGraphPoint,
+            };
+        } else if (
+            (!legacyHost || !this.hasLegacyInteractiveCapture()) &&
             this.canStartNodeDrag(hit.node)
         ) {
             this.session = {
                 kind: "node-press",
                 node: hit.node as DraggableNodeLike,
+                legacyPointerUp: Boolean(legacyHost),
             };
         } else {
             this.session = {
@@ -286,26 +321,26 @@ export class InteractionController {
 
         const source = this.createPointerSource(event);
         const pagePoint = source.getPagePoint();
-        const worldPoint = source.getInnerPoint();
+        const graphPoint = source.getInnerPoint();
         const normalizedPagePoint = {
             x: toFiniteNumber(pagePoint.x),
             y: toFiniteNumber(pagePoint.y),
         };
-        const normalizedWorldPoint = {
-            x: toFiniteNumber(worldPoint.x),
-            y: toFiniteNumber(worldPoint.y),
+        const normalizedGraphPoint = {
+            x: toFiniteNumber(graphPoint.x),
+            y: toFiniteNumber(graphPoint.y),
         };
 
         if (this.session?.kind === "connection") {
             this.connectionController.finish(
-                normalizedWorldPoint.x,
-                normalizedWorldPoint.y
+                normalizedGraphPoint.x,
+                normalizedGraphPoint.y
             );
             this.stopEvent(event, true);
         } else if (this.session?.kind === "selection") {
             this.selectionController.finish(
-                normalizedWorldPoint.x,
-                normalizedWorldPoint.y
+                normalizedGraphPoint.x,
+                normalizedGraphPoint.y
             );
             this.stopEvent(event);
         } else if (this.session?.kind === "background-press") {
@@ -314,6 +349,12 @@ export class InteractionController {
                 this.canvas.sceneSyncController?.repaintAllNodeHosts();
             }
             this.stopEvent(event);
+        } else if (this.session?.kind === "node-press") {
+            if (this.session.legacyPointerUp) {
+                this.dispatchLegacyPointerUp(source, normalizedPagePoint, event);
+            } else {
+                this.stopEvent(event);
+            }
         } else if (this.session?.kind === "node-drag") {
             this.finishNodeDrag(this.session);
             this.stopEvent(event);
@@ -337,9 +378,9 @@ export class InteractionController {
 
         const source = this.createPointerSource(event);
         const pagePoint = source.getPagePoint();
-        const worldPoint = source.getInnerPoint();
-        const hit = this.hitTestService.hitLegacyNodeAt(worldPoint.x, worldPoint.y);
-        const targets = this.collectTargets(hit?.host || null);
+        const graphPoint = source.getInnerPoint();
+        const hit = this.hitTestService.hitNodeAt(graphPoint.x, graphPoint.y);
+        const targets = this.collectTargets(this.toLegacyHost(hit?.host || null));
         const shouldDispatch =
             targets.length > 0 ||
             Boolean(this.canvas.node_widget) ||
@@ -384,20 +425,20 @@ export class InteractionController {
 
         const source = this.createPointerSource(event);
         const pagePoint = source.getPagePoint();
-        const worldPoint = source.getInnerPoint();
+        const graphPoint = source.getInnerPoint();
         const normalizedPagePoint = {
             x: toFiniteNumber(pagePoint.x),
             y: toFiniteNumber(pagePoint.y),
         };
-        const normalizedWorldPoint = {
-            x: toFiniteNumber(worldPoint.x),
-            y: toFiniteNumber(worldPoint.y),
+        const normalizedGraphPoint = {
+            x: toFiniteNumber(graphPoint.x),
+            y: toFiniteNumber(graphPoint.y),
         };
 
         if (this.session.kind === "connection") {
             this.connectionController.update(
-                normalizedWorldPoint.x,
-                normalizedWorldPoint.y
+                normalizedGraphPoint.x,
+                normalizedGraphPoint.y
             );
             this.lastPagePoint = normalizedPagePoint;
             this.stopEvent(event, true);
@@ -413,8 +454,8 @@ export class InteractionController {
                 ) >= 4
             ) {
                 this.selectionController.begin(
-                    this.session.startWorldPoint.x,
-                    this.session.startWorldPoint.y,
+                    this.session.startGraphPoint.x,
+                    this.session.startGraphPoint.y,
                     this.session.additive
                 );
                 this.session = {
@@ -428,8 +469,8 @@ export class InteractionController {
 
         if (this.session.kind === "selection") {
             this.selectionController.update(
-                normalizedWorldPoint.x,
-                normalizedWorldPoint.y
+                normalizedGraphPoint.x,
+                normalizedGraphPoint.y
             );
             this.lastPagePoint = normalizedPagePoint;
             this.stopEvent(event);
@@ -446,7 +487,7 @@ export class InteractionController {
         }
 
         if (this.session.kind === "node-press") {
-            if (this.hasLegacyInteractiveCapture()) {
+            if (this.session.legacyPointerUp && this.hasLegacyInteractiveCapture()) {
                 this.session = {
                     kind: "legacy-press",
                 };
@@ -472,7 +513,7 @@ export class InteractionController {
                     kind: "node-drag",
                     node: this.session.node,
                     dragNodes,
-                    lastWorldPoint: normalizedWorldPoint,
+                    lastGraphPoint: normalizedGraphPoint,
                 };
             } else {
                 this.lastPagePoint = normalizedPagePoint;
@@ -482,9 +523,9 @@ export class InteractionController {
 
         if (this.session.kind === "node-drag") {
             const deltaX =
-                normalizedWorldPoint.x - this.session.lastWorldPoint.x;
+                normalizedGraphPoint.x - this.session.lastGraphPoint.x;
             const deltaY =
-                normalizedWorldPoint.y - this.session.lastWorldPoint.y;
+                normalizedGraphPoint.y - this.session.lastGraphPoint.y;
             if (deltaX || deltaY) {
                 for (let i = 0; i < this.session.dragNodes.length; ++i) {
                     const node = this.session.dragNodes[i];
@@ -492,7 +533,7 @@ export class InteractionController {
                     node.pos[1] += deltaY;
                     this.emitNodeMoved(node);
                 }
-                this.session.lastWorldPoint = normalizedWorldPoint;
+                this.session.lastGraphPoint = normalizedGraphPoint;
             }
             this.lastPagePoint = normalizedPagePoint;
             this.stopEvent(event);
@@ -504,9 +545,9 @@ export class InteractionController {
         pagePoint: PointLike,
         event: PointerEvent
     ): void {
-        const worldPoint = source.getInnerPoint();
-        const hit = this.hitTestService.hitLegacyNodeAt(worldPoint.x, worldPoint.y);
-        const targets = this.collectTargets(hit?.host || null);
+        const graphPoint = source.getInnerPoint();
+        const hit = this.hitTestService.hitNodeAt(graphPoint.x, graphPoint.y);
+        const targets = this.collectTargets(this.toLegacyHost(hit?.host || null));
         const shouldDispatch =
             targets.length > 0 ||
             Boolean(this.canvas.node_widget) ||
@@ -545,9 +586,9 @@ export class InteractionController {
         pagePoint: PointLike,
         event: PointerEvent
     ): void {
-        const worldPoint = source.getInnerPoint();
-        const hit = this.hitTestService.hitLegacyNodeAt(worldPoint.x, worldPoint.y);
-        const targets = this.collectTargets(hit?.host || null);
+        const graphPoint = source.getInnerPoint();
+        const hit = this.hitTestService.hitNodeAt(graphPoint.x, graphPoint.y);
+        const targets = this.collectTargets(this.toLegacyHost(hit?.host || null));
         const shouldDispatch =
             this.pointerIsDown ||
             targets.length > 0 ||
@@ -636,12 +677,12 @@ export class InteractionController {
     }
 
     private collectTargets(
-        hitHost: LegacyNodeHost | null
+        hitHost: (NodeViewHost & { eventRoot: LegacyPointerTarget["nodeRoot"] }) | null
     ): LegacyPointerTarget[] {
         const targets = new Map<string, LegacyPointerTarget>();
         const pushHost = (
             nodeId: GraphMutationNodeId,
-            host: LegacyNodeHost | null
+            host: (NodeViewHost & { eventRoot: LegacyPointerTarget["nodeRoot"] }) | null
         ): void => {
             if (!host) {
                 return;
@@ -649,6 +690,7 @@ export class InteractionController {
             targets.set(String(nodeId), {
                 nodeId,
                 nodeRoot: host.eventRoot,
+                nodePosition: this.resolveNodePosition(host.node),
             });
         };
 
@@ -661,9 +703,12 @@ export class InteractionController {
             | null
             | undefined;
         if (hoveredNode) {
+            const hoveredHost = this.toLegacyHost(
+                this.hitTestService.getHostForNode(hoveredNode)
+            );
             pushHost(
                 hoveredNode.id,
-                this.hitTestService.getLegacyHostForNode(hoveredNode)
+                hoveredHost
             );
         }
 
@@ -672,9 +717,12 @@ export class InteractionController {
             | null
             | undefined;
         if (capturedNode) {
+            const capturedHost = this.toLegacyHost(
+                this.hitTestService.getHostForNode(capturedNode)
+            );
             pushHost(
                 capturedNode.id,
-                this.hitTestService.getLegacyHostForNode(capturedNode)
+                capturedHost
             );
         }
 
@@ -682,13 +730,22 @@ export class InteractionController {
             | GraphMutationNodeLike
             | undefined;
         if (widgetNode) {
+            const widgetHost = this.toLegacyHost(
+                this.hitTestService.getHostForNode(widgetNode)
+            );
             pushHost(
                 widgetNode.id,
-                this.hitTestService.getLegacyHostForNode(widgetNode)
+                widgetHost
             );
         }
 
         return Array.from(targets.values());
+    }
+
+    private toLegacyHost(
+        host: NodeViewHost | null | undefined
+    ): (NodeViewHost & { eventRoot: LegacyPointerTarget["nodeRoot"] }) | null {
+        return isLegacyHost(host) ? host : null;
     }
 
     private createPointerSource(event: PointerEvent): LegacyPointerEventSource {
@@ -708,13 +765,19 @@ export class InteractionController {
             target: event.target,
             current: event.currentTarget,
             time: Date.now(),
+            clientX: event.clientX,
+            clientY: event.clientY,
+            pageX: event.pageX,
+            pageY: event.pageY,
+            screenX: event.screenX,
+            screenY: event.screenY,
             left: event.button === 0 || Boolean(event.buttons & 1),
             middle: event.button === 1 || Boolean(event.buttons & 4),
             right: event.button === 2 || Boolean(event.buttons & 2),
             getPagePoint: () => pagePoint,
             getInnerPoint: (relative) => {
                 if (!relative) {
-                    return worldPoint;
+                    return pagePoint;
                 }
                 return relative.getInnerPoint(worldPoint);
             },
@@ -725,6 +788,18 @@ export class InteractionController {
                 event.stopImmediatePropagation();
             },
         };
+    }
+
+    private resolveNodePosition(
+        node: GraphMutationNodeLike
+    ): readonly [number, number] | undefined {
+        const rawPos = (node as { pos?: unknown }).pos;
+        if (!rawPos || (!Array.isArray(rawPos) && !ArrayBuffer.isView(rawPos))) {
+            return undefined;
+        }
+
+        const pos = rawPos as ArrayLike<unknown>;
+        return [toFiniteNumber(pos[0]), toFiniteNumber(pos[1])];
     }
 
     private attachDocumentTracking(): void {

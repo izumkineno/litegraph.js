@@ -238,10 +238,14 @@ export class LGraphCanvasLifecycle extends LGraphCanvasStatic {
 
     background_image: string;
     ds: DragAndScale;
+    /** @deprecated Leafer runtime uses `leaferAppHost.view`; direct canvas access is not a supported host API. */
     canvas: CanvasLike | null;
     canvasHostElement: HTMLElement | null;
+    /** @deprecated Leafer runtime does not expose a background canvas. */
     bgcanvas: CanvasLike | null;
+    /** @deprecated Leafer runtime does not expose a stable `CanvasRenderingContext2D` host context. */
     ctx: CanvasRenderingContext2D | null;
+    /** @deprecated Leafer runtime does not expose a stable background `CanvasRenderingContext2D`. */
     bgctx: CanvasRenderingContext2D | null;
     leaferAppHost: LeaferAppHost | null;
     viewportController: ViewportController | null;
@@ -769,11 +773,13 @@ export class LGraphCanvasLifecycle extends LGraphCanvasStatic {
             this.ds
         );
         this.attachSceneSyncBackbone();
+        this.viewportController.setSceneSyncController(this.sceneSyncController);
 
         console.info("LGraphCanvas: Leafer App shell initialized.");
     }
 
     private destroySceneSyncBackbone(): void {
+        this.viewportController?.setSceneSyncController(null);
         if (this.interactionController) {
             this.interactionController.destroy();
             this.interactionController = null;
@@ -845,6 +851,7 @@ export class LGraphCanvasLifecycle extends LGraphCanvasStatic {
             this.leaferAppHost,
             this.sceneSyncController
         );
+        this.viewportController?.setSceneSyncController(this.sceneSyncController);
     }
 
     setCanvas(
@@ -1264,6 +1271,7 @@ export class LGraphCanvasLifecycle extends LGraphCanvasStatic {
         return (doc.defaultView || doc.parentWindow) as Window;
     }
 
+    /** @deprecated Use `requestRuntimeRender()` or node-level dirty signals instead of manual full-canvas invalidation. */
     setDirty(fgcanvas: boolean, bgcanvas: boolean): void {
         if (fgcanvas) {
             this.dirty_canvas = true;
@@ -1271,6 +1279,24 @@ export class LGraphCanvasLifecycle extends LGraphCanvasStatic {
         if (bgcanvas) {
             this.dirty_bgcanvas = true;
         }
+    }
+
+    requestRuntimeRender(forceNodeRepaint = false): void {
+        if (this.renderRuntime === "leafer") {
+            if (forceNodeRepaint) {
+                this.sceneSyncController?.repaintAllNodeHosts();
+            }
+            if (typeof this.leaferAppHost?.app.requestRender === "function") {
+                this.leaferAppHost.app.requestRender();
+            } else {
+                this.leaferAppHost?.app.forceRender();
+            }
+            return;
+        }
+
+        (this as unknown as {
+            draw: (force_canvas?: boolean, force_bgcanvas?: boolean) => void;
+        }).draw(forceNodeRepaint, forceNodeRepaint);
     }
 
     notifyDirtySignal(fgcanvas?: boolean, bgcanvas?: boolean): void {

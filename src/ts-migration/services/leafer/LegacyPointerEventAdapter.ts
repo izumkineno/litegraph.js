@@ -5,6 +5,7 @@ import type { GraphMutationNodeId } from "./GraphMutationBus";
 export interface LegacyPointerTarget {
     readonly nodeId: GraphMutationNodeId;
     readonly nodeRoot: Group;
+    readonly nodePosition?: readonly [number, number];
 }
 
 export interface LegacyPointerEventSource {
@@ -16,6 +17,12 @@ export interface LegacyPointerEventSource {
     readonly target?: unknown;
     readonly current?: unknown;
     readonly time?: number;
+    readonly clientX?: number;
+    readonly clientY?: number;
+    readonly pageX?: number;
+    readonly pageY?: number;
+    readonly screenX?: number;
+    readonly screenY?: number;
     readonly left?: boolean;
     readonly middle?: boolean;
     readonly right?: boolean;
@@ -79,9 +86,9 @@ function toMutationKey(nodeId: GraphMutationNodeId): string {
     return String(nodeId);
 }
 
-function toFiniteNumber(value: unknown): number {
+function toFiniteNumber(value: unknown, fallback = 0): number {
     const numericValue = Number(value);
-    return Number.isFinite(numericValue) ? numericValue : 0;
+    return Number.isFinite(numericValue) ? numericValue : fallback;
 }
 
 function resolveMouseType(
@@ -135,11 +142,25 @@ function resolveWhich(button: number): number {
     return button + 1;
 }
 
-function buildLocalPosMap(event: LegacyPointerEventSource, targets: readonly LegacyPointerTarget[]): Map<string, readonly [number, number]> {
+function buildLocalPosMap(
+    event: LegacyPointerEventSource,
+    targets: readonly LegacyPointerTarget[]
+): Map<string, readonly [number, number]> {
     const localPosByNodeId = new Map<string, readonly [number, number]>();
+    const pagePoint = event.getPagePoint();
+    const pageX = toFiniteNumber(pagePoint.x);
+    const pageY = toFiniteNumber(pagePoint.y);
 
     for (let i = 0; i < targets.length; ++i) {
         const target = targets[i];
+        if (target.nodePosition) {
+            localPosByNodeId.set(toMutationKey(target.nodeId), [
+                pageX - toFiniteNumber(target.nodePosition[0]),
+                pageY - toFiniteNumber(target.nodePosition[1]),
+            ]);
+            continue;
+        }
+
         const localPoint = event.getInnerPoint(target.nodeRoot);
         localPosByNodeId.set(toMutationKey(target.nodeId), [
             toFiniteNumber(localPoint.x),
@@ -158,8 +179,8 @@ export function createLegacyPointerEvent(
     const canvasX = toFiniteNumber(pagePoint.x);
     const canvasY = toFiniteNumber(pagePoint.y);
     const hostRect = hostElement.getBoundingClientRect();
-    const clientX = hostRect.left + canvasX;
-    const clientY = hostRect.top + canvasY;
+    const clientX = toFiniteNumber(event.clientX, hostRect.left + canvasX);
+    const clientY = toFiniteNumber(event.clientY, hostRect.top + canvasY);
     const button = resolveButton(event);
     const buttons = resolveButtons(event);
     const localPosByNodeId = buildLocalPosMap(event, options.targets || []);
@@ -179,12 +200,12 @@ export function createLegacyPointerEvent(
         type: resolveMouseType(options.type),
         canvasX,
         canvasY,
-        pageX: canvasX,
-        pageY: canvasY,
+        pageX: toFiniteNumber(event.pageX, clientX),
+        pageY: toFiniteNumber(event.pageY, clientY),
         clientX,
         clientY,
-        screenX: clientX,
-        screenY: clientY,
+        screenX: toFiniteNumber(event.screenX, clientX),
+        screenY: toFiniteNumber(event.screenY, clientY),
         offsetX: canvasX,
         offsetY: canvasY,
         deltaX: toFiniteNumber(options.deltaX),
