@@ -27,6 +27,7 @@ export interface LegacyPointerEventSource {
     readonly middle?: boolean;
     readonly right?: boolean;
     getPagePoint: () => { x: number; y: number };
+    getWorldPoint: () => { x: number; y: number };
     getInnerPoint: (relative?: Group) => { x: number; y: number };
     stop?: () => void;
     stopNow?: () => void;

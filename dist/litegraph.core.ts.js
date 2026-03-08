@@ -12198,10 +12198,15 @@ var LiteGraphTSMigration = (function(exports) {
         }
         const source = this.createPointerSource(event2);
         const pagePoint = source.getPagePoint();
+        const worldPoint = source.getWorldPoint();
         const graphPoint = source.getInnerPoint();
         const normalizedPagePoint = {
           x: toFiniteNumber$7(pagePoint.x),
           y: toFiniteNumber$7(pagePoint.y)
+        };
+        const normalizedWorldPoint = {
+          x: toFiniteNumber$7(worldPoint.x),
+          y: toFiniteNumber$7(worldPoint.y)
         };
         const normalizedGraphPoint = {
           x: toFiniteNumber$7(graphPoint.x),
@@ -12244,8 +12249,8 @@ var LiteGraphTSMigration = (function(exports) {
         const legacyHost = isLegacyHost(hit.host) ? hit.host : null;
         const modernHost = isModernHost(hit.host) ? hit.host : null;
         const modernPart = modernHost ? modernHost.getInteractivePartAt(
-          normalizedGraphPoint.x,
-          normalizedGraphPoint.y
+          normalizedWorldPoint.x,
+          normalizedWorldPoint.y
         ) : null;
         if (legacyHost) {
           const targets = this.collectTargets(legacyHost);
@@ -12355,10 +12360,15 @@ var LiteGraphTSMigration = (function(exports) {
         }
         const source = this.createPointerSource(event2);
         const pagePoint = source.getPagePoint();
+        const worldPoint = source.getWorldPoint();
         const graphPoint = source.getInnerPoint();
         const normalizedPagePoint = {
           x: toFiniteNumber$7(pagePoint.x),
           y: toFiniteNumber$7(pagePoint.y)
+        };
+        const normalizedWorldPoint = {
+          x: toFiniteNumber$7(worldPoint.x),
+          y: toFiniteNumber$7(worldPoint.y)
         };
         const normalizedGraphPoint = {
           x: toFiniteNumber$7(graphPoint.x),
@@ -12385,7 +12395,7 @@ var LiteGraphTSMigration = (function(exports) {
         } else if (((_e2 = this.session) == null ? void 0 : _e2.kind) === "modern-press") {
           this.finishModernPress(
             this.session,
-            normalizedGraphPoint,
+            normalizedWorldPoint,
             event2
           );
           this.stopEvent(event2);
@@ -12395,7 +12405,7 @@ var LiteGraphTSMigration = (function(exports) {
           } else {
             this.finishModernTap(
               this.session,
-              normalizedGraphPoint,
+              normalizedWorldPoint,
               event2
             );
             this.stopEvent(event2);
@@ -12481,11 +12491,12 @@ var LiteGraphTSMigration = (function(exports) {
     }
     dispatchHoverPointerMove(event2) {
       const source = this.createPointerSource(event2);
+      const worldPoint = source.getWorldPoint();
       const pagePoint = source.getPagePoint();
       const graphPoint = source.getInnerPoint();
       const hit = this.hitTestService.hitNodeAt(graphPoint.x, graphPoint.y);
       const modernHost = isModernHost(hit == null ? void 0 : hit.host) ? hit.host : null;
-      const modernPart = modernHost ? modernHost.getInteractivePartAt(graphPoint.x, graphPoint.y) : null;
+      const modernPart = modernHost ? modernHost.getInteractivePartAt(worldPoint.x, worldPoint.y) : null;
       this.updateModernHover(modernHost, modernPart);
       if (modernHost) {
         this.view.style.cursor = this.resolveCursorForModernPart(modernPart);
@@ -12527,10 +12538,15 @@ var LiteGraphTSMigration = (function(exports) {
       }
       const source = this.createPointerSource(event2);
       const pagePoint = source.getPagePoint();
+      const worldPoint = source.getWorldPoint();
       const graphPoint = source.getInnerPoint();
       const normalizedPagePoint = {
         x: toFiniteNumber$7(pagePoint.x),
         y: toFiniteNumber$7(pagePoint.y)
+      };
+      const normalizedWorldPoint = {
+        x: toFiniteNumber$7(worldPoint.x),
+        y: toFiniteNumber$7(worldPoint.y)
       };
       const normalizedGraphPoint = {
         x: toFiniteNumber$7(graphPoint.x),
@@ -12582,8 +12598,8 @@ var LiteGraphTSMigration = (function(exports) {
       }
       if (this.session.kind === "modern-press") {
         const activePart = this.session.host.getInteractivePartAt(
-          normalizedGraphPoint.x,
-          normalizedGraphPoint.y
+          normalizedWorldPoint.x,
+          normalizedWorldPoint.y
         );
         this.session.host.updateInteractionState({
           hovered: true,
@@ -12612,8 +12628,8 @@ var LiteGraphTSMigration = (function(exports) {
         }
         if (this.session.host) {
           const activePart = this.session.host.getInteractivePartAt(
-            normalizedGraphPoint.x,
-            normalizedGraphPoint.y
+            normalizedWorldPoint.x,
+            normalizedWorldPoint.y
           );
           this.session.host.updateInteractionState({
             hovered: true,
@@ -12781,11 +12797,11 @@ var LiteGraphTSMigration = (function(exports) {
       (_g = (_f = this.graphRef).afterChange) == null ? void 0 : _g.call(_f, this.dragTransactionNode || session.node);
       (_i2 = (_h2 = this.graphRef).change) == null ? void 0 : _i2.call(_h2);
     }
-    finishModernPress(session, graphPoint, event2) {
+    finishModernPress(session, worldPoint, event2) {
       var _a3, _b3, _c2, _d2, _e2, _f, _g, _h2, _i2, _j, _k;
       const releasePart = session.host.getInteractivePartAt(
-        graphPoint.x,
-        graphPoint.y
+        worldPoint.x,
+        worldPoint.y
       );
       session.host.updateInteractionState({
         hovered: true,
@@ -12822,14 +12838,14 @@ var LiteGraphTSMigration = (function(exports) {
         (_k = this.canvas.sceneSyncController) == null ? void 0 : _k.repaintNodeHost(session.node.id);
       }
     }
-    finishModernTap(session, graphPoint, event2) {
+    finishModernTap(session, worldPoint, event2) {
       var _a3, _b3, _c2, _d2, _e2;
       if (!session.host) {
         return;
       }
       const releasePart = session.host.getInteractivePartAt(
-        graphPoint.x,
-        graphPoint.y
+        worldPoint.x,
+        worldPoint.y
       );
       session.host.updateInteractionState({
         hovered: true,
@@ -12850,7 +12866,7 @@ var LiteGraphTSMigration = (function(exports) {
       if (!isDoubleTap) {
         return;
       }
-      const localPos = session.host.getLocalPoint(graphPoint.x, graphPoint.y);
+      const localPos = session.host.getLocalPoint(worldPoint.x, worldPoint.y);
       (_b3 = (_a3 = session.node).onDblClick) == null ? void 0 : _b3.call(_a3, event2, localPos, this.canvas);
       (_d2 = (_c2 = this.canvas).processNodeDblClicked) == null ? void 0 : _d2.call(_c2, session.node);
       (_e2 = this.canvas.sceneSyncController) == null ? void 0 : _e2.repaintNodeHost(session.node.id);
@@ -12867,13 +12883,13 @@ var LiteGraphTSMigration = (function(exports) {
       if (entry.schema.readonly && entry.schema.type !== "button") {
         return;
       }
-      const pagePoint = this.appHost.app.getPagePointByClient({
+      const worldPoint = this.appHost.app.getWorldPointByClient({
         clientX: event2.clientX,
         clientY: event2.clientY
       });
       const localPos = host.getLocalPoint(
-        toFiniteNumber$7(pagePoint.x),
-        toFiniteNumber$7(pagePoint.y)
+        toFiniteNumber$7(worldPoint.x),
+        toFiniteNumber$7(worldPoint.y)
       );
       const propertyName = entry.schema.property;
       const widgetMeta = {
@@ -13133,6 +13149,7 @@ var LiteGraphTSMigration = (function(exports) {
         middle: event2.button === 1 || Boolean(event2.buttons & 4),
         right: event2.button === 2 || Boolean(event2.buttons & 2),
         getPagePoint: () => pagePoint,
+        getWorldPoint: () => worldPoint,
         getInnerPoint: (relative) => {
           if (!relative) {
             return pagePoint;

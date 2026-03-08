@@ -281,10 +281,15 @@ export class InteractionController {
 
         const source = this.createPointerSource(event);
         const pagePoint = source.getPagePoint();
+        const worldPoint = source.getWorldPoint();
         const graphPoint = source.getInnerPoint();
         const normalizedPagePoint = {
             x: toFiniteNumber(pagePoint.x),
             y: toFiniteNumber(pagePoint.y),
+        };
+        const normalizedWorldPoint = {
+            x: toFiniteNumber(worldPoint.x),
+            y: toFiniteNumber(worldPoint.y),
         };
         const normalizedGraphPoint = {
             x: toFiniteNumber(graphPoint.x),
@@ -332,8 +337,8 @@ export class InteractionController {
         const modernHost = isModernHost(hit.host) ? hit.host : null;
         const modernPart = modernHost
             ? modernHost.getInteractivePartAt(
-                  normalizedGraphPoint.x,
-                  normalizedGraphPoint.y
+                  normalizedWorldPoint.x,
+                  normalizedWorldPoint.y
               )
             : null;
 
@@ -465,10 +470,15 @@ export class InteractionController {
 
         const source = this.createPointerSource(event);
         const pagePoint = source.getPagePoint();
+        const worldPoint = source.getWorldPoint();
         const graphPoint = source.getInnerPoint();
         const normalizedPagePoint = {
             x: toFiniteNumber(pagePoint.x),
             y: toFiniteNumber(pagePoint.y),
+        };
+        const normalizedWorldPoint = {
+            x: toFiniteNumber(worldPoint.x),
+            y: toFiniteNumber(worldPoint.y),
         };
         const normalizedGraphPoint = {
             x: toFiniteNumber(graphPoint.x),
@@ -496,7 +506,7 @@ export class InteractionController {
         } else if (this.session?.kind === "modern-press") {
             this.finishModernPress(
                 this.session,
-                normalizedGraphPoint,
+                normalizedWorldPoint,
                 event
             );
             this.stopEvent(event);
@@ -506,7 +516,7 @@ export class InteractionController {
             } else {
                 this.finishModernTap(
                     this.session,
-                    normalizedGraphPoint,
+                    normalizedWorldPoint,
                     event
                 );
                 this.stopEvent(event);
@@ -534,12 +544,13 @@ export class InteractionController {
 
     private dispatchHoverPointerMove(event: PointerEvent): void {
         const source = this.createPointerSource(event);
+        const worldPoint = source.getWorldPoint();
         const pagePoint = source.getPagePoint();
         const graphPoint = source.getInnerPoint();
         const hit = this.hitTestService.hitNodeAt(graphPoint.x, graphPoint.y);
         const modernHost = isModernHost(hit?.host) ? hit.host : null;
         const modernPart = modernHost
-            ? modernHost.getInteractivePartAt(graphPoint.x, graphPoint.y)
+            ? modernHost.getInteractivePartAt(worldPoint.x, worldPoint.y)
             : null;
 
         this.updateModernHover(modernHost, modernPart);
@@ -602,10 +613,15 @@ export class InteractionController {
 
         const source = this.createPointerSource(event);
         const pagePoint = source.getPagePoint();
+        const worldPoint = source.getWorldPoint();
         const graphPoint = source.getInnerPoint();
         const normalizedPagePoint = {
             x: toFiniteNumber(pagePoint.x),
             y: toFiniteNumber(pagePoint.y),
+        };
+        const normalizedWorldPoint = {
+            x: toFiniteNumber(worldPoint.x),
+            y: toFiniteNumber(worldPoint.y),
         };
         const normalizedGraphPoint = {
             x: toFiniteNumber(graphPoint.x),
@@ -665,8 +681,8 @@ export class InteractionController {
 
         if (this.session.kind === "modern-press") {
             const activePart = this.session.host.getInteractivePartAt(
-                normalizedGraphPoint.x,
-                normalizedGraphPoint.y
+                normalizedWorldPoint.x,
+                normalizedWorldPoint.y
             );
             this.session.host.updateInteractionState({
                 hovered: true,
@@ -697,8 +713,8 @@ export class InteractionController {
 
             if (this.session.host) {
                 const activePart = this.session.host.getInteractivePartAt(
-                    normalizedGraphPoint.x,
-                    normalizedGraphPoint.y
+                    normalizedWorldPoint.x,
+                    normalizedWorldPoint.y
                 );
                 this.session.host.updateInteractionState({
                     hovered: true,
@@ -933,12 +949,12 @@ export class InteractionController {
 
     private finishModernPress(
         session: Extract<PointerSession, { kind: "modern-press" }>,
-        graphPoint: PointLike,
+        worldPoint: PointLike,
         event: PointerEvent
     ): void {
         const releasePart = session.host.getInteractivePartAt(
-            graphPoint.x,
-            graphPoint.y
+            worldPoint.x,
+            worldPoint.y
         );
         session.host.updateInteractionState({
             hovered: true,
@@ -984,7 +1000,7 @@ export class InteractionController {
 
     private finishModernTap(
         session: Extract<PointerSession, { kind: "node-press" }>,
-        graphPoint: PointLike,
+        worldPoint: PointLike,
         event: PointerEvent
     ): void {
         if (!session.host) {
@@ -992,8 +1008,8 @@ export class InteractionController {
         }
 
         const releasePart = session.host.getInteractivePartAt(
-            graphPoint.x,
-            graphPoint.y
+            worldPoint.x,
+            worldPoint.y
         );
         session.host.updateInteractionState({
             hovered: true,
@@ -1025,7 +1041,7 @@ export class InteractionController {
             return;
         }
 
-        const localPos = session.host.getLocalPoint(graphPoint.x, graphPoint.y);
+        const localPos = session.host.getLocalPoint(worldPoint.x, worldPoint.y);
         (
             session.node as {
                 onDblClick?: (
@@ -1056,13 +1072,13 @@ export class InteractionController {
             return;
         }
 
-        const pagePoint = this.appHost.app.getPagePointByClient({
+        const worldPoint = this.appHost.app.getWorldPointByClient({
             clientX: event.clientX,
             clientY: event.clientY,
         });
         const localPos = host.getLocalPoint(
-            toFiniteNumber(pagePoint.x),
-            toFiniteNumber(pagePoint.y)
+            toFiniteNumber(worldPoint.x),
+            toFiniteNumber(worldPoint.y)
         );
         const propertyName = entry.schema.property;
         const widgetMeta = {
@@ -1411,6 +1427,7 @@ export class InteractionController {
             middle: event.button === 1 || Boolean(event.buttons & 4),
             right: event.button === 2 || Boolean(event.buttons & 2),
             getPagePoint: () => pagePoint,
+            getWorldPoint: () => worldPoint,
             getInnerPoint: (relative) => {
                 if (!relative) {
                     return pagePoint;
