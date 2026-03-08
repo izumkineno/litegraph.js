@@ -27,23 +27,25 @@
     function buildSlotSchemaFromNode(node) {
         var inputs = Array.isArray(node.inputs)
             ? node.inputs.map(function(slot) {
+                  var slotType =
+                      slot && Object.prototype.hasOwnProperty.call(slot, "type")
+                          ? slot.type
+                          : undefined;
                   return {
                       name: String((slot && slot.name) || ""),
-                      type:
-                          slot && (typeof slot.type === "string" || slot.type === -1)
-                              ? slot.type
-                              : -1,
+                      type: slotType == null ? -1 : slotType,
                   };
               })
             : [];
         var outputs = Array.isArray(node.outputs)
             ? node.outputs.map(function(slot) {
+                  var slotType =
+                      slot && Object.prototype.hasOwnProperty.call(slot, "type")
+                          ? slot.type
+                          : undefined;
                   return {
                       name: String((slot && slot.name) || ""),
-                      type:
-                          slot && (typeof slot.type === "string" || slot.type === -1)
-                              ? slot.type
-                              : -1,
+                      type: slotType == null ? -1 : slotType,
                   };
               })
             : [];

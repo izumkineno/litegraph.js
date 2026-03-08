@@ -15732,7 +15732,7 @@ var LiteGraphTSMigration = (function(exports) {
      * @param {Object} extra_info this can be used to have special properties of an input (label, color, position, etc)
      */
     addInput(name, type, extra_info) {
-      const normalizedType = type || 0;
+      const normalizedType = type === void 0 || type === null ? 0 : type;
       const input = {
         name,
         type: normalizedType,
@@ -18706,6 +18706,7 @@ var LiteGraphTSMigration = (function(exports) {
         for (let i2 = 0; i2 < visibleParts.length; ++i2) {
           const schema = visibleParts[i2];
           const layout = layouts[i2];
+          const isFooterSplitPart = schema.placement === "footer-left" || schema.placement === "footer-right";
           const root = new ye$1({
             x: layout.x,
             y: layout.y,
@@ -18718,10 +18719,10 @@ var LiteGraphTSMigration = (function(exports) {
             y: 0,
             width: layout.width,
             height: layout.height,
-            fill: "#172332",
-            stroke: "#2B4663",
-            strokeWidth: 1,
-            cornerRadius: schema.placement === "footer-left" ? [0, 0, 10, 0] : schema.placement === "footer-right" ? [0, 0, 0, 10] : 8,
+            fill: isFooterSplitPart ? "#20252C" : "#172332",
+            stroke: isFooterSplitPart ? "#394454" : "#2B4663",
+            strokeWidth: isFooterSplitPart ? 1 : 1,
+            cornerRadius: schema.placement === "footer-left" ? 4 : schema.placement === "footer-right" ? 4 : 8,
             hittable: false
           });
           const outline = new xe$1({
@@ -18729,7 +18730,7 @@ var LiteGraphTSMigration = (function(exports) {
             y: 0,
             width: Math.max(0, layout.width),
             height: Math.max(0, layout.height),
-            cornerRadius: schema.placement === "footer-left" ? [0, 0, 10, 0] : schema.placement === "footer-right" ? [0, 0, 0, 10] : 8,
+            cornerRadius: schema.placement === "footer-left" ? 4 : schema.placement === "footer-right" ? 4 : 8,
             fill: "rgba(0,0,0,0)",
             stroke: "#78AEFF",
             strokeWidth: 1.5,
@@ -18738,25 +18739,45 @@ var LiteGraphTSMigration = (function(exports) {
             hittable: false
           });
           const content = new m$1({
-            x: 8,
+            x: isFooterSplitPart ? 0 : 8,
             y: 0,
-            width: Math.max(1, layout.width - 16),
+            width: Math.max(
+              1,
+              isFooterSplitPart ? layout.width : layout.width - 16
+            ),
             height: layout.height,
             flow: "x",
             flowAlign: "center",
             hittable: false
           });
           const label = createText({
-            width: 1,
-            autoWidth: 1,
+            x: isFooterSplitPart ? 0 : void 0,
+            y: isFooterSplitPart ? -4 : void 0,
+            width: isFooterSplitPart ? layout.width : 1,
+            autoWidth: isFooterSplitPart ? 0 : 1,
             height: layout.height,
             textAlign: "center",
             text: String(schema.label || schema.id),
-            fontSize: 12,
-            fill: "#BBD0E6"
+            fontSize: isFooterSplitPart ? 13 : 12,
+            fill: isFooterSplitPart ? "#999" : "#BBD0E6"
           });
-          content.add(label);
-          root.add([background, outline, content]);
+          const glyph = isFooterSplitPart ? new di$1({
+            x: layout.width / 2,
+            y: layout.height / 2,
+            path: "M -5 0 L 5 0 M 0 -5 L 0 5",
+            fill: "rgba(0,0,0,0)",
+            stroke: "#B7C4D1",
+            strokeWidth: 1.75,
+            hittable: false
+          }) : null;
+          if (isFooterSplitPart) {
+            content.visible = false;
+            label.visible = false;
+            root.add([background, outline, glyph]);
+          } else {
+            content.add(label);
+            root.add([background, outline, content]);
+          }
           this.shell.actionPartLayer.add(root);
           this.actionPartEntries.push({
             schema,
@@ -18765,6 +18786,7 @@ var LiteGraphTSMigration = (function(exports) {
             outline,
             content,
             label,
+            glyph,
             layout
           });
         }
@@ -18782,14 +18804,30 @@ var LiteGraphTSMigration = (function(exports) {
           entry.background.height = entry.layout.height;
           entry.outline.width = Math.max(0, entry.layout.width);
           entry.outline.height = Math.max(0, entry.layout.height);
-          entry.outline.cornerRadius = entry.schema.placement === "footer-left" ? [0, 0, 10, 0] : entry.schema.placement === "footer-right" ? [0, 0, 0, 10] : 8;
-          entry.content.x = 8;
-          entry.content.width = Math.max(1, entry.layout.width - 16);
+          const isFooterSplitPart = entry.schema.placement === "footer-left" || entry.schema.placement === "footer-right";
+          entry.outline.cornerRadius = entry.schema.placement === "footer-left" ? 4 : entry.schema.placement === "footer-right" ? 4 : 8;
+          entry.background.fill = isFooterSplitPart ? "#20252C" : "#172332";
+          entry.background.stroke = isFooterSplitPart ? "#394454" : "#2B4663";
+          entry.background.strokeWidth = 1;
+          entry.content.visible = !isFooterSplitPart;
+          entry.content.x = isFooterSplitPart ? 0 : 8;
+          entry.content.width = Math.max(
+            1,
+            isFooterSplitPart ? entry.layout.width : entry.layout.width - 16
+          );
           entry.content.height = entry.layout.height;
-          entry.label.width = 1;
-          entry.label.autoWidth = 1;
+          entry.label.x = isFooterSplitPart ? 0 : 0;
+          entry.label.y = isFooterSplitPart ? -4 : 0;
+          entry.label.width = isFooterSplitPart ? entry.layout.width : 1;
+          entry.label.autoWidth = isFooterSplitPart ? 0 : 1;
           entry.label.height = entry.layout.height;
+          entry.label.fontSize = isFooterSplitPart ? 13 : 12;
+          entry.label.visible = !isFooterSplitPart;
           entry.label.text = String(entry.schema.label || entry.schema.id);
+          if (entry.glyph) {
+            entry.glyph.x = entry.layout.width / 2;
+            entry.glyph.y = entry.layout.height / 2;
+          }
         }
       }
       this.shellLayout.actionParts = layouts;
@@ -19319,6 +19357,19 @@ var LiteGraphTSMigration = (function(exports) {
           i2,
           entry.schema.id
         );
+        const isFooterSplitPart = entry.schema.placement === "footer-left" || entry.schema.placement === "footer-right";
+        if (isFooterSplitPart) {
+          entry.background.fill = state === "press" ? "#2D3A48" : state === "hover" ? "#283442" : "#20252C";
+          entry.background.stroke = state === "press" ? "#7EB2FF" : state === "hover" ? "#5D7898" : "#394454";
+          entry.outline.visible = state === "press" || state === "hover";
+          entry.outline.opacity = state === "press" ? 1 : state === "hover" ? 0.9 : 0;
+          entry.outline.stroke = state === "press" ? "#A4CAFF" : "#7EB2FF";
+          entry.outline.strokeWidth = state === "press" ? 2 : 1.5;
+          if (entry.glyph) {
+            entry.glyph.stroke = state === "press" ? "#F3F8FF" : state === "hover" ? "#DCEBFB" : "#B7C4D1";
+          }
+          continue;
+        }
         entry.background.fill = state === "press" ? "#1B3657" : state === "hover" ? "#21364E" : "#172332";
         entry.background.stroke = state === "press" ? "#76A8FF" : state === "hover" ? "#5A7FA8" : "#2B4663";
         entry.outline.visible = state === "press" || state === "hover";

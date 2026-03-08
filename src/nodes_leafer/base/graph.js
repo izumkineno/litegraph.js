@@ -71,24 +71,56 @@
                 }, 10);
             }
 
+            requestSubgraphPortPatch() {
+                this.requestModernPatch(
+                    ns.ModernNodeChangeMask.Layout |
+                        ns.ModernNodeChangeMask.Ports |
+                        ns.ModernNodeChangeMask.Data
+                );
+            }
+
             defineActionParts() {
                 if (this.flags && this.flags.collapsed) {
                     return [];
                 }
-                var width = Math.max((this.size && this.size[0]) || 0, 216);
-                var footerY = Math.max(0, ((this.size && this.size[1]) || 80) - 24);
-                var actionWidth = Math.max(72, width / 2 - 10);
+                var width = Math.max(
+                    0,
+                    Math.round((this.size && this.size[0]) || 0)
+                );
+                var bodyHeight = Math.max(
+                    0,
+                    Math.round((this.size && this.size[1]) || 0)
+                );
+                var sideInset = 12;
+                var buttonHeight = 20;
+                var bottomInset = 18;
+                var gap = 12;
+                var usableWidth = Math.max(96, width - sideInset * 2);
+                var buttonWidth = Math.max(
+                    44,
+                    Math.min(56, Math.floor((usableWidth - gap) / 2))
+                );
+                var pairWidth = buttonWidth * 2 + gap;
+                var footerY = Math.max(
+                    0,
+                    Math.round(bodyHeight - bottomInset - buttonHeight)
+                );
+                var leftX = Math.max(
+                    sideInset,
+                    Math.round((width - pairWidth) / 2)
+                );
+                var rightX = leftX + buttonWidth + gap;
                 return [
                     {
                         id: "subgraph-left",
                         action: "subgraph-left",
-                        label: "Input +",
+                        label: "+",
                         placement: "footer-left",
                         bounds: {
-                            x: 6,
+                            x: leftX,
                             y: footerY,
-                            width: actionWidth,
-                            height: 20,
+                            width: buttonWidth,
+                            height: buttonHeight,
                         },
                         onTrigger: function(context) {
                             if (context.graphcanvas) {
@@ -101,13 +133,13 @@
                     {
                         id: "subgraph-right",
                         action: "subgraph-right",
-                        label: "Output +",
+                        label: "+",
                         placement: "footer-right",
                         bounds: {
-                            x: width - actionWidth - 6,
+                            x: rightX,
                             y: footerY,
-                            width: actionWidth,
-                            height: 20,
+                            width: buttonWidth,
+                            height: buttonHeight,
                         },
                         onTrigger: function(context) {
                             if (context.graphcanvas) {
@@ -125,15 +157,10 @@
                     this,
                     context
                 );
-                var inputCount = this.inputs ? this.inputs.length : 0;
-                var outputCount = this.outputs ? this.outputs.length : 0;
-                shellState.headerMetaText = this.enabled ? "LIVE" : "OFF";
-                shellState.summaryText =
-                    inputCount || outputCount
-                        ? inputCount + " in / " + outputCount + " out"
-                        : "Double-click to open";
-                shellState.minimumWidth = 232;
-                shellState.minimumHeight = 88;
+                delete shellState.headerMetaText;
+                delete shellState.summaryText;
+                delete shellState.minimumWidth;
+                delete shellState.minimumHeight;
                 if (!this.enabled) {
                     shellState.bodyColor = "#171A1F";
                     shellState.borderColor = "#404754";
@@ -195,7 +222,7 @@
             onSubgraphTrigger(event, param) {
                 var slot = this.findOutputSlot(event);
                 if (slot !== -1) {
-                    this.triggerSlot(slot, param);
+                    this.triggerSlot(slot);
                 }
             }
 
@@ -203,11 +230,7 @@
                 var slot = this.findInputSlot(name);
                 if (slot === -1) {
                     this.addInput(name, type);
-                    this.syncModernPorts();
-                    this.requestModernPatch(
-                        ns.ModernNodeChangeMask.Layout |
-                            ns.ModernNodeChangeMask.Data
-                    );
+                    this.requestSubgraphPortPatch();
                 }
             }
 
@@ -217,11 +240,7 @@
                     return;
                 }
                 this.getInputInfo(slot).name = name;
-                this.syncModernPorts();
-                this.requestModernPatch(
-                    ns.ModernNodeChangeMask.Layout |
-                        ns.ModernNodeChangeMask.Data
-                );
+                this.requestSubgraphPortPatch();
             }
 
             onSubgraphTypeChangeInput(name, type) {
@@ -230,11 +249,7 @@
                     return;
                 }
                 this.getInputInfo(slot).type = type;
-                this.syncModernPorts();
-                this.requestModernPatch(
-                    ns.ModernNodeChangeMask.Layout |
-                        ns.ModernNodeChangeMask.Data
-                );
+                this.requestSubgraphPortPatch();
             }
 
             onSubgraphRemovedInput(name) {
@@ -243,22 +258,14 @@
                     return;
                 }
                 this.removeInput(slot);
-                this.syncModernPorts();
-                this.requestModernPatch(
-                    ns.ModernNodeChangeMask.Layout |
-                        ns.ModernNodeChangeMask.Data
-                );
+                this.requestSubgraphPortPatch();
             }
 
             onSubgraphNewOutput(name, type) {
                 var slot = this.findOutputSlot(name);
                 if (slot === -1) {
                     this.addOutput(name, type);
-                    this.syncModernPorts();
-                    this.requestModernPatch(
-                        ns.ModernNodeChangeMask.Layout |
-                            ns.ModernNodeChangeMask.Data
-                    );
+                    this.requestSubgraphPortPatch();
                 }
             }
 
@@ -268,11 +275,7 @@
                     return;
                 }
                 this.getOutputInfo(slot).name = name;
-                this.syncModernPorts();
-                this.requestModernPatch(
-                    ns.ModernNodeChangeMask.Layout |
-                        ns.ModernNodeChangeMask.Data
-                );
+                this.requestSubgraphPortPatch();
             }
 
             onSubgraphTypeChangeOutput(name, type) {
@@ -281,11 +284,7 @@
                     return;
                 }
                 this.getOutputInfo(slot).type = type;
-                this.syncModernPorts();
-                this.requestModernPatch(
-                    ns.ModernNodeChangeMask.Layout |
-                        ns.ModernNodeChangeMask.Data
-                );
+                this.requestSubgraphPortPatch();
             }
 
             onSubgraphRemovedOutput(name) {
@@ -294,11 +293,7 @@
                     return;
                 }
                 this.removeOutput(slot);
-                this.syncModernPorts();
-                this.requestModernPatch(
-                    ns.ModernNodeChangeMask.Layout |
-                        ns.ModernNodeChangeMask.Data
-                );
+                this.requestSubgraphPortPatch();
             }
 
             getExtraMenuOptions(graphcanvas) {

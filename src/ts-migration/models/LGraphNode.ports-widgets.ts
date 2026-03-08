@@ -275,7 +275,11 @@ export class LGraphNodePortsWidgets extends LGraphNodeExecution {
         type: string | -1,
         extra_info?: Partial<INodeInputSlot>
     ): INodeInputSlot {
-        const normalizedType = (type || (0 as unknown as -1 | string)) as
+        const normalizedType = (
+            type === undefined || type === null
+                ? (0 as unknown as -1 | string)
+                : (type as unknown)
+        ) as
             | string
             | -1
             | number;
