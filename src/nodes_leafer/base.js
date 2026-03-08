@@ -39,6 +39,10 @@
         "basic/script",
         "basic/CompareValues"
     ];
+    var SOURCE_TYPE_SET = SOURCE_TYPES.reduce(function(map, type) {
+        map[type] = true;
+        return map;
+    }, {});
 
     var AUTO_DIRTY_ON_EXECUTE = {
         "basic/time": true,
@@ -61,37 +65,15 @@
     };
 
     var CATEGORY_ACCENTS = {
-        graph: "#8B5CF6",
-        basic: "#37A8FF"
+        graph: "#5F8DFF",
+        basic: "#5F8DFF"
     };
 
+    // Keep a small explicit map only for nodes that benefit from semantic color.
+    // The baseline style remains unified through the shared default accent.
     var TYPE_ACCENTS = {
-        "basic/time": "#30C6B1",
-        "basic/watch": "#6EE7A8",
-        "basic/const": "#4D8DFF",
-        "basic/boolean": "#53D1B4",
-        "basic/string": "#FFB86B",
-        "basic/object": "#68B2E3",
-        "basic/file": "#B695E0",
-        "basic/jsonparse": "#F9C74F",
-        "basic/data": "#F7A072",
-        "basic/array": "#8F67FF",
-        "basic/set_array": "#8F67FF",
-        "basic/array[]": "#8F67FF",
-        "basic/table[][]": "#8F67FF",
-        "basic/object_property": "#5A9BFF",
-        "basic/object_keys": "#5A9BFF",
-        "basic/set_object": "#5A9BFF",
-        "basic/merge_objects": "#5A9BFF",
-        "basic/variable": "#4ADE80",
-        "basic/download": "#FB923C",
-        "basic/console": "#FB923C",
         "basic/alert": "#F97373",
-        "basic/script": "#F43F5E",
-        "basic/CompareValues": "#A3E635",
-        "graph/subgraph": "#A855F7",
-        "graph/input": "#A855F7",
-        "graph/output": "#A855F7"
+        "basic/script": "#F43F5E"
     };
 
     var UI_THEME = {
@@ -162,6 +144,17 @@
         return color.slice(0, 7).toUpperCase();
     }
 
+    function tryNormalizeHexColor(color) {
+        if (typeof color !== "string") {
+            return null;
+        }
+        var trimmed = color.trim();
+        if (!/^#[0-9a-fA-F]{3}$/.test(trimmed) && !/^#[0-9a-fA-F]{6}$/.test(trimmed)) {
+            return null;
+        }
+        return normalizeHexColor(trimmed);
+    }
+
     function hexToRgb(color) {
         var normalized = normalizeHexColor(color);
         return {
@@ -216,7 +209,11 @@
     }
 
     function getTargetType(sourceType) {
-        return "leafer/" + sourceType;
+        return String(sourceType || "");
+    }
+
+    function isLeaferModernNodeType(ctor) {
+        return !!(ctor && ctor.__litegraphLeaferModernWrapper);
     }
 
     function getNodeType(node) {
@@ -232,7 +229,7 @@
     }
 
     function getSourceType(node) {
-        return getNodeType(node).replace(/^leafer\//, "") || node._leaferSourceType || "basic/node";
+        return getNodeType(node) || node._leaferSourceType || "basic/node";
     }
 
     function markNodeDirty(node) {
@@ -410,14 +407,43 @@
     }
 
     function resolveAccentColor(node, sourceType) {
-        if (node && typeof node.boxcolor === "string" && node.boxcolor) {
-            return normalizeHexColor(node.boxcolor);
+        var explicitColor = tryNormalizeHexColor(node && node.color);
+        if (explicitColor) {
+            return explicitColor;
+        }
+        var nodeBoxColor = tryNormalizeHexColor(node && node.boxcolor);
+        if (nodeBoxColor) {
+            return nodeBoxColor;
+        }
+        var ctorColor = tryNormalizeHexColor(node && node.constructor && node.constructor.color);
+        if (ctorColor) {
+            return ctorColor;
         }
         if (TYPE_ACCENTS[sourceType]) {
             return TYPE_ACCENTS[sourceType];
         }
         var category = String(sourceType).split("/")[0];
-        return CATEGORY_ACCENTS[category] || "#37A8FF";
+        return (
+            tryNormalizeHexColor(LiteGraph.NODE_DEFAULT_COLOR) ||
+            CATEGORY_ACCENTS[category] ||
+            "#5F8DFF"
+        );
+    }
+
+    function resolveSurfaceColor(node, accent) {
+        var explicitBg = tryNormalizeHexColor(node && node.bgcolor);
+        if (explicitBg) {
+            return explicitBg;
+        }
+        var ctorBg = tryNormalizeHexColor(node && node.constructor && node.constructor.bgcolor);
+        if (ctorBg) {
+            return ctorBg;
+        }
+        var defaultBg = tryNormalizeHexColor(LiteGraph.NODE_DEFAULT_BGCOLOR);
+        if (defaultBg) {
+            return defaultBg;
+        }
+        return darken(accent, 0.78);
     }
 
     function resolveSlotColor(slot, isInput) {
@@ -1117,6 +1143,10 @@
         });
         var state = {
             accent: resolveAccentColor(node, sourceType),
+            surface: UI_THEME.surface,
+            surfaceRaised: UI_THEME.surfaceRaised,
+            surfacePanel: UI_THEME.surfacePanel,
+            surfaceMuted: UI_THEME.surfaceMuted,
             frame: createRect(leafer, {
                 x: 0,
                 y: 0,
@@ -1608,6 +1638,10 @@
         var state = shell.__litegraphModernState;
         var leafer = context.leafer;
         var accent = resolveAccentColor(node, sourceType);
+        var surface = resolveSurfaceColor(node, accent);
+        var surfaceRaised = mixColor(surface, accent, 0.22);
+        var surfacePanel = darken(surface, 0.14);
+        var surfaceMuted = darken(surface, 0.08);
         var layout = buildShellLayout(node, sourceType);
         var collapsed = !!(node && node.flags && node.flags.collapsed);
         var frameRadius = collapsed ? 15 : 18;
@@ -1624,6 +1658,10 @@
         var footerText = describeFooter(node, sourceType);
 
         state.accent = accent;
+        state.surface = surface;
+        state.surfaceRaised = surfaceRaised;
+        state.surfacePanel = surfacePanel;
+        state.surfaceMuted = surfaceMuted;
         state.layout = layout;
 
         state.frame.width = layout.width;
@@ -1733,6 +1771,10 @@
 
     function applyInteractionState(node, state, interaction) {
         var accent = state.accent || "#37A8FF";
+        var surface = state.surface || UI_THEME.surface;
+        var surfaceRaised = state.surfaceRaised || UI_THEME.surfaceRaised;
+        var surfacePanel = state.surfacePanel || UI_THEME.surfacePanel;
+        var surfaceMuted = state.surfaceMuted || UI_THEME.surfaceMuted;
         var isSelected = !!(node && node.is_selected);
         var hoveredPart = interaction && interaction.hoveredPart;
         var pressedPart = interaction && interaction.pressedPart;
@@ -1741,7 +1783,7 @@
         var dragging = !!(interaction && interaction.dragging);
         var resizing = !!(interaction && interaction.resizing);
 
-        state.frame.fill = hovered ? darken(accent, 0.88) : UI_THEME.surface;
+        state.frame.fill = hovered ? mixColor(surface, accent, 0.12) : surface;
         state.frame.stroke = isSelected
             ? lighten(accent, 0.18)
             : hovered
@@ -1749,10 +1791,10 @@
                 : UI_THEME.border;
         state.frameOutline.stroke = isSelected ? rgba("#FFFFFF", 0.08) : rgba("#FFFFFF", 0.02);
         state.header.fill = dragging || resizing
-            ? darken(accent, 0.78)
+            ? mixColor(surfaceRaised, accent, 0.32)
             : hovered
-                ? darken(accent, 0.84)
-                : UI_THEME.surfaceRaised;
+                ? mixColor(surfaceRaised, accent, 0.2)
+                : surfaceRaised;
         state.headerDivider.fill = hovered ? rgba(accent, 0.24) : UI_THEME.borderSoft;
         state.title.fill = isSelected ? "#FFFFFF" : UI_THEME.text;
         state.subtitle.fill = hovered ? lighten(accent, 0.36) : UI_THEME.textSoft;
@@ -1773,11 +1815,11 @@
             : hovered
                 ? lighten(accent, 0.08)
                 : accent;
-        state.summarySurface.fill = hovered ? rgba(accent, 0.09) : UI_THEME.surfacePanel;
+        state.summarySurface.fill = hovered ? rgba(accent, 0.09) : surfacePanel;
         state.summarySurface.stroke = hovered ? rgba(accent, 0.22) : UI_THEME.borderSoft;
-        state.portSurface.fill = hovered ? rgba(accent, 0.06) : UI_THEME.surfaceMuted;
+        state.portSurface.fill = hovered ? rgba(accent, 0.06) : surfaceMuted;
         state.portSurface.stroke = hovered ? rgba(accent, 0.2) : UI_THEME.borderSoft;
-        state.widgetSurface.fill = hovered ? rgba(accent, 0.04) : darken(UI_THEME.surfacePanel, 0.08);
+        state.widgetSurface.fill = hovered ? rgba(accent, 0.04) : darken(surfacePanel, 0.08);
         state.widgetSurface.stroke = hovered ? rgba(accent, 0.18) : UI_THEME.borderSoft;
 
         setControlState(
@@ -1871,11 +1913,13 @@
         };
     }
 
-    function createLeaferNodeType(sourceType) {
-        var BaseCtor = LiteGraph.registered_node_types[sourceType];
+    function createLeaferNodeType(sourceType, baseCtor, registerNodeTypeFn) {
+        var BaseCtor = baseCtor || LiteGraph.registered_node_types[sourceType];
         if (!BaseCtor) {
-            console.warn("nodes_leafer/base.js: source node type not found:", sourceType);
             return null;
+        }
+        if (isLeaferModernNodeType(BaseCtor)) {
+            return BaseCtor;
         }
 
         var ctorName = toCtorName(getTargetType(sourceType));
@@ -1890,6 +1934,7 @@
         )(BaseCtor, sourceType);
 
         cloneStaticProperties(LeaferNode, BaseCtor);
+        LeaferNode.__litegraphLeaferModernWrapper = true;
         LeaferNode.leaferSourceType = sourceType;
         LeaferNode.leaferTargetType = getTargetType(sourceType);
         LeaferNode.title = BaseCtor.title;
@@ -1924,16 +1969,50 @@
             });
         }
 
-        LiteGraph.registerNodeType(getTargetType(sourceType), LeaferNode);
+        (registerNodeTypeFn || LiteGraph.registerNodeType)(
+            getTargetType(sourceType),
+            LeaferNode
+        );
         return LeaferNode;
+    }
+
+    function ensureLeaferNodeType(sourceType, baseCtor, registerNodeTypeFn) {
+        var targetType = getTargetType(sourceType);
+        var existingCtor = LiteGraph.registered_node_types[targetType];
+        if (isLeaferModernNodeType(existingCtor) && existingCtor.leaferSourceType === sourceType) {
+            return existingCtor;
+        }
+        return createLeaferNodeType(sourceType, baseCtor, registerNodeTypeFn);
+    }
+
+    function installLeaferBaseRegistrationHook() {
+        if (
+            LiteGraph.registerNodeType &&
+            LiteGraph.registerNodeType.__litegraphLeaferBaseWrapped
+        ) {
+            return;
+        }
+
+        var originalRegisterNodeType = LiteGraph.registerNodeType.bind(LiteGraph);
+        var wrappedRegisterNodeType = function(type, ctor) {
+            originalRegisterNodeType(type, ctor);
+            if (SOURCE_TYPE_SET[type] && ctor && !isLeaferModernNodeType(ctor)) {
+                ensureLeaferNodeType(type, ctor, originalRegisterNodeType);
+            }
+        };
+
+        wrappedRegisterNodeType.__litegraphLeaferBaseWrapped = true;
+        wrappedRegisterNodeType.__litegraphLeaferBaseOriginal = originalRegisterNodeType;
+        LiteGraph.registerNodeType = wrappedRegisterNodeType;
     }
 
     function registerLeaferBaseNodes() {
         var mapping = {};
         SOURCE_TYPES.forEach(function(sourceType) {
             var targetType = getTargetType(sourceType);
-            if (!LiteGraph.registered_node_types[targetType]) {
-                createLeaferNodeType(sourceType);
+            var baseCtor = LiteGraph.registered_node_types[sourceType];
+            if (baseCtor && !isLeaferModernNodeType(baseCtor)) {
+                ensureLeaferNodeType(sourceType, baseCtor);
             }
             mapping[sourceType] = targetType;
         });
@@ -1941,6 +2020,7 @@
         return mapping;
     }
 
+    installLeaferBaseRegistrationHook();
     LiteGraph.registerLeaferBaseNodes = registerLeaferBaseNodes;
     registerLeaferBaseNodes();
 })(typeof window !== "undefined" ? window : globalThis);

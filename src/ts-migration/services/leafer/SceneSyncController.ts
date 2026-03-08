@@ -36,6 +36,7 @@ interface RuntimeAnimatedNode extends GraphMutationNodeLike {
 
 interface RuntimeAnimatedLink extends GraphMutationLinkLike {
     _last_time?: number;
+    _pos?: Float32Array | [number, number];
     color?: unknown;
 }
 
@@ -46,6 +47,76 @@ function toMutationKey(id: GraphMutationNodeId | GraphMutationLinkId): string {
 function toFiniteNumber(value: unknown, fallback = 0): number {
     const numericValue = Number(value);
     return Number.isFinite(numericValue) ? numericValue : fallback;
+}
+
+interface RenderBoundsLike {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+}
+
+function toRenderBoundsLike(value: unknown): RenderBoundsLike | null {
+    if (!value || typeof value !== "object") {
+        return null;
+    }
+
+    const bounds = value as {
+        x?: unknown;
+        y?: unknown;
+        width?: unknown;
+        height?: unknown;
+    };
+    const x = toFiniteNumber(bounds.x);
+    const y = toFiniteNumber(bounds.y);
+    const width = Math.max(0, toFiniteNumber(bounds.width));
+    const height = Math.max(0, toFiniteNumber(bounds.height));
+
+    if (!width || !height) {
+        return null;
+    }
+
+    return { x, y, width, height };
+}
+
+function mergeRenderBounds(
+    first: RenderBoundsLike | null,
+    second: RenderBoundsLike | null
+): RenderBoundsLike | null {
+    if (!first) {
+        return second ? { ...second } : null;
+    }
+    if (!second) {
+        return { ...first };
+    }
+
+    const left = Math.min(first.x, second.x);
+    const top = Math.min(first.y, second.y);
+    const right = Math.max(first.x + first.width, second.x + second.width);
+    const bottom = Math.max(first.y + first.height, second.y + second.height);
+
+    return {
+        x: left,
+        y: top,
+        width: right - left,
+        height: bottom - top,
+    };
+}
+
+function expandRenderBounds(
+    bounds: RenderBoundsLike | null,
+    padding = 6
+): RenderBoundsLike | null {
+    if (!bounds) {
+        return null;
+    }
+
+    return {
+        x: bounds.x - padding,
+        y: bounds.y - padding,
+        width: bounds.width + padding * 2,
+        height: bounds.height + padding * 2,
+    };
 }
 
 export class SceneSyncController {
@@ -64,6 +135,18 @@ export class SceneSyncController {
     private readonly activeLinkIds = new Set<GraphMutationLinkId>();
     private readonly pendingSettledNodeRepaints = new Set<GraphMutationNodeId>();
     private runtimeAnimationFrame: number | null = null;
+    private readonly getViewportScale = (): number =>
+        Math.max(
+            1,
+            toFiniteNumber(
+                (
+                    this.appHost.treeZoomLayer as {
+                        scaleX?: unknown;
+                    }
+                ).scaleX,
+                1
+            )
+        );
 
     constructor(
         private readonly graph: GraphMutationGraphLike,
@@ -165,6 +248,12 @@ export class SceneSyncController {
         }
     }
 
+    repaintAllLinkViews(): void {
+        for (const [linkId, link] of this.linksById.entries()) {
+            this.syncLinkView(linkId, link);
+        }
+    }
+
     syncNodeMoved(
         nodeId: GraphMutationNodeId,
         node?: GraphMutationNodeLike
@@ -173,8 +262,11 @@ export class SceneSyncController {
             this.nodesById.set(nodeId, node);
         }
 
+        const previousBounds = this.captureNodeClusterBounds(nodeId);
         this.nodeHosts.get(nodeId)?.syncPosition();
         this.updateIncidentLinks(nodeId);
+        const nextBounds = this.captureNodeClusterBounds(nodeId);
+        this.requestSceneRender(mergeRenderBounds(previousBounds, nextBounds));
     }
 
     private hydrateFromGraph(): void {
@@ -256,7 +348,11 @@ export class SceneSyncController {
                 pos: [number, number];
                 size: [number, number];
             },
-            this.renderHost
+            this.renderHost,
+            {
+                view: this.appHost.view,
+                getViewportScale: this.getViewportScale,
+            }
         );
         this.appHost.legacyNodeLayer.add(nodeHost.root);
         return nodeHost;
@@ -306,7 +402,11 @@ export class SceneSyncController {
         }
 
         const linkView = new LinkViewHost(
-            `litegraph-link-view:${toMutationKey(linkId)}`
+            `litegraph-link-view:${toMutationKey(linkId)}`,
+            {
+                view: this.appHost.view,
+                getViewportScale: this.getViewportScale,
+            }
         );
         this.appHost.linkLayerBack.add(linkView.view);
         this.linkViews.set(linkId, linkView);
@@ -347,8 +447,11 @@ export class SceneSyncController {
             this.nodesById.set(nodeId, node);
         }
 
+        const previousBounds = this.captureNodeClusterBounds(nodeId);
         this.nodeHosts.get(nodeId)?.repaint();
         this.updateIncidentLinks(nodeId);
+        const nextBounds = this.captureNodeClusterBounds(nodeId);
+        this.requestSceneRender(mergeRenderBounds(previousBounds, nextBounds));
     }
 
     private installNodeDirtyBridge(node: GraphMutationNodeLike): void {
@@ -434,6 +537,32 @@ export class SceneSyncController {
         }
     }
 
+    private captureNodeClusterBounds(
+        nodeId: GraphMutationNodeId
+    ): RenderBoundsLike | null {
+        const nodeHost = this.nodeHosts.get(nodeId);
+        let clusterBounds = this.captureWorldRenderBounds(nodeHost?.root);
+
+        const incidentLinks = this.linksByNodeId.get(nodeId);
+        if (incidentLinks?.size) {
+            for (const linkId of incidentLinks) {
+                const linkView = this.linkViews.get(linkId);
+                clusterBounds = mergeRenderBounds(
+                    clusterBounds,
+                    this.captureWorldRenderBounds(linkView?.view)
+                );
+            }
+        }
+
+        return expandRenderBounds(clusterBounds);
+    }
+
+    private captureWorldRenderBounds(
+        target: { worldRenderBounds?: unknown } | null | undefined
+    ): RenderBoundsLike | null {
+        return toRenderBoundsLike(target?.worldRenderBounds);
+    }
+
     private syncLinkView(
         linkId: GraphMutationLinkId,
         providedLink?: GraphMutationLinkLike,
@@ -465,6 +594,7 @@ export class SceneSyncController {
             curve,
             now
         );
+        this.syncLinkMidpoint(link as RuntimeAnimatedLink, curve);
         view.update({
             curve,
             stroke: (link.color as string) || "#9A9",
@@ -493,7 +623,13 @@ export class SceneSyncController {
         return runtimeWindow.performance?.now?.() ?? Date.now();
     }
 
-    private requestSceneRender(): void {
+    private requestSceneRender(bounds?: RenderBoundsLike | null): void {
+        const partialBounds = toRenderBoundsLike(bounds);
+        if (partialBounds) {
+            this.appHost.app.forceRender(partialBounds);
+            return;
+        }
+
         if (typeof this.appHost.app.requestRender === "function") {
             this.appHost.app.requestRender();
             return;
@@ -684,5 +820,18 @@ export class SceneSyncController {
             dotRadius: 5,
             dots,
         };
+    }
+
+    private syncLinkMidpoint(
+        link: RuntimeAnimatedLink,
+        curve: Exclude<ReturnType<NodePortAdapter["getLinkCurve"]>, null>
+    ): void {
+        const midpoint = this.nodePortAdapter.getPointOnLinkCurve(curve, 0.5);
+        const target = ArrayBuffer.isView(link._pos)
+            ? link._pos
+            : (link._pos = new Float32Array(2));
+
+        target[0] = midpoint[0];
+        target[1] = midpoint[1];
     }
 }

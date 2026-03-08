@@ -41,6 +41,8 @@ export class LeaferAppHost {
             view: this.view,
             fill: options.fill ?? "transparent",
             pixelSnap: true,
+            usePartRender: true,
+            usePartLayout: true,
             ground: {
                 hittable: false,
             },

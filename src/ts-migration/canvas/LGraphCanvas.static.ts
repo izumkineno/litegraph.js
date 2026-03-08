@@ -1096,14 +1096,26 @@ export class LGraphCanvas {
             };
 
             const graphcanvas = LGraphCanvas.active_canvas as LGraphCanvasRuntimeLike;
-            if (!graphcanvas.selected_nodes || Object.keys(graphcanvas.selected_nodes).length <= 1) {
-                fApplyColor(node);
+            const targets: LGraphNodeLike[] = [];
+            if (
+                !graphcanvas.selected_nodes ||
+                Object.keys(graphcanvas.selected_nodes).length <= 1
+            ) {
+                targets.push(node);
             } else {
                 for (const i in graphcanvas.selected_nodes) {
-                    fApplyColor(graphcanvas.selected_nodes[i]);
+                    const target = graphcanvas.selected_nodes[i];
+                    if (target) {
+                        targets.push(target);
+                    }
                 }
             }
-            node.setDirtyCanvas!(true, true);
+
+            for (let index = 0; index < targets.length; index += 1) {
+                const target = targets[index];
+                fApplyColor(target);
+                target.setDirtyCanvas?.(true, true);
+            }
         }
 
         return false;

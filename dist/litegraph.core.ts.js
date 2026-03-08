@@ -9,7 +9,7 @@ var LiteGraphTSMigration = (function(exports) {
   function s(t2) {
     return void 0 === t2;
   }
-  function r(t2) {
+  function r$1(t2) {
     return null == t2;
   }
   function i(t2) {
@@ -1457,9 +1457,9 @@ var LiteGraphTSMigration = (function(exports) {
     }
   }, ellipse(t2, e2, s2, i2, n2, o2, a2, h2, l2) {
     if (i2 === n2) return Tr(t2, e2, s2, i2, a2, h2, l2);
-    r(o2) ? t2.push(fr, e2, s2, i2, n2) : (r(a2) && (a2 = 0), r(h2) && (h2 = 360), t2.push(pr, e2, s2, i2, n2, o2, a2, h2, l2 ? 1 : 0));
+    r$1(o2) ? t2.push(fr, e2, s2, i2, n2) : (r$1(a2) && (a2 = 0), r$1(h2) && (h2 = 360), t2.push(pr, e2, s2, i2, n2, o2, a2, h2, l2 ? 1 : 0));
   }, arc(t2, e2, s2, i2, n2, o2, a2) {
-    r(n2) ? t2.push(yr, e2, s2, i2) : (r(n2) && (n2 = 0), r(o2) && (o2 = 360), t2.push(gr, e2, s2, i2, n2, o2, a2 ? 1 : 0));
+    r$1(n2) ? t2.push(yr, e2, s2, i2) : (r$1(n2) && (n2 = 0), r$1(o2) && (o2 = 360), t2.push(gr, e2, s2, i2, n2, o2, a2 ? 1 : 0));
   }, arcTo(t2, e2, r2, i2, n2, o2, a2, h2, l2) {
     if (!s(a2)) {
       const t3 = xr(a2, h2, e2, r2, i2, n2) / (l2 ? 1 : 2);
@@ -1467,9 +1467,9 @@ var LiteGraphTSMigration = (function(exports) {
     }
     t2.push(mr, e2, r2, i2, n2, o2);
   }, drawEllipse(t2, e2, s2, i2, n2, o2, a2, h2, l2) {
-    hs.ellipse(null, e2, s2, i2, n2, r(o2) ? 0 : o2, r(a2) ? 0 : a2, r(h2) ? 360 : h2, l2, null, null, kr), t2.push(or, kr.x, kr.y), Or(t2, e2, s2, i2, n2, o2, a2, h2, l2);
+    hs.ellipse(null, e2, s2, i2, n2, r$1(o2) ? 0 : o2, r$1(a2) ? 0 : a2, r$1(h2) ? 360 : h2, l2, null, null, kr), t2.push(or, kr.x, kr.y), Or(t2, e2, s2, i2, n2, o2, a2, h2, l2);
   }, drawArc(t2, e2, s2, i2, n2, o2, a2) {
-    hs.arc(null, e2, s2, i2, r(n2) ? 0 : n2, r(o2) ? 360 : o2, a2, null, null, kr), t2.push(or, kr.x, kr.y), Tr(t2, e2, s2, i2, n2, o2, a2);
+    hs.arc(null, e2, s2, i2, r$1(n2) ? 0 : n2, r$1(o2) ? 360 : o2, a2, null, null, kr), t2.push(or, kr.x, kr.y), Tr(t2, e2, s2, i2, n2, o2, a2);
   }, drawPoints(t2, e2, s2, r2) {
     hs.points(t2, e2, s2, r2);
   } }, { ellipse: Or, arc: Tr } = Cr, { moveTo: Pr, lineTo: Sr, quadraticCurveTo: Lr, bezierCurveTo: Rr, closePath: Er, beginPath: Ir, rect: Mr, roundRect: Ar, ellipse: Wr, arc: Nr, arcTo: Yr, drawEllipse: Dr, drawArc: Xr, drawPoints: zr } = Cr;
@@ -5315,7 +5315,7 @@ var LiteGraphTSMigration = (function(exports) {
       canvasPrototype: bundle.LGraphCanvas.prototype
     });
   }
-  function clamp(v2, a2, b2) {
+  function clamp$1(v2, a2, b2) {
     return a2 > v2 ? a2 : b2 < v2 ? b2 : v2;
   }
   const defaultBridgeOptions = {
@@ -5355,7 +5355,7 @@ var LiteGraphTSMigration = (function(exports) {
       liteGraph.CurveEditor = runtime2.CurveEditor;
     }
     if (resolved.exposeClamp) {
-      globalScope.clamp = clamp;
+      globalScope.clamp = clamp$1;
     }
     if (resolved.installRequestAnimationFrameShim) {
       installRequestAnimationFrameShim(globalScope);
@@ -7105,6 +7105,7 @@ var LiteGraphTSMigration = (function(exports) {
         node: node2
       });
       function inner_clicked(v2) {
+        var _a3;
         if (!node2) {
           return;
         }
@@ -7124,14 +7125,22 @@ var LiteGraphTSMigration = (function(exports) {
           }
         };
         const graphcanvas = _a2.active_canvas;
+        const targets = [];
         if (!graphcanvas.selected_nodes || Object.keys(graphcanvas.selected_nodes).length <= 1) {
-          fApplyColor(node2);
+          targets.push(node2);
         } else {
           for (const i2 in graphcanvas.selected_nodes) {
-            fApplyColor(graphcanvas.selected_nodes[i2]);
+            const target = graphcanvas.selected_nodes[i2];
+            if (target) {
+              targets.push(target);
+            }
           }
         }
-        node2.setDirtyCanvas(true, true);
+        for (let index = 0; index < targets.length; index += 1) {
+          const target = targets[index];
+          fApplyColor(target);
+          (_a3 = target.setDirtyCanvas) == null ? void 0 : _a3.call(target, true, true);
+        }
       }
       return false;
     }
@@ -8598,7 +8607,7 @@ var LiteGraphTSMigration = (function(exports) {
   function toMutationKey$1(nodeId) {
     return String(nodeId);
   }
-  function toFiniteNumber$7(value, fallback = 0) {
+  function toFiniteNumber$8(value, fallback = 0) {
     const numericValue = Number(value);
     return Number.isFinite(numericValue) ? numericValue : fallback;
   }
@@ -8612,7 +8621,7 @@ var LiteGraphTSMigration = (function(exports) {
     return "mouseup";
   }
   function resolveButtons(event2) {
-    return toFiniteNumber$7(event2.buttons);
+    return toFiniteNumber$8(event2.buttons);
   }
   function resolveButton(event2) {
     const pointerEvent = event2;
@@ -8643,21 +8652,21 @@ var LiteGraphTSMigration = (function(exports) {
   function buildLocalPosMap(event2, targets) {
     const localPosByNodeId = /* @__PURE__ */ new Map();
     const pagePoint = event2.getPagePoint();
-    const pageX = toFiniteNumber$7(pagePoint.x);
-    const pageY = toFiniteNumber$7(pagePoint.y);
+    const pageX = toFiniteNumber$8(pagePoint.x);
+    const pageY = toFiniteNumber$8(pagePoint.y);
     for (let i2 = 0; i2 < targets.length; ++i2) {
       const target = targets[i2];
       if (target.nodePosition) {
         localPosByNodeId.set(toMutationKey$1(target.nodeId), [
-          pageX - toFiniteNumber$7(target.nodePosition[0]),
-          pageY - toFiniteNumber$7(target.nodePosition[1])
+          pageX - toFiniteNumber$8(target.nodePosition[0]),
+          pageY - toFiniteNumber$8(target.nodePosition[1])
         ]);
         continue;
       }
       const localPoint = event2.getInnerPoint(target.nodeRoot);
       localPosByNodeId.set(toMutationKey$1(target.nodeId), [
-        toFiniteNumber$7(localPoint.x),
-        toFiniteNumber$7(localPoint.y)
+        toFiniteNumber$8(localPoint.x),
+        toFiniteNumber$8(localPoint.y)
       ]);
     }
     return localPosByNodeId;
@@ -8665,11 +8674,11 @@ var LiteGraphTSMigration = (function(exports) {
   function createLegacyPointerEvent(options) {
     const { event: event2, hostElement } = options;
     const pagePoint = event2.getPagePoint();
-    const canvasX = toFiniteNumber$7(pagePoint.x);
-    const canvasY = toFiniteNumber$7(pagePoint.y);
+    const canvasX = toFiniteNumber$8(pagePoint.x);
+    const canvasY = toFiniteNumber$8(pagePoint.y);
     const hostRect = hostElement.getBoundingClientRect();
-    const clientX = toFiniteNumber$7(event2.clientX, hostRect.left + canvasX);
-    const clientY = toFiniteNumber$7(event2.clientY, hostRect.top + canvasY);
+    const clientX = toFiniteNumber$8(event2.clientX, hostRect.left + canvasX);
+    const clientY = toFiniteNumber$8(event2.clientY, hostRect.top + canvasY);
     const button = resolveButton(event2);
     const buttons = resolveButtons(event2);
     const localPosByNodeId = buildLocalPosMap(event2, options.targets || []);
@@ -8689,22 +8698,22 @@ var LiteGraphTSMigration = (function(exports) {
       type: resolveMouseType(options.type),
       canvasX,
       canvasY,
-      pageX: toFiniteNumber$7(event2.pageX, clientX),
-      pageY: toFiniteNumber$7(event2.pageY, clientY),
+      pageX: toFiniteNumber$8(event2.pageX, clientX),
+      pageY: toFiniteNumber$8(event2.pageY, clientY),
       clientX,
       clientY,
-      screenX: toFiniteNumber$7(event2.screenX, clientX),
-      screenY: toFiniteNumber$7(event2.screenY, clientY),
+      screenX: toFiniteNumber$8(event2.screenX, clientX),
+      screenY: toFiniteNumber$8(event2.screenY, clientY),
       offsetX: canvasX,
       offsetY: canvasY,
-      deltaX: toFiniteNumber$7(options.deltaX),
-      deltaY: toFiniteNumber$7(options.deltaY),
-      deltax: toFiniteNumber$7(options.deltaX),
-      deltay: toFiniteNumber$7(options.deltaY),
+      deltaX: toFiniteNumber$8(options.deltaX),
+      deltaY: toFiniteNumber$8(options.deltaY),
+      deltax: toFiniteNumber$8(options.deltaX),
+      deltay: toFiniteNumber$8(options.deltaY),
       which: resolveWhich(button),
       button,
       buttons,
-      click_time: Math.max(0, toFiniteNumber$7(options.clickTime)),
+      click_time: Math.max(0, toFiniteNumber$8(options.clickTime)),
       dragging: Boolean(options.dragging),
       shiftKey: Boolean(event2.shiftKey),
       ctrlKey: Boolean(event2.ctrlKey),
@@ -9085,17 +9094,17 @@ var LiteGraphTSMigration = (function(exports) {
   const PORT_DIRECTION_RIGHT = 2;
   const PORT_DIRECTION_DOWN = 3;
   const PORT_DIRECTION_LEFT = 4;
-  function toFiniteNumber$6(value, fallback = 0) {
+  function toFiniteNumber$7(value, fallback = 0) {
     const numericValue = Number(value);
     return Number.isFinite(numericValue) ? numericValue : fallback;
   }
   function toPoint$1(value) {
     if (Array.isArray(value) || ArrayBuffer.isView(value) || typeof value === "object" && value !== null && "0" in value && "1" in value) {
       const indexedValue = value;
-      return [toFiniteNumber$6(indexedValue[0]), toFiniteNumber$6(indexedValue[1])];
+      return [toFiniteNumber$7(indexedValue[0]), toFiniteNumber$7(indexedValue[1])];
     }
     const point = value;
-    return [toFiniteNumber$6(point.x), toFiniteNumber$6(point.y)];
+    return [toFiniteNumber$7(point.x), toFiniteNumber$7(point.y)];
   }
   function distance(a2, b2) {
     const dx = b2[0] - a2[0];
@@ -9144,10 +9153,10 @@ var LiteGraphTSMigration = (function(exports) {
         if (!bounds) {
           continue;
         }
-        const left = toFiniteNumber$6(bounds[0]);
-        const top = toFiniteNumber$6(bounds[1]);
-        const width2 = toFiniteNumber$6(bounds[2]);
-        const height = toFiniteNumber$6(bounds[3]);
+        const left = toFiniteNumber$7(bounds[0]);
+        const top = toFiniteNumber$7(bounds[1]);
+        const width2 = toFiniteNumber$7(bounds[2]);
+        const height = toFiniteNumber$7(bounds[3]);
         if (x2 >= left && x2 <= left + width2 && y2 >= top && y2 <= top + height) {
           return node2;
         }
@@ -9207,7 +9216,7 @@ var LiteGraphTSMigration = (function(exports) {
         slotIndex
       );
       if (hostAnchor) {
-        return [toFiniteNumber$6(hostAnchor[0]), toFiniteNumber$6(hostAnchor[1])];
+        return [toFiniteNumber$7(hostAnchor[0]), toFiniteNumber$7(hostAnchor[1])];
       }
       const node2 = this.getNodeById(nodeId);
       if (!node2 || typeof node2.getConnectionPos !== "function") {
@@ -9220,8 +9229,8 @@ var LiteGraphTSMigration = (function(exports) {
       if (typeof rawPoint === "object" && rawPoint !== null && "0" in rawPoint) {
         const indexedPoint = rawPoint;
         return [
-          toFiniteNumber$6(indexedPoint[0]),
-          toFiniteNumber$6(indexedPoint[1])
+          toFiniteNumber$7(indexedPoint[0]),
+          toFiniteNumber$7(indexedPoint[1])
         ];
       }
       return toPoint$1(rawPoint);
@@ -9234,14 +9243,14 @@ var LiteGraphTSMigration = (function(exports) {
         slotIndex
       );
       if (hostDirection != null) {
-        const normalizedDirection = toFiniteNumber$6(hostDirection, 0);
+        const normalizedDirection = toFiniteNumber$7(hostDirection, 0);
         if (normalizedDirection) {
           return normalizedDirection;
         }
       }
       const slotList = kind === "input" ? node2.inputs : node2.outputs;
       const resolvedSlot = slot || (slotList == null ? void 0 : slotList[slotIndex]) || null;
-      const explicitDir = toFiniteNumber$6(resolvedSlot == null ? void 0 : resolvedSlot.dir, 0);
+      const explicitDir = toFiniteNumber$7(resolvedSlot == null ? void 0 : resolvedSlot.dir, 0);
       if (explicitDir) {
         return explicitDir;
       }
@@ -9324,7 +9333,7 @@ var LiteGraphTSMigration = (function(exports) {
       return this.buildLinkCurve(start, end, startDir, endDir).path;
     }
     getPointOnLinkCurve(curve, t2) {
-      const clampedT = Math.max(0, Math.min(1, toFiniteNumber$6(t2, 0)));
+      const clampedT = Math.max(0, Math.min(1, toFiniteNumber$7(t2, 0)));
       const oneMinusT = 1 - clampedT;
       const c1 = oneMinusT * oneMinusT * oneMinusT;
       const c2 = 3 * oneMinusT * oneMinusT * clampedT;
@@ -11852,7 +11861,7 @@ var LiteGraphTSMigration = (function(exports) {
     isData: c,
     isEmptyData: u$1,
     isFinite: n,
-    isNull: r,
+    isNull: r$1,
     isNumber: o,
     isObject: d$1,
     isString: i,
@@ -11888,11 +11897,11 @@ var LiteGraphTSMigration = (function(exports) {
     visibleType: In,
     zoomLayerType: kt$2
   }, Symbol.toStringTag, { value: "Module" }));
-  function toFiniteNumber$5(value, fallback = 0) {
+  function toFiniteNumber$6(value, fallback = 0) {
     const numericValue = Number(value);
     return Number.isFinite(numericValue) ? numericValue : fallback;
   }
-  function toLocalPoint$1(point, bounds) {
+  function toLocalPoint(point, bounds) {
     return [point[0] - bounds.x, point[1] - bounds.y];
   }
   class OverlayPrimitives {
@@ -11979,10 +11988,10 @@ var LiteGraphTSMigration = (function(exports) {
     }
     syncWorldTransform() {
       const zoomLayer = this.appHost.treeZoomLayer;
-      this.appHost.overlayWorld.x = toFiniteNumber$5(zoomLayer.x);
-      this.appHost.overlayWorld.y = toFiniteNumber$5(zoomLayer.y);
-      this.appHost.overlayWorld.scaleX = toFiniteNumber$5(zoomLayer.scaleX, 1);
-      this.appHost.overlayWorld.scaleY = toFiniteNumber$5(zoomLayer.scaleY, 1);
+      this.appHost.overlayWorld.x = toFiniteNumber$6(zoomLayer.x);
+      this.appHost.overlayWorld.y = toFiniteNumber$6(zoomLayer.y);
+      this.appHost.overlayWorld.scaleX = toFiniteNumber$6(zoomLayer.scaleX, 1);
+      this.appHost.overlayWorld.scaleY = toFiniteNumber$6(zoomLayer.scaleY, 1);
     }
     measureCurveBounds(curve, strokeWidth) {
       const padding = Math.ceil(strokeWidth + 8);
@@ -12031,10 +12040,10 @@ var LiteGraphTSMigration = (function(exports) {
     }
     paintConnectionPreview(curve, bounds, color) {
       const ctx = this.offscreenContext;
-      const start = toLocalPoint$1(curve.start, bounds);
-      const c1 = toLocalPoint$1(curve.c1, bounds);
-      const c2 = toLocalPoint$1(curve.c2, bounds);
-      const end = toLocalPoint$1(curve.end, bounds);
+      const start = toLocalPoint(curve.start, bounds);
+      const c1 = toLocalPoint(curve.c1, bounds);
+      const c2 = toLocalPoint(curve.c2, bounds);
+      const end = toLocalPoint(curve.end, bounds);
       ctx.save();
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.clearRect(0, 0, bounds.width, bounds.height);
@@ -12139,7 +12148,7 @@ var LiteGraphTSMigration = (function(exports) {
       return Boolean(this.activeSelection);
     }
   }
-  function toFiniteNumber$4(value) {
+  function toFiniteNumber$5(value) {
     const numericValue = Number(value);
     return Number.isFinite(numericValue) ? numericValue : 0;
   }
@@ -12192,12 +12201,12 @@ var LiteGraphTSMigration = (function(exports) {
         const pagePoint = source.getPagePoint();
         const graphPoint = source.getInnerPoint();
         const normalizedPagePoint = {
-          x: toFiniteNumber$4(pagePoint.x),
-          y: toFiniteNumber$4(pagePoint.y)
+          x: toFiniteNumber$5(pagePoint.x),
+          y: toFiniteNumber$5(pagePoint.y)
         };
         const normalizedGraphPoint = {
-          x: toFiniteNumber$4(graphPoint.x),
-          y: toFiniteNumber$4(graphPoint.y)
+          x: toFiniteNumber$5(graphPoint.x),
+          y: toFiniteNumber$5(graphPoint.y)
         };
         this.pointerIsDown = true;
         this.pointerDownAt = Date.now();
@@ -12349,12 +12358,12 @@ var LiteGraphTSMigration = (function(exports) {
         const pagePoint = source.getPagePoint();
         const graphPoint = source.getInnerPoint();
         const normalizedPagePoint = {
-          x: toFiniteNumber$4(pagePoint.x),
-          y: toFiniteNumber$4(pagePoint.y)
+          x: toFiniteNumber$5(pagePoint.x),
+          y: toFiniteNumber$5(pagePoint.y)
         };
         const normalizedGraphPoint = {
-          x: toFiniteNumber$4(graphPoint.x),
-          y: toFiniteNumber$4(graphPoint.y)
+          x: toFiniteNumber$5(graphPoint.x),
+          y: toFiniteNumber$5(graphPoint.y)
         };
         if (((_a3 = this.session) == null ? void 0 : _a3.kind) === "connection") {
           this.connectionController.finish(
@@ -12491,8 +12500,8 @@ var LiteGraphTSMigration = (function(exports) {
       const targets = this.collectTargets(this.toLegacyHost((hit == null ? void 0 : hit.host) || null));
       const shouldDispatch = targets.length > 0 || Boolean(this.canvas.node_widget) || Boolean(this.canvas.node_over) || Boolean(this.canvas.node_capturing_input) || Boolean(this.canvas.node_dragged) || Boolean(this.canvas.resizing_node) || Boolean(this.canvas.connecting_node);
       const normalizedPagePoint = {
-        x: toFiniteNumber$4(pagePoint.x),
-        y: toFiniteNumber$4(pagePoint.y)
+        x: toFiniteNumber$5(pagePoint.x),
+        y: toFiniteNumber$5(pagePoint.y)
       };
       const deltaX2 = this.lastPagePoint ? normalizedPagePoint.x - this.lastPagePoint.x : 0;
       const deltaY = this.lastPagePoint ? normalizedPagePoint.y - this.lastPagePoint.y : 0;
@@ -12522,12 +12531,12 @@ var LiteGraphTSMigration = (function(exports) {
       const pagePoint = source.getPagePoint();
       const graphPoint = source.getInnerPoint();
       const normalizedPagePoint = {
-        x: toFiniteNumber$4(pagePoint.x),
-        y: toFiniteNumber$4(pagePoint.y)
+        x: toFiniteNumber$5(pagePoint.x),
+        y: toFiniteNumber$5(pagePoint.y)
       };
       const normalizedGraphPoint = {
-        x: toFiniteNumber$4(graphPoint.x),
-        y: toFiniteNumber$4(graphPoint.y)
+        x: toFiniteNumber$5(graphPoint.x),
+        y: toFiniteNumber$5(graphPoint.y)
       };
       if (this.session.kind === "connection") {
         this.connectionController.update(
@@ -12854,8 +12863,8 @@ var LiteGraphTSMigration = (function(exports) {
         clientY: event2.clientY
       });
       const localPos = host.getLocalPoint(
-        toFiniteNumber$4(pagePoint.x),
-        toFiniteNumber$4(pagePoint.y)
+        toFiniteNumber$5(pagePoint.x),
+        toFiniteNumber$5(pagePoint.y)
       );
       const propertyName = (_a3 = widget.options) == null ? void 0 : _a3.property;
       const applyValue = (nextValue) => {
@@ -12874,7 +12883,7 @@ var LiteGraphTSMigration = (function(exports) {
         }
         (_c3 = node2.onWidgetChanged) == null ? void 0 : _c3.call(node2, widget.name, nextValue, previousValue, widget);
         if (node2.graph) {
-          node2.graph._version = toFiniteNumber$4(
+          node2.graph._version = toFiniteNumber$5(
             node2.graph._version
           ) + 1;
         }
@@ -12907,21 +12916,21 @@ var LiteGraphTSMigration = (function(exports) {
           applyValue(!widget.value);
           return;
         case "number": {
-          const step = toFiniteNumber$4((_c2 = widget.options) == null ? void 0 : _c2.step) || 1;
+          const step = toFiniteNumber$5((_c2 = widget.options) == null ? void 0 : _c2.step) || 1;
           const min = (_d2 = widget.options) == null ? void 0 : _d2.min;
           const max = (_e2 = widget.options) == null ? void 0 : _e2.max;
           if (part.action === "decrement") {
-            let nextValue = toFiniteNumber$4(widget.value) - step;
+            let nextValue = toFiniteNumber$5(widget.value) - step;
             if (min != null) {
-              nextValue = Math.max(toFiniteNumber$4(min), nextValue);
+              nextValue = Math.max(toFiniteNumber$5(min), nextValue);
             }
             applyValue(nextValue);
             return;
           }
           if (part.action === "increment") {
-            let nextValue = toFiniteNumber$4(widget.value) + step;
+            let nextValue = toFiniteNumber$5(widget.value) + step;
             if (max != null) {
-              nextValue = Math.min(toFiniteNumber$4(max), nextValue);
+              nextValue = Math.min(toFiniteNumber$5(max), nextValue);
             }
             applyValue(nextValue);
             return;
@@ -13155,7 +13164,7 @@ var LiteGraphTSMigration = (function(exports) {
         return void 0;
       }
       const pos2 = rawPos;
-      return [toFiniteNumber$4(pos2[0]), toFiniteNumber$4(pos2[1])];
+      return [toFiniteNumber$5(pos2[0]), toFiniteNumber$5(pos2[1])];
     }
     dispatchContextMenu(event2) {
       var _a3, _b2, _c2, _d2, _e2, _f, _g;
@@ -13283,10 +13292,10 @@ var LiteGraphTSMigration = (function(exports) {
     e2 || (e2 = A$1), e2.scale && (I$4.assignScale(e2, e2.scale), delete e2.scale), e2 !== A$1 && Lt$2.canAnimate || (i2 = null);
     let a2 = !!i2 && (function(t3, e3, n2) {
       let s2 = "in" === t3 ? "transition" : "transitionOut";
-      "out" === t3 && r(n2[s2]) && r(e3[s2]) && (s2 = "transition");
-      return r(e3[s2]) ? n2[s2] : e3[s2];
+      "out" === t3 && r$1(n2[s2]) && r$1(e3[s2]) && (s2 = "transition");
+      return r$1(e3[s2]) ? n2[s2] : e3[s2];
     })(i2, e2, t2);
-    const r$1 = a2 ? (function(t3, e3) {
+    const r2 = a2 ? (function(t3, e3) {
       const n2 = k$1(e3, t3), s2 = t3.animate();
       s2 && k$1(n2, t3, s2.fromStyle);
       return n2;
@@ -13302,8 +13311,8 @@ var LiteGraphTSMigration = (function(exports) {
       t2.normalStyle = O$1(c2, t2), t2.set(c2, "temp");
     } else t2.normalStyle = void 0;
     if (a2) {
-      const e3 = O$1(r$1, t2);
-      t2.set(r$1, "temp"), t2.animate([r$1, e3], a2, "transition", true);
+      const e3 = O$1(r2, t2);
+      t2.set(r2, "temp"), t2.animate([r2, e3], a2, "transition", true);
     }
     t2.__layout.stateStyleChanged = false;
   }
@@ -13505,6 +13514,8 @@ var LiteGraphTSMigration = (function(exports) {
         view: this.view,
         fill: (_a3 = options.fill) != null ? _a3 : "transparent",
         pixelSnap: true,
+        usePartRender: true,
+        usePartLayout: true,
         ground: {
           hittable: false
         },
@@ -13652,10 +13663,10 @@ var LiteGraphTSMigration = (function(exports) {
       var _a3;
       (_a3 = renderHost.drawNodeWidgets) == null ? void 0 : _a3.call(renderHost, ...args);
     }
-    static paint(node2, renderHost, context, bounds) {
+    static paint(node2, renderHost, context, bounds, renderScale = 1) {
       const resolvedBounds = bounds || this.measure(node2, renderHost, context);
       context.save();
-      context.setTransform(1, 0, 0, 1, 0, 0);
+      context.setTransform(renderScale, 0, 0, renderScale, 0, 0);
       context.clearRect(0, 0, resolvedBounds.width, resolvedBounds.height);
       context.translate(
         resolvedBounds.contentOffsetX,
@@ -13666,14 +13677,38 @@ var LiteGraphTSMigration = (function(exports) {
       return resolvedBounds;
     }
   }
+  function toFiniteNumber$4(value, fallback = 0) {
+    const numericValue = Number(value);
+    return Number.isFinite(numericValue) ? numericValue : fallback;
+  }
+  function clamp(value, min, max) {
+    return Math.min(max, Math.max(min, value));
+  }
+  function resolveDevicePixelRatio(view) {
+    var _a3;
+    const windowRef = ((_a3 = view == null ? void 0 : view.ownerDocument) == null ? void 0 : _a3.defaultView) || window;
+    return Math.max(1, toFiniteNumber$4(windowRef.devicePixelRatio, 1));
+  }
+  function resolveRasterRenderScale(options) {
+    const devicePixelRatio2 = resolveDevicePixelRatio(options.view);
+    const zoomScale = Math.max(1, toFiniteNumber$4(options.zoomScale, 1));
+    const maxPixelRatio = Math.max(
+      devicePixelRatio2,
+      toFiniteNumber$4(options.maxPixelRatio, 4)
+    );
+    const scaledRatio = devicePixelRatio2 * zoomScale;
+    return clamp(Math.ceil(scaledRatio * 2) / 2, devicePixelRatio2, maxPixelRatio);
+  }
   class LegacyNodeHost {
-    constructor(node2, renderHost) {
+    constructor(node2, renderHost, options = {}) {
       this.runtime = "legacy";
       this.lastBounds = null;
       this.positionOffsetX = 0;
       this.positionOffsetY = 0;
       this.node = node2;
       this.renderHost = renderHost;
+      this.view = options.view || null;
+      this.getViewportScale = options.getViewportScale || (() => 1);
       this.root = new ye$1({
         name: `litegraph-legacy-node:${String(node2.id)}`,
         hittable: true,
@@ -13691,6 +13726,7 @@ var LiteGraphTSMigration = (function(exports) {
         width: 1,
         height: 1,
         pixelRatio: 1,
+        smooth: false,
         hittable: true,
         data: {
           litegraphNodeId: String(node2.id)
@@ -13715,12 +13751,16 @@ var LiteGraphTSMigration = (function(exports) {
         this.renderHost,
         this.offscreenContext
       );
-      this.ensureCanvasSize(bounds.width, bounds.height);
+      const renderScale = this.resolveRenderScale();
+      const pixelWidth = Math.max(1, Math.ceil(bounds.width * renderScale));
+      const pixelHeight = Math.max(1, Math.ceil(bounds.height * renderScale));
+      this.ensureCanvasSize(bounds.width, bounds.height, renderScale);
       LegacyNodePainter.paint(
         this.node,
         this.renderHost,
         this.offscreenContext,
-        bounds
+        bounds,
+        renderScale
       );
       this.positionOffsetX = bounds.x - Number(((_a3 = this.node.pos) == null ? void 0 : _a3[0]) || 0);
       this.positionOffsetY = bounds.y - Number(((_b2 = this.node.pos) == null ? void 0 : _b2[1]) || 0);
@@ -13731,10 +13771,21 @@ var LiteGraphTSMigration = (function(exports) {
       this.surface.height = bounds.height;
       this.eventRoot.x = bounds.contentOffsetX;
       this.eventRoot.y = bounds.contentOffsetY;
+      this.surface.pixelRatio = renderScale;
       const surfaceContext = this.surface.context;
       surfaceContext.setTransform(1, 0, 0, 1, 0, 0);
-      surfaceContext.clearRect(0, 0, bounds.width, bounds.height);
-      surfaceContext.drawImage(this.offscreenCanvas, 0, 0, bounds.width, bounds.height);
+      surfaceContext.clearRect(0, 0, pixelWidth, pixelHeight);
+      surfaceContext.drawImage(
+        this.offscreenCanvas,
+        0,
+        0,
+        this.offscreenCanvas.width,
+        this.offscreenCanvas.height,
+        0,
+        0,
+        pixelWidth,
+        pixelHeight
+      );
       this.surface.paint();
       this.lastBounds = bounds;
     }
@@ -13749,10 +13800,12 @@ var LiteGraphTSMigration = (function(exports) {
       this.root.x = Number(((_a3 = this.node.pos) == null ? void 0 : _a3[0]) || 0) + this.positionOffsetX;
       this.root.y = Number(((_b2 = this.node.pos) == null ? void 0 : _b2[1]) || 0) + this.positionOffsetY;
     }
-    ensureCanvasSize(width2, height) {
-      if (this.offscreenCanvas.width !== width2 || this.offscreenCanvas.height !== height) {
-        this.offscreenCanvas.width = width2;
-        this.offscreenCanvas.height = height;
+    ensureCanvasSize(width2, height, renderScale) {
+      const pixelWidth = Math.max(1, Math.ceil(width2 * renderScale));
+      const pixelHeight = Math.max(1, Math.ceil(height * renderScale));
+      if (this.offscreenCanvas.width !== pixelWidth || this.offscreenCanvas.height !== pixelHeight) {
+        this.offscreenCanvas.width = pixelWidth;
+        this.offscreenCanvas.height = pixelHeight;
       }
       if (this.surface.width !== width2) {
         this.surface.width = width2;
@@ -13761,186 +13814,143 @@ var LiteGraphTSMigration = (function(exports) {
         this.surface.height = height;
       }
     }
+    resolveRenderScale() {
+      return resolveRasterRenderScale({
+        zoomScale: this.getViewportScale(),
+        view: this.view
+      });
+    }
   }
+  const LINK_BORDER_COLOR = "transparent";
+  const LINK_BORDER_EXTRA_WIDTH = 0;
+  const LINK_FLOW_DOT_COUNT = 5;
   function toFiniteNumber$3(value, fallback = 0) {
     const numericValue = Number(value);
     return Number.isFinite(numericValue) ? numericValue : fallback;
   }
-  function toLocalPoint(point, bounds) {
-    return [point[0] - bounds.x, point[1] - bounds.y];
+  function toOpacity(value, fallback = 1) {
+    return Math.max(0, Math.min(1, toFiniteNumber$3(value, fallback)));
   }
   class LinkViewHost {
-    constructor(name) {
+    constructor(name, options = {}) {
+      this.flowDots = [];
+      this.getViewportScale = options.getViewportScale || (() => 1);
       this.view = new ye$1({
         name,
         hittable: false,
         visible: true,
         data: {
-          litegraphPlaceholderKind: "link-view"
+          litegraphPlaceholderKind: "link-view",
+          litegraphRenderMode: "leafer-path"
         }
       });
-      this.surface = new si$1({
-        name: `${name}:surface`,
-        width: 1,
-        height: 1,
-        pixelRatio: 1,
+      this.borderPath = this.createPath(`${name}:border`, LINK_BORDER_COLOR);
+      this.strokePath = this.createPath(`${name}:stroke`, "#9A9");
+      this.flowPath = this.createPath(`${name}:flow`, "#FFF");
+      this.flowPath.visible = false;
+      this.flowDotLayer = new ye$1({
+        name: `${name}:flow-dots`,
         hittable: false,
-        visible: true
+        visible: false
       });
-      this.view.add(this.surface);
-      this.offscreenCanvas = document.createElement("canvas");
-      this.offscreenCanvas.width = 1;
-      this.offscreenCanvas.height = 1;
-      const context = this.offscreenCanvas.getContext("2d");
-      if (!context) {
-        throw new Error("LinkViewHost: failed to create 2D offscreen context.");
+      for (let index = 0; index < LINK_FLOW_DOT_COUNT; ++index) {
+        const dot = new xe$1({
+          name: `${name}:flow-dot:${String(index)}`,
+          width: 0,
+          height: 0,
+          cornerRadius: 999,
+          fill: "#FFF",
+          visible: false,
+          hittable: false
+        });
+        this.flowDots.push(dot);
+        this.flowDotLayer.add(dot);
       }
-      this.offscreenContext = context;
+      this.view.add([
+        this.borderPath,
+        this.strokePath,
+        this.flowPath,
+        this.flowDotLayer
+      ]);
     }
     update(presentation) {
-      const { curve } = presentation;
+      const curve = presentation.curve;
       const visible = presentation.visible !== false && Boolean(curve);
       this.view.visible = visible;
       if (!visible || !curve) {
+        this.hideFlowOverlay();
         return;
       }
-      const bounds = this.measureBounds(curve, presentation);
-      this.ensureCanvasSize(bounds.width, bounds.height);
-      this.paintToOffscreen(bounds, presentation);
-      this.view.x = bounds.x;
-      this.view.y = bounds.y;
-      this.surface.width = bounds.width;
-      this.surface.height = bounds.height;
-      const surfaceContext = this.surface.context;
-      surfaceContext.setTransform(1, 0, 0, 1, 0, 0);
-      surfaceContext.clearRect(0, 0, bounds.width, bounds.height);
-      surfaceContext.drawImage(
-        this.offscreenCanvas,
-        0,
-        0,
-        bounds.width,
-        bounds.height
+      const strokeWidth = Math.max(
+        1,
+        toFiniteNumber$3(presentation.strokeWidth, 3)
       );
-      this.surface.paint();
+      this.getViewportScale();
+      const stroke = presentation.stroke || "#9A9";
+      const path = curve.path;
+      this.borderPath.visible = false;
+      this.borderPath.path = path;
+      this.borderPath.strokeWidth = strokeWidth + LINK_BORDER_EXTRA_WIDTH;
+      this.strokePath.path = path;
+      this.strokePath.stroke = stroke;
+      this.strokePath.strokeWidth = strokeWidth;
+      this.updateFlowOverlay(path, strokeWidth, presentation.flow);
     }
     destroy() {
       this.view.destroy();
     }
-    measureBounds(curve, presentation) {
-      var _a3, _b2;
-      const strokeWidth = Math.max(
-        1,
-        toFiniteNumber$3(presentation.strokeWidth, 3)
-      );
-      const dotRadius = Math.max(
-        strokeWidth,
-        toFiniteNumber$3((_a3 = presentation.flow) == null ? void 0 : _a3.dotRadius, 5)
-      );
-      const padding = Math.ceil(Math.max(strokeWidth, dotRadius) + 8);
-      let minX = Math.min(
-        curve.start[0],
-        curve.c1[0],
-        curve.c2[0],
-        curve.end[0]
-      );
-      let minY = Math.min(
-        curve.start[1],
-        curve.c1[1],
-        curve.c2[1],
-        curve.end[1]
-      );
-      let maxX = Math.max(
-        curve.start[0],
-        curve.c1[0],
-        curve.c2[0],
-        curve.end[0]
-      );
-      let maxY = Math.max(
-        curve.start[1],
-        curve.c1[1],
-        curve.c2[1],
-        curve.end[1]
-      );
-      const dots = ((_b2 = presentation.flow) == null ? void 0 : _b2.dots) || [];
-      for (let i2 = 0; i2 < dots.length; ++i2) {
-        const point = dots[i2];
-        minX = Math.min(minX, point[0] - dotRadius);
-        minY = Math.min(minY, point[1] - dotRadius);
-        maxX = Math.max(maxX, point[0] + dotRadius);
-        maxY = Math.max(maxY, point[1] + dotRadius);
-      }
-      return {
-        x: Math.floor(minX) - padding,
-        y: Math.floor(minY) - padding,
-        width: Math.max(1, Math.ceil(maxX - minX) + padding * 2),
-        height: Math.max(1, Math.ceil(maxY - minY) + padding * 2)
-      };
+    createPath(name, stroke) {
+      return new di$1({
+        name,
+        hitFill: "none",
+        hitStroke: "none",
+        hittable: false,
+        visible: true,
+        stroke,
+        strokeWidth: 3,
+        strokeCap: "round",
+        strokeJoin: "round"
+      });
     }
-    ensureCanvasSize(width2, height) {
-      if (this.offscreenCanvas.width !== width2 || this.offscreenCanvas.height !== height) {
-        this.offscreenCanvas.width = width2;
-        this.offscreenCanvas.height = height;
-      }
-      if (this.surface.width !== width2) {
-        this.surface.width = width2;
-      }
-      if (this.surface.height !== height) {
-        this.surface.height = height;
-      }
-    }
-    paintToOffscreen(bounds, presentation) {
-      const { curve } = presentation;
-      if (!curve) {
+    updateFlowOverlay(path, strokeWidth, flow) {
+      if (!(flow == null ? void 0 : flow.active)) {
+        this.hideFlowOverlay();
         return;
       }
-      const ctx = this.offscreenContext;
-      const strokeWidth = Math.max(
-        1,
-        toFiniteNumber$3(presentation.strokeWidth, 3)
-      );
-      const baseColor = presentation.stroke || "#9A9";
-      const flow = presentation.flow;
-      const dotRadius = Math.max(
-        1,
-        toFiniteNumber$3(flow == null ? void 0 : flow.dotRadius, 5)
-      );
-      const opacity = Math.max(
-        0,
-        Math.min(1, toFiniteNumber$3(flow == null ? void 0 : flow.opacity, 1))
-      );
-      ctx.save();
-      ctx.setTransform(1, 0, 0, 1, 0, 0);
-      ctx.clearRect(0, 0, bounds.width, bounds.height);
-      ctx.lineWidth = strokeWidth;
-      ctx.lineCap = "round";
-      ctx.lineJoin = "round";
-      ctx.strokeStyle = baseColor;
-      this.traceCurve(ctx, curve, bounds);
-      ctx.stroke();
-      if (flow == null ? void 0 : flow.active) {
-        ctx.globalAlpha = opacity;
-        ctx.strokeStyle = flow.color || "#FFF";
-        this.traceCurve(ctx, curve, bounds);
-        ctx.stroke();
-        ctx.fillStyle = flow.color || "#FFF";
-        const dots = flow.dots || [];
-        for (let i2 = 0; i2 < dots.length; ++i2) {
-          const point = toLocalPoint(dots[i2], bounds);
-          ctx.beginPath();
-          ctx.arc(point[0], point[1], dotRadius, 0, Math.PI * 2);
-          ctx.fill();
+      const flowColor = flow.color || "#FFF";
+      const flowOpacity = toOpacity(flow.opacity, 1);
+      const dotRadius = Math.max(1, toFiniteNumber$3(flow.dotRadius, 5));
+      const dots = flow.dots || [];
+      this.flowPath.visible = true;
+      this.flowPath.path = path;
+      this.flowPath.stroke = flowColor;
+      this.flowPath.strokeWidth = strokeWidth;
+      this.flowPath.opacity = flowOpacity;
+      this.flowDotLayer.visible = dots.length > 0;
+      for (let index = 0; index < this.flowDots.length; ++index) {
+        const dot = this.flowDots[index];
+        const point = dots[index];
+        if (!point) {
+          dot.visible = false;
+          continue;
         }
+        const diameter = dotRadius * 2;
+        dot.visible = true;
+        dot.fill = flowColor;
+        dot.opacity = flowOpacity;
+        dot.x = point[0] - dotRadius;
+        dot.y = point[1] - dotRadius;
+        dot.width = diameter;
+        dot.height = diameter;
+        dot.cornerRadius = dotRadius;
       }
-      ctx.restore();
     }
-    traceCurve(context, curve, bounds) {
-      const start = toLocalPoint(curve.start, bounds);
-      const c1 = toLocalPoint(curve.c1, bounds);
-      const c2 = toLocalPoint(curve.c2, bounds);
-      const end = toLocalPoint(curve.end, bounds);
-      context.beginPath();
-      context.moveTo(start[0], start[1]);
-      context.bezierCurveTo(c1[0], c1[1], c2[0], c2[1], end[0], end[1]);
+    hideFlowOverlay() {
+      this.flowPath.visible = false;
+      this.flowDotLayer.visible = false;
+      for (let index = 0; index < this.flowDots.length; ++index) {
+        this.flowDots[index].visible = false;
+      }
     }
   }
   const MODERN_STATE_KEY = "__litegraphModernState";
@@ -14386,6 +14396,49 @@ var LiteGraphTSMigration = (function(exports) {
     const numericValue = Number(value);
     return Number.isFinite(numericValue) ? numericValue : fallback;
   }
+  function toRenderBoundsLike(value) {
+    if (!value || typeof value !== "object") {
+      return null;
+    }
+    const bounds = value;
+    const x2 = toFiniteNumber$1(bounds.x);
+    const y2 = toFiniteNumber$1(bounds.y);
+    const width2 = Math.max(0, toFiniteNumber$1(bounds.width));
+    const height = Math.max(0, toFiniteNumber$1(bounds.height));
+    if (!width2 || !height) {
+      return null;
+    }
+    return { x: x2, y: y2, width: width2, height };
+  }
+  function mergeRenderBounds(first, second) {
+    if (!first) {
+      return second ? { ...second } : null;
+    }
+    if (!second) {
+      return { ...first };
+    }
+    const left = Math.min(first.x, second.x);
+    const top = Math.min(first.y, second.y);
+    const right = Math.max(first.x + first.width, second.x + second.width);
+    const bottom = Math.max(first.y + first.height, second.y + second.height);
+    return {
+      x: left,
+      y: top,
+      width: right - left,
+      height: bottom - top
+    };
+  }
+  function expandRenderBounds(bounds, padding = 6) {
+    if (!bounds) {
+      return null;
+    }
+    return {
+      x: bounds.x - padding,
+      y: bounds.y - padding,
+      width: bounds.width + padding * 2,
+      height: bounds.height + padding * 2
+    };
+  }
   class SceneSyncController {
     constructor(graph, bus, appHost, renderHost) {
       this.graph = graph;
@@ -14402,6 +14455,13 @@ var LiteGraphTSMigration = (function(exports) {
       this.activeLinkIds = /* @__PURE__ */ new Set();
       this.pendingSettledNodeRepaints = /* @__PURE__ */ new Set();
       this.runtimeAnimationFrame = null;
+      this.getViewportScale = () => Math.max(
+        1,
+        toFiniteNumber$1(
+          this.appHost.treeZoomLayer.scaleX,
+          1
+        )
+      );
       this.handleRuntimeAnimationFrame = () => {
         this.runtimeAnimationFrame = null;
         const nodeFrame = this.repaintAnimatedNodes();
@@ -14490,13 +14550,21 @@ var LiteGraphTSMigration = (function(exports) {
         this.updateIncidentLinks(nodeId);
       }
     }
+    repaintAllLinkViews() {
+      for (const [linkId, link] of this.linksById.entries()) {
+        this.syncLinkView(linkId, link);
+      }
+    }
     syncNodeMoved(nodeId, node2) {
       var _a3;
       if (node2) {
         this.nodesById.set(nodeId, node2);
       }
+      const previousBounds = this.captureNodeClusterBounds(nodeId);
       (_a3 = this.nodeHosts.get(nodeId)) == null ? void 0 : _a3.syncPosition();
       this.updateIncidentLinks(nodeId);
+      const nextBounds = this.captureNodeClusterBounds(nodeId);
+      this.requestSceneRender(mergeRenderBounds(previousBounds, nextBounds));
     }
     hydrateFromGraph() {
       const existingNodes = Array.isArray(this.graph._nodes) ? this.graph._nodes : [];
@@ -14558,7 +14626,11 @@ var LiteGraphTSMigration = (function(exports) {
       }
       const nodeHost = new LegacyNodeHost(
         node2,
-        this.renderHost
+        this.renderHost,
+        {
+          view: this.appHost.view,
+          getViewportScale: this.getViewportScale
+        }
       );
       this.appHost.legacyNodeLayer.add(nodeHost.root);
       return nodeHost;
@@ -14600,7 +14672,11 @@ var LiteGraphTSMigration = (function(exports) {
         this.ensureTrackedNodeId(link.target_id);
       }
       const linkView = new LinkViewHost(
-        `litegraph-link-view:${toMutationKey(linkId)}`
+        `litegraph-link-view:${toMutationKey(linkId)}`,
+        {
+          view: this.appHost.view,
+          getViewportScale: this.getViewportScale
+        }
       );
       this.appHost.linkLayerBack.add(linkView.view);
       this.linkViews.set(linkId, linkView);
@@ -14631,8 +14707,11 @@ var LiteGraphTSMigration = (function(exports) {
       if (node2) {
         this.nodesById.set(nodeId, node2);
       }
+      const previousBounds = this.captureNodeClusterBounds(nodeId);
       (_a3 = this.nodeHosts.get(nodeId)) == null ? void 0 : _a3.repaint();
       this.updateIncidentLinks(nodeId);
+      const nextBounds = this.captureNodeClusterBounds(nodeId);
+      this.requestSceneRender(mergeRenderBounds(previousBounds, nextBounds));
     }
     installNodeDirtyBridge(node2) {
       if (this.dirtyBridgeUninstallers.has(node2.id)) {
@@ -14695,6 +14774,24 @@ var LiteGraphTSMigration = (function(exports) {
         this.syncLinkView(linkId);
       }
     }
+    captureNodeClusterBounds(nodeId) {
+      const nodeHost = this.nodeHosts.get(nodeId);
+      let clusterBounds = this.captureWorldRenderBounds(nodeHost == null ? void 0 : nodeHost.root);
+      const incidentLinks = this.linksByNodeId.get(nodeId);
+      if (incidentLinks == null ? void 0 : incidentLinks.size) {
+        for (const linkId of incidentLinks) {
+          const linkView = this.linkViews.get(linkId);
+          clusterBounds = mergeRenderBounds(
+            clusterBounds,
+            this.captureWorldRenderBounds(linkView == null ? void 0 : linkView.view)
+          );
+        }
+      }
+      return expandRenderBounds(clusterBounds);
+    }
+    captureWorldRenderBounds(target) {
+      return toRenderBoundsLike(target == null ? void 0 : target.worldRenderBounds);
+    }
     syncLinkView(linkId, providedLink, providedView, now = this.getRuntimeNow()) {
       const link = providedLink || this.linksById.get(linkId);
       const view = providedView || this.linkViews.get(linkId);
@@ -14719,6 +14816,7 @@ var LiteGraphTSMigration = (function(exports) {
         curve,
         now
       );
+      this.syncLinkMidpoint(link, curve);
       view.update({
         curve,
         stroke: link.color || "#9A9",
@@ -14742,7 +14840,12 @@ var LiteGraphTSMigration = (function(exports) {
       const runtimeWindow = this.getRuntimeWindow();
       return (_c2 = (_b2 = (_a3 = runtimeWindow.performance) == null ? void 0 : _a3.now) == null ? void 0 : _b2.call(_a3)) != null ? _c2 : Date.now();
     }
-    requestSceneRender() {
+    requestSceneRender(bounds) {
+      const partialBounds = toRenderBoundsLike(bounds);
+      if (partialBounds) {
+        this.appHost.app.forceRender(partialBounds);
+        return;
+      }
       if (typeof this.appHost.app.requestRender === "function") {
         this.appHost.app.requestRender();
         return;
@@ -14878,7 +14981,68 @@ var LiteGraphTSMigration = (function(exports) {
         dots
       };
     }
+    syncLinkMidpoint(link, curve) {
+      const midpoint = this.nodePortAdapter.getPointOnLinkCurve(curve, 0.5);
+      const target = ArrayBuffer.isView(link._pos) ? link._pos : link._pos = new Float32Array(2);
+      target[0] = midpoint[0];
+      target[1] = midpoint[1];
+    }
   }
+  function r(t2, e2) {
+    let i2 = 1;
+    const h2 = "out" === e2, s2 = Math.abs(t2);
+    if (s2 > 1) {
+      for (; h2 ? i2 < s2 : i2 <= s2; ) i2 *= 2;
+      h2 && (i2 /= 2);
+    } else {
+      for (; h2 ? i2 >= s2 : i2 > s2; ) i2 /= 2;
+      h2 || (i2 *= 2);
+    }
+    return i2 / t2;
+  }
+  he$2.add("view"), we$1.prototype.zoom = function(t2, e2, w2, f2) {
+    let g2;
+    c(e2) ? (g2 = e2.padding, w2 = e2.scroll, f2 = e2.transition) : g2 = e2;
+    const { zoomLayer: u2 } = this, x2 = this.canvas.bounds.clone().shrink(r$1(g2) ? 30 : g2), y2 = new Vt$3(), m2 = { x: x2.x + x2.width / 2, y: x2.y + x2.height / 2 };
+    let b2;
+    u2.killAnimate();
+    const { x: k2, y: B2, scaleX: p2, scaleY: v2 } = u2.__, { boxBounds: M2 } = u2;
+    if (i(t2)) switch (t2) {
+      case "in":
+        b2 = r(p2, "in");
+        break;
+      case "out":
+        b2 = r(p2, "out");
+        break;
+      case "fit":
+        t2 = M2;
+        break;
+      case "fit-width":
+        (t2 = new Vt$3(M2)).height = 0;
+        break;
+      case "fit-height":
+        (t2 = new Vt$3(M2)).width = 0;
+    }
+    else o(t2) && (b2 = t2 / p2);
+    if (b2) b2 = this.getValidScale(b2), u2.scaleOfWorld(m2, b2, b2, false, f2);
+    else if (d$1(t2)) {
+      const e3 = { x: k2, y: B2, scaleX: p2, scaleY: v2 }, i2 = l(t2);
+      if (i2 || t2.tag) {
+        const e4 = i2 ? t2 : [t2];
+        y2.setListWithFn(e4, xo.worldBounds);
+      } else {
+        const e4 = (function(t3, e5) {
+          let i3, { x: h3, y: s3, width: a3, height: o3 } = t3;
+          return o3 || (o3 = a3 * (e5.height / e5.width), i3 = true), a3 || (a3 = o3 * (e5.width / e5.height), i3 = true), i3 ? { x: h3, y: s3, width: a3, height: o3 } : t3;
+        })(t2, x2);
+        y2.set(u2.getWorldBounds(e4));
+      }
+      const { width: h2, height: s2 } = y2;
+      let a2 = x2.x - y2.x, o2 = x2.y - y2.y;
+      return w2 ? (a2 += Math.max((x2.width - h2) / 2, 0), o2 += Math.max((x2.height - s2) / 2, 0)) : (b2 = this.getValidScale(Math.min(x2.width / h2, x2.height / s2)), a2 += (x2.width - h2 * b2) / 2, o2 += (x2.height - s2 * b2) / 2, ot$2.scaleOf(e3, y2, b2), y2.scaleOf(y2, b2), e3.scaleX *= b2, e3.scaleY *= b2), "x" === w2 ? o2 = 0 : "y" === w2 && (a2 = 0), ot$2.move(e3, a2, o2), y2.move(a2, o2), u2.set(e3, f2), y2;
+    }
+    return u2.worldBoxBounds;
+  };
   function D(t2) {
     const { scroll: e2, disabled: a2 } = t2.app.config.move;
     return !e2 || a2 ? "" : true === e2 ? "free" : e2;
@@ -15200,6 +15364,13 @@ var LiteGraphTSMigration = (function(exports) {
       if (Math.abs(nextScale - currentScale) < 1e-4) {
         return;
       }
+      const zoomableTree = this.appHost.tree;
+      if (!zoomingCenter && typeof zoomableTree.zoom === "function") {
+        zoomableTree.zoom(nextScale, 0, null, false);
+        this.lastScale = this.getScale();
+        this.queueLegacyScaleRepaint();
+        return;
+      }
       const worldOrigin = this.resolveWorldOrigin(zoomingCenter);
       this.appHost.treeZoomLayer.scaleOfWorld(
         worldOrigin,
@@ -15233,9 +15404,10 @@ var LiteGraphTSMigration = (function(exports) {
       }
       const windowRef = ((_a3 = this.appHost.view.ownerDocument) == null ? void 0 : _a3.defaultView) || window;
       this.queuedScaleRepaintFrame = windowRef.requestAnimationFrame(() => {
-        var _a4;
+        var _a4, _b2;
         this.queuedScaleRepaintFrame = null;
         (_a4 = this.sceneSyncController) == null ? void 0 : _a4.repaintLegacyNodeHosts();
+        (_b2 = this.sceneSyncController) == null ? void 0 : _b2.repaintAllLinkViews();
       });
     }
     clampScale(value) {
@@ -20111,7 +20283,7 @@ var LiteGraphTSMigration = (function(exports) {
             }
             break;
           case "slider": {
-            const nvalue = clamp((x - 15) / (widget_width - 30), 0, 1);
+            const nvalue = clamp$1((x - 15) / (widget_width - 30), 0, 1);
             if (w.options.read_only) break;
             w.value = w.options.min + (w.options.max - w.options.min) * nvalue;
             if (old_value != w.value) {
@@ -26002,11 +26174,11 @@ var LiteGraphTSMigration = (function(exports) {
           return;
         }
         if (!is_edge_point) {
-          point[0] = clamp(x2, 0, 1);
+          point[0] = clamp$1(x2, 0, 1);
         } else {
           point[0] = s2 == 0 ? 0 : 1;
         }
-        point[1] = 1 - clamp(y2, 0, 1);
+        point[1] = 1 - clamp$1(y2, 0, 1);
         points.sort((a2, b2) => a2[0] - b2[0]);
         this.selected = points.indexOf(point);
         this.must_update = true;
