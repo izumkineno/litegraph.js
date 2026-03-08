@@ -75,12 +75,21 @@
                 if (this.flags && this.flags.collapsed) {
                     return [];
                 }
+                var width = Math.max((this.size && this.size[0]) || 0, 216);
+                var footerY = Math.max(0, ((this.size && this.size[1]) || 80) - 24);
+                var actionWidth = Math.max(72, width / 2 - 10);
                 return [
                     {
                         id: "subgraph-left",
                         action: "subgraph-left",
-                        label: "+",
+                        label: "Input +",
                         placement: "footer-left",
+                        bounds: {
+                            x: 6,
+                            y: footerY,
+                            width: actionWidth,
+                            height: 20,
+                        },
                         onTrigger: function(context) {
                             if (context.graphcanvas) {
                                 context.graphcanvas.showSubgraphPropertiesDialog(
@@ -92,8 +101,14 @@
                     {
                         id: "subgraph-right",
                         action: "subgraph-right",
-                        label: "+",
+                        label: "Output +",
                         placement: "footer-right",
+                        bounds: {
+                            x: width - actionWidth - 6,
+                            y: footerY,
+                            width: actionWidth,
+                            height: 20,
+                        },
                         onTrigger: function(context) {
                             if (context.graphcanvas) {
                                 context.graphcanvas.showSubgraphPropertiesDialogRight(
@@ -110,7 +125,20 @@
                     this,
                     context
                 );
-                shellState.summaryText = "Double-click to open";
+                var inputCount = this.inputs ? this.inputs.length : 0;
+                var outputCount = this.outputs ? this.outputs.length : 0;
+                shellState.headerMetaText = this.enabled ? "LIVE" : "OFF";
+                shellState.summaryText =
+                    inputCount || outputCount
+                        ? inputCount + " in / " + outputCount + " out"
+                        : "Double-click to open";
+                shellState.minimumWidth = 232;
+                shellState.minimumHeight = 88;
+                if (!this.enabled) {
+                    shellState.bodyColor = "#171A1F";
+                    shellState.borderColor = "#404754";
+                    shellState.boxColor = "#8A93A4";
+                }
                 return shellState;
             }
 
@@ -119,7 +147,14 @@
             }
 
             onExecute() {
+                var wasEnabled = this.enabled;
                 this.enabled = this.getInputOrProperty("enabled");
+                if (wasEnabled !== this.enabled) {
+                    this.requestModernPatch(
+                        ns.ModernNodeChangeMask.Data |
+                            ns.ModernNodeChangeMask.Style
+                    );
+                }
                 if (!this.enabled) {
                     return;
                 }
@@ -147,84 +182,6 @@
                 }
             }
 
-            onDrawBackground(ctx, graphcanvas, canvas, pos) {
-                if (this.flags.collapsed) {
-                    return;
-                }
-
-                var y = this.size[1] - LiteGraph.NODE_TITLE_HEIGHT + 0.5;
-                var over = LiteGraph.isInsideRectangle(
-                    pos[0],
-                    pos[1],
-                    this.pos[0],
-                    this.pos[1] + y,
-                    this.size[0],
-                    LiteGraph.NODE_TITLE_HEIGHT
-                );
-                var overleft = LiteGraph.isInsideRectangle(
-                    pos[0],
-                    pos[1],
-                    this.pos[0],
-                    this.pos[1] + y,
-                    this.size[0] / 2,
-                    LiteGraph.NODE_TITLE_HEIGHT
-                );
-
-                ctx.fillStyle = over ? "#555" : "#222";
-                ctx.beginPath();
-                if (this._shape == LiteGraph.BOX_SHAPE) {
-                    if (overleft) {
-                        ctx.rect(0, y, this.size[0] / 2 + 1, LiteGraph.NODE_TITLE_HEIGHT);
-                    } else {
-                        ctx.rect(
-                            this.size[0] / 2,
-                            y,
-                            this.size[0] / 2 + 1,
-                            LiteGraph.NODE_TITLE_HEIGHT
-                        );
-                    }
-                } else if (overleft) {
-                    ctx.roundRect(
-                        0,
-                        y,
-                        this.size[0] / 2 + 1,
-                        LiteGraph.NODE_TITLE_HEIGHT,
-                        [0, 0, 8, 8]
-                    );
-                } else {
-                    ctx.roundRect(
-                        this.size[0] / 2,
-                        y,
-                        this.size[0] / 2 + 1,
-                        LiteGraph.NODE_TITLE_HEIGHT,
-                        [0, 0, 8, 8]
-                    );
-                }
-
-                if (over) {
-                    ctx.fill();
-                } else {
-                    ctx.fillRect(0, y, this.size[0] + 1, LiteGraph.NODE_TITLE_HEIGHT);
-                }
-
-                ctx.textAlign = "center";
-                ctx.font = "24px Arial";
-                ctx.fillStyle = over ? "#DDD" : "#999";
-                ctx.fillText("+", this.size[0] * 0.25, y + 24);
-                ctx.fillText("+", this.size[0] * 0.75, y + 24);
-            }
-
-            onMouseDown(e, localpos, graphcanvas) {
-                var y = this.size[1] - LiteGraph.NODE_TITLE_HEIGHT + 0.5;
-                if (localpos[1] > y) {
-                    if (localpos[0] < this.size[0] / 2) {
-                        graphcanvas.showSubgraphPropertiesDialog(this);
-                    } else {
-                        graphcanvas.showSubgraphPropertiesDialogRight(this);
-                    }
-                }
-            }
-
             computeSize() {
                 var numInputs = this.inputs ? this.inputs.length : 0;
                 var numOutputs = this.outputs ? this.outputs.length : 0;
@@ -247,6 +204,10 @@
                 if (slot === -1) {
                     this.addInput(name, type);
                     this.syncModernPorts();
+                    this.requestModernPatch(
+                        ns.ModernNodeChangeMask.Layout |
+                            ns.ModernNodeChangeMask.Data
+                    );
                 }
             }
 
@@ -257,6 +218,10 @@
                 }
                 this.getInputInfo(slot).name = name;
                 this.syncModernPorts();
+                this.requestModernPatch(
+                    ns.ModernNodeChangeMask.Layout |
+                        ns.ModernNodeChangeMask.Data
+                );
             }
 
             onSubgraphTypeChangeInput(name, type) {
@@ -266,6 +231,10 @@
                 }
                 this.getInputInfo(slot).type = type;
                 this.syncModernPorts();
+                this.requestModernPatch(
+                    ns.ModernNodeChangeMask.Layout |
+                        ns.ModernNodeChangeMask.Data
+                );
             }
 
             onSubgraphRemovedInput(name) {
@@ -275,6 +244,10 @@
                 }
                 this.removeInput(slot);
                 this.syncModernPorts();
+                this.requestModernPatch(
+                    ns.ModernNodeChangeMask.Layout |
+                        ns.ModernNodeChangeMask.Data
+                );
             }
 
             onSubgraphNewOutput(name, type) {
@@ -282,6 +255,10 @@
                 if (slot === -1) {
                     this.addOutput(name, type);
                     this.syncModernPorts();
+                    this.requestModernPatch(
+                        ns.ModernNodeChangeMask.Layout |
+                            ns.ModernNodeChangeMask.Data
+                    );
                 }
             }
 
@@ -292,6 +269,10 @@
                 }
                 this.getOutputInfo(slot).name = name;
                 this.syncModernPorts();
+                this.requestModernPatch(
+                    ns.ModernNodeChangeMask.Layout |
+                        ns.ModernNodeChangeMask.Data
+                );
             }
 
             onSubgraphTypeChangeOutput(name, type) {
@@ -301,6 +282,10 @@
                 }
                 this.getOutputInfo(slot).type = type;
                 this.syncModernPorts();
+                this.requestModernPatch(
+                    ns.ModernNodeChangeMask.Layout |
+                        ns.ModernNodeChangeMask.Data
+                );
             }
 
             onSubgraphRemovedOutput(name) {
@@ -310,6 +295,10 @@
                 }
                 this.removeOutput(slot);
                 this.syncModernPorts();
+                this.requestModernPatch(
+                    ns.ModernNodeChangeMask.Layout |
+                        ns.ModernNodeChangeMask.Data
+                );
             }
 
             getExtraMenuOptions(graphcanvas) {
@@ -476,6 +465,10 @@
                         }
                     }
                     this.name_in_graph = v;
+                    this.requestModernPatch(
+                        ns.ModernNodeChangeMask.Layout |
+                            ns.ModernNodeChangeMask.Data
+                    );
                 } else if (name == "type") {
                     this.updateType();
                 }
@@ -486,6 +479,30 @@
                     return this.properties.name;
                 }
                 return this.title;
+            }
+
+            getShellState(context) {
+                var shellState = ns.BaseNode.prototype.getShellState.call(
+                    this,
+                    context
+                );
+                shellState.title = this.properties.name || this.title;
+                shellState.headerMetaText = ns.describePortType(this.properties.type);
+                shellState.minimumWidth = 220;
+                return shellState;
+            }
+
+            getPortPresentation(kind, slotIndex, context) {
+                var portPresentation = ns.BaseNode.prototype.getPortPresentation.call(
+                    this,
+                    kind,
+                    slotIndex,
+                    context
+                );
+                if (kind === "output" && slotIndex === 0) {
+                    portPresentation.label = this.properties.name || "";
+                }
+                return portPresentation;
             }
 
             onAction(action, param) {
@@ -562,6 +579,10 @@
                         }
                     }
                     this.name_in_graph = v;
+                    this.requestModernPatch(
+                        ns.ModernNodeChangeMask.Layout |
+                            ns.ModernNodeChangeMask.Data
+                    );
                 } else if (name == "type") {
                     this.updateType();
                 }
@@ -613,6 +634,30 @@
                     return this.properties.name;
                 }
                 return this.title;
+            }
+
+            getShellState(context) {
+                var shellState = ns.BaseNode.prototype.getShellState.call(
+                    this,
+                    context
+                );
+                shellState.title = this.properties.name || this.title;
+                shellState.headerMetaText = ns.describePortType(this.properties.type);
+                shellState.minimumWidth = 214;
+                return shellState;
+            }
+
+            getPortPresentation(kind, slotIndex, context) {
+                var portPresentation = ns.BaseNode.prototype.getPortPresentation.call(
+                    this,
+                    kind,
+                    slotIndex,
+                    context
+                );
+                if (kind === "input" && slotIndex === 0) {
+                    portPresentation.label = this.properties.name || "";
+                }
+                return portPresentation;
             }
         }
 

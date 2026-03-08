@@ -224,6 +224,7 @@ export class InteractionController {
     private readonly view: HTMLElement;
     private readonly doc: Document;
     private readonly graphRef: InteractionGraphLike;
+    private sceneViewElement: HTMLElement | null = null;
     private pointerDownAt = 0;
     private pointerIsDown = false;
     private lastPagePoint: PointLike | null = null;
@@ -309,6 +310,10 @@ export class InteractionController {
     }
 
     private readonly handleViewPointerDown = (event: PointerEvent): void => {
+        if (!this.isScenePointerEvent(event)) {
+            return;
+        }
+
         if (event.button === 2) {
             this.stopPropagationOnly(event, true);
             return;
@@ -502,12 +507,20 @@ export class InteractionController {
     };
 
     private readonly handleViewContextMenu = (event: MouseEvent): void => {
+        if (!this.isScenePointerEvent(event)) {
+            return;
+        }
+
         this.dispatchContextMenu(event);
         event.preventDefault();
         event.stopImmediatePropagation();
     };
 
     private readonly handleViewPointerMove = (event: PointerEvent): void => {
+        if (!this.isScenePointerEvent(event)) {
+            return;
+        }
+
         if (this.pointerIsDown) {
             return;
         }
@@ -1760,6 +1773,85 @@ export class InteractionController {
             return;
         }
         event.stopPropagation();
+    }
+
+    private isScenePointerEvent(event: MouseEvent | PointerEvent): boolean {
+        const target = this.resolveEventTargetElement(event);
+        if (!target || !this.view.contains(target)) {
+            return false;
+        }
+
+        if (this.isDomOverlayTarget(target)) {
+            return false;
+        }
+
+        const sceneView = this.resolveSceneViewElement();
+        if (!sceneView) {
+            return true;
+        }
+
+        return sceneView === target || sceneView.contains(target);
+    }
+
+    private resolveEventTargetElement(
+        event: MouseEvent | PointerEvent
+    ): Element | null {
+        const target = event.target;
+        if (target instanceof Element) {
+            return target;
+        }
+        if (target instanceof Node) {
+            return target.parentElement;
+        }
+        return null;
+    }
+
+    private resolveSceneViewElement(): HTMLElement | null {
+        if (this.sceneViewElement?.isConnected) {
+            return this.sceneViewElement;
+        }
+
+        this.sceneViewElement = this.view.querySelector(
+            ".leafer-app-view"
+        ) as HTMLElement | null;
+        return this.sceneViewElement;
+    }
+
+    private isDomOverlayTarget(target: Element): boolean {
+        if (
+            target.closest(
+                [
+                    ".graphdialog",
+                    ".graphmenu",
+                    ".graphcontextualmenu",
+                    ".litemenu",
+                    ".litecontextmenu",
+                    ".litegraph-editor-dialog",
+                    ".litegraph-editor-panel",
+                    "#node-panel",
+                    "#option-panel",
+                ].join(",")
+            )
+        ) {
+            return true;
+        }
+
+        const htmlTarget = target as HTMLElement;
+        if (htmlTarget.isContentEditable) {
+            return true;
+        }
+
+        switch (target.tagName) {
+            case "INPUT":
+            case "TEXTAREA":
+            case "SELECT":
+            case "OPTION":
+            case "BUTTON":
+            case "LABEL":
+                return true;
+            default:
+                return false;
+        }
     }
 
     private shouldHandleLegacyPointerDown(event: PointerEvent): boolean {

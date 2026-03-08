@@ -30,6 +30,7 @@ function toFiniteNumber(value: unknown, fallback = 0): number {
 
 export class ViewportController implements DragAndScaleViewportPort {
     private scaleListenerId: unknown = null;
+    private moveListenerId: unknown = null;
     private sceneSyncController: Pick<
         SceneSyncController,
         "repaintLegacyNodeHosts" | "repaintAllLinkViews"
@@ -70,7 +71,12 @@ export class ViewportController implements DragAndScaleViewportPort {
             "leafer.scale",
             this.handleTreeScale
         );
+        this.moveListenerId = this.appHost.tree.on_(
+            "leafer.move",
+            this.handleTreeMove
+        );
         this.dragAndScale.attachViewportPort(this);
+        this.syncBackgroundViewport();
     }
 
     destroy(): void {
@@ -78,6 +84,10 @@ export class ViewportController implements DragAndScaleViewportPort {
         if (this.scaleListenerId) {
             this.appHost.tree.off_(this.scaleListenerId as never);
             this.scaleListenerId = null;
+        }
+        if (this.moveListenerId) {
+            this.appHost.tree.off_(this.moveListenerId as never);
+            this.moveListenerId = null;
         }
         if (this.queuedScaleRepaintFrame !== null) {
             const windowRef =
@@ -135,6 +145,7 @@ export class ViewportController implements DragAndScaleViewportPort {
         if (!zoomingCenter && typeof zoomableTree.zoom === "function") {
             zoomableTree.zoom(nextScale, 0, null, false);
             this.lastScale = this.getScale();
+            this.syncBackgroundViewport();
             this.queueLegacyScaleRepaint();
             return;
         }
@@ -145,6 +156,7 @@ export class ViewportController implements DragAndScaleViewportPort {
             nextScale / currentScale
         );
         this.lastScale = nextScale;
+        this.syncBackgroundViewport();
         this.queueLegacyScaleRepaint();
     }
 
@@ -152,6 +164,7 @@ export class ViewportController implements DragAndScaleViewportPort {
         const scale = this.getScale();
         this.appHost.treeZoomLayer.x = toFiniteNumber(x) * scale;
         this.appHost.treeZoomLayer.y = toFiniteNumber(y) * scale;
+        this.syncBackgroundViewport();
     }
 
     moveByScreenDelta(deltaX: number, deltaY: number): void {
@@ -159,6 +172,7 @@ export class ViewportController implements DragAndScaleViewportPort {
             return;
         }
         this.appHost.treeZoomLayer.move(deltaX, deltaY);
+        this.syncBackgroundViewport();
     }
 
     reset(): void {
@@ -166,16 +180,22 @@ export class ViewportController implements DragAndScaleViewportPort {
         this.appHost.treeZoomLayer.y = 0;
         this.appHost.treeZoomLayer.scale = 1;
         this.lastScale = 1;
+        this.syncBackgroundViewport();
         this.queueLegacyScaleRepaint();
     }
 
     private readonly handleTreeScale = (): void => {
         const nextScale = this.getScale();
+        this.syncBackgroundViewport();
         if (Math.abs(nextScale - this.lastScale) < 0.0001) {
             return;
         }
         this.lastScale = nextScale;
         this.queueLegacyScaleRepaint();
+    };
+
+    private readonly handleTreeMove = (): void => {
+        this.syncBackgroundViewport();
     };
 
     private queueLegacyScaleRepaint(): void {
@@ -216,6 +236,14 @@ export class ViewportController implements DragAndScaleViewportPort {
                 clientY: rect.top + centerY,
             },
             true
+        );
+    }
+
+    private syncBackgroundViewport(): void {
+        this.appHost.syncBackgroundViewport(
+            toFiniteNumber((this.appHost.treeZoomLayer as { x?: unknown }).x),
+            toFiniteNumber((this.appHost.treeZoomLayer as { y?: unknown }).y),
+            this.getScale()
         );
     }
 }

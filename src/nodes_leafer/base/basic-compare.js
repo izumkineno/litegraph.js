@@ -19,6 +19,7 @@
                     values: GenericCompare.values,
                 });
                 this.size = [80, 60];
+                this._lastResult = null;
             }
 
             defineWidgets() {
@@ -39,6 +40,26 @@
 
             getTitle() {
                 return "*A " + this.properties.OP + " *B";
+            }
+
+            getShellState(context) {
+                var shellState = ns.BaseNode.prototype.getShellState.call(
+                    this,
+                    context
+                );
+                shellState.title = "Compare";
+                shellState.headerMetaText = this.properties.OP;
+                shellState.minimumWidth = 232;
+                if (this._lastResult === true) {
+                    shellState.bodyColor = "#15221C";
+                    shellState.borderColor = "#2F6B53";
+                    shellState.boxColor = "#8FD9B0";
+                } else if (this._lastResult === false) {
+                    shellState.bodyColor = "#24181B";
+                    shellState.borderColor = "#74404A";
+                    shellState.boxColor = "#F2A1AE";
+                }
+                return shellState;
             }
 
             onExecute() {
@@ -90,6 +111,13 @@
 
                 this.setOutputData(0, result);
                 this.setOutputData(1, !result);
+                if (this._lastResult !== result) {
+                    this._lastResult = result;
+                    this.requestModernPatch(
+                        ns.ModernNodeChangeMask.Data |
+                            ns.ModernNodeChangeMask.Style
+                    );
+                }
             }
         }
 

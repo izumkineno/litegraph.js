@@ -1,3 +1,4 @@
+import { Flow } from "@leafer-in/flow";
 import * as leafer from "leafer-ui";
 import { Group, Path, Rect, Text, UI } from "leafer-ui";
 
@@ -121,6 +122,8 @@ interface ModernActionPartEntry {
     schema: ModernActionPartSchema<ModernNodeLike, ModernNodeHost>;
     root: Group;
     background: Rect;
+    outline: Rect;
+    content: Flow;
     label: Text;
     layout: ModernNodeActionPartLayout;
 }
@@ -139,7 +142,9 @@ interface ShellParts {
     selectionOutline: Rect;
     header: Rect;
     body: Rect;
+    headerContent: Flow;
     title: Text;
+    headerMeta: Text;
     summary: Text;
     collapseOverlay: Rect;
     signalLamp: Rect;
@@ -231,14 +236,22 @@ export interface ModernNodeLike extends GraphMutationNodeLike {
     ) => void;
 }
 
-const TITLE_HEIGHT = 30;
+const TITLE_HEIGHT = 34;
 const SLOT_HEIGHT = 20;
-const BODY_MIN_WIDTH = 120;
-const BODY_MIN_HEIGHT = 30;
-const BODY_PADDING_X = 10;
-const BODY_PADDING_Y = 8;
-const OUTLINE_PADDING = 5;
+const BODY_MIN_WIDTH = 132;
+const BODY_MIN_HEIGHT = 34;
+const BODY_PADDING_X = 12;
+const BODY_PADDING_Y = 10;
+const OUTLINE_PADDING = 4;
 const RESIZE_HANDLE_SIZE = 14;
+const HEADER_META_GAP = 10;
+const HEADER_META_MIN_WIDTH = 44;
+const HEADER_SIGNAL_SIZE = 10;
+const PORT_LABEL_MAX_WIDTH = 84;
+const PORT_LABEL_PADDING = 10;
+const PORT_GUTTER_MIN = 14;
+const WIDGET_ROW_HEIGHT = 28;
+const WIDGET_ROW_GAP = 6;
 
 function toFiniteNumber(value: unknown, fallback = 0): number {
     const numericValue = Number(value);
@@ -315,7 +328,7 @@ function createText(config: Record<string, unknown>): Text {
     return new Text({
         fontSize: 12,
         fontFamily:
-            "'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif",
+            "'Aptos', 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif",
         fill: "#E8EDF2",
         hittable: false,
         textWrap: "none",
@@ -329,6 +342,19 @@ function cloneRect(rect: ModernNodeRectLike): ModernNodeRectLike {
     return {
         x: rect.x,
         y: rect.y,
+        width: rect.width,
+        height: rect.height,
+    };
+}
+
+function offsetRect(
+    rect: ModernNodeRectLike,
+    offsetX: number,
+    offsetY: number
+): ModernNodeRectLike {
+    return {
+        x: rect.x + offsetX,
+        y: rect.y + offsetY,
         width: rect.width,
         height: rect.height,
     };
@@ -375,7 +401,10 @@ function getLiteGraphConstants(): {
 let textMeasureCanvas: HTMLCanvasElement | null = null;
 let textMeasureContext: CanvasRenderingContext2D | null = null;
 
-function measureTextWidth(text: string, font = "14px Arial"): number {
+function measureTextWidth(
+    text: string,
+    font = '600 13px "Aptos", "Segoe UI", sans-serif'
+): number {
     if (
         typeof document === "undefined" ||
         typeof document.createElement !== "function"
@@ -612,6 +641,10 @@ export class ModernNodeHost implements NodeViewHost {
     private actionPartEntries: ModernActionPartEntry[] = [];
     private portEntries = new Map<string, ModernPortEntry>();
     private widgetValueSnapshot = new Map<string, unknown>();
+    private currentWidgetSchemas: ReadonlyArray<ModernWidgetSchema> = [];
+    private currentActionPartSchemas: ReadonlyArray<
+        ModernActionPartSchema<ModernNodeLike, ModernNodeHost>
+    > = [];
     private lastWidgetSignature = "";
     private lastActionPartSignature = "";
     private mounted = false;
@@ -642,6 +675,9 @@ export class ModernNodeHost implements NodeViewHost {
         this.node.ensureModernPorts?.();
         const changeMask = this.consumeChangeMask();
         this.shellState = this.resolveShellState(changeMask);
+        this.currentWidgetSchemas = this.collectWidgetSchemas();
+        this.currentActionPartSchemas = this.collectActionPartSchemas(changeMask);
+        this.ensureMinimumNodeSize(this.shellState);
         this.shellLayout = this.computeShellLayout(this.shellState);
 
         if (!this.mounted) {
@@ -663,6 +699,53 @@ export class ModernNodeHost implements NodeViewHost {
         this.applyInteractionState();
         this.syncPosition();
         this.storeInspectableState();
+    }
+
+    private collectWidgetSchemas(): ReadonlyArray<ModernWidgetSchema> {
+        if (Boolean(this.node.flags?.collapsed)) {
+            return [];
+        }
+        const schemas = this.node.defineWidgets?.();
+        return Array.isArray(schemas) ? [...schemas] : [];
+    }
+
+    private collectActionPartSchemas(
+        changeMask: ModernNodeChangeMaskValue
+    ): ReadonlyArray<ModernActionPartSchema<ModernNodeLike, ModernNodeHost>> {
+        if (Boolean(this.node.flags?.collapsed)) {
+            return [];
+        }
+        const parts = this.node.defineActionParts?.(
+            this.createLifecycleContext(changeMask)
+        );
+        return Array.isArray(parts)
+            ? parts.filter((schema) => schema.visible !== false)
+            : [];
+    }
+
+    private ensureMinimumNodeSize(shellState: ModernShellState): void {
+        if (Boolean(this.node.flags?.collapsed)) {
+            return;
+        }
+
+        const size = this.node.size;
+        const nextWidth = Math.max(
+            toFiniteNumber(size?.[0], BODY_MIN_WIDTH),
+            toFiniteNumber(shellState.minimumWidth, BODY_MIN_WIDTH),
+            this.resolveMinimumShellWidth(shellState)
+        );
+        const nextHeight = Math.max(
+            toFiniteNumber(size?.[1], BODY_MIN_HEIGHT),
+            toFiniteNumber(shellState.minimumHeight, BODY_MIN_HEIGHT),
+            this.resolveMinimumBodyHeight(shellState)
+        );
+
+        if (size) {
+            size[0] = nextWidth;
+            size[1] = nextHeight;
+        } else {
+            this.node.size = [nextWidth, nextHeight] as [number, number];
+        }
     }
 
     syncPosition(): void {
@@ -980,32 +1063,55 @@ export class ModernNodeHost implements NodeViewHost {
         });
         const selectionOutline = new Rect({
             fill: "rgba(0,0,0,0)",
-            stroke: "#76A8FF",
-            strokeWidth: 2,
-            cornerRadius: 12,
+            stroke: "#67A2FF",
+            strokeWidth: 1.5,
+            cornerRadius: 14,
             visible: false,
             hittable: false,
         });
         const header = new Rect({
-            fill: "#333333",
-            stroke: "#243342",
+            fill: "#283444",
+            stroke: "#314254",
             strokeWidth: 1,
-            cornerRadius: [10, 10, 0, 0],
+            cornerRadius: [12, 12, 0, 0],
             hittable: false,
         });
         const body = new Rect({
-            fill: "#353535",
+            fill: "#101720",
             stroke: "#243342",
             strokeWidth: 1.25,
-            cornerRadius: [0, 0, 10, 10],
+            cornerRadius: [0, 0, 12, 12],
+            hittable: false,
+        });
+        const headerContent = new Flow({
+            x: 34,
+            y: -TITLE_HEIGHT,
+            width: 1,
+            height: TITLE_HEIGHT,
+            flow: "x",
+            gap: HEADER_META_GAP,
+            flowAlign: {
+                content: "left",
+                y: "center",
+            },
             hittable: false,
         });
         const title = createText({
-            x: 42,
-            y: -TITLE_HEIGHT + TITLE_HEIGHT / 2,
             text: "",
-            fontWeight: "bold",
+            height: TITLE_HEIGHT,
+            fontSize: 13,
+            fontWeight: 600,
         });
+        const headerMeta = createText({
+            width: HEADER_META_MIN_WIDTH,
+            height: TITLE_HEIGHT,
+            fontSize: 10,
+            fontWeight: 500,
+            textAlign: "right",
+            fill: "#89A0B7",
+            text: "",
+        });
+        headerContent.add([title, headerMeta]);
         const summary = createText({
             x: BODY_PADDING_X,
             y: 18,
@@ -1025,10 +1131,10 @@ export class ModernNodeHost implements NodeViewHost {
             hittable: false,
         });
         const signalLamp = new Rect({
-            x: 8,
-            y: -TITLE_HEIGHT + 8,
-            width: 14,
-            height: 14,
+            x: 10,
+            y: -TITLE_HEIGHT + (TITLE_HEIGHT - HEADER_SIGNAL_SIZE) / 2,
+            width: HEADER_SIGNAL_SIZE,
+            height: HEADER_SIGNAL_SIZE,
             cornerRadius: 999,
             fill: "#666666",
             stroke: "#10151A",
@@ -1059,7 +1165,7 @@ export class ModernNodeHost implements NodeViewHost {
             body,
             collapseOverlay,
             signalLamp,
-            title,
+            headerContent,
             summary,
             inputPortLayer,
             outputPortLayer,
@@ -1074,7 +1180,9 @@ export class ModernNodeHost implements NodeViewHost {
             selectionOutline,
             header,
             body,
+            headerContent,
             title,
+            headerMeta,
             summary,
             collapseOverlay,
             signalLamp,
@@ -1113,22 +1221,32 @@ export class ModernNodeHost implements NodeViewHost {
         shellState: ModernShellState
     ): ModernNodeShellLayout {
         const constants = getLiteGraphConstants();
-        const titleHeight = constants.NODE_TITLE_HEIGHT;
+        const titleHeight = Math.max(constants.NODE_TITLE_HEIGHT, TITLE_HEIGHT);
         const bodyHeight = Math.max(
             toFiniteNumber(this.node.size?.[1], BODY_MIN_HEIGHT),
-            BODY_MIN_HEIGHT
+            toFiniteNumber(shellState.minimumHeight, BODY_MIN_HEIGHT),
+            this.resolveMinimumBodyHeight(shellState)
         );
         const isCollapsed = Boolean(this.node.flags?.collapsed);
+        const minWidth = this.resolveMinimumShellWidth(shellState, titleHeight);
         const expandedWidth = Math.max(
             toFiniteNumber(this.node.size?.[0], BODY_MIN_WIDTH),
-            BODY_MIN_WIDTH
+            minWidth
         );
         const collapsedWidth =
             shellState.collapsedWidth != null
-                ? Math.max(toFiniteNumber(shellState.collapsedWidth, expandedWidth), 48)
+                ? Math.max(
+                      toFiniteNumber(shellState.collapsedWidth, expandedWidth),
+                      Math.min(minWidth, expandedWidth),
+                      56
+                  )
                 : Math.min(
                       expandedWidth,
-                      measureTextWidth(String(shellState.title || "")) + titleHeight * 2
+                      Math.max(
+                          56,
+                          measureTextWidth(String(shellState.title || "")) +
+                              titleHeight * 1.8
+                      )
                   );
         const width = isCollapsed ? collapsedWidth : expandedWidth;
         const header: ModernNodeRectLike = {
@@ -1193,9 +1311,9 @@ export class ModernNodeHost implements NodeViewHost {
         this.shell.header.y = header.y;
         this.shell.header.width = header.width;
         this.shell.header.height = header.height;
-        this.shell.header.fill = shellState.titleColor || "#333333";
-        this.shell.header.stroke = shellState.borderColor || "#243342";
-        this.shell.header.cornerRadius = body ? [10, 10, 0, 0] : [10, 10, 10, 10];
+        this.shell.header.fill = shellState.titleColor || "#283444";
+        this.shell.header.stroke = shellState.borderColor || "#314254";
+        this.shell.header.cornerRadius = body ? [12, 12, 0, 0] : [12, 12, 12, 12];
 
         this.shell.body.visible = Boolean(body);
         if (body) {
@@ -1203,17 +1321,48 @@ export class ModernNodeHost implements NodeViewHost {
             this.shell.body.y = body.y;
             this.shell.body.width = body.width;
             this.shell.body.height = body.height;
-            this.shell.body.fill = shellState.bodyColor || "#353535";
-            this.shell.body.stroke = shellState.borderColor || "#243342";
-            this.shell.body.cornerRadius = [0, 0, 10, 10];
+            this.shell.body.fill = shellState.bodyColor || "#101720";
+            this.shell.body.stroke = shellState.borderColor || "#314254";
+            this.shell.body.cornerRadius = [0, 0, 12, 12];
         }
+
+        const headerMeta = this.resolveHeaderMetaText(shellState);
+        const headerMetaWidth = headerMeta
+            ? Math.max(
+                  HEADER_META_MIN_WIDTH,
+                  measureTextWidth(
+                      headerMeta,
+                      '500 10px "Aptos", "Segoe UI", sans-serif'
+                  ) + 8
+              )
+            : 0;
+        const titleStartX = this.resolveTitleStartX(Boolean(layout.collapse), header.height);
+        const showHeaderMeta =
+            Boolean(headerMeta) &&
+            !Boolean(this.node.flags?.collapsed) &&
+            header.width - titleStartX - headerMetaWidth - HEADER_META_GAP - 12 >= 56;
+        const titleEndPadding = showHeaderMeta
+            ? headerMetaWidth + HEADER_META_GAP + 12
+            : 14;
+        const titleWidth = Math.max(24, header.width - titleStartX - titleEndPadding);
+
+        this.shell.headerContent.x = titleStartX;
+        this.shell.headerContent.y = header.y;
+        this.shell.headerContent.width = Math.max(24, header.width - titleStartX - 12);
+        this.shell.headerContent.height = header.height;
+        this.shell.headerContent.visible =
+            shellState.titleMode !== "hidden" || showHeaderMeta;
 
         this.shell.title.text = String(shellState.title || "");
         this.shell.title.fill = shellState.titleTextColor || "#F5F7FA";
-        this.shell.title.x = (layout.collapse ? header.height : 10) + 10;
-        this.shell.title.y = header.y + header.height / 2;
-        this.shell.title.width = Math.max(24, header.width - this.shell.title.x - 14);
+        this.shell.title.height = header.height;
+        this.shell.title.width = titleWidth;
         this.shell.title.visible = shellState.titleMode !== "hidden";
+
+        this.shell.headerMeta.text = headerMeta;
+        this.shell.headerMeta.visible = showHeaderMeta;
+        this.shell.headerMeta.width = Math.max(HEADER_META_MIN_WIDTH, headerMetaWidth);
+        this.shell.headerMeta.height = header.height;
 
         this.shell.summary.text = String(shellState.summaryText || "");
         this.shell.summary.visible = Boolean(
@@ -1222,13 +1371,20 @@ export class ModernNodeHost implements NodeViewHost {
                 !this.content &&
                 shellState.summaryText
         );
-        this.shell.summary.x = BODY_PADDING_X;
-        this.shell.summary.y = 16;
-        this.shell.summary.width = Math.max(20, layout.width - BODY_PADDING_X * 2);
+        const contentArea = this.getContentArea();
+        this.shell.summary.x = contentArea?.x || BODY_PADDING_X;
+        this.shell.summary.y =
+            (contentArea?.y || BODY_PADDING_Y) +
+            Math.min(20, Math.max(14, (contentArea?.height || 24) * 0.45));
+        this.shell.summary.width = Math.max(
+            20,
+            (contentArea?.width || layout.width - BODY_PADDING_X * 2)
+        );
 
         this.shell.signalLamp.visible = shellState.showSignalLamp !== false;
-        this.shell.signalLamp.x = 8;
-        this.shell.signalLamp.y = header.y + 8;
+        this.shell.signalLamp.x = 10;
+        this.shell.signalLamp.y =
+            header.y + (header.height - HEADER_SIGNAL_SIZE) / 2;
         this.shell.signalLamp.fill = shellState.boxColor || "#666666";
 
         this.shell.collapseOverlay.visible = Boolean(layout.collapse);
@@ -1252,6 +1408,145 @@ export class ModernNodeHost implements NodeViewHost {
         this.shell.selectionOutline.visible = Boolean(this.node.is_selected);
     }
 
+    private resolveMinimumBodyHeight(shellState?: ModernShellState): number {
+        const slotCount = Math.max(
+            Array.isArray(this.node.inputs) ? this.node.inputs.length : 0,
+            Array.isArray(this.node.outputs) ? this.node.outputs.length : 0
+        );
+        const widgetHeight = this.currentWidgetSchemas.length
+            ? BODY_PADDING_Y * 2 +
+              this.currentWidgetSchemas.length * WIDGET_ROW_HEIGHT +
+              Math.max(0, this.currentWidgetSchemas.length - 1) * WIDGET_ROW_GAP
+            : 0;
+        const portHeight = slotCount
+            ? BODY_PADDING_Y * 2 + slotCount * getLiteGraphConstants().NODE_SLOT_HEIGHT
+            : 0;
+        const summaryHeight =
+            !this.currentWidgetSchemas.length && !this.content ? 42 : 0;
+        const footerHeight = this.hasFooterActionParts() ? TITLE_HEIGHT : 0;
+        return Math.max(
+            BODY_MIN_HEIGHT,
+            toFiniteNumber(shellState?.minimumHeight, BODY_MIN_HEIGHT),
+            widgetHeight + footerHeight,
+            portHeight + footerHeight,
+            summaryHeight + footerHeight
+        );
+    }
+
+    private resolveMinimumShellWidth(
+        shellState: ModernShellState,
+        headerHeight = TITLE_HEIGHT
+    ): number {
+        const gutters = this.resolvePortGutters();
+        const headerMeta = this.resolveHeaderMetaText(shellState);
+        const headerMetaWidth = headerMeta
+            ? Math.max(
+                  HEADER_META_MIN_WIDTH,
+                  measureTextWidth(
+                      headerMeta,
+                      '500 10px "Aptos", "Segoe UI", sans-serif'
+                  ) + 8
+              )
+            : 0;
+        const titleWidth = measureTextWidth(
+            String(shellState.title || ""),
+            '600 13px "Aptos", "Segoe UI", sans-serif'
+        );
+        const contentWidth = this.resolveMinimumContentWidth();
+
+        return Math.max(
+            BODY_MIN_WIDTH,
+            toFiniteNumber(shellState.minimumWidth, BODY_MIN_WIDTH),
+            BODY_PADDING_X * 2 + gutters.left + gutters.right + contentWidth,
+            this.resolveTitleStartX(Boolean(shellState.collapsible), headerHeight) +
+                titleWidth +
+                (headerMetaWidth
+                    ? HEADER_META_GAP + headerMetaWidth + 12
+                    : 14)
+        );
+    }
+
+    private resolveMinimumContentWidth(): number {
+        if (!this.currentWidgetSchemas.length) {
+            return 72;
+        }
+
+        let minWidth = 104;
+        for (let i = 0; i < this.currentWidgetSchemas.length; ++i) {
+            const schema = this.currentWidgetSchemas[i];
+            if (schema.type === "number" || schema.type === "combo") {
+                minWidth = Math.max(minWidth, 156);
+            } else if (schema.type === "text" || schema.type === "toggle") {
+                minWidth = Math.max(minWidth, 124);
+            } else if (schema.type === "button") {
+                minWidth = Math.max(minWidth, 110);
+            }
+        }
+
+        return minWidth;
+    }
+
+    private resolveHeaderMetaText(shellState: ModernShellState): string {
+        if (typeof shellState.headerMetaText === "string") {
+            return shellState.headerMetaText.trim();
+        }
+        const inputCount = Array.isArray(this.node.inputs) ? this.node.inputs.length : 0;
+        const outputCount = Array.isArray(this.node.outputs)
+            ? this.node.outputs.length
+            : 0;
+        if (inputCount || outputCount) {
+            return `I${inputCount} / O${outputCount}`;
+        }
+        const summary = String(shellState.summaryText || "").trim();
+        return summary.length > 18 ? `${summary.slice(0, 17)}...` : summary;
+    }
+
+    private resolveTitleStartX(hasCollapse: boolean, headerHeight: number): number {
+        const collapseWidth = hasCollapse ? headerHeight : 0;
+        return Math.max(collapseWidth + 10, 30);
+    }
+
+    private resolvePortGutters(): { left: number; right: number } {
+        return {
+            left: this.measurePortGutter("input"),
+            right: this.measurePortGutter("output"),
+        };
+    }
+
+    private measurePortGutter(kind: NodeViewPortKind): number {
+        const slots = kind === "input" ? this.node.inputs : this.node.outputs;
+        if (!Array.isArray(slots) || !slots.length || Boolean(this.node.flags?.collapsed)) {
+            return 0;
+        }
+
+        let maxWidth = 0;
+        for (let i = 0; i < slots.length; ++i) {
+            const presentation = this.resolvePortPresentation(kind, i, slots[i]);
+            const label =
+                presentation.hideLabelWhenCollapsed && this.node.flags?.collapsed
+                    ? ""
+                    : presentation.label;
+            if (!label) {
+                continue;
+            }
+            maxWidth = Math.max(
+                maxWidth,
+                Math.min(
+                    PORT_LABEL_MAX_WIDTH,
+                    measureTextWidth(
+                        String(label),
+                        '500 11px "Aptos", "Segoe UI", sans-serif'
+                    )
+                )
+            );
+        }
+
+        if (!maxWidth) {
+            return PORT_GUTTER_MIN;
+        }
+        return Math.max(PORT_GUTTER_MIN, maxWidth + PORT_LABEL_PADDING + 10);
+    }
+
     private syncContentLayout(): void {
         const contentArea = this.getContentArea();
         this.shell.contentLayer.visible = Boolean(contentArea);
@@ -1272,13 +1567,8 @@ export class ModernNodeHost implements NodeViewHost {
     }
 
     private syncWidgets(changeMask: ModernNodeChangeMaskValue): void {
-        const collapsed = Boolean(this.node.flags?.collapsed);
-        const schemas = collapsed
-            ? []
-            : Array.isArray(this.node.defineWidgets?.())
-              ? [...(this.node.defineWidgets?.() || [])]
-              : [];
-        this.shell.widgetLayer.visible = !collapsed && schemas.length > 0;
+        const schemas = this.currentWidgetSchemas;
+        this.shell.widgetLayer.visible = schemas.length > 0;
 
         const nextSignature = signatureOfWidgets(schemas);
         const needsRebuild =
@@ -1333,13 +1623,30 @@ export class ModernNodeHost implements NodeViewHost {
                 if (!entry) {
                     continue;
                 }
-                entry.schema = schemas[i];
-                entry.layout = layouts[i];
-                entry.renderer.patchView(
-                    this.createWidgetContext(entry.schema, layouts[i]),
-                    entry.handle,
-                    changeMask
-                );
+                const nextSchema = schemas[i];
+                const nextLayout = layouts[i];
+                const shouldPatch =
+                    (changeMask &
+                        (ModernNodeChangeMask.Layout |
+                            ModernNodeChangeMask.Style)) !==
+                        0 ||
+                    entry.schema.value !== nextSchema.value ||
+                    entry.schema.disabled !== nextSchema.disabled ||
+                    entry.schema.label !== nextSchema.label ||
+                    entry.schema.name !== nextSchema.name ||
+                    entry.layout.x !== nextLayout.x ||
+                    entry.layout.y !== nextLayout.y ||
+                    entry.layout.width !== nextLayout.width ||
+                    entry.layout.height !== nextLayout.height;
+                entry.schema = nextSchema;
+                entry.layout = nextLayout;
+                if (shouldPatch) {
+                    entry.renderer.patchView(
+                        this.createWidgetContext(entry.schema, nextLayout),
+                        entry.handle,
+                        changeMask
+                    );
+                }
                 this.widgetValueSnapshot.set(entry.schema.id, entry.schema.value);
             }
         }
@@ -1352,17 +1659,7 @@ export class ModernNodeHost implements NodeViewHost {
     }
 
     private syncActionParts(changeMask: ModernNodeChangeMaskValue): void {
-        const collapsed = Boolean(this.node.flags?.collapsed);
-        const actionParts = collapsed
-            ? []
-            : Array.isArray(this.node.defineActionParts?.(this.createLifecycleContext(changeMask)))
-              ? [
-                    ...(this.node.defineActionParts?.(
-                        this.createLifecycleContext(changeMask)
-                    ) || []),
-                ]
-              : [];
-        const visibleParts = actionParts.filter((schema) => schema.visible !== false);
+        const visibleParts = this.currentActionPartSchemas;
         this.shell.actionPartLayer.visible = visibleParts.length > 0;
 
         const nextSignature = signatureOfActionParts(visibleParts);
@@ -1389,8 +1686,8 @@ export class ModernNodeHost implements NodeViewHost {
                     y: 0,
                     width: layout.width,
                     height: layout.height,
-                    fill: "#1C2430",
-                    stroke: "#2E455D",
+                    fill: "#172332",
+                    stroke: "#2B4663",
                     strokeWidth: 1,
                     cornerRadius:
                         schema.placement === "footer-left"
@@ -1400,20 +1697,51 @@ export class ModernNodeHost implements NodeViewHost {
                               : 8,
                     hittable: false,
                 });
-                const label = createText({
+                const outline = new Rect({
                     x: 0,
-                    y: layout.height / 2,
-                    width: layout.width,
+                    y: 0,
+                    width: Math.max(0, layout.width),
+                    height: Math.max(0, layout.height),
+                    cornerRadius:
+                        schema.placement === "footer-left"
+                            ? [0, 0, 10, 0]
+                            : schema.placement === "footer-right"
+                              ? [0, 0, 0, 10]
+                              : 8,
+                    fill: "rgba(0,0,0,0)",
+                    stroke: "#78AEFF",
+                    strokeWidth: 1.5,
+                    visible: false,
+                    opacity: 0,
+                    hittable: false,
+                });
+                const content = new Flow({
+                    x: 8,
+                    y: 0,
+                    width: Math.max(1, layout.width - 16),
+                    height: layout.height,
+                    flow: "x",
+                    flowAlign: "center",
+                    hittable: false,
+                });
+                const label = createText({
+                    width: 1,
+                    autoWidth: 1,
+                    height: layout.height,
                     textAlign: "center",
                     text: String(schema.label || schema.id),
-                    fontSize: 18,
+                    fontSize: 12,
+                    fill: "#BBD0E6",
                 });
-                root.add([background, label]);
+                content.add(label);
+                root.add([background, outline, content]);
                 this.shell.actionPartLayer.add(root);
                 this.actionPartEntries.push({
                     schema,
                     root,
                     background,
+                    outline,
+                    content,
                     label,
                     layout,
                 });
@@ -1430,8 +1758,20 @@ export class ModernNodeHost implements NodeViewHost {
                 entry.root.height = entry.layout.height;
                 entry.background.width = entry.layout.width;
                 entry.background.height = entry.layout.height;
-                entry.label.width = entry.layout.width;
-                entry.label.y = entry.layout.height / 2;
+                entry.outline.width = Math.max(0, entry.layout.width);
+                entry.outline.height = Math.max(0, entry.layout.height);
+                entry.outline.cornerRadius =
+                    entry.schema.placement === "footer-left"
+                        ? [0, 0, 10, 0]
+                        : entry.schema.placement === "footer-right"
+                          ? [0, 0, 0, 10]
+                          : 8;
+                entry.content.x = 8;
+                entry.content.width = Math.max(1, entry.layout.width - 16);
+                entry.content.height = entry.layout.height;
+                entry.label.width = 1;
+                entry.label.autoWidth = 1;
+                entry.label.height = entry.layout.height;
                 entry.label.text = String(entry.schema.label || entry.schema.id);
             }
         }
@@ -1480,27 +1820,26 @@ export class ModernNodeHost implements NodeViewHost {
         if (!body) {
             return null;
         }
+        const gutters = this.resolvePortGutters();
         const footerHeight = this.hasFooterActionParts() ? TITLE_HEIGHT : 0;
         return {
-            x: BODY_PADDING_X,
+            x: BODY_PADDING_X + gutters.left,
             y: BODY_PADDING_Y,
-            width: Math.max(16, body.width - BODY_PADDING_X * 2),
+            width: Math.max(
+                16,
+                body.width - BODY_PADDING_X * 2 - gutters.left - gutters.right
+            ),
             height: Math.max(0, body.height - BODY_PADDING_Y * 2 - footerHeight),
         };
     }
 
     private hasFooterActionParts(): boolean {
-        const schemas = this.node.defineActionParts?.(
-            this.createLifecycleContext(ModernNodeChangeMask.Layout)
-        );
         return Boolean(
-            Array.isArray(schemas) &&
-                schemas.some(
-                    (schema) =>
-                        schema.visible !== false &&
-                        (schema.placement === "footer-left" ||
-                            schema.placement === "footer-right")
-                )
+            this.currentActionPartSchemas.some(
+                (schema) =>
+                    schema.placement === "footer-left" ||
+                    schema.placement === "footer-right"
+            )
         );
     }
 
@@ -1515,11 +1854,15 @@ export class ModernNodeHost implements NodeViewHost {
             width: this.shellLayout.width,
             height: BODY_MIN_HEIGHT,
         };
+        const gutters = this.resolvePortGutters();
         const footerHeight = this.hasFooterActionParts() ? TITLE_HEIGHT : 0;
         return {
-            x: BODY_PADDING_X,
+            x: BODY_PADDING_X + gutters.left,
             y: BODY_PADDING_Y,
-            width: Math.max(20, body.width - BODY_PADDING_X * 2),
+            width: Math.max(
+                20,
+                body.width - BODY_PADDING_X * 2 - gutters.left - gutters.right
+            ),
             height: Math.max(20, body.height - BODY_PADDING_Y * 2 - footerHeight),
         };
     }
@@ -1661,6 +2004,9 @@ export class ModernNodeHost implements NodeViewHost {
                 slotIndex,
                 this.createLifecycleContext(ModernNodeChangeMask.Ports)
             ) || null;
+        const hasExplicitLabel = Boolean(
+            explicit && Object.prototype.hasOwnProperty.call(explicit, "label")
+        );
 
         let shape = explicit?.shape || "circle";
         if (!explicit?.shape) {
@@ -1683,7 +2029,11 @@ export class ModernNodeHost implements NodeViewHost {
                 : constants.LINK_COLOR;
 
         return {
-            label: String(explicit?.label || slotRecord.label || slotRecord.name || ""),
+            label: String(
+                hasExplicitLabel
+                    ? explicit?.label ?? ""
+                    : slotRecord.label ?? slotRecord.name ?? ""
+            ),
             shape,
             dir: explicit?.dir,
             colorOn:
@@ -1713,17 +2063,49 @@ export class ModernNodeHost implements NodeViewHost {
             }
             return [toFiniteNumber(explicit.x), toFiniteNumber(explicit.y)];
         }
+        return this.resolveDefaultPortAnchorLocal(kind, slotIndex);
+    }
 
-        const anchor = toPoint(
-            this.node.getConnectionPos?.(kind === "input", slotIndex)
-        );
-        if (!anchor) {
+    private resolveDefaultPortAnchorLocal(
+        kind: NodeViewPortKind,
+        slotIndex: number
+    ): [number, number] | null {
+        const slots = kind === "input" ? this.node.inputs : this.node.outputs;
+        if (!Array.isArray(slots) || slotIndex < 0 || slotIndex >= slots.length) {
             return null;
         }
-        return [
-            anchor[0] - toFiniteNumber(this.node.pos?.[0]),
-            anchor[1] - toFiniteNumber(this.node.pos?.[1]),
-        ];
+
+        const header = this.shellLayout.header || {
+            x: 0,
+            y: -TITLE_HEIGHT,
+            width: this.shellLayout.width,
+            height: TITLE_HEIGHT,
+        };
+        const body = this.shellLayout.body;
+        const anchorX = kind === "input" ? 0 : this.shellLayout.width;
+
+        if (!body || Boolean(this.node.flags?.collapsed)) {
+            return [anchorX, header.y + header.height / 2];
+        }
+
+        const widgetLayout =
+            (slots.length === 1 || this.currentWidgetSchemas.length === slots.length) &&
+            this.shellLayout.widgets?.[slotIndex];
+        if (widgetLayout) {
+            return [anchorX, widgetLayout.y + widgetLayout.height / 2];
+        }
+
+        const footerHeight = this.hasFooterActionParts() ? TITLE_HEIGHT : 0;
+        const usableTop = body.y + BODY_PADDING_Y + 4;
+        const usableHeight = Math.max(
+            getLiteGraphConstants().NODE_SLOT_HEIGHT,
+            body.height - BODY_PADDING_Y * 2 - footerHeight - 8
+        );
+        const step = usableHeight / Math.max(slots.length, 1);
+        const anchorY = usableTop + step * slotIndex + step / 2;
+        const minY = body.y + 12;
+        const maxY = body.y + body.height - footerHeight - 12;
+        return [anchorX, Math.max(minY, Math.min(maxY, anchorY))];
     }
 
     private isPortActive(
@@ -1759,13 +2141,14 @@ export class ModernNodeHost implements NodeViewHost {
                     hittable: false,
                 });
                 const marker = createPortMarker(layout.shape, markerColor);
+                const labelFrame = this.resolvePortLabelFrame(kind);
                 const label = createText({
-                    x: kind === "input" ? layout.anchorX + 10 : layout.anchorX - 90,
+                    x: labelFrame.x,
                     y: layout.anchorY,
-                    width: 80,
-                    textAlign: kind === "input" ? "left" : "right",
-                    fontSize: 11,
-                    fill: "#D5DEE7",
+                    width: labelFrame.width,
+                    textAlign: labelFrame.textAlign,
+                    fontSize: 10.5,
+                    fill: "#93A8BD",
                     text: layout.label,
                 });
                 root.add(marker);
@@ -1794,9 +2177,11 @@ export class ModernNodeHost implements NodeViewHost {
 
             entry.label.text = layout.label;
             entry.label.visible = !layout.hiddenLabelWhenCollapsed && Boolean(layout.label);
-            entry.label.x = kind === "input" ? layout.anchorX + 10 : layout.anchorX - 90;
+            const labelFrame = this.resolvePortLabelFrame(kind);
+            entry.label.x = labelFrame.x;
             entry.label.y = layout.anchorY;
-            entry.label.width = 80;
+            entry.label.width = labelFrame.width;
+            entry.label.textAlign = labelFrame.textAlign;
         }
 
         for (const [key, entry] of this.portEntries.entries()) {
@@ -1831,6 +2216,28 @@ export class ModernNodeHost implements NodeViewHost {
             }
         }
         return null;
+    }
+
+    private resolvePortLabelFrame(
+        kind: NodeViewPortKind
+    ): { x: number; width: number; textAlign: "left" | "right" } {
+        const gutters = this.resolvePortGutters();
+        if (kind === "input") {
+            return {
+                x: PORT_LABEL_PADDING,
+                width: Math.max(28, gutters.left - PORT_LABEL_PADDING - 4),
+                textAlign: "left",
+            };
+        }
+
+        return {
+            x: Math.max(
+                PORT_LABEL_PADDING,
+                this.shellLayout.width - gutters.right + 4
+            ),
+            width: Math.max(28, gutters.right - PORT_LABEL_PADDING - 8),
+            textAlign: "right",
+        };
     }
 
     private storeInspectableState(): void {
@@ -1953,14 +2360,16 @@ export class ModernNodeHost implements NodeViewHost {
     }
 
     private applyWidgetInteractionState(): void {
-        const hoveredIndex =
+        const hoveredPart =
             this.interactionState.hoveredPart?.kind === "widget"
-                ? this.interactionState.hoveredPart.index
+                ? this.interactionState.hoveredPart
                 : null;
-        const pressedIndex =
+        const pressedPart =
             this.interactionState.pressedPart?.kind === "widget"
-                ? this.interactionState.pressedPart.index
+                ? this.interactionState.pressedPart
                 : null;
+        const hoveredIndex = hoveredPart?.index ?? null;
+        const pressedIndex = pressedPart?.index ?? null;
 
         for (let i = 0; i < this.widgetEntries.length; ++i) {
             const entry = this.widgetEntries[i];
@@ -1968,9 +2377,16 @@ export class ModernNodeHost implements NodeViewHost {
             if (!widgetRoot || typeof widgetRoot !== "object") {
                 continue;
             }
+            const outline = toUI(
+                (entry.handle as { outline?: unknown }).outline
+            ) as Rect | null;
             widgetRoot.disabled = Boolean(entry.schema.disabled);
             if (entry.schema.disabled) {
                 widgetRoot.state = "";
+                if (outline) {
+                    outline.visible = false;
+                    outline.opacity = 0;
+                }
                 continue;
             }
             if (pressedIndex === i) {
@@ -1980,6 +2396,42 @@ export class ModernNodeHost implements NodeViewHost {
             } else {
                 widgetRoot.state = "";
             }
+
+            if (!outline) {
+                continue;
+            }
+
+            const activePart =
+                pressedIndex === i
+                    ? pressedPart
+                    : hoveredIndex === i
+                      ? hoveredPart
+                      : null;
+            if (!activePart) {
+                outline.visible = false;
+                outline.opacity = 0;
+                continue;
+            }
+
+            const actionZone =
+                activePart.action && entry.handle.actionZones
+                    ? entry.handle.actionZones[activePart.action]
+                    : null;
+            const frame = actionZone || {
+                x: 0,
+                y: 0,
+                width: entry.handle.bounds.width,
+                height: entry.handle.bounds.height,
+            };
+            outline.x = frame.x;
+            outline.y = frame.y;
+            outline.width = Math.max(0, frame.width);
+            outline.height = Math.max(0, frame.height);
+            outline.cornerRadius = actionZone ? 8 : 10;
+            outline.stroke = pressedIndex === i ? "#A4CAFF" : "#7EB2FF";
+            outline.strokeWidth = pressedIndex === i ? 2 : 1.5;
+            outline.visible = true;
+            outline.opacity = pressedIndex === i ? 1 : 0.95;
         }
     }
 
@@ -1994,16 +2446,28 @@ export class ModernNodeHost implements NodeViewHost {
             );
             entry.background.fill =
                 state === "press"
-                    ? "#17304F"
+                    ? "#1B3657"
                     : state === "hover"
-                      ? "#223951"
-                      : "#1C2430";
+                      ? "#21364E"
+                      : "#172332";
             entry.background.stroke =
                 state === "press"
                     ? "#76A8FF"
                     : state === "hover"
-                      ? "#4E6D94"
-                      : "#2E455D";
+                      ? "#5A7FA8"
+                      : "#2B4663";
+            entry.outline.visible = state === "press" || state === "hover";
+            entry.outline.opacity =
+                state === "press" ? 1 : state === "hover" ? 0.95 : 0;
+            entry.outline.stroke =
+                state === "press" ? "#A4CAFF" : "#7EB2FF";
+            entry.outline.strokeWidth = state === "press" ? 2 : 1.5;
+            entry.label.fill =
+                state === "press"
+                    ? "#F3F8FF"
+                    : state === "hover"
+                      ? "#D6E8FA"
+                      : "#BBD0E6";
         }
     }
 
@@ -2061,13 +2525,14 @@ export class ModernNodeHost implements NodeViewHost {
 
             if (widget.actionZones) {
                 for (const [action, rect] of Object.entries(widget.actionZones)) {
-                    if (pointInsideRect(point, rect)) {
+                    const absoluteRect = offsetRect(rect, widget.x, widget.y);
+                    if (pointInsideRect(point, absoluteRect)) {
                         return {
                             kind: "widget",
                             index: widget.index,
                             action,
                             cursor: "pointer",
-                            bounds: rect,
+                            bounds: absoluteRect,
                         };
                     }
                 }

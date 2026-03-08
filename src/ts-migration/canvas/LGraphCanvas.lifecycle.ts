@@ -767,7 +767,12 @@ export class LGraphCanvasLifecycle extends LGraphCanvasStatic {
         this.ctx = null;
 
         this.destroyLeaferAppShell();
-        this.leaferAppHost = new LeaferAppHost(hostView);
+        this.leaferAppHost = new LeaferAppHost(hostView, {
+            backgroundColor: this.clear_background_color,
+            backgroundImage: this.background_image,
+            backgroundAlpha: this.editor_alpha,
+            zoomModifyBackgroundAlpha: this.zoom_modify_alpha,
+        });
         this.viewportController = new ViewportController(
             this.leaferAppHost,
             this.ds

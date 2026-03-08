@@ -12394,6 +12394,7 @@ var LiteGraphTSMigration = (function(exports) {
     constructor(graph, canvas, appHost, sceneSyncController) {
       this.canvas = canvas;
       this.appHost = appHost;
+      this.sceneViewElement = null;
       this.pointerDownAt = 0;
       this.pointerIsDown = false;
       this.lastPagePoint = null;
@@ -12407,6 +12408,9 @@ var LiteGraphTSMigration = (function(exports) {
       this.lastTapAt = 0;
       this.handleViewPointerDown = (event2) => {
         var _a3, _b3, _c2, _d2;
+        if (!this.isScenePointerEvent(event2)) {
+          return;
+        }
         if (event2.button === 2) {
           this.stopPropagationOnly(event2, true);
           return;
@@ -12575,11 +12579,17 @@ var LiteGraphTSMigration = (function(exports) {
         this.stopEvent(event2);
       };
       this.handleViewContextMenu = (event2) => {
+        if (!this.isScenePointerEvent(event2)) {
+          return;
+        }
         this.dispatchContextMenu(event2);
         event2.preventDefault();
         event2.stopImmediatePropagation();
       };
       this.handleViewPointerMove = (event2) => {
+        if (!this.isScenePointerEvent(event2)) {
+          return;
+        }
         if (this.pointerIsDown) {
           return;
         }
@@ -13602,6 +13612,72 @@ var LiteGraphTSMigration = (function(exports) {
       }
       event2.stopPropagation();
     }
+    isScenePointerEvent(event2) {
+      const target = this.resolveEventTargetElement(event2);
+      if (!target || !this.view.contains(target)) {
+        return false;
+      }
+      if (this.isDomOverlayTarget(target)) {
+        return false;
+      }
+      const sceneView = this.resolveSceneViewElement();
+      if (!sceneView) {
+        return true;
+      }
+      return sceneView === target || sceneView.contains(target);
+    }
+    resolveEventTargetElement(event2) {
+      const target = event2.target;
+      if (target instanceof Element) {
+        return target;
+      }
+      if (target instanceof Node) {
+        return target.parentElement;
+      }
+      return null;
+    }
+    resolveSceneViewElement() {
+      var _a3;
+      if ((_a3 = this.sceneViewElement) == null ? void 0 : _a3.isConnected) {
+        return this.sceneViewElement;
+      }
+      this.sceneViewElement = this.view.querySelector(
+        ".leafer-app-view"
+      );
+      return this.sceneViewElement;
+    }
+    isDomOverlayTarget(target) {
+      if (target.closest(
+        [
+          ".graphdialog",
+          ".graphmenu",
+          ".graphcontextualmenu",
+          ".litemenu",
+          ".litecontextmenu",
+          ".litegraph-editor-dialog",
+          ".litegraph-editor-panel",
+          "#node-panel",
+          "#option-panel"
+        ].join(",")
+      )) {
+        return true;
+      }
+      const htmlTarget = target;
+      if (htmlTarget.isContentEditable) {
+        return true;
+      }
+      switch (target.tagName) {
+        case "INPUT":
+        case "TEXTAREA":
+        case "SELECT":
+        case "OPTION":
+        case "BUTTON":
+        case "LABEL":
+          return true;
+        default:
+          return false;
+      }
+    }
     shouldHandleLegacyPointerDown(event2) {
       return event2.button === 0;
     }
@@ -13867,12 +13943,28 @@ var LiteGraphTSMigration = (function(exports) {
   }
   class LeaferAppHost {
     constructor(view, options = {}) {
-      var _a3;
+      var _a3, _b3;
       this.view = view;
       this.prepareView();
+      this.backgroundImage = options.backgroundImage || null;
+      this.backgroundTileSize = Math.max(1, options.backgroundTileSize || 100);
+      this.backgroundAlpha = this.clampAlpha((_a3 = options.backgroundAlpha) != null ? _a3 : 1);
+      this.zoomModifyBackgroundAlpha = options.zoomModifyBackgroundAlpha !== false;
+      this.backgroundColorLayer = this.createBackgroundLayer(
+        "lgraph-leafer-background-color"
+      );
+      this.backgroundPatternLayer = this.createBackgroundLayer(
+        "lgraph-leafer-background-pattern"
+      );
+      this.view.insertBefore(this.backgroundPatternLayer, this.view.firstChild);
+      this.view.insertBefore(this.backgroundColorLayer, this.view.firstChild);
+      this.backgroundColorLayer.style.backgroundColor = options.backgroundColor || "#222";
+      this.backgroundPatternLayer.style.backgroundImage = this.backgroundImage ? `url("${this.backgroundImage}")` : "none";
+      this.backgroundPatternLayer.style.backgroundRepeat = "repeat";
+      this.backgroundPatternLayer.style.imageRendering = "pixelated";
       this.app = new N$2({
         view: this.view,
-        fill: (_a3 = options.fill) != null ? _a3 : "transparent",
+        fill: (_b3 = options.fill) != null ? _b3 : "transparent",
         pixelSnap: true,
         usePartRender: true,
         usePartLayout: true,
@@ -13899,12 +13991,50 @@ var LiteGraphTSMigration = (function(exports) {
       this.skyRoot = this.layers.skyRoot;
       this.overlayWorld = this.layers.overlayWorld;
       this.overlayScreen = this.layers.overlayScreen;
+      this.syncBackgroundViewport(0, 0, 1);
     }
     resize() {
       this.app.forceRender();
     }
+    configureBackground(options) {
+      if (options.backgroundColor !== void 0) {
+        this.backgroundColorLayer.style.backgroundColor = options.backgroundColor || "#222";
+      }
+      if (options.backgroundImage !== void 0) {
+        this.backgroundImage = options.backgroundImage || null;
+        this.backgroundPatternLayer.style.backgroundImage = this.backgroundImage ? `url("${this.backgroundImage}")` : "none";
+      }
+      if (options.backgroundTileSize !== void 0) {
+        this.backgroundTileSize = Math.max(1, options.backgroundTileSize || 100);
+      }
+      if (options.backgroundAlpha !== void 0) {
+        this.backgroundAlpha = this.clampAlpha(options.backgroundAlpha);
+      }
+      if (options.zoomModifyBackgroundAlpha !== void 0) {
+        this.zoomModifyBackgroundAlpha = !!options.zoomModifyBackgroundAlpha;
+      }
+      this.syncBackgroundViewport(
+        this.treeZoomLayer.x || 0,
+        this.treeZoomLayer.y || 0,
+        this.treeZoomLayer.scaleX || 1
+      );
+    }
+    syncBackgroundViewport(screenOffsetX, screenOffsetY, scale) {
+      const resolvedScale = Number.isFinite(scale) && scale > 0 ? scale : 1;
+      const offsetX = Number.isFinite(screenOffsetX) ? screenOffsetX : 0;
+      const offsetY = Number.isFinite(screenOffsetY) ? screenOffsetY : 0;
+      const tileSize = this.backgroundTileSize * resolvedScale;
+      this.backgroundPatternLayer.style.backgroundSize = `${tileSize}px ${tileSize}px`;
+      this.backgroundPatternLayer.style.backgroundPosition = `${offsetX}px ${offsetY}px`;
+      this.backgroundPatternLayer.style.opacity = this.resolvePatternAlpha(
+        resolvedScale
+      ).toString();
+      this.backgroundPatternLayer.style.display = this.backgroundImage && resolvedScale > 0.5 ? "" : "none";
+    }
     destroy() {
       this.app.destroy();
+      this.backgroundPatternLayer.remove();
+      this.backgroundColorLayer.remove();
       this.view.removeAttribute("data-render-runtime");
     }
     prepareView() {
@@ -13922,6 +14052,31 @@ var LiteGraphTSMigration = (function(exports) {
       if (!this.view.style.overflow) {
         this.view.style.overflow = "hidden";
       }
+    }
+    createBackgroundLayer(className) {
+      const element = this.view.ownerDocument.createElement("div");
+      element.className = className;
+      element.setAttribute("aria-hidden", "true");
+      element.style.position = "absolute";
+      element.style.inset = "0";
+      element.style.pointerEvents = "none";
+      element.style.zIndex = "0";
+      return element;
+    }
+    resolvePatternAlpha(scale) {
+      if (!this.zoomModifyBackgroundAlpha) {
+        return this.backgroundAlpha;
+      }
+      if (scale <= 0.5) {
+        return 0;
+      }
+      return this.clampAlpha((1 - 0.5 / scale) * this.backgroundAlpha);
+    }
+    clampAlpha(value) {
+      if (!Number.isFinite(value)) {
+        return 1;
+      }
+      return Math.max(0, Math.min(1, value));
     }
   }
   function colorToString(c2) {
@@ -16778,9 +16933,13 @@ var LiteGraphTSMigration = (function(exports) {
       var _a3;
       const safePort = port && typeof port === "object" ? port : { name: "" };
       const fallbackName = `${kind}_${index}`;
-      const rawName = String((_a3 = safePort.name) != null ? _a3 : "").trim();
+      const hasExplicitName = Object.prototype.hasOwnProperty.call(
+        safePort,
+        "name"
+      );
+      const rawName = hasExplicitName ? String((_a3 = safePort.name) != null ? _a3 : "") : "";
       return {
-        name: rawName || fallbackName,
+        name: hasExplicitName ? rawName : fallbackName,
         type: safePort.type,
         extra: safePort.extra && typeof safePort.extra === "object" ? { ...safePort.extra } : void 0
       };
@@ -16887,10 +17046,17 @@ var LiteGraphTSMigration = (function(exports) {
     MODERN_NODE_STATE_KEY,
     ModernNodeChangeMask
   };
-  const LABEL_WIDTH_MIN = 36;
-  const LABEL_WIDTH_MAX = 74;
+  const LABEL_WIDTH_MIN = 48;
+  const LABEL_WIDTH_MAX = 92;
   const INLINE_PADDING = 10;
-  const ACTION_ICON_WIDTH = 24;
+  const ACTION_ICON_WIDTH = 20;
+  const WIDGET_VERTICAL_PADDING = 4;
+  const WIDGET_ROW_GAP$1 = 6;
+  const WIDGET_ROW_MIN_HEIGHT = 28;
+  const STEPPER_MIN_VALUE_WIDTH = 40;
+  const STEPPER_GAP = 6;
+  const FLOW_GAP = 8;
+  const ACTION_FLOW_GAP = 4;
   function toFiniteNumber$3(value, fallback = 0) {
     const numericValue = Number(value);
     return Number.isFinite(numericValue) ? numericValue : fallback;
@@ -16914,7 +17080,33 @@ var LiteGraphTSMigration = (function(exports) {
     return String(schema.value);
   }
   function resolveLabelWidth(bounds) {
-    return clamp(bounds.width * 0.32, LABEL_WIDTH_MIN, LABEL_WIDTH_MAX);
+    return clamp(bounds.width * 0.38, LABEL_WIDTH_MIN, LABEL_WIDTH_MAX);
+  }
+  function resolveStepperFrames(bounds) {
+    const actionWidth = 18;
+    const clusterGap = 4;
+    const availableWidth = bounds.width - INLINE_PADDING * 2 - actionWidth * 2 - clusterGap - STEPPER_GAP;
+    const labelWidth = clamp(
+      Math.min(
+        resolveLabelWidth(bounds),
+        Math.max(24, availableWidth - STEPPER_MIN_VALUE_WIDTH)
+      ),
+      24,
+      LABEL_WIDTH_MAX
+    );
+    const valueWidth = Math.max(STEPPER_MIN_VALUE_WIDTH, availableWidth - labelWidth);
+    const valueX = INLINE_PADDING + labelWidth + STEPPER_GAP;
+    const decrementX = bounds.width - INLINE_PADDING - actionWidth * 2 - clusterGap;
+    const incrementX = bounds.width - INLINE_PADDING - actionWidth;
+    return {
+      labelX: INLINE_PADDING,
+      labelWidth,
+      valueX,
+      valueWidth,
+      decrementX,
+      incrementX,
+      actionWidth
+    };
   }
   function createRoot(context, cursor = "pointer") {
     var _a3;
@@ -16932,7 +17124,7 @@ var LiteGraphTSMigration = (function(exports) {
           opacity: 1
         },
         press: {
-          scale: 0.985
+          scale: 0.992
         },
         focus: {
           opacity: 1
@@ -16948,16 +17140,16 @@ var LiteGraphTSMigration = (function(exports) {
       y: 0,
       width: context.bounds.width,
       height: context.bounds.height,
-      cornerRadius: 8,
-      fill: "#162130",
-      stroke: "#2E455D",
+      cornerRadius: 10,
+      fill: "#141C26",
+      stroke: "#314253",
       strokeWidth: 1,
       hoverStyle: {
-        fill: "#1B2A3D",
-        stroke: "#4E6D94"
+        fill: "#182230",
+        stroke: "#486179"
       },
       pressStyle: {
-        fill: "#102034",
+        fill: "#101821",
         stroke: "#76A8FF"
       },
       focusStyle: {
@@ -16968,10 +17160,42 @@ var LiteGraphTSMigration = (function(exports) {
       },
       hittable: false
     });
-    (_a3 = root.add) == null ? void 0 : _a3.call(root, [background]);
+    const outline = new Rect({
+      x: 0,
+      y: 0,
+      width: Math.max(0, context.bounds.width),
+      height: Math.max(0, context.bounds.height),
+      cornerRadius: 10,
+      fill: "rgba(0,0,0,0)",
+      stroke: "#78AEFF",
+      strokeWidth: 1.5,
+      opacity: 0,
+      visible: false,
+      hittable: false
+    });
+    const content = new m$1({
+      x: INLINE_PADDING,
+      y: WIDGET_VERTICAL_PADDING,
+      width: Math.max(1, context.bounds.width - INLINE_PADDING * 2),
+      height: Math.max(1, context.bounds.height - WIDGET_VERTICAL_PADDING * 2),
+      flow: "x",
+      gap: FLOW_GAP,
+      flowAlign: {
+        content: "left",
+        y: "center"
+      },
+      hittable: false
+    });
+    (_a3 = root.add) == null ? void 0 : _a3.call(root, [
+      background,
+      outline,
+      content
+    ]);
     return {
       root,
       background,
+      outline,
+      content,
       bounds: { ...context.bounds }
     };
   }
@@ -16984,13 +17208,32 @@ var LiteGraphTSMigration = (function(exports) {
     handle.root.disabled = Boolean(context.schema.disabled);
     handle.background.width = context.bounds.width;
     handle.background.height = context.bounds.height;
+    if (handle.outline) {
+      handle.outline.x = 0;
+      handle.outline.y = 0;
+      handle.outline.width = Math.max(0, context.bounds.width);
+      handle.outline.height = Math.max(0, context.bounds.height);
+      handle.outline.cornerRadius = 10;
+    }
+    if (handle.content) {
+      handle.content.x = INLINE_PADDING;
+      handle.content.y = WIDGET_VERTICAL_PADDING;
+      handle.content.width = Math.max(
+        1,
+        context.bounds.width - INLINE_PADDING * 2
+      );
+      handle.content.height = Math.max(
+        1,
+        context.bounds.height - WIDGET_VERTICAL_PADDING * 2
+      );
+    }
   }
   function createTextNode(context, config) {
     const { Text } = context.leafer;
     return new Text({
-      fontSize: 11,
-      fontFamily: "'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif",
-      fill: "#D9E8F7",
+      fontSize: 10.5,
+      fontFamily: "'Aptos', 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif",
+      fill: "#C2D2E2",
       verticalAlign: "middle",
       textWrap: "none",
       textOverflow: "hide",
@@ -17000,37 +17243,50 @@ var LiteGraphTSMigration = (function(exports) {
   }
   function createLabelAndValue(context, handle) {
     var _a3, _b3;
+    const contentHeight = Math.max(
+      1,
+      context.bounds.height - WIDGET_VERTICAL_PADDING * 2
+    );
     const labelText = createTextNode(context, {
-      x: INLINE_PADDING,
-      y: context.bounds.height / 2,
       text: context.schema.label || context.schema.name,
-      width: resolveLabelWidth(context.bounds)
+      width: resolveLabelWidth(context.bounds),
+      height: contentHeight,
+      fontSize: 10,
+      fill: "#88A0B8"
     });
     const valueText = createTextNode(context, {
-      y: context.bounds.height / 2,
       textAlign: "right",
-      text: formatWidgetValue(context.schema)
+      text: formatWidgetValue(context.schema),
+      width: 1,
+      autoWidth: 1,
+      height: contentHeight,
+      fontSize: 12,
+      fontFamily: "'Cascadia Code', 'Consolas', 'Fira Code', 'Microsoft YaHei', monospace",
+      fill: "#EEF5FF"
     });
     handle.labelText = labelText;
     handle.valueText = valueText;
-    (_b3 = (_a3 = handle.root).add) == null ? void 0 : _b3.call(_a3, [
+    (_b3 = (_a3 = handle.content) == null ? void 0 : _a3.add) == null ? void 0 : _b3.call(_a3, [
       labelText,
       valueText
     ]);
   }
   function patchLabelAndValue(handle, context) {
     const labelWidth = resolveLabelWidth(context.bounds);
+    const contentHeight = Math.max(
+      1,
+      context.bounds.height - WIDGET_VERTICAL_PADDING * 2
+    );
     if (handle.labelText) {
       handle.labelText.text = context.schema.label || context.schema.name;
-      handle.labelText.x = INLINE_PADDING;
-      handle.labelText.y = context.bounds.height / 2;
       handle.labelText.width = labelWidth;
+      handle.labelText.height = contentHeight;
     }
     if (handle.valueText) {
       handle.valueText.text = formatWidgetValue(context.schema);
-      handle.valueText.x = INLINE_PADDING + labelWidth + 8;
-      handle.valueText.y = context.bounds.height / 2;
-      handle.valueText.width = context.bounds.width - (INLINE_PADDING * 2 + labelWidth + 8);
+      handle.valueText.autoWidth = 1;
+      handle.valueText.width = 1;
+      handle.valueText.height = contentHeight;
     }
   }
   const buttonRenderer = {
@@ -17038,19 +17294,19 @@ var LiteGraphTSMigration = (function(exports) {
       var _a3, _b3;
       const handle = createRoot(context);
       handle.background.fill = "#18324A";
-      handle.background.stroke = "#335372";
+      handle.background.stroke = "#416180";
       handle.background.hoverStyle = {
-        fill: "#21415E",
-        stroke: "#4A7297"
+        fill: "#203A55",
+        stroke: "#5A80A8"
       };
       handle.background.pressStyle = {
-        fill: "#11273A",
+        fill: "#15293C",
         stroke: "#76A8FF"
       };
       const text = createTextNode(context, {
-        x: INLINE_PADDING,
-        y: context.bounds.height / 2,
-        width: context.bounds.width - INLINE_PADDING * 2,
+        width: 1,
+        autoWidth: 1,
+        height: Math.max(1, context.bounds.height - WIDGET_VERTICAL_PADDING * 2),
         textAlign: "center",
         text: context.schema.label || context.schema.name
       });
@@ -17063,7 +17319,9 @@ var LiteGraphTSMigration = (function(exports) {
           height: context.bounds.height
         }
       };
-      (_b3 = (_a3 = handle.root).add) == null ? void 0 : _b3.call(_a3, [text]);
+      (_b3 = (_a3 = handle.content) == null ? void 0 : _a3.add) == null ? void 0 : _b3.call(_a3, [
+        text
+      ]);
       return handle;
     },
     patchView(context, handle) {
@@ -17071,8 +17329,12 @@ var LiteGraphTSMigration = (function(exports) {
       applyRootLayout(builtinHandle, context);
       if (builtinHandle.valueText) {
         builtinHandle.valueText.text = context.schema.label || context.schema.name;
-        builtinHandle.valueText.width = context.bounds.width - INLINE_PADDING * 2;
-        builtinHandle.valueText.y = context.bounds.height / 2;
+        builtinHandle.valueText.autoWidth = 1;
+        builtinHandle.valueText.width = 1;
+        builtinHandle.valueText.height = Math.max(
+          1,
+          context.bounds.height - WIDGET_VERTICAL_PADDING * 2
+        );
       }
       builtinHandle.actionZones = {
         activate: {
@@ -17091,6 +17353,8 @@ var LiteGraphTSMigration = (function(exports) {
     createView(context) {
       const handle = createRoot(context);
       createLabelAndValue(context, handle);
+      handle.background.fill = context.schema.value ? "#1A3148" : "#141C26";
+      handle.background.stroke = context.schema.value ? "#4E78A1" : "#314253";
       handle.actionZones = {
         toggle: {
           x: 0,
@@ -17105,6 +17369,8 @@ var LiteGraphTSMigration = (function(exports) {
       const builtinHandle = handle;
       applyRootLayout(builtinHandle, context);
       patchLabelAndValue(builtinHandle, context);
+      builtinHandle.background.fill = context.schema.value ? "#1A3148" : "#141C26";
+      builtinHandle.background.stroke = context.schema.value ? "#4E78A1" : "#314253";
       builtinHandle.actionZones = {
         toggle: {
           x: 0,
@@ -17121,71 +17387,113 @@ var LiteGraphTSMigration = (function(exports) {
   function createStepperRenderer(type) {
     return {
       createView(context) {
-        var _a3, _b3;
+        var _a3, _b3, _c2, _d2;
         const handle = createRoot(context);
         createLabelAndValue(context, handle);
+        handle.actionsFlow = new m$1({
+          flow: "x",
+          gap: ACTION_FLOW_GAP,
+          flowAlign: {
+            content: "left",
+            y: "center"
+          },
+          hittable: false
+        });
         handle.leftText = createTextNode(context, {
-          x: 0,
-          y: context.bounds.height / 2,
           width: ACTION_ICON_WIDTH,
+          height: Math.max(
+            1,
+            context.bounds.height - WIDGET_VERTICAL_PADDING * 2
+          ),
           textAlign: "center",
           text: "-",
           fill: "#8AA5C1"
         });
         handle.rightText = createTextNode(context, {
-          y: context.bounds.height / 2,
           width: ACTION_ICON_WIDTH,
+          height: Math.max(
+            1,
+            context.bounds.height - WIDGET_VERTICAL_PADDING * 2
+          ),
           textAlign: "center",
-          text: "+",
+          text: type === "combo" ? ">" : "+",
           fill: "#8AA5C1"
         });
-        (_b3 = (_a3 = handle.root).add) == null ? void 0 : _b3.call(_a3, [
-          handle.leftText,
-          handle.rightText
+        if (handle.leftText) {
+          handle.leftText.text = type === "combo" ? "<" : "-";
+        }
+        (_b3 = (_a3 = handle.actionsFlow) == null ? void 0 : _a3.add) == null ? void 0 : _b3.call(_a3, [handle.leftText, handle.rightText]);
+        (_d2 = (_c2 = handle.content) == null ? void 0 : _c2.add) == null ? void 0 : _d2.call(_c2, [
+          handle.actionsFlow
         ]);
         this.patchView(context, handle, 0);
         return handle;
       },
       patchView(context, handle) {
+        var _a3;
         const builtinHandle = handle;
         applyRootLayout(builtinHandle, context);
         patchLabelAndValue(builtinHandle, context);
+        const frames = resolveStepperFrames(context.bounds);
+        const contentHeight = Math.max(
+          1,
+          context.bounds.height - WIDGET_VERTICAL_PADDING * 2
+        );
         if (builtinHandle.valueText) {
-          builtinHandle.valueText.x = INLINE_PADDING + resolveLabelWidth(context.bounds) + ACTION_ICON_WIDTH;
-          builtinHandle.valueText.width = context.bounds.width - (INLINE_PADDING * 2 + resolveLabelWidth(context.bounds) + ACTION_ICON_WIDTH * 2);
+          builtinHandle.valueText.textAlign = type === "combo" ? "center" : "right";
+          builtinHandle.valueText.autoWidth = void 0;
+          builtinHandle.valueText.width = frames.valueWidth;
+          builtinHandle.valueText.height = contentHeight;
+        }
+        if (builtinHandle.labelText) {
+          builtinHandle.labelText.width = frames.labelWidth;
+          builtinHandle.labelText.height = contentHeight;
+        }
+        if (builtinHandle.actionsFlow) {
+          builtinHandle.actionsFlow.width = frames.actionWidth * 2 + ACTION_FLOW_GAP;
+          builtinHandle.actionsFlow.height = contentHeight;
         }
         if (builtinHandle.leftText) {
-          builtinHandle.leftText.x = INLINE_PADDING + resolveLabelWidth(context.bounds);
-          builtinHandle.leftText.y = context.bounds.height / 2;
+          builtinHandle.leftText.width = frames.actionWidth;
+          builtinHandle.leftText.height = contentHeight;
         }
         if (builtinHandle.rightText) {
-          builtinHandle.rightText.x = context.bounds.width - INLINE_PADDING - ACTION_ICON_WIDTH;
-          builtinHandle.rightText.y = context.bounds.height / 2;
+          builtinHandle.rightText.width = frames.actionWidth;
+          builtinHandle.rightText.height = contentHeight;
         }
+        const contentX = toFiniteNumber$3((_a3 = builtinHandle.content) == null ? void 0 : _a3.x, INLINE_PADDING);
+        const labelWidth = builtinHandle.labelText ? toFiniteNumber$3(builtinHandle.labelText.width, frames.labelWidth) : frames.labelWidth;
+        const valueWidth = builtinHandle.valueText ? toFiniteNumber$3(builtinHandle.valueText.width, frames.valueWidth) : frames.valueWidth;
+        const decrementWidth = builtinHandle.leftText ? toFiniteNumber$3(builtinHandle.leftText.width, frames.actionWidth) : frames.actionWidth;
+        const incrementWidth = builtinHandle.rightText ? toFiniteNumber$3(builtinHandle.rightText.width, frames.actionWidth) : frames.actionWidth;
+        const editX = contentX + labelWidth + FLOW_GAP;
+        const editWidth = valueWidth;
+        const decrementX = editX + valueWidth + FLOW_GAP;
+        const incrementX = decrementX + decrementWidth + ACTION_FLOW_GAP;
         builtinHandle.actionZones = {
           decrement: {
-            x: INLINE_PADDING + resolveLabelWidth(context.bounds),
+            x: decrementX,
             y: 0,
-            width: ACTION_ICON_WIDTH,
+            width: decrementWidth,
             height: context.bounds.height
           },
           edit: {
-            x: INLINE_PADDING + resolveLabelWidth(context.bounds) + ACTION_ICON_WIDTH,
+            x: editX,
             y: 0,
-            width: context.bounds.width - (INLINE_PADDING * 2 + resolveLabelWidth(context.bounds) + ACTION_ICON_WIDTH * 2),
+            width: editWidth,
             height: context.bounds.height
           },
           increment: {
-            x: context.bounds.width - INLINE_PADDING - ACTION_ICON_WIDTH,
+            x: incrementX,
             y: 0,
-            width: ACTION_ICON_WIDTH,
+            width: incrementWidth,
             height: context.bounds.height
           }
         };
       },
       performAction(context) {
         var _a3, _b3, _c2, _d2;
-        if (context.action === "edit") {
+        if (context.action === "edit" || context.action === "activate") {
           return { consumed: true, openEditor: true };
         }
         if (type === "number") {
@@ -17274,10 +17582,10 @@ var LiteGraphTSMigration = (function(exports) {
   }
   function resolveWidgetBounds(bodyBounds, index, count) {
     const totalCount = Math.max(count, 1);
-    const verticalPadding = 4;
-    const gap = 4;
+    const verticalPadding = WIDGET_VERTICAL_PADDING;
+    const gap = WIDGET_ROW_GAP$1;
     const usableHeight = bodyBounds.height - verticalPadding * 2 - gap * (totalCount - 1);
-    const rowHeight = Math.max(20, usableHeight / totalCount);
+    const rowHeight = Math.max(WIDGET_ROW_MIN_HEIGHT, usableHeight / totalCount);
     return {
       x: bodyBounds.x + 6,
       y: bodyBounds.y + verticalPadding + index * (rowHeight + gap),
@@ -17285,14 +17593,22 @@ var LiteGraphTSMigration = (function(exports) {
       height: rowHeight
     };
   }
-  const TITLE_HEIGHT = 30;
+  const TITLE_HEIGHT = 34;
   const SLOT_HEIGHT = 20;
-  const BODY_MIN_WIDTH = 120;
-  const BODY_MIN_HEIGHT = 30;
-  const BODY_PADDING_X = 10;
-  const BODY_PADDING_Y = 8;
-  const OUTLINE_PADDING = 5;
+  const BODY_MIN_WIDTH = 132;
+  const BODY_MIN_HEIGHT = 34;
+  const BODY_PADDING_X = 12;
+  const BODY_PADDING_Y = 10;
+  const OUTLINE_PADDING = 4;
   const RESIZE_HANDLE_SIZE = 14;
+  const HEADER_META_GAP = 10;
+  const HEADER_META_MIN_WIDTH = 44;
+  const HEADER_SIGNAL_SIZE = 10;
+  const PORT_LABEL_MAX_WIDTH = 84;
+  const PORT_LABEL_PADDING = 10;
+  const PORT_GUTTER_MIN = 14;
+  const WIDGET_ROW_HEIGHT = 28;
+  const WIDGET_ROW_GAP = 6;
   function toFiniteNumber$2(value, fallback = 0) {
     const numericValue = Number(value);
     return Number.isFinite(numericValue) ? numericValue : fallback;
@@ -17335,7 +17651,7 @@ var LiteGraphTSMigration = (function(exports) {
   function createText(config) {
     return new hi$1({
       fontSize: 12,
-      fontFamily: "'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif",
+      fontFamily: "'Aptos', 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif",
       fill: "#E8EDF2",
       hittable: false,
       textWrap: "none",
@@ -17348,6 +17664,14 @@ var LiteGraphTSMigration = (function(exports) {
     return {
       x: rect.x,
       y: rect.y,
+      width: rect.width,
+      height: rect.height
+    };
+  }
+  function offsetRect(rect, offsetX, offsetY) {
+    return {
+      x: rect.x + offsetX,
+      y: rect.y + offsetY,
       width: rect.width,
       height: rect.height
     };
@@ -17373,7 +17697,7 @@ var LiteGraphTSMigration = (function(exports) {
   }
   let textMeasureCanvas = null;
   let textMeasureContext = null;
-  function measureTextWidth(text, font = "14px Arial") {
+  function measureTextWidth(text, font = '600 13px "Aptos", "Segoe UI", sans-serif') {
     if (typeof document === "undefined" || typeof document.createElement !== "function") {
       return text.length * 7.2;
     }
@@ -17545,6 +17869,8 @@ var LiteGraphTSMigration = (function(exports) {
       this.actionPartEntries = [];
       this.portEntries = /* @__PURE__ */ new Map();
       this.widgetValueSnapshot = /* @__PURE__ */ new Map();
+      this.currentWidgetSchemas = [];
+      this.currentActionPartSchemas = [];
       this.lastWidgetSignature = "";
       this.lastActionPartSignature = "";
       this.mounted = false;
@@ -17568,6 +17894,9 @@ var LiteGraphTSMigration = (function(exports) {
       (_b3 = (_a3 = this.node).ensureModernPorts) == null ? void 0 : _b3.call(_a3);
       const changeMask = this.consumeChangeMask();
       this.shellState = this.resolveShellState(changeMask);
+      this.currentWidgetSchemas = this.collectWidgetSchemas();
+      this.currentActionPartSchemas = this.collectActionPartSchemas(changeMask);
+      this.ensureMinimumNodeSize(this.shellState);
       this.shellLayout = this.computeShellLayout(this.shellState);
       if (!this.mounted) {
         this.content = toUI(this.mountContent(changeMask));
@@ -17587,6 +17916,48 @@ var LiteGraphTSMigration = (function(exports) {
       this.applyInteractionState();
       this.syncPosition();
       this.storeInspectableState();
+    }
+    collectWidgetSchemas() {
+      var _a3, _b3, _c2;
+      if (Boolean((_a3 = this.node.flags) == null ? void 0 : _a3.collapsed)) {
+        return [];
+      }
+      const schemas = (_c2 = (_b3 = this.node).defineWidgets) == null ? void 0 : _c2.call(_b3);
+      return Array.isArray(schemas) ? [...schemas] : [];
+    }
+    collectActionPartSchemas(changeMask) {
+      var _a3, _b3, _c2;
+      if (Boolean((_a3 = this.node.flags) == null ? void 0 : _a3.collapsed)) {
+        return [];
+      }
+      const parts = (_c2 = (_b3 = this.node).defineActionParts) == null ? void 0 : _c2.call(
+        _b3,
+        this.createLifecycleContext(changeMask)
+      );
+      return Array.isArray(parts) ? parts.filter((schema) => schema.visible !== false) : [];
+    }
+    ensureMinimumNodeSize(shellState) {
+      var _a3;
+      if (Boolean((_a3 = this.node.flags) == null ? void 0 : _a3.collapsed)) {
+        return;
+      }
+      const size = this.node.size;
+      const nextWidth = Math.max(
+        toFiniteNumber$2(size == null ? void 0 : size[0], BODY_MIN_WIDTH),
+        toFiniteNumber$2(shellState.minimumWidth, BODY_MIN_WIDTH),
+        this.resolveMinimumShellWidth(shellState)
+      );
+      const nextHeight = Math.max(
+        toFiniteNumber$2(size == null ? void 0 : size[1], BODY_MIN_HEIGHT),
+        toFiniteNumber$2(shellState.minimumHeight, BODY_MIN_HEIGHT),
+        this.resolveMinimumBodyHeight(shellState)
+      );
+      if (size) {
+        size[0] = nextWidth;
+        size[1] = nextHeight;
+      } else {
+        this.node.size = [nextWidth, nextHeight];
+      }
     }
     syncPosition() {
       var _a3, _b3;
@@ -17832,32 +18203,55 @@ var LiteGraphTSMigration = (function(exports) {
       });
       const selectionOutline = new xe$1({
         fill: "rgba(0,0,0,0)",
-        stroke: "#76A8FF",
-        strokeWidth: 2,
-        cornerRadius: 12,
+        stroke: "#67A2FF",
+        strokeWidth: 1.5,
+        cornerRadius: 14,
         visible: false,
         hittable: false
       });
       const header = new xe$1({
-        fill: "#333333",
-        stroke: "#243342",
+        fill: "#283444",
+        stroke: "#314254",
         strokeWidth: 1,
-        cornerRadius: [10, 10, 0, 0],
+        cornerRadius: [12, 12, 0, 0],
         hittable: false
       });
       const body = new xe$1({
-        fill: "#353535",
+        fill: "#101720",
         stroke: "#243342",
         strokeWidth: 1.25,
-        cornerRadius: [0, 0, 10, 10],
+        cornerRadius: [0, 0, 12, 12],
+        hittable: false
+      });
+      const headerContent = new m$1({
+        x: 34,
+        y: -TITLE_HEIGHT,
+        width: 1,
+        height: TITLE_HEIGHT,
+        flow: "x",
+        gap: HEADER_META_GAP,
+        flowAlign: {
+          content: "left",
+          y: "center"
+        },
         hittable: false
       });
       const title = createText({
-        x: 42,
-        y: -TITLE_HEIGHT + TITLE_HEIGHT / 2,
         text: "",
-        fontWeight: "bold"
+        height: TITLE_HEIGHT,
+        fontSize: 13,
+        fontWeight: 600
       });
+      const headerMeta = createText({
+        width: HEADER_META_MIN_WIDTH,
+        height: TITLE_HEIGHT,
+        fontSize: 10,
+        fontWeight: 500,
+        textAlign: "right",
+        fill: "#89A0B7",
+        text: ""
+      });
+      headerContent.add([title, headerMeta]);
       const summary = createText({
         x: BODY_PADDING_X,
         y: 18,
@@ -17877,10 +18271,10 @@ var LiteGraphTSMigration = (function(exports) {
         hittable: false
       });
       const signalLamp = new xe$1({
-        x: 8,
-        y: -TITLE_HEIGHT + 8,
-        width: 14,
-        height: 14,
+        x: 10,
+        y: -TITLE_HEIGHT + (TITLE_HEIGHT - HEADER_SIGNAL_SIZE) / 2,
+        width: HEADER_SIGNAL_SIZE,
+        height: HEADER_SIGNAL_SIZE,
         cornerRadius: 999,
         fill: "#666666",
         stroke: "#10151A",
@@ -17910,7 +18304,7 @@ var LiteGraphTSMigration = (function(exports) {
         body,
         collapseOverlay,
         signalLamp,
-        title,
+        headerContent,
         summary,
         inputPortLayer,
         outputPortLayer,
@@ -17924,7 +18318,9 @@ var LiteGraphTSMigration = (function(exports) {
         selectionOutline,
         header,
         body,
+        headerContent,
         title,
+        headerMeta,
         summary,
         collapseOverlay,
         signalLamp,
@@ -17957,19 +18353,28 @@ var LiteGraphTSMigration = (function(exports) {
     computeShellLayout(shellState) {
       var _a3, _b3, _c2;
       const constants = getLiteGraphConstants();
-      const titleHeight = constants.NODE_TITLE_HEIGHT;
+      const titleHeight = Math.max(constants.NODE_TITLE_HEIGHT, TITLE_HEIGHT);
       const bodyHeight = Math.max(
         toFiniteNumber$2((_a3 = this.node.size) == null ? void 0 : _a3[1], BODY_MIN_HEIGHT),
-        BODY_MIN_HEIGHT
+        toFiniteNumber$2(shellState.minimumHeight, BODY_MIN_HEIGHT),
+        this.resolveMinimumBodyHeight(shellState)
       );
       const isCollapsed = Boolean((_b3 = this.node.flags) == null ? void 0 : _b3.collapsed);
+      const minWidth = this.resolveMinimumShellWidth(shellState, titleHeight);
       const expandedWidth = Math.max(
         toFiniteNumber$2((_c2 = this.node.size) == null ? void 0 : _c2[0], BODY_MIN_WIDTH),
-        BODY_MIN_WIDTH
+        minWidth
       );
-      const collapsedWidth = shellState.collapsedWidth != null ? Math.max(toFiniteNumber$2(shellState.collapsedWidth, expandedWidth), 48) : Math.min(
+      const collapsedWidth = shellState.collapsedWidth != null ? Math.max(
+        toFiniteNumber$2(shellState.collapsedWidth, expandedWidth),
+        Math.min(minWidth, expandedWidth),
+        56
+      ) : Math.min(
         expandedWidth,
-        measureTextWidth(String(shellState.title || "")) + titleHeight * 2
+        Math.max(
+          56,
+          measureTextWidth(String(shellState.title || "")) + titleHeight * 1.8
+        )
       );
       const width2 = isCollapsed ? collapsedWidth : expandedWidth;
       const header = {
@@ -18010,6 +18415,7 @@ var LiteGraphTSMigration = (function(exports) {
       };
     }
     applyShellLayout() {
+      var _a3;
       const layout = this.shellLayout;
       const shellState = this.shellState;
       const header = layout.header || {
@@ -18024,35 +18430,59 @@ var LiteGraphTSMigration = (function(exports) {
       this.shell.header.y = header.y;
       this.shell.header.width = header.width;
       this.shell.header.height = header.height;
-      this.shell.header.fill = shellState.titleColor || "#333333";
-      this.shell.header.stroke = shellState.borderColor || "#243342";
-      this.shell.header.cornerRadius = body ? [10, 10, 0, 0] : [10, 10, 10, 10];
+      this.shell.header.fill = shellState.titleColor || "#283444";
+      this.shell.header.stroke = shellState.borderColor || "#314254";
+      this.shell.header.cornerRadius = body ? [12, 12, 0, 0] : [12, 12, 12, 12];
       this.shell.body.visible = Boolean(body);
       if (body) {
         this.shell.body.x = body.x;
         this.shell.body.y = body.y;
         this.shell.body.width = body.width;
         this.shell.body.height = body.height;
-        this.shell.body.fill = shellState.bodyColor || "#353535";
-        this.shell.body.stroke = shellState.borderColor || "#243342";
-        this.shell.body.cornerRadius = [0, 0, 10, 10];
+        this.shell.body.fill = shellState.bodyColor || "#101720";
+        this.shell.body.stroke = shellState.borderColor || "#314254";
+        this.shell.body.cornerRadius = [0, 0, 12, 12];
       }
+      const headerMeta = this.resolveHeaderMetaText(shellState);
+      const headerMetaWidth = headerMeta ? Math.max(
+        HEADER_META_MIN_WIDTH,
+        measureTextWidth(
+          headerMeta,
+          '500 10px "Aptos", "Segoe UI", sans-serif'
+        ) + 8
+      ) : 0;
+      const titleStartX = this.resolveTitleStartX(Boolean(layout.collapse), header.height);
+      const showHeaderMeta = Boolean(headerMeta) && !Boolean((_a3 = this.node.flags) == null ? void 0 : _a3.collapsed) && header.width - titleStartX - headerMetaWidth - HEADER_META_GAP - 12 >= 56;
+      const titleEndPadding = showHeaderMeta ? headerMetaWidth + HEADER_META_GAP + 12 : 14;
+      const titleWidth = Math.max(24, header.width - titleStartX - titleEndPadding);
+      this.shell.headerContent.x = titleStartX;
+      this.shell.headerContent.y = header.y;
+      this.shell.headerContent.width = Math.max(24, header.width - titleStartX - 12);
+      this.shell.headerContent.height = header.height;
+      this.shell.headerContent.visible = shellState.titleMode !== "hidden" || showHeaderMeta;
       this.shell.title.text = String(shellState.title || "");
       this.shell.title.fill = shellState.titleTextColor || "#F5F7FA";
-      this.shell.title.x = (layout.collapse ? header.height : 10) + 10;
-      this.shell.title.y = header.y + header.height / 2;
-      this.shell.title.width = Math.max(24, header.width - this.shell.title.x - 14);
+      this.shell.title.height = header.height;
+      this.shell.title.width = titleWidth;
       this.shell.title.visible = shellState.titleMode !== "hidden";
+      this.shell.headerMeta.text = headerMeta;
+      this.shell.headerMeta.visible = showHeaderMeta;
+      this.shell.headerMeta.width = Math.max(HEADER_META_MIN_WIDTH, headerMetaWidth);
+      this.shell.headerMeta.height = header.height;
       this.shell.summary.text = String(shellState.summaryText || "");
       this.shell.summary.visible = Boolean(
         body && !this.widgetEntries.length && !this.content && shellState.summaryText
       );
-      this.shell.summary.x = BODY_PADDING_X;
-      this.shell.summary.y = 16;
-      this.shell.summary.width = Math.max(20, layout.width - BODY_PADDING_X * 2);
+      const contentArea = this.getContentArea();
+      this.shell.summary.x = (contentArea == null ? void 0 : contentArea.x) || BODY_PADDING_X;
+      this.shell.summary.y = ((contentArea == null ? void 0 : contentArea.y) || BODY_PADDING_Y) + Math.min(20, Math.max(14, ((contentArea == null ? void 0 : contentArea.height) || 24) * 0.45));
+      this.shell.summary.width = Math.max(
+        20,
+        (contentArea == null ? void 0 : contentArea.width) || layout.width - BODY_PADDING_X * 2
+      );
       this.shell.signalLamp.visible = shellState.showSignalLamp !== false;
-      this.shell.signalLamp.x = 8;
-      this.shell.signalLamp.y = header.y + 8;
+      this.shell.signalLamp.x = 10;
+      this.shell.signalLamp.y = header.y + (header.height - HEADER_SIGNAL_SIZE) / 2;
       this.shell.signalLamp.fill = shellState.boxColor || "#666666";
       this.shell.collapseOverlay.visible = Boolean(layout.collapse);
       if (layout.collapse) {
@@ -18072,6 +18502,113 @@ var LiteGraphTSMigration = (function(exports) {
       this.shell.selectionOutline.height = totalHeight + OUTLINE_PADDING * 2;
       this.shell.selectionOutline.visible = Boolean(this.node.is_selected);
     }
+    resolveMinimumBodyHeight(shellState) {
+      const slotCount = Math.max(
+        Array.isArray(this.node.inputs) ? this.node.inputs.length : 0,
+        Array.isArray(this.node.outputs) ? this.node.outputs.length : 0
+      );
+      const widgetHeight = this.currentWidgetSchemas.length ? BODY_PADDING_Y * 2 + this.currentWidgetSchemas.length * WIDGET_ROW_HEIGHT + Math.max(0, this.currentWidgetSchemas.length - 1) * WIDGET_ROW_GAP : 0;
+      const portHeight = slotCount ? BODY_PADDING_Y * 2 + slotCount * getLiteGraphConstants().NODE_SLOT_HEIGHT : 0;
+      const summaryHeight = !this.currentWidgetSchemas.length && !this.content ? 42 : 0;
+      const footerHeight = this.hasFooterActionParts() ? TITLE_HEIGHT : 0;
+      return Math.max(
+        BODY_MIN_HEIGHT,
+        toFiniteNumber$2(shellState == null ? void 0 : shellState.minimumHeight, BODY_MIN_HEIGHT),
+        widgetHeight + footerHeight,
+        portHeight + footerHeight,
+        summaryHeight + footerHeight
+      );
+    }
+    resolveMinimumShellWidth(shellState, headerHeight = TITLE_HEIGHT) {
+      const gutters = this.resolvePortGutters();
+      const headerMeta = this.resolveHeaderMetaText(shellState);
+      const headerMetaWidth = headerMeta ? Math.max(
+        HEADER_META_MIN_WIDTH,
+        measureTextWidth(
+          headerMeta,
+          '500 10px "Aptos", "Segoe UI", sans-serif'
+        ) + 8
+      ) : 0;
+      const titleWidth = measureTextWidth(
+        String(shellState.title || ""),
+        '600 13px "Aptos", "Segoe UI", sans-serif'
+      );
+      const contentWidth = this.resolveMinimumContentWidth();
+      return Math.max(
+        BODY_MIN_WIDTH,
+        toFiniteNumber$2(shellState.minimumWidth, BODY_MIN_WIDTH),
+        BODY_PADDING_X * 2 + gutters.left + gutters.right + contentWidth,
+        this.resolveTitleStartX(Boolean(shellState.collapsible), headerHeight) + titleWidth + (headerMetaWidth ? HEADER_META_GAP + headerMetaWidth + 12 : 14)
+      );
+    }
+    resolveMinimumContentWidth() {
+      if (!this.currentWidgetSchemas.length) {
+        return 72;
+      }
+      let minWidth = 104;
+      for (let i2 = 0; i2 < this.currentWidgetSchemas.length; ++i2) {
+        const schema = this.currentWidgetSchemas[i2];
+        if (schema.type === "number" || schema.type === "combo") {
+          minWidth = Math.max(minWidth, 156);
+        } else if (schema.type === "text" || schema.type === "toggle") {
+          minWidth = Math.max(minWidth, 124);
+        } else if (schema.type === "button") {
+          minWidth = Math.max(minWidth, 110);
+        }
+      }
+      return minWidth;
+    }
+    resolveHeaderMetaText(shellState) {
+      if (typeof shellState.headerMetaText === "string") {
+        return shellState.headerMetaText.trim();
+      }
+      const inputCount = Array.isArray(this.node.inputs) ? this.node.inputs.length : 0;
+      const outputCount = Array.isArray(this.node.outputs) ? this.node.outputs.length : 0;
+      if (inputCount || outputCount) {
+        return `I${inputCount} / O${outputCount}`;
+      }
+      const summary = String(shellState.summaryText || "").trim();
+      return summary.length > 18 ? `${summary.slice(0, 17)}...` : summary;
+    }
+    resolveTitleStartX(hasCollapse, headerHeight) {
+      const collapseWidth = hasCollapse ? headerHeight : 0;
+      return Math.max(collapseWidth + 10, 30);
+    }
+    resolvePortGutters() {
+      return {
+        left: this.measurePortGutter("input"),
+        right: this.measurePortGutter("output")
+      };
+    }
+    measurePortGutter(kind) {
+      var _a3, _b3;
+      const slots = kind === "input" ? this.node.inputs : this.node.outputs;
+      if (!Array.isArray(slots) || !slots.length || Boolean((_a3 = this.node.flags) == null ? void 0 : _a3.collapsed)) {
+        return 0;
+      }
+      let maxWidth = 0;
+      for (let i2 = 0; i2 < slots.length; ++i2) {
+        const presentation = this.resolvePortPresentation(kind, i2, slots[i2]);
+        const label = presentation.hideLabelWhenCollapsed && ((_b3 = this.node.flags) == null ? void 0 : _b3.collapsed) ? "" : presentation.label;
+        if (!label) {
+          continue;
+        }
+        maxWidth = Math.max(
+          maxWidth,
+          Math.min(
+            PORT_LABEL_MAX_WIDTH,
+            measureTextWidth(
+              String(label),
+              '500 11px "Aptos", "Segoe UI", sans-serif'
+            )
+          )
+        );
+      }
+      if (!maxWidth) {
+        return PORT_GUTTER_MIN;
+      }
+      return Math.max(PORT_GUTTER_MIN, maxWidth + PORT_LABEL_PADDING + 10);
+    }
     syncContentLayout() {
       const contentArea = this.getContentArea();
       this.shell.contentLayer.visible = Boolean(contentArea);
@@ -18088,10 +18625,9 @@ var LiteGraphTSMigration = (function(exports) {
       }
     }
     syncWidgets(changeMask) {
-      var _a3, _b3, _c2, _d2, _e2, _f;
-      const collapsed = Boolean((_a3 = this.node.flags) == null ? void 0 : _a3.collapsed);
-      const schemas = collapsed ? [] : Array.isArray((_c2 = (_b3 = this.node).defineWidgets) == null ? void 0 : _c2.call(_b3)) ? [...((_e2 = (_d2 = this.node).defineWidgets) == null ? void 0 : _e2.call(_d2)) || []] : [];
-      this.shell.widgetLayer.visible = !collapsed && schemas.length > 0;
+      var _a3;
+      const schemas = this.currentWidgetSchemas;
+      this.shell.widgetLayer.visible = schemas.length > 0;
       const nextSignature = signatureOfWidgets(schemas);
       const needsRebuild = this.widgetEntries.length !== schemas.length || this.lastWidgetSignature !== nextSignature || (changeMask & ModernNodeChangeMask.Layout) !== 0;
       if (!schemas.length) {
@@ -18110,7 +18646,7 @@ var LiteGraphTSMigration = (function(exports) {
           id: schemas[i2].id,
           type: schemas[i2].type,
           action: schemas[i2].type === "toggle" ? "toggle" : "activate",
-          actionZones: (_f = this.widgetEntries[i2]) == null ? void 0 : _f.handle.actionZones
+          actionZones: (_a3 = this.widgetEntries[i2]) == null ? void 0 : _a3.handle.actionZones
         });
       }
       if (needsRebuild) {
@@ -18139,13 +18675,18 @@ var LiteGraphTSMigration = (function(exports) {
           if (!entry) {
             continue;
           }
-          entry.schema = schemas[i2];
-          entry.layout = layouts[i2];
-          entry.renderer.patchView(
-            this.createWidgetContext(entry.schema, layouts[i2]),
-            entry.handle,
-            changeMask
-          );
+          const nextSchema = schemas[i2];
+          const nextLayout = layouts[i2];
+          const shouldPatch = (changeMask & (ModernNodeChangeMask.Layout | ModernNodeChangeMask.Style)) !== 0 || entry.schema.value !== nextSchema.value || entry.schema.disabled !== nextSchema.disabled || entry.schema.label !== nextSchema.label || entry.schema.name !== nextSchema.name || entry.layout.x !== nextLayout.x || entry.layout.y !== nextLayout.y || entry.layout.width !== nextLayout.width || entry.layout.height !== nextLayout.height;
+          entry.schema = nextSchema;
+          entry.layout = nextLayout;
+          if (shouldPatch) {
+            entry.renderer.patchView(
+              this.createWidgetContext(entry.schema, nextLayout),
+              entry.handle,
+              changeMask
+            );
+          }
           this.widgetValueSnapshot.set(entry.schema.id, entry.schema.value);
         }
       }
@@ -18155,15 +18696,7 @@ var LiteGraphTSMigration = (function(exports) {
       this.patchShellWidgetLayout(layouts);
     }
     syncActionParts(changeMask) {
-      var _a3, _b3, _c2, _d2, _e2;
-      const collapsed = Boolean((_a3 = this.node.flags) == null ? void 0 : _a3.collapsed);
-      const actionParts = collapsed ? [] : Array.isArray((_c2 = (_b3 = this.node).defineActionParts) == null ? void 0 : _c2.call(_b3, this.createLifecycleContext(changeMask))) ? [
-        ...((_e2 = (_d2 = this.node).defineActionParts) == null ? void 0 : _e2.call(
-          _d2,
-          this.createLifecycleContext(changeMask)
-        )) || []
-      ] : [];
-      const visibleParts = actionParts.filter((schema) => schema.visible !== false);
+      const visibleParts = this.currentActionPartSchemas;
       this.shell.actionPartLayer.visible = visibleParts.length > 0;
       const nextSignature = signatureOfActionParts(visibleParts);
       const needsRebuild = this.actionPartEntries.length !== visibleParts.length || this.lastActionPartSignature !== nextSignature || (changeMask & ModernNodeChangeMask.Layout) !== 0;
@@ -18185,26 +18718,52 @@ var LiteGraphTSMigration = (function(exports) {
             y: 0,
             width: layout.width,
             height: layout.height,
-            fill: "#1C2430",
-            stroke: "#2E455D",
+            fill: "#172332",
+            stroke: "#2B4663",
             strokeWidth: 1,
             cornerRadius: schema.placement === "footer-left" ? [0, 0, 10, 0] : schema.placement === "footer-right" ? [0, 0, 0, 10] : 8,
             hittable: false
           });
-          const label = createText({
+          const outline = new xe$1({
             x: 0,
-            y: layout.height / 2,
-            width: layout.width,
+            y: 0,
+            width: Math.max(0, layout.width),
+            height: Math.max(0, layout.height),
+            cornerRadius: schema.placement === "footer-left" ? [0, 0, 10, 0] : schema.placement === "footer-right" ? [0, 0, 0, 10] : 8,
+            fill: "rgba(0,0,0,0)",
+            stroke: "#78AEFF",
+            strokeWidth: 1.5,
+            visible: false,
+            opacity: 0,
+            hittable: false
+          });
+          const content = new m$1({
+            x: 8,
+            y: 0,
+            width: Math.max(1, layout.width - 16),
+            height: layout.height,
+            flow: "x",
+            flowAlign: "center",
+            hittable: false
+          });
+          const label = createText({
+            width: 1,
+            autoWidth: 1,
+            height: layout.height,
             textAlign: "center",
             text: String(schema.label || schema.id),
-            fontSize: 18
+            fontSize: 12,
+            fill: "#BBD0E6"
           });
-          root.add([background, label]);
+          content.add(label);
+          root.add([background, outline, content]);
           this.shell.actionPartLayer.add(root);
           this.actionPartEntries.push({
             schema,
             root,
             background,
+            outline,
+            content,
             label,
             layout
           });
@@ -18221,8 +18780,15 @@ var LiteGraphTSMigration = (function(exports) {
           entry.root.height = entry.layout.height;
           entry.background.width = entry.layout.width;
           entry.background.height = entry.layout.height;
-          entry.label.width = entry.layout.width;
-          entry.label.y = entry.layout.height / 2;
+          entry.outline.width = Math.max(0, entry.layout.width);
+          entry.outline.height = Math.max(0, entry.layout.height);
+          entry.outline.cornerRadius = entry.schema.placement === "footer-left" ? [0, 0, 10, 0] : entry.schema.placement === "footer-right" ? [0, 0, 0, 10] : 8;
+          entry.content.x = 8;
+          entry.content.width = Math.max(1, entry.layout.width - 16);
+          entry.content.height = entry.layout.height;
+          entry.label.width = 1;
+          entry.label.autoWidth = 1;
+          entry.label.height = entry.layout.height;
           entry.label.text = String(entry.schema.label || entry.schema.id);
         }
       }
@@ -18267,23 +18833,22 @@ var LiteGraphTSMigration = (function(exports) {
       if (!body) {
         return null;
       }
+      const gutters = this.resolvePortGutters();
       const footerHeight = this.hasFooterActionParts() ? TITLE_HEIGHT : 0;
       return {
-        x: BODY_PADDING_X,
+        x: BODY_PADDING_X + gutters.left,
         y: BODY_PADDING_Y,
-        width: Math.max(16, body.width - BODY_PADDING_X * 2),
+        width: Math.max(
+          16,
+          body.width - BODY_PADDING_X * 2 - gutters.left - gutters.right
+        ),
         height: Math.max(0, body.height - BODY_PADDING_Y * 2 - footerHeight)
       };
     }
     hasFooterActionParts() {
-      var _a3, _b3;
-      const schemas = (_b3 = (_a3 = this.node).defineActionParts) == null ? void 0 : _b3.call(
-        _a3,
-        this.createLifecycleContext(ModernNodeChangeMask.Layout)
-      );
       return Boolean(
-        Array.isArray(schemas) && schemas.some(
-          (schema) => schema.visible !== false && (schema.placement === "footer-left" || schema.placement === "footer-right")
+        this.currentActionPartSchemas.some(
+          (schema) => schema.placement === "footer-left" || schema.placement === "footer-right"
         )
       );
     }
@@ -18295,11 +18860,15 @@ var LiteGraphTSMigration = (function(exports) {
         width: this.shellLayout.width,
         height: BODY_MIN_HEIGHT
       };
+      const gutters = this.resolvePortGutters();
       const footerHeight = this.hasFooterActionParts() ? TITLE_HEIGHT : 0;
       return {
-        x: BODY_PADDING_X,
+        x: BODY_PADDING_X + gutters.left,
         y: BODY_PADDING_Y,
-        width: Math.max(20, body.width - BODY_PADDING_X * 2),
+        width: Math.max(
+          20,
+          body.width - BODY_PADDING_X * 2 - gutters.left - gutters.right
+        ),
         height: Math.max(20, body.height - BODY_PADDING_Y * 2 - footerHeight)
       };
     }
@@ -18418,7 +18987,7 @@ var LiteGraphTSMigration = (function(exports) {
       return layouts;
     }
     resolvePortPresentation(kind, slotIndex, slot) {
-      var _a3, _b3;
+      var _a3, _b3, _c2, _d2, _e2;
       const constants = getLiteGraphConstants();
       const slotRecord = slot || {};
       const explicit = ((_b3 = (_a3 = this.node).getPortPresentation) == null ? void 0 : _b3.call(
@@ -18427,6 +18996,9 @@ var LiteGraphTSMigration = (function(exports) {
         slotIndex,
         this.createLifecycleContext(ModernNodeChangeMask.Ports)
       )) || null;
+      const hasExplicitLabel = Boolean(
+        explicit && Object.prototype.hasOwnProperty.call(explicit, "label")
+      );
       let shape = (explicit == null ? void 0 : explicit.shape) || "circle";
       if (!(explicit == null ? void 0 : explicit.shape)) {
         if (toFiniteNumber$2(slotRecord.shape) === constants.BOX_SHAPE || slotRecord.type === constants.EVENT || slotRecord.type === constants.ACTION) {
@@ -18439,7 +19011,9 @@ var LiteGraphTSMigration = (function(exports) {
       }
       const defaultActiveColor = slotRecord.type === constants.EVENT || slotRecord.type === constants.ACTION ? constants.EVENT_LINK_COLOR : constants.LINK_COLOR;
       return {
-        label: String((explicit == null ? void 0 : explicit.label) || slotRecord.label || slotRecord.name || ""),
+        label: String(
+          hasExplicitLabel ? (_c2 = explicit == null ? void 0 : explicit.label) != null ? _c2 : "" : (_e2 = (_d2 = slotRecord.label) != null ? _d2 : slotRecord.name) != null ? _e2 : ""
+        ),
         shape,
         dir: explicit == null ? void 0 : explicit.dir,
         colorOn: (explicit == null ? void 0 : explicit.colorOn) || String(slotRecord.color_on || slotRecord.color || defaultActiveColor),
@@ -18449,7 +19023,7 @@ var LiteGraphTSMigration = (function(exports) {
       };
     }
     resolvePortAnchorLocal(kind, slotIndex) {
-      var _a3, _b3, _c2, _d2, _e2, _f, _g, _h2;
+      var _a3, _b3, _c2, _d2;
       const explicit = (_b3 = (_a3 = this.node).getPortLayout) == null ? void 0 : _b3.call(
         _a3,
         kind,
@@ -18465,16 +19039,39 @@ var LiteGraphTSMigration = (function(exports) {
         }
         return [toFiniteNumber$2(explicit.x), toFiniteNumber$2(explicit.y)];
       }
-      const anchor = toPoint(
-        (_f = (_e2 = this.node).getConnectionPos) == null ? void 0 : _f.call(_e2, kind === "input", slotIndex)
-      );
-      if (!anchor) {
+      return this.resolveDefaultPortAnchorLocal(kind, slotIndex);
+    }
+    resolveDefaultPortAnchorLocal(kind, slotIndex) {
+      var _a3, _b3;
+      const slots = kind === "input" ? this.node.inputs : this.node.outputs;
+      if (!Array.isArray(slots) || slotIndex < 0 || slotIndex >= slots.length) {
         return null;
       }
-      return [
-        anchor[0] - toFiniteNumber$2((_g = this.node.pos) == null ? void 0 : _g[0]),
-        anchor[1] - toFiniteNumber$2((_h2 = this.node.pos) == null ? void 0 : _h2[1])
-      ];
+      const header = this.shellLayout.header || {
+        y: -TITLE_HEIGHT,
+        width: this.shellLayout.width,
+        height: TITLE_HEIGHT
+      };
+      const body = this.shellLayout.body;
+      const anchorX = kind === "input" ? 0 : this.shellLayout.width;
+      if (!body || Boolean((_a3 = this.node.flags) == null ? void 0 : _a3.collapsed)) {
+        return [anchorX, header.y + header.height / 2];
+      }
+      const widgetLayout = (slots.length === 1 || this.currentWidgetSchemas.length === slots.length) && ((_b3 = this.shellLayout.widgets) == null ? void 0 : _b3[slotIndex]);
+      if (widgetLayout) {
+        return [anchorX, widgetLayout.y + widgetLayout.height / 2];
+      }
+      const footerHeight = this.hasFooterActionParts() ? TITLE_HEIGHT : 0;
+      const usableTop = body.y + BODY_PADDING_Y + 4;
+      const usableHeight = Math.max(
+        getLiteGraphConstants().NODE_SLOT_HEIGHT,
+        body.height - BODY_PADDING_Y * 2 - footerHeight - 8
+      );
+      const step = usableHeight / Math.max(slots.length, 1);
+      const anchorY = usableTop + step * slotIndex + step / 2;
+      const minY = body.y + 12;
+      const maxY = body.y + body.height - footerHeight - 12;
+      return [anchorX, Math.max(minY, Math.min(maxY, anchorY))];
     }
     isPortActive(kind, _slotIndex, slot) {
       const slotRecord = slot || {};
@@ -18499,13 +19096,14 @@ var LiteGraphTSMigration = (function(exports) {
             hittable: false
           });
           const marker = createPortMarker(layout.shape, markerColor);
+          const labelFrame2 = this.resolvePortLabelFrame(kind);
           const label = createText({
-            x: kind === "input" ? layout.anchorX + 10 : layout.anchorX - 90,
+            x: labelFrame2.x,
             y: layout.anchorY,
-            width: 80,
-            textAlign: kind === "input" ? "left" : "right",
-            fontSize: 11,
-            fill: "#D5DEE7",
+            width: labelFrame2.width,
+            textAlign: labelFrame2.textAlign,
+            fontSize: 10.5,
+            fill: "#93A8BD",
             text: layout.label
           });
           root.add(marker);
@@ -18532,9 +19130,11 @@ var LiteGraphTSMigration = (function(exports) {
         }
         entry.label.text = layout.label;
         entry.label.visible = !layout.hiddenLabelWhenCollapsed && Boolean(layout.label);
-        entry.label.x = kind === "input" ? layout.anchorX + 10 : layout.anchorX - 90;
+        const labelFrame = this.resolvePortLabelFrame(kind);
+        entry.label.x = labelFrame.x;
         entry.label.y = layout.anchorY;
-        entry.label.width = 80;
+        entry.label.width = labelFrame.width;
+        entry.label.textAlign = labelFrame.textAlign;
       }
       for (const [key, entry] of this.portEntries.entries()) {
         if (!key.startsWith(`${kind}:`) || activeKeys.has(key)) {
@@ -18556,6 +19156,24 @@ var LiteGraphTSMigration = (function(exports) {
         }
       }
       return null;
+    }
+    resolvePortLabelFrame(kind) {
+      const gutters = this.resolvePortGutters();
+      if (kind === "input") {
+        return {
+          x: PORT_LABEL_PADDING,
+          width: Math.max(28, gutters.left - PORT_LABEL_PADDING - 4),
+          textAlign: "left"
+        };
+      }
+      return {
+        x: Math.max(
+          PORT_LABEL_PADDING,
+          this.shellLayout.width - gutters.right + 4
+        ),
+        width: Math.max(28, gutters.right - PORT_LABEL_PADDING - 8),
+        textAlign: "right"
+      };
     }
     storeInspectableState() {
       this.root[MODERN_NODE_STATE_KEY] = {
@@ -18635,18 +19253,27 @@ var LiteGraphTSMigration = (function(exports) {
       };
     }
     applyWidgetInteractionState() {
-      var _a3, _b3;
-      const hoveredIndex = ((_a3 = this.interactionState.hoveredPart) == null ? void 0 : _a3.kind) === "widget" ? this.interactionState.hoveredPart.index : null;
-      const pressedIndex = ((_b3 = this.interactionState.pressedPart) == null ? void 0 : _b3.kind) === "widget" ? this.interactionState.pressedPart.index : null;
+      var _a3, _b3, _c2, _d2;
+      const hoveredPart = ((_a3 = this.interactionState.hoveredPart) == null ? void 0 : _a3.kind) === "widget" ? this.interactionState.hoveredPart : null;
+      const pressedPart = ((_b3 = this.interactionState.pressedPart) == null ? void 0 : _b3.kind) === "widget" ? this.interactionState.pressedPart : null;
+      const hoveredIndex = (_c2 = hoveredPart == null ? void 0 : hoveredPart.index) != null ? _c2 : null;
+      const pressedIndex = (_d2 = pressedPart == null ? void 0 : pressedPart.index) != null ? _d2 : null;
       for (let i2 = 0; i2 < this.widgetEntries.length; ++i2) {
         const entry = this.widgetEntries[i2];
         const widgetRoot = entry.handle.root;
         if (!widgetRoot || typeof widgetRoot !== "object") {
           continue;
         }
+        const outline = toUI(
+          entry.handle.outline
+        );
         widgetRoot.disabled = Boolean(entry.schema.disabled);
         if (entry.schema.disabled) {
           widgetRoot.state = "";
+          if (outline) {
+            outline.visible = false;
+            outline.opacity = 0;
+          }
           continue;
         }
         if (pressedIndex === i2) {
@@ -18656,6 +19283,31 @@ var LiteGraphTSMigration = (function(exports) {
         } else {
           widgetRoot.state = "";
         }
+        if (!outline) {
+          continue;
+        }
+        const activePart = pressedIndex === i2 ? pressedPart : hoveredIndex === i2 ? hoveredPart : null;
+        if (!activePart) {
+          outline.visible = false;
+          outline.opacity = 0;
+          continue;
+        }
+        const actionZone = activePart.action && entry.handle.actionZones ? entry.handle.actionZones[activePart.action] : null;
+        const frame = actionZone || {
+          x: 0,
+          y: 0,
+          width: entry.handle.bounds.width,
+          height: entry.handle.bounds.height
+        };
+        outline.x = frame.x;
+        outline.y = frame.y;
+        outline.width = Math.max(0, frame.width);
+        outline.height = Math.max(0, frame.height);
+        outline.cornerRadius = actionZone ? 8 : 10;
+        outline.stroke = pressedIndex === i2 ? "#A4CAFF" : "#7EB2FF";
+        outline.strokeWidth = pressedIndex === i2 ? 2 : 1.5;
+        outline.visible = true;
+        outline.opacity = pressedIndex === i2 ? 1 : 0.95;
       }
     }
     applyActionPartInteractionState() {
@@ -18667,8 +19319,13 @@ var LiteGraphTSMigration = (function(exports) {
           i2,
           entry.schema.id
         );
-        entry.background.fill = state === "press" ? "#17304F" : state === "hover" ? "#223951" : "#1C2430";
-        entry.background.stroke = state === "press" ? "#76A8FF" : state === "hover" ? "#4E6D94" : "#2E455D";
+        entry.background.fill = state === "press" ? "#1B3657" : state === "hover" ? "#21364E" : "#172332";
+        entry.background.stroke = state === "press" ? "#76A8FF" : state === "hover" ? "#5A7FA8" : "#2B4663";
+        entry.outline.visible = state === "press" || state === "hover";
+        entry.outline.opacity = state === "press" ? 1 : state === "hover" ? 0.95 : 0;
+        entry.outline.stroke = state === "press" ? "#A4CAFF" : "#7EB2FF";
+        entry.outline.strokeWidth = state === "press" ? 2 : 1.5;
+        entry.label.fill = state === "press" ? "#F3F8FF" : state === "hover" ? "#D6E8FA" : "#BBD0E6";
       }
     }
     applyPortInteractionState() {
@@ -18711,13 +19368,14 @@ var LiteGraphTSMigration = (function(exports) {
         }
         if (widget.actionZones) {
           for (const [action, rect] of Object.entries(widget.actionZones)) {
-            if (pointInsideRect(point, rect)) {
+            const absoluteRect = offsetRect(rect, widget.x, widget.y);
+            if (pointInsideRect(point, absoluteRect)) {
               return {
                 kind: "widget",
                 index: widget.index,
                 action,
                 cursor: "pointer",
-                bounds: rect
+                bounds: absoluteRect
               };
             }
           }
@@ -19762,16 +20420,21 @@ var LiteGraphTSMigration = (function(exports) {
       this.appHost = appHost;
       this.dragAndScale = dragAndScale;
       this.scaleListenerId = null;
+      this.moveListenerId = null;
       this.sceneSyncController = null;
       this.queuedScaleRepaintFrame = null;
       this.lastScale = 1;
       this.handleTreeScale = () => {
         const nextScale = this.getScale();
+        this.syncBackgroundViewport();
         if (Math.abs(nextScale - this.lastScale) < 1e-4) {
           return;
         }
         this.lastScale = nextScale;
         this.queueLegacyScaleRepaint();
+      };
+      this.handleTreeMove = () => {
+        this.syncBackgroundViewport();
       };
       O(this.appHost.tree, {
         wheel: {
@@ -19801,7 +20464,12 @@ var LiteGraphTSMigration = (function(exports) {
         "leafer.scale",
         this.handleTreeScale
       );
+      this.moveListenerId = this.appHost.tree.on_(
+        "leafer.move",
+        this.handleTreeMove
+      );
       this.dragAndScale.attachViewportPort(this);
+      this.syncBackgroundViewport();
     }
     destroy() {
       var _a3;
@@ -19809,6 +20477,10 @@ var LiteGraphTSMigration = (function(exports) {
       if (this.scaleListenerId) {
         this.appHost.tree.off_(this.scaleListenerId);
         this.scaleListenerId = null;
+      }
+      if (this.moveListenerId) {
+        this.appHost.tree.off_(this.moveListenerId);
+        this.moveListenerId = null;
       }
       if (this.queuedScaleRepaintFrame !== null) {
         const windowRef = ((_a3 = this.appHost.view.ownerDocument) == null ? void 0 : _a3.defaultView) || window;
@@ -19847,6 +20519,7 @@ var LiteGraphTSMigration = (function(exports) {
       if (!zoomingCenter && typeof zoomableTree.zoom === "function") {
         zoomableTree.zoom(nextScale, 0, null, false);
         this.lastScale = this.getScale();
+        this.syncBackgroundViewport();
         this.queueLegacyScaleRepaint();
         return;
       }
@@ -19856,24 +20529,28 @@ var LiteGraphTSMigration = (function(exports) {
         nextScale / currentScale
       );
       this.lastScale = nextScale;
+      this.syncBackgroundViewport();
       this.queueLegacyScaleRepaint();
     }
     setOffset(x2, y2) {
       const scale = this.getScale();
       this.appHost.treeZoomLayer.x = toFiniteNumber(x2) * scale;
       this.appHost.treeZoomLayer.y = toFiniteNumber(y2) * scale;
+      this.syncBackgroundViewport();
     }
     moveByScreenDelta(deltaX2, deltaY) {
       if (!deltaX2 && !deltaY) {
         return;
       }
       this.appHost.treeZoomLayer.move(deltaX2, deltaY);
+      this.syncBackgroundViewport();
     }
     reset() {
       this.appHost.treeZoomLayer.x = 0;
       this.appHost.treeZoomLayer.y = 0;
       this.appHost.treeZoomLayer.scale = 1;
       this.lastScale = 1;
+      this.syncBackgroundViewport();
       this.queueLegacyScaleRepaint();
     }
     queueLegacyScaleRepaint() {
@@ -19906,6 +20583,13 @@ var LiteGraphTSMigration = (function(exports) {
           clientY: rect.top + centerY
         },
         true
+      );
+    }
+    syncBackgroundViewport() {
+      this.appHost.syncBackgroundViewport(
+        toFiniteNumber(this.appHost.treeZoomLayer.x),
+        toFiniteNumber(this.appHost.treeZoomLayer.y),
+        this.getScale()
       );
     }
   }
@@ -20881,7 +21565,12 @@ var LiteGraphTSMigration = (function(exports) {
       this.bgctx = null;
       this.ctx = null;
       this.destroyLeaferAppShell();
-      this.leaferAppHost = new LeaferAppHost(hostView);
+      this.leaferAppHost = new LeaferAppHost(hostView, {
+        backgroundColor: this.clear_background_color,
+        backgroundImage: this.background_image,
+        backgroundAlpha: this.editor_alpha,
+        zoomModifyBackgroundAlpha: this.zoom_modify_alpha
+      });
       this.viewportController = new ViewportController(
         this.leaferAppHost,
         this.ds

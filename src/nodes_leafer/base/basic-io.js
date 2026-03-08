@@ -72,6 +72,16 @@
                 }
                 return this.title;
             }
+
+            getShellState(context) {
+                var shellState = ns.BaseNode.prototype.getShellState.call(
+                    this,
+                    context
+                );
+                shellState.headerMetaText = "FILE";
+                shellState.minimumWidth = 168;
+                return shellState;
+            }
         }
 
         DownloadData.type = "basic/download";
@@ -84,23 +94,60 @@
                 this.size = [60, 30];
                 this.addInput("value", 0, { label: "" });
                 this.value = 0;
+                this._displayValue = Watch.toString(this.value);
             }
 
             onExecute() {
                 if (this.inputs[0]) {
                     this.value = this.getInputData(0);
                 }
+                this.syncDisplayValue();
             }
 
             getTitle() {
                 if (this.flags.collapsed) {
-                    return this.inputs[0].label;
+                    return this._displayValue;
                 }
                 return this.title;
             }
 
-            onDrawBackground() {
-                this.inputs[0].label = Watch.toString(this.value);
+            getShellState(context) {
+                var shellState = ns.BaseNode.prototype.getShellState.call(
+                    this,
+                    context
+                );
+                shellState.headerMetaText = "LIVE";
+                shellState.summaryText = this._displayValue || "Waiting for input";
+                shellState.minimumWidth = 180;
+                shellState.minimumHeight = 46;
+                return shellState;
+            }
+
+            getPortPresentation(kind, slotIndex, context) {
+                var portPresentation = ns.BaseNode.prototype.getPortPresentation.call(
+                    this,
+                    kind,
+                    slotIndex,
+                    context
+                );
+                if (kind === "input" && slotIndex === 0) {
+                    portPresentation.label = this.flags.collapsed
+                        ? this._displayValue
+                        : "";
+                }
+                return portPresentation;
+            }
+
+            syncDisplayValue() {
+                var nextValue = Watch.toString(this.value);
+                if (this._displayValue === nextValue) {
+                    return;
+                }
+                this._displayValue = nextValue;
+                this.requestModernPatch(
+                    ns.ModernNodeChangeMask.Data |
+                        ns.ModernNodeChangeMask.Ports
+                );
             }
         }
 
@@ -179,6 +226,16 @@
                 }
             }
 
+            getShellState(context) {
+                var shellState = ns.BaseNode.prototype.getShellState.call(
+                    this,
+                    context
+                );
+                shellState.headerMetaText = "LOG";
+                shellState.minimumWidth = 164;
+                return shellState;
+            }
+
             onGetInputs() {
                 return [
                     ["log", LiteGraph.ACTION],
@@ -223,6 +280,16 @@
                 setTimeout(function() {
                     alert(msg);
                 }, 10);
+            }
+
+            getShellState(context) {
+                var shellState = ns.BaseNode.prototype.getShellState.call(
+                    this,
+                    context
+                );
+                shellState.headerMetaText = "EVENT";
+                shellState.minimumWidth = 204;
+                return shellState;
             }
         }
 

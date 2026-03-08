@@ -9,6 +9,34 @@
         this.setProperty("value", v);
     }
 
+    function getJsonStatus(node) {
+        if (node.boxcolor === "red") {
+            return "ERROR";
+        }
+        if (node.boxcolor === "#AEA") {
+            return "READY";
+        }
+        return "IDLE";
+    }
+
+    function getJsonTone(status) {
+        if (status === "ERROR") {
+            return {
+                bodyColor: "#23171A",
+                borderColor: "#743B45",
+                boxColor: "#F199A5",
+            };
+        }
+        if (status === "READY") {
+            return {
+                bodyColor: "#15211C",
+                borderColor: "#2C6651",
+                boxColor: "#7FD2AB",
+            };
+        }
+        return null;
+    }
+
     ns.registerBaseModule("base/basic-data", function() {
         class ConstantFile extends ns.BaseNode {
             constructor(title) {
@@ -40,6 +68,12 @@
                     } else {
                         this.fetchFile(value);
                     }
+                } else if (name == "type") {
+                    this.requestModernPatch(
+                        ns.ModernNodeChangeMask.Layout |
+                            ns.ModernNodeChangeMask.Data |
+                            ns.ModernNodeChangeMask.Style
+                    );
                 }
             }
 
@@ -55,11 +89,31 @@
                 setValue.call(this, v);
             }
 
+            getShellState(context) {
+                var shellState = ns.BaseNode.prototype.getShellState.call(
+                    this,
+                    context
+                );
+                shellState.headerMetaText = ns.describePortType(this.properties.type);
+                shellState.minimumWidth = 220;
+                var tone = getJsonTone(getJsonStatus(this));
+                if (tone) {
+                    shellState.bodyColor = tone.bodyColor;
+                    shellState.borderColor = tone.borderColor;
+                    shellState.boxColor = tone.boxColor;
+                }
+                return shellState;
+            }
+
             fetchFile(url) {
                 var that = this;
                 if (!url || url.constructor !== String) {
                     that._data = null;
                     that.boxcolor = null;
+                    that.requestModernPatch(
+                        ns.ModernNodeChangeMask.Data |
+                            ns.ModernNodeChangeMask.Style
+                    );
                     return;
                 }
 
@@ -91,10 +145,18 @@
                     .then(function(data) {
                         that._data = data;
                         that.boxcolor = "#AEA";
+                        that.requestModernPatch(
+                            ns.ModernNodeChangeMask.Data |
+                                ns.ModernNodeChangeMask.Style
+                        );
                     })
                     .catch(function() {
                         that._data = null;
                         that.boxcolor = "red";
+                        that.requestModernPatch(
+                            ns.ModernNodeChangeMask.Data |
+                                ns.ModernNodeChangeMask.Style
+                        );
                         console.error("error fetching file:", url);
                     });
             }
@@ -113,6 +175,10 @@
                         value = JSON.parse(value);
                     }
                     that._data = value;
+                    that.requestModernPatch(
+                        ns.ModernNodeChangeMask.Data |
+                            ns.ModernNodeChangeMask.Style
+                    );
                 };
 
                 if (that.properties.type == "arraybuffer") {
@@ -163,17 +229,30 @@
             }
 
             parse() {
+                this._str = this.getInputData(1);
                 if (!this._str) {
+                    this.boxcolor = null;
+                    this.requestModernPatch(
+                        ns.ModernNodeChangeMask.Data |
+                            ns.ModernNodeChangeMask.Style
+                    );
                     return;
                 }
 
                 try {
-                    this._str = this.getInputData(1);
                     this._obj = JSON.parse(this._str);
                     this.boxcolor = "#AEA";
+                    this.requestModernPatch(
+                        ns.ModernNodeChangeMask.Data |
+                            ns.ModernNodeChangeMask.Style
+                    );
                     this.triggerSlot(0);
                 } catch (err) {
                     this.boxcolor = "red";
+                    this.requestModernPatch(
+                        ns.ModernNodeChangeMask.Data |
+                            ns.ModernNodeChangeMask.Style
+                    );
                 }
             }
 
@@ -186,6 +265,24 @@
                 if (name == "parse") {
                     this.parse();
                 }
+            }
+
+            getShellState(context) {
+                var shellState = ns.BaseNode.prototype.getShellState.call(
+                    this,
+                    context
+                );
+                var status = getJsonStatus(this);
+                var tone = getJsonTone(status);
+                shellState.title = "JSON Parser";
+                shellState.headerMetaText = status;
+                shellState.minimumWidth = 208;
+                if (tone) {
+                    shellState.bodyColor = tone.bodyColor;
+                    shellState.borderColor = tone.borderColor;
+                    shellState.boxColor = tone.boxColor;
+                }
+                return shellState;
             }
         }
 
@@ -234,6 +331,23 @@
 
             setValue(v) {
                 setValue.call(this, v);
+            }
+
+            getShellState(context) {
+                var shellState = ns.BaseNode.prototype.getShellState.call(
+                    this,
+                    context
+                );
+                var status = getJsonStatus(this);
+                var tone = getJsonTone(status);
+                shellState.headerMetaText = status;
+                shellState.minimumWidth = 180;
+                if (tone) {
+                    shellState.bodyColor = tone.bodyColor;
+                    shellState.borderColor = tone.borderColor;
+                    shellState.boxColor = tone.boxColor;
+                }
+                return shellState;
             }
         }
 
@@ -302,6 +416,16 @@
 
             setValue(v) {
                 setValue.call(this, v);
+            }
+
+            getShellState(context) {
+                var shellState = ns.BaseNode.prototype.getShellState.call(
+                    this,
+                    context
+                );
+                shellState.headerMetaText = "ARRAY";
+                shellState.minimumWidth = 188;
+                return shellState;
             }
         }
 

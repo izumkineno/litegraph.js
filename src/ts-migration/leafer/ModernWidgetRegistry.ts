@@ -1,3 +1,5 @@
+import { Flow } from "@leafer-in/flow";
+
 import {
     getModernWidgetRenderer,
     registerModernWidgets,
@@ -12,16 +14,26 @@ import {
 interface BuiltinWidgetHandle extends ModernWidgetViewHandle {
     root: Record<string, unknown>;
     background: Record<string, unknown>;
+    outline?: Record<string, unknown> | null;
+    content?: Flow | null;
+    actionsFlow?: Flow | null;
     labelText?: Record<string, unknown> | null;
     valueText?: Record<string, unknown> | null;
     leftText?: Record<string, unknown> | null;
     rightText?: Record<string, unknown> | null;
 }
 
-const LABEL_WIDTH_MIN = 36;
-const LABEL_WIDTH_MAX = 74;
+const LABEL_WIDTH_MIN = 48;
+const LABEL_WIDTH_MAX = 92;
 const INLINE_PADDING = 10;
-const ACTION_ICON_WIDTH = 24;
+const ACTION_ICON_WIDTH = 20;
+const WIDGET_VERTICAL_PADDING = 4;
+const WIDGET_ROW_GAP = 6;
+const WIDGET_ROW_MIN_HEIGHT = 28;
+const STEPPER_MIN_VALUE_WIDTH = 40;
+const STEPPER_GAP = 6;
+const FLOW_GAP = 8;
+const ACTION_FLOW_GAP = 4;
 
 function toFiniteNumber(value: unknown, fallback = 0): number {
     const numericValue = Number(value);
@@ -49,7 +61,44 @@ function formatWidgetValue(schema: ModernWidgetSchema): string {
 }
 
 function resolveLabelWidth(bounds: ModernWidgetRectLike): number {
-    return clamp(bounds.width * 0.32, LABEL_WIDTH_MIN, LABEL_WIDTH_MAX);
+    return clamp(bounds.width * 0.38, LABEL_WIDTH_MIN, LABEL_WIDTH_MAX);
+}
+
+function resolveStepperFrames(bounds: ModernWidgetRectLike): {
+    labelX: number;
+    labelWidth: number;
+    valueX: number;
+    valueWidth: number;
+    decrementX: number;
+    incrementX: number;
+    actionWidth: number;
+} {
+    const actionWidth = 18;
+    const clusterGap = 4;
+    const availableWidth =
+        bounds.width - INLINE_PADDING * 2 - actionWidth * 2 - clusterGap - STEPPER_GAP;
+    const labelWidth = clamp(
+        Math.min(
+            resolveLabelWidth(bounds),
+            Math.max(24, availableWidth - STEPPER_MIN_VALUE_WIDTH)
+        ),
+        24,
+        LABEL_WIDTH_MAX
+    );
+    const valueWidth = Math.max(STEPPER_MIN_VALUE_WIDTH, availableWidth - labelWidth);
+    const valueX = INLINE_PADDING + labelWidth + STEPPER_GAP;
+    const decrementX =
+        bounds.width - INLINE_PADDING - actionWidth * 2 - clusterGap;
+    const incrementX = bounds.width - INLINE_PADDING - actionWidth;
+    return {
+        labelX: INLINE_PADDING,
+        labelWidth,
+        valueX,
+        valueWidth,
+        decrementX,
+        incrementX,
+        actionWidth,
+    };
 }
 
 function createRoot(
@@ -72,7 +121,7 @@ function createRoot(
                 opacity: 1,
             },
             press: {
-                scale: 0.985,
+                scale: 0.992,
             },
             focus: {
                 opacity: 1,
@@ -88,16 +137,16 @@ function createRoot(
         y: 0,
         width: context.bounds.width,
         height: context.bounds.height,
-        cornerRadius: 8,
-        fill: "#162130",
-        stroke: "#2E455D",
+        cornerRadius: 10,
+        fill: "#141C26",
+        stroke: "#314253",
         strokeWidth: 1,
         hoverStyle: {
-            fill: "#1B2A3D",
-            stroke: "#4E6D94",
+            fill: "#182230",
+            stroke: "#486179",
         },
         pressStyle: {
-            fill: "#102034",
+            fill: "#101821",
             stroke: "#76A8FF",
         },
         focusStyle: {
@@ -108,12 +157,44 @@ function createRoot(
         },
         hittable: false,
     });
+    const outline = new Rect({
+        x: 0,
+        y: 0,
+        width: Math.max(0, context.bounds.width),
+        height: Math.max(0, context.bounds.height),
+        cornerRadius: 10,
+        fill: "rgba(0,0,0,0)",
+        stroke: "#78AEFF",
+        strokeWidth: 1.5,
+        opacity: 0,
+        visible: false,
+        hittable: false,
+    });
+    const content = new Flow({
+        x: INLINE_PADDING,
+        y: WIDGET_VERTICAL_PADDING,
+        width: Math.max(1, context.bounds.width - INLINE_PADDING * 2),
+        height: Math.max(1, context.bounds.height - WIDGET_VERTICAL_PADDING * 2),
+        flow: "x",
+        gap: FLOW_GAP,
+        flowAlign: {
+            content: "left",
+            y: "center",
+        },
+        hittable: false,
+    });
 
-    (root as { add?: (children: unknown[]) => void }).add?.([background]);
+    (root as { add?: (children: unknown[]) => void }).add?.([
+        background,
+        outline,
+        content,
+    ]);
 
     return {
         root,
         background,
+        outline,
+        content,
         bounds: { ...context.bounds },
     };
 }
@@ -130,6 +211,25 @@ function applyRootLayout(
     handle.root.disabled = Boolean(context.schema.disabled);
     handle.background.width = context.bounds.width;
     handle.background.height = context.bounds.height;
+    if (handle.outline) {
+        handle.outline.x = 0;
+        handle.outline.y = 0;
+        handle.outline.width = Math.max(0, context.bounds.width);
+        handle.outline.height = Math.max(0, context.bounds.height);
+        handle.outline.cornerRadius = 10;
+    }
+    if (handle.content) {
+        handle.content.x = INLINE_PADDING;
+        handle.content.y = WIDGET_VERTICAL_PADDING;
+        handle.content.width = Math.max(
+            1,
+            context.bounds.width - INLINE_PADDING * 2
+        );
+        handle.content.height = Math.max(
+            1,
+            context.bounds.height - WIDGET_VERTICAL_PADDING * 2
+        );
+    }
 }
 
 function createTextNode(
@@ -140,10 +240,10 @@ function createTextNode(
         data?: Record<string, unknown>
     ) => Record<string, unknown>>;
     return new Text({
-        fontSize: 11,
+        fontSize: 10.5,
         fontFamily:
-            "'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif",
-        fill: "#D9E8F7",
+            "'Aptos', 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif",
+        fill: "#C2D2E2",
         verticalAlign: "middle",
         textWrap: "none",
         textOverflow: "hide",
@@ -156,21 +256,32 @@ function createLabelAndValue(
     context: ModernWidgetRenderContext,
     handle: BuiltinWidgetHandle
 ): void {
+    const contentHeight = Math.max(
+        1,
+        context.bounds.height - WIDGET_VERTICAL_PADDING * 2
+    );
     const labelText = createTextNode(context, {
-        x: INLINE_PADDING,
-        y: context.bounds.height / 2,
         text: context.schema.label || context.schema.name,
         width: resolveLabelWidth(context.bounds),
+        height: contentHeight,
+        fontSize: 10,
+        fill: "#88A0B8",
     });
     const valueText = createTextNode(context, {
-        y: context.bounds.height / 2,
         textAlign: "right",
         text: formatWidgetValue(context.schema),
+        width: 1,
+        autoWidth: 1,
+        height: contentHeight,
+        fontSize: 12,
+        fontFamily:
+            "'Cascadia Code', 'Consolas', 'Fira Code', 'Microsoft YaHei', monospace",
+        fill: "#EEF5FF",
     });
 
     handle.labelText = labelText;
     handle.valueText = valueText;
-    (handle.root as { add?: (children: unknown[]) => void }).add?.([
+    (handle.content as { add?: (children: unknown[]) => void } | null)?.add?.([
         labelText,
         valueText,
     ]);
@@ -181,19 +292,21 @@ function patchLabelAndValue(
     context: ModernWidgetRenderContext
 ): void {
     const labelWidth = resolveLabelWidth(context.bounds);
+    const contentHeight = Math.max(
+        1,
+        context.bounds.height - WIDGET_VERTICAL_PADDING * 2
+    );
     if (handle.labelText) {
         handle.labelText.text = context.schema.label || context.schema.name;
-        handle.labelText.x = INLINE_PADDING;
-        handle.labelText.y = context.bounds.height / 2;
         handle.labelText.width = labelWidth;
+        handle.labelText.height = contentHeight;
     }
 
     if (handle.valueText) {
         handle.valueText.text = formatWidgetValue(context.schema);
-        handle.valueText.x = INLINE_PADDING + labelWidth + 8;
-        handle.valueText.y = context.bounds.height / 2;
-        handle.valueText.width =
-            context.bounds.width - (INLINE_PADDING * 2 + labelWidth + 8);
+        handle.valueText.autoWidth = 1;
+        handle.valueText.width = 1;
+        handle.valueText.height = contentHeight;
     }
 }
 
@@ -201,19 +314,19 @@ const buttonRenderer: ModernWidgetRenderer = {
     createView(context) {
         const handle = createRoot(context);
         handle.background.fill = "#18324A";
-        handle.background.stroke = "#335372";
+        handle.background.stroke = "#416180";
         handle.background.hoverStyle = {
-            fill: "#21415E",
-            stroke: "#4A7297",
+            fill: "#203A55",
+            stroke: "#5A80A8",
         };
         handle.background.pressStyle = {
-            fill: "#11273A",
+            fill: "#15293C",
             stroke: "#76A8FF",
         };
         const text = createTextNode(context, {
-            x: INLINE_PADDING,
-            y: context.bounds.height / 2,
-            width: context.bounds.width - INLINE_PADDING * 2,
+            width: 1,
+            autoWidth: 1,
+            height: Math.max(1, context.bounds.height - WIDGET_VERTICAL_PADDING * 2),
             textAlign: "center",
             text: context.schema.label || context.schema.name,
         });
@@ -226,7 +339,9 @@ const buttonRenderer: ModernWidgetRenderer = {
                 height: context.bounds.height,
             },
         };
-        (handle.root as { add?: (children: unknown[]) => void }).add?.([text]);
+        (handle.content as { add?: (children: unknown[]) => void } | null)?.add?.([
+            text,
+        ]);
         return handle;
     },
     patchView(context, handle) {
@@ -235,8 +350,12 @@ const buttonRenderer: ModernWidgetRenderer = {
         if (builtinHandle.valueText) {
             builtinHandle.valueText.text =
                 context.schema.label || context.schema.name;
-            builtinHandle.valueText.width = context.bounds.width - INLINE_PADDING * 2;
-            builtinHandle.valueText.y = context.bounds.height / 2;
+            builtinHandle.valueText.autoWidth = 1;
+            builtinHandle.valueText.width = 1;
+            builtinHandle.valueText.height = Math.max(
+                1,
+                context.bounds.height - WIDGET_VERTICAL_PADDING * 2
+            );
         }
         builtinHandle.actionZones = {
             activate: {
@@ -256,6 +375,8 @@ const toggleRenderer: ModernWidgetRenderer = {
     createView(context) {
         const handle = createRoot(context);
         createLabelAndValue(context, handle);
+        handle.background.fill = context.schema.value ? "#1A3148" : "#141C26";
+        handle.background.stroke = context.schema.value ? "#4E78A1" : "#314253";
         handle.actionZones = {
             toggle: {
                 x: 0,
@@ -267,12 +388,16 @@ const toggleRenderer: ModernWidgetRenderer = {
         return handle;
     },
     patchView(context, handle) {
-        const builtinHandle = handle as BuiltinWidgetHandle;
-        applyRootLayout(builtinHandle, context);
-        patchLabelAndValue(builtinHandle, context);
-        builtinHandle.actionZones = {
-            toggle: {
-                x: 0,
+            const builtinHandle = handle as BuiltinWidgetHandle;
+            applyRootLayout(builtinHandle, context);
+            patchLabelAndValue(builtinHandle, context);
+            builtinHandle.background.fill = context.schema.value ? "#1A3148" : "#141C26";
+            builtinHandle.background.stroke = context.schema.value
+                ? "#4E78A1"
+                : "#314253";
+            builtinHandle.actionZones = {
+                toggle: {
+                    x: 0,
                 y: 0,
                 width: context.bounds.width,
                 height: context.bounds.height,
@@ -289,24 +414,43 @@ function createStepperRenderer(type: "number" | "combo"): ModernWidgetRenderer {
         createView(context) {
             const handle = createRoot(context);
             createLabelAndValue(context, handle);
+            handle.actionsFlow = new Flow({
+                flow: "x",
+                gap: ACTION_FLOW_GAP,
+                flowAlign: {
+                    content: "left",
+                    y: "center",
+                },
+                hittable: false,
+            });
             handle.leftText = createTextNode(context, {
-                x: 0,
-                y: context.bounds.height / 2,
                 width: ACTION_ICON_WIDTH,
+                height: Math.max(
+                    1,
+                    context.bounds.height - WIDGET_VERTICAL_PADDING * 2
+                ),
                 textAlign: "center",
                 text: "-",
                 fill: "#8AA5C1",
             });
             handle.rightText = createTextNode(context, {
-                y: context.bounds.height / 2,
                 width: ACTION_ICON_WIDTH,
+                height: Math.max(
+                    1,
+                    context.bounds.height - WIDGET_VERTICAL_PADDING * 2
+                ),
                 textAlign: "center",
-                text: "+",
+                text: type === "combo" ? ">" : "+",
                 fill: "#8AA5C1",
             });
-            (handle.root as { add?: (children: unknown[]) => void }).add?.([
-                handle.leftText,
-                handle.rightText,
+            if (handle.leftText) {
+                handle.leftText.text = type === "combo" ? "<" : "-";
+            }
+            (
+                handle.actionsFlow as { add?: (children: unknown[]) => void } | null
+            )?.add?.([handle.leftText, handle.rightText]);
+            (handle.content as { add?: (children: unknown[]) => void } | null)?.add?.([
+                handle.actionsFlow,
             ]);
             this.patchView(context, handle, 0);
             return handle;
@@ -315,53 +459,81 @@ function createStepperRenderer(type: "number" | "combo"): ModernWidgetRenderer {
             const builtinHandle = handle as BuiltinWidgetHandle;
             applyRootLayout(builtinHandle, context);
             patchLabelAndValue(builtinHandle, context);
+            const frames = resolveStepperFrames(context.bounds);
+            const contentHeight = Math.max(
+                1,
+                context.bounds.height - WIDGET_VERTICAL_PADDING * 2
+            );
 
             if (builtinHandle.valueText) {
-                builtinHandle.valueText.x =
-                    INLINE_PADDING + resolveLabelWidth(context.bounds) + ACTION_ICON_WIDTH;
-                builtinHandle.valueText.width =
-                    context.bounds.width -
-                    (INLINE_PADDING * 2 +
-                        resolveLabelWidth(context.bounds) +
-                        ACTION_ICON_WIDTH * 2);
+                builtinHandle.valueText.textAlign =
+                    type === "combo" ? "center" : "right";
+                builtinHandle.valueText.autoWidth = undefined;
+                builtinHandle.valueText.width = frames.valueWidth;
+                builtinHandle.valueText.height = contentHeight;
+            }
+            if (builtinHandle.labelText) {
+                builtinHandle.labelText.width = frames.labelWidth;
+                builtinHandle.labelText.height = contentHeight;
+            }
+            if (builtinHandle.actionsFlow) {
+                builtinHandle.actionsFlow.width =
+                    frames.actionWidth * 2 + ACTION_FLOW_GAP;
+                builtinHandle.actionsFlow.height = contentHeight;
             }
             if (builtinHandle.leftText) {
-                builtinHandle.leftText.x = INLINE_PADDING + resolveLabelWidth(context.bounds);
-                builtinHandle.leftText.y = context.bounds.height / 2;
+                builtinHandle.leftText.width = frames.actionWidth;
+                builtinHandle.leftText.height = contentHeight;
             }
             if (builtinHandle.rightText) {
-                builtinHandle.rightText.x =
-                    context.bounds.width - INLINE_PADDING - ACTION_ICON_WIDTH;
-                builtinHandle.rightText.y = context.bounds.height / 2;
+                builtinHandle.rightText.width = frames.actionWidth;
+                builtinHandle.rightText.height = contentHeight;
             }
+
+            const contentX = toFiniteNumber(builtinHandle.content?.x, INLINE_PADDING);
+            const labelWidth = builtinHandle.labelText
+                ? toFiniteNumber(builtinHandle.labelText.width, frames.labelWidth)
+                : frames.labelWidth;
+            const valueWidth = builtinHandle.valueText
+                ? toFiniteNumber(builtinHandle.valueText.width, frames.valueWidth)
+                : frames.valueWidth;
+            const decrementWidth = builtinHandle.leftText
+                ? toFiniteNumber(builtinHandle.leftText.width, frames.actionWidth)
+                : frames.actionWidth;
+            const incrementWidth = builtinHandle.rightText
+                ? toFiniteNumber(builtinHandle.rightText.width, frames.actionWidth)
+                : frames.actionWidth;
+            const editX = contentX + labelWidth + FLOW_GAP;
+            const editWidth = valueWidth;
+            const decrementX = editX + valueWidth + FLOW_GAP;
+            const incrementX = decrementX + decrementWidth + ACTION_FLOW_GAP;
 
             builtinHandle.actionZones = {
                 decrement: {
-                    x: INLINE_PADDING + resolveLabelWidth(context.bounds),
+                    x: decrementX,
                     y: 0,
-                    width: ACTION_ICON_WIDTH,
+                    width: decrementWidth,
                     height: context.bounds.height,
                 },
                 edit: {
-                    x: INLINE_PADDING + resolveLabelWidth(context.bounds) + ACTION_ICON_WIDTH,
+                    x: editX,
                     y: 0,
-                    width:
-                        context.bounds.width -
-                        (INLINE_PADDING * 2 +
-                            resolveLabelWidth(context.bounds) +
-                            ACTION_ICON_WIDTH * 2),
+                    width: editWidth,
                     height: context.bounds.height,
                 },
                 increment: {
-                    x: context.bounds.width - INLINE_PADDING - ACTION_ICON_WIDTH,
+                    x: incrementX,
                     y: 0,
-                    width: ACTION_ICON_WIDTH,
+                    width: incrementWidth,
                     height: context.bounds.height,
                 },
             };
         },
         performAction(context): ModernWidgetActionResult {
-            if (context.action === "edit") {
+            if (
+                context.action === "edit" ||
+                context.action === "activate"
+            ) {
                 return { consumed: true, openEditor: true };
             }
             if (type === "number") {
@@ -473,11 +645,11 @@ export function resolveWidgetBounds(
     count: number
 ): ModernWidgetRectLike {
     const totalCount = Math.max(count, 1);
-    const verticalPadding = 4;
-    const gap = 4;
+    const verticalPadding = WIDGET_VERTICAL_PADDING;
+    const gap = WIDGET_ROW_GAP;
     const usableHeight =
         bodyBounds.height - verticalPadding * 2 - gap * (totalCount - 1);
-    const rowHeight = Math.max(20, usableHeight / totalCount);
+    const rowHeight = Math.max(WIDGET_ROW_MIN_HEIGHT, usableHeight / totalCount);
     return {
         x: bodyBounds.x + 6,
         y: bodyBounds.y + verticalPadding + index * (rowHeight + gap),

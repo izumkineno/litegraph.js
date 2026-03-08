@@ -94,6 +94,9 @@ export interface ModernShellState {
     title?: string;
     titleMode?: "default" | "compact" | "hidden";
     collapsedWidth?: number | null;
+    headerMetaText?: string;
+    minimumWidth?: number;
+    minimumHeight?: number;
     titleColor?: string | null;
     titleTextColor?: string | null;
     boxColor?: string | null;

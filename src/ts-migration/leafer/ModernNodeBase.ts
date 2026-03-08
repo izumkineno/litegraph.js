@@ -218,9 +218,15 @@ export abstract class ModernNodeBase extends LGraphNodeCanvasCollab {
     ): ModernNodePortDefinition {
         const safePort = port && typeof port === "object" ? port : { name: "" };
         const fallbackName = `${kind}_${index}`;
-        const rawName = String(safePort.name ?? "").trim();
+        const hasExplicitName = Object.prototype.hasOwnProperty.call(
+            safePort,
+            "name"
+        );
+        const rawName = hasExplicitName
+            ? String(safePort.name ?? "")
+            : "";
         return {
-            name: rawName || fallbackName,
+            name: hasExplicitName ? rawName : fallbackName,
             type: safePort.type,
             extra:
                 safePort.extra && typeof safePort.extra === "object"

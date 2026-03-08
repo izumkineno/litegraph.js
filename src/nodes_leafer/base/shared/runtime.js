@@ -82,6 +82,90 @@
         return String((node && (node.title || node.type)) || "Node");
     }
 
+    function truncateText(value, maxLength) {
+        var text = String(value == null ? "" : value)
+            .replace(/\s+/g, " ")
+            .trim();
+        if (!text) {
+            return "";
+        }
+        var safeMaxLength = Math.max(toFiniteNumber(maxLength, 24), 4);
+        if (text.length <= safeMaxLength) {
+            return text;
+        }
+        return text.slice(0, safeMaxLength - 3) + "...";
+    }
+
+    function formatNodeValue(value, maxLength) {
+        if (value == null) {
+            return "null";
+        }
+        if (value.constructor === Number) {
+            return Number.isInteger(value)
+                ? String(value)
+                : Number(value).toFixed(3).replace(/0+$/, "").replace(/\.$/, "");
+        }
+        if (value.constructor === Boolean) {
+            return value ? "true" : "false";
+        }
+        if (value.constructor === String) {
+            return truncateText(value, maxLength || 22);
+        }
+        if (Array.isArray(value)) {
+            return "Array(" + value.length + ")";
+        }
+        if (typeof value === "function") {
+            return "fn()";
+        }
+        if (typeof value === "object") {
+            var keys = Object.keys(value);
+            return keys.length ? "{" + truncateText(keys.join(", "), 18) + "}" : "{}";
+        }
+        return truncateText(String(value), maxLength || 22);
+    }
+
+    function describePortType(type) {
+        if (
+            type === LiteGraph.EVENT ||
+            type === LiteGraph.ACTION ||
+            type === "event" ||
+            type === "action"
+        ) {
+            return "EVENT";
+        }
+        if (type == null || type === "" || type === -1 || type === 0) {
+            return "ANY";
+        }
+
+        var label = String(type)
+            .replace(/_/g, " ")
+            .replace(/\s+/g, " ")
+            .trim();
+        if (!label) {
+            return "ANY";
+        }
+
+        if (label === "number") {
+            return "NUMBER";
+        }
+        if (label === "boolean") {
+            return "BOOLEAN";
+        }
+        if (label === "string") {
+            return "STRING";
+        }
+        if (label === "object") {
+            return "OBJECT";
+        }
+        if (label === "array") {
+            return "ARRAY";
+        }
+        if (label === "json") {
+            return "JSON";
+        }
+        return label.toUpperCase();
+    }
+
     function getNodeSummary(node) {
         if (!node) {
             return "";
@@ -312,6 +396,9 @@
     };
     ns.BaseNode = BaseNode;
     ns.buildSlotSchemaFromNode = buildSlotSchemaFromNode;
+    ns.truncateText = truncateText;
+    ns.formatNodeValue = formatNodeValue;
+    ns.describePortType = describePortType;
     ns.getNodeSummary = getNodeSummary;
     ns.resolveShellState = resolveShellState;
     ns.resolvePortPresentation = resolvePortPresentation;
