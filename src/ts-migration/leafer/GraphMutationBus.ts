@@ -17,10 +17,39 @@ export interface GraphMutationNodeLike {
     [key: string]: unknown;
 }
 
+export interface GraphMutationGroupLike {
+    title?: string;
+    color?: string;
+    font_size?: number;
+    graph?: GraphMutationGraphLike | null;
+    _bounding?: ArrayLike<unknown>;
+    _pos?: ArrayLike<unknown>;
+    _size?: ArrayLike<unknown>;
+    _nodes?: GraphMutationNodeLike[];
+    pos?: ArrayLike<unknown>;
+    size?: ArrayLike<unknown>;
+    move?: (deltaX: number, deltaY: number, ignoreNodes?: boolean) => void;
+    recomputeInsideNodes?: () => void;
+    isPointInside?: (
+        x: number,
+        y: number,
+        margin?: number,
+        skipTitle?: boolean
+    ) => boolean;
+    setDirtyCanvas?: (
+        dirtyForeground: boolean,
+        dirtyBackground?: boolean
+    ) => void;
+    [key: string]: unknown;
+}
+
 export interface GraphMutationGraphLike extends GraphLinksProxyGraphLike {
     _nodes?: GraphMutationNodeLike[];
+    _groups?: GraphMutationGroupLike[];
     onNodeAdded?: ((node: GraphMutationNodeLike) => void) | null;
     onNodeRemoved?: ((node: GraphMutationNodeLike) => void) | null;
+    add?: (...args: unknown[]) => unknown;
+    remove?: (...args: unknown[]) => unknown;
     clear?: (...args: unknown[]) => unknown;
 }
 
@@ -50,6 +79,14 @@ export interface GraphMutationEventMap {
         nodeId: GraphMutationNodeId;
         node: GraphMutationNodeLike;
     };
+    "group:add": {
+        graph: GraphMutationGraphLike;
+        group: GraphMutationGroupLike;
+    };
+    "group:remove": {
+        graph: GraphMutationGraphLike;
+        group: GraphMutationGroupLike;
+    };
     "link:add": {
         graph: GraphMutationGraphLike;
         linkId: GraphMutationLinkId;
@@ -78,13 +115,19 @@ interface GraphInstrumentationState {
     graph: GraphMutationGraphLike;
     refCount: number;
     listeners: Set<GraphInstrumentationListener>;
+    addBridge: (...args: unknown[]) => unknown;
+    removeBridge: (...args: unknown[]) => unknown;
     nodeAddedBridge: (node: GraphMutationNodeLike) => void;
     nodeRemovedBridge: (node: GraphMutationNodeLike) => void;
     clearBridge: (...args: unknown[]) => unknown;
     linksProxy: GraphLinksProxy;
+    hadOwnAdd: boolean;
+    hadOwnRemove: boolean;
     hadOwnOnNodeAdded: boolean;
     hadOwnOnNodeRemoved: boolean;
     hadOwnClear: boolean;
+    originalAdd?: (...args: unknown[]) => unknown;
+    originalRemove?: (...args: unknown[]) => unknown;
     userOnNodeAdded?: ((node: GraphMutationNodeLike) => void) | null;
     userOnNodeRemoved?: ((node: GraphMutationNodeLike) => void) | null;
     originalClear?: (...args: unknown[]) => unknown;
@@ -119,12 +162,62 @@ function restoreGraphHook(
     }
 }
 
+function restoreGraphMethod(
+    graph: GraphMutationGraphLike,
+    key: "add" | "remove" | "clear",
+    hadOwnProperty: boolean,
+    originalMethod?: ((...args: unknown[]) => unknown) | null
+): void {
+    delete (graph as unknown as Record<string, unknown>)[key];
+
+    if (hadOwnProperty && typeof originalMethod === "function") {
+        (graph as unknown as Record<string, unknown>)[key] = originalMethod;
+    }
+}
+
+function isGroupLike(value: unknown): value is GraphMutationGroupLike {
+    if (!value || typeof value !== "object") {
+        return false;
+    }
+
+    const candidate = value as Record<string, unknown>;
+    const hasBounding =
+        Array.isArray(candidate._bounding) ||
+        ArrayBuffer.isView(candidate._bounding as ArrayBufferView);
+    const hasSize =
+        Array.isArray(candidate.size) ||
+        ArrayBuffer.isView(candidate.size as ArrayBufferView);
+    const hasPosition =
+        Array.isArray(candidate.pos) ||
+        ArrayBuffer.isView(candidate.pos as ArrayBufferView);
+
+    return (
+        !("id" in candidate) &&
+        hasBounding &&
+        hasPosition &&
+        hasSize &&
+        typeof candidate.isPointInside === "function"
+    );
+}
+
 function teardownGraphInstrumentation(
     state: GraphInstrumentationState
 ): void {
     const { graph } = state;
 
     state.linksProxy.destroy();
+    restoreGraphMethod(
+        graph,
+        "add",
+        state.hadOwnAdd,
+        state.originalAdd || null
+    );
+    restoreGraphMethod(
+        graph,
+        "remove",
+        state.hadOwnRemove,
+        state.originalRemove || null
+    );
     restoreGraphHook(
         graph,
         "onNodeAdded",
@@ -137,12 +230,12 @@ function teardownGraphInstrumentation(
         state.hadOwnOnNodeRemoved,
         state.userOnNodeRemoved
     );
-
-    delete (graph as unknown as Record<string, unknown>).clear;
-    if (state.hadOwnClear && state.originalClear) {
-        (graph as unknown as Record<string, unknown>).clear =
-            state.originalClear;
-    }
+    restoreGraphMethod(
+        graph,
+        "clear",
+        state.hadOwnClear,
+        state.originalClear || null
+    );
 
     instrumentedGraphs.delete(graph);
 }
@@ -159,6 +252,8 @@ function instrumentGraph(
     state.graph = graph;
     state.refCount = 0;
     state.listeners = new Set<GraphInstrumentationListener>();
+    state.hadOwnAdd = Object.prototype.hasOwnProperty.call(graph, "add");
+    state.hadOwnRemove = Object.prototype.hasOwnProperty.call(graph, "remove");
     state.hadOwnOnNodeAdded = Object.prototype.hasOwnProperty.call(
         graph,
         "onNodeAdded"
@@ -168,12 +263,45 @@ function instrumentGraph(
         "onNodeRemoved"
     );
     state.hadOwnClear = Object.prototype.hasOwnProperty.call(graph, "clear");
+    state.originalAdd =
+        typeof graph.add === "function" ? graph.add.bind(graph) : undefined;
+    state.originalRemove =
+        typeof graph.remove === "function" ? graph.remove.bind(graph) : undefined;
     state.userOnNodeAdded =
         typeof graph.onNodeAdded === "function" ? graph.onNodeAdded : null;
     state.userOnNodeRemoved =
         typeof graph.onNodeRemoved === "function" ? graph.onNodeRemoved : null;
     state.originalClear =
         typeof graph.clear === "function" ? graph.clear.bind(graph) : undefined;
+
+    state.addBridge = (...args: unknown[]) => {
+        const result = state.originalAdd?.(...args);
+        const candidate = args[0];
+        if (
+            isGroupLike(candidate) &&
+            Array.isArray(graph._groups) &&
+            graph._groups.includes(candidate)
+        ) {
+            dispatchGraphMutation(state, "group:add", {
+                graph,
+                group: candidate,
+            });
+        }
+        return result;
+    };
+
+    state.removeBridge = (...args: unknown[]) => {
+        const candidate = args[0];
+        const removedGroup = isGroupLike(candidate) ? candidate : null;
+        const result = state.originalRemove?.(...args);
+        if (removedGroup) {
+            dispatchGraphMutation(state, "group:remove", {
+                graph,
+                group: removedGroup,
+            });
+        }
+        return result;
+    };
 
     state.nodeAddedBridge = (node: GraphMutationNodeLike) => {
         state.userOnNodeAdded?.call(graph, node);
@@ -225,6 +353,12 @@ function instrumentGraph(
         },
     });
 
+    if (typeof state.originalAdd === "function") {
+        (graph as unknown as Record<string, unknown>).add = state.addBridge;
+    }
+    if (typeof state.originalRemove === "function") {
+        (graph as unknown as Record<string, unknown>).remove = state.removeBridge;
+    }
     (graph as unknown as Record<string, unknown>).clear = state.clearBridge;
     state.linksProxy = new GraphLinksProxy(graph, {
         onLinkAdded: (linkId, link) => {

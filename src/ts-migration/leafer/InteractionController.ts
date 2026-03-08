@@ -2,6 +2,7 @@ import * as leafer from "leafer-ui";
 
 import type {
     GraphMutationBus,
+    GraphMutationGroupLike,
     GraphMutationGraphLike,
     GraphMutationNodeId,
     GraphMutationNodeLike,
@@ -65,9 +66,14 @@ interface InteractionCanvasHost {
 
 interface InteractionGraphLike extends GraphMutationGraphLike {
     _nodes?: GraphMutationNodeLike[];
+    _groups?: GraphMutationGroupLike[];
     beforeChange?: (info?: GraphMutationNodeLike) => void;
     afterChange?: (info?: GraphMutationNodeLike) => void;
     change?: () => void;
+    getGroupOnPos?: (
+        x: number,
+        y: number
+    ) => GraphMutationGroupLike | null | undefined;
     config?: {
         align_to_grid?: boolean;
         [key: string]: unknown;
@@ -78,6 +84,14 @@ interface DraggableNodeLike extends GraphMutationNodeLike {
     pos: [number, number] | Float32Array;
     size: [number, number] | Float32Array;
     alignToGrid?: () => void;
+}
+
+interface DraggableGroupLike extends GraphMutationGroupLike {
+    pos: [number, number] | Float32Array;
+    size: [number, number] | Float32Array;
+    _nodes: GraphMutationNodeLike[];
+    move: (deltaX: number, deltaY: number, ignoreNodes?: boolean) => void;
+    recomputeInsideNodes: () => void;
 }
 
 interface PointLike {
@@ -125,6 +139,13 @@ type PointerSession =
       }
     | {
           kind: "connection";
+      }
+    | {
+          kind: "group-drag";
+          group: DraggableGroupLike;
+          lastGraphPoint: PointLike;
+          resizing: boolean;
+          movedNodeIds: Set<GraphMutationNodeId>;
       };
 
 function toFiniteNumber(value: unknown): number {
@@ -139,6 +160,24 @@ function isDraggableNode(node: unknown): node is DraggableNodeLike {
         typeof node === "object" &&
         Boolean(pos) &&
         (Array.isArray(pos) || ArrayBuffer.isView(pos))
+    );
+}
+
+function isDraggableGroup(group: unknown): group is DraggableGroupLike {
+    const candidate = group as DraggableGroupLike | null | undefined;
+    const pos = candidate?.pos;
+    const size = candidate?.size;
+
+    return (
+        Boolean(group) &&
+        typeof group === "object" &&
+        Boolean(pos) &&
+        Boolean(size) &&
+        (Array.isArray(pos) || ArrayBuffer.isView(pos)) &&
+        (Array.isArray(size) || ArrayBuffer.isView(size)) &&
+        Array.isArray(candidate?._nodes) &&
+        typeof candidate?.move === "function" &&
+        typeof candidate?.recomputeInsideNodes === "function"
     );
 }
 
@@ -319,6 +358,26 @@ export class InteractionController {
             normalizedGraphPoint.y
         );
         if (!hit?.host) {
+            const group = this.resolveInteractiveGroupAt(normalizedGraphPoint);
+            if (group && !this.canvas.read_only) {
+                const resizing = this.isPointerNearGroupResizeHandle(
+                    group,
+                    normalizedGraphPoint
+                );
+                if (!resizing) {
+                    group.recomputeInsideNodes();
+                }
+                this.session = {
+                    kind: "group-drag",
+                    group,
+                    lastGraphPoint: normalizedGraphPoint,
+                    resizing,
+                    movedNodeIds: new Set<GraphMutationNodeId>(),
+                };
+                this.view.style.cursor = resizing ? "se-resize" : "move";
+                this.stopEvent(event);
+                return;
+            }
             this.session = {
                 kind: "background-press",
                 additive: Boolean(event.ctrlKey || event.metaKey || event.shiftKey),
@@ -527,6 +586,9 @@ export class InteractionController {
         } else if (this.session?.kind === "node-drag") {
             this.finishNodeDrag(this.session);
             this.stopEvent(event);
+        } else if (this.session?.kind === "group-drag") {
+            this.finishGroupDrag(this.session, event.ctrlKey);
+            this.stopEvent(event);
         } else {
             this.dispatchLegacyPointerUp(source, normalizedPagePoint, event);
         }
@@ -665,6 +727,48 @@ export class InteractionController {
                 normalizedGraphPoint.x,
                 normalizedGraphPoint.y
             );
+            this.lastPagePoint = normalizedPagePoint;
+            this.stopEvent(event);
+            return;
+        }
+
+        if (this.session.kind === "group-drag") {
+            if (this.session.resizing) {
+                this.session.group.size = [
+                    normalizedGraphPoint.x - this.session.group.pos[0],
+                    normalizedGraphPoint.y - this.session.group.pos[1],
+                ];
+                this.canvas.sceneSyncController?.syncGroupChanged(
+                    this.session.group
+                );
+                this.view.style.cursor = "se-resize";
+            } else {
+                const deltaX =
+                    normalizedGraphPoint.x - this.session.lastGraphPoint.x;
+                const deltaY =
+                    normalizedGraphPoint.y - this.session.lastGraphPoint.y;
+                if (deltaX || deltaY) {
+                    this.session.group.move(deltaX, deltaY, event.ctrlKey);
+                    if (!event.ctrlKey) {
+                        const movedNodeIds = this.collectGroupNodeIds(
+                            this.session.group
+                        );
+                        for (let i = 0; i < movedNodeIds.length; ++i) {
+                            this.session.movedNodeIds.add(movedNodeIds[i]);
+                        }
+                        this.canvas.sceneSyncController?.syncGroupChanged(
+                            this.session.group,
+                            movedNodeIds
+                        );
+                    } else {
+                        this.canvas.sceneSyncController?.syncGroupChanged(
+                            this.session.group
+                        );
+                    }
+                    this.session.lastGraphPoint = normalizedGraphPoint;
+                }
+                this.view.style.cursor = "move";
+            }
             this.lastPagePoint = normalizedPagePoint;
             this.stopEvent(event);
             return;
@@ -923,6 +1027,55 @@ export class InteractionController {
         });
         this.graphRef.afterChange?.(this.dragTransactionNode || session.node);
         this.graphRef.change?.();
+    }
+
+    private finishGroupDrag(
+        session: Extract<PointerSession, { kind: "group-drag" }>,
+        ctrlKey: boolean
+    ): void {
+        const diffX = session.group.pos[0] - Math.round(session.group.pos[0]);
+        const diffY = session.group.pos[1] - Math.round(session.group.pos[1]);
+
+        if (diffX || diffY) {
+            session.group.move(diffX, diffY, ctrlKey);
+        }
+
+        session.group.pos[0] = Math.round(session.group.pos[0]);
+        session.group.pos[1] = Math.round(session.group.pos[1]);
+
+        if (!ctrlKey) {
+            const movedNodeIds = this.collectGroupNodeIds(session.group);
+            for (let i = 0; i < movedNodeIds.length; ++i) {
+                session.movedNodeIds.add(movedNodeIds[i]);
+            }
+        }
+
+        const finalizedMovedNodeIds = Array.from(session.movedNodeIds);
+        this.canvas.sceneSyncController?.syncGroupChanged(
+            session.group,
+            finalizedMovedNodeIds
+        );
+
+        if (finalizedMovedNodeIds.length) {
+            const nodesById = new Map<
+                GraphMutationNodeId,
+                DraggableNodeLike
+            >();
+            for (let i = 0; i < session.group._nodes.length; ++i) {
+                const node = session.group._nodes[i];
+                if (isDraggableNode(node)) {
+                    nodesById.set(node.id, node);
+                }
+            }
+            for (let i = 0; i < finalizedMovedNodeIds.length; ++i) {
+                const movedNode = nodesById.get(finalizedMovedNodeIds[i]);
+                if (!movedNode) {
+                    continue;
+                }
+                this.emitNodeMoved(movedNode);
+                this.canvas.onNodeMoved?.(movedNode);
+            }
+        }
     }
 
     private finishNodeResize(
@@ -1270,6 +1423,56 @@ export class InteractionController {
             nodeId: node.id,
             node,
         });
+    }
+
+    private collectGroupNodeIds(
+        group: Pick<DraggableGroupLike, "_nodes">
+    ): GraphMutationNodeId[] {
+        const nodeIds: GraphMutationNodeId[] = [];
+        for (let i = 0; i < group._nodes.length; ++i) {
+            const node = group._nodes[i];
+            if (node?.id === undefined || node?.id === null) {
+                continue;
+            }
+            nodeIds.push(node.id);
+        }
+        return nodeIds;
+    }
+
+    private resolveInteractiveGroupAt(
+        graphPoint: PointLike
+    ): DraggableGroupLike | null {
+        const group = this.graphRef.getGroupOnPos?.(graphPoint.x, graphPoint.y);
+        return isDraggableGroup(group) ? group : null;
+    }
+
+    private isPointerNearGroupResizeHandle(
+        group: Pick<DraggableGroupLike, "pos" | "size">,
+        graphPoint: PointLike
+    ): boolean {
+        const resizeCorner = {
+            x: toFiniteNumber(group.pos[0]) + toFiniteNumber(group.size[0]),
+            y: toFiniteNumber(group.pos[1]) + toFiniteNumber(group.size[1]),
+        };
+        return (
+            getPointerDistance(graphPoint, resizeCorner) * this.getViewportScale() <
+            10
+        );
+    }
+
+    private getViewportScale(): number {
+        return Math.max(
+            0.0001,
+            Math.abs(
+                toFiniteNumber(
+                    (
+                        this.appHost.treeZoomLayer as {
+                            scaleX?: unknown;
+                        }
+                    ).scaleX || 1
+                )
+            )
+        );
     }
 
     private hasLegacyInteractiveCapture(): boolean {

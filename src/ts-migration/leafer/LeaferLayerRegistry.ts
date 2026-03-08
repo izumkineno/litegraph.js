@@ -8,6 +8,7 @@ export interface LeaferLayerRegistry {
     readonly treeZoomLayer: App["tree"]["zoomLayer"];
     readonly groundRoot: Group;
     readonly treeRoot: Group;
+    readonly groupLayer: Group;
     readonly linkLayerBack: Group;
     readonly legacyNodeLayer: Group;
     readonly modernNodeLayer: Group;
@@ -27,6 +28,7 @@ function createLayerGroup(name: string, hittable = false): Group {
 export function createLeaferLayerRegistry(app: App): LeaferLayerRegistry {
     const groundRoot = createLayerGroup("litegraph-ground-root");
     const treeRoot = createLayerGroup("litegraph-tree-root", true);
+    const groupLayer = createLayerGroup("litegraph-group-layer");
     const linkLayerBack = createLayerGroup("litegraph-link-layer-back");
     const legacyNodeLayer = createLayerGroup("litegraph-legacy-node-layer", true);
     const modernNodeLayer = createLayerGroup("litegraph-modern-node-layer", true);
@@ -38,6 +40,7 @@ export function createLeaferLayerRegistry(app: App): LeaferLayerRegistry {
     app.ground.add(groundRoot);
     app.tree.zoomLayer.add(treeRoot);
     treeRoot.add([
+        groupLayer,
         linkLayerBack,
         legacyNodeLayer,
         modernNodeLayer,
@@ -54,6 +57,7 @@ export function createLeaferLayerRegistry(app: App): LeaferLayerRegistry {
         treeZoomLayer: app.tree.zoomLayer,
         groundRoot,
         treeRoot,
+        groupLayer,
         linkLayerBack,
         legacyNodeLayer,
         modernNodeLayer,

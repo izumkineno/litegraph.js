@@ -2,11 +2,13 @@ import type { LeaferAppHost } from "./LeaferAppHost";
 import {
     GraphMutationBus,
     type GraphMutationGraphLike,
+    type GraphMutationGroupLike,
     type GraphMutationLinkId,
     type GraphMutationLinkLike,
     type GraphMutationNodeId,
     type GraphMutationNodeLike,
 } from "./GraphMutationBus";
+import { GraphGroupHost } from "./GraphGroupHost";
 import { LegacyNodeHost } from "./LegacyNodeHost";
 import type { LegacyNodeRenderHost } from "./LegacyNodePainter";
 import { LinkViewHost } from "./LinkViewHost";
@@ -20,6 +22,7 @@ import type { NodeViewHost } from "./NodeViewHost";
 
 export type NodeHost = NodeViewHost;
 export type LinkView = LinkViewHost;
+export type GroupHost = GraphGroupHost;
 export type SceneSyncRenderHost = LegacyNodeRenderHost;
 
 interface DirtyCapableNode extends GraphMutationNodeLike {
@@ -121,6 +124,7 @@ function expandRenderBounds(
 
 export class SceneSyncController {
     readonly nodeHosts = new Map<GraphMutationNodeId, NodeHost>();
+    readonly groupHosts = new Map<GraphMutationGroupLike, GroupHost>();
     readonly linkViews = new Map<GraphMutationLinkId, LinkView>();
     readonly linksByNodeId = new Map<GraphMutationNodeId, Set<GraphMutationLinkId>>();
     readonly nodePortAdapter: NodePortAdapter;
@@ -130,6 +134,10 @@ export class SceneSyncController {
     private readonly linksById = new Map<GraphMutationLinkId, GraphMutationLinkLike>();
     private readonly dirtyBridgeUninstallers = new Map<
         GraphMutationNodeId,
+        () => void
+    >();
+    private readonly groupDirtyBridgeUninstallers = new Map<
+        GraphMutationGroupLike,
         () => void
     >();
     private readonly activeLinkIds = new Set<GraphMutationLinkId>();
@@ -179,6 +187,12 @@ export class SceneSyncController {
             }),
             this.bus.on("node:moved", ({ nodeId, node }) => {
                 this.syncNodeMoved(nodeId, node);
+            }),
+            this.bus.on("group:add", ({ group }) => {
+                this.ensureGroupHost(group);
+            }),
+            this.bus.on("group:remove", ({ group }) => {
+                this.removeGroupHost(group);
             }),
             this.bus.on("link:add", ({ linkId, link }) => {
                 this.ensureLinkView(linkId, link);
@@ -254,6 +268,40 @@ export class SceneSyncController {
         }
     }
 
+    repaintGroupHost(group: GraphMutationGroupLike): void {
+        this.ensureGroupHost(group).repaint();
+    }
+
+    syncGroupChanged(
+        group: GraphMutationGroupLike,
+        movedNodeIds: readonly GraphMutationNodeId[] = []
+    ): void {
+        const groupHost = this.ensureGroupHost(group);
+        let dirtyBounds: RenderBoundsLike | null = groupHost.captureRenderBounds();
+
+        for (let i = 0; i < movedNodeIds.length; ++i) {
+            dirtyBounds = mergeRenderBounds(
+                dirtyBounds,
+                this.captureNodeClusterBounds(movedNodeIds[i])
+            );
+        }
+
+        groupHost.repaint();
+
+        for (let i = 0; i < movedNodeIds.length; ++i) {
+            const nodeId = movedNodeIds[i];
+            this.nodeHosts.get(nodeId)?.syncPosition();
+            this.updateIncidentLinks(nodeId);
+            dirtyBounds = mergeRenderBounds(
+                dirtyBounds,
+                this.captureNodeClusterBounds(nodeId)
+            );
+        }
+
+        dirtyBounds = mergeRenderBounds(dirtyBounds, groupHost.captureRenderBounds());
+        this.requestSceneRender(dirtyBounds);
+    }
+
     syncNodeMoved(
         nodeId: GraphMutationNodeId,
         node?: GraphMutationNodeLike
@@ -270,6 +318,13 @@ export class SceneSyncController {
     }
 
     private hydrateFromGraph(): void {
+        const existingGroups = Array.isArray(this.graph._groups)
+            ? this.graph._groups
+            : [];
+        for (let i = 0; i < existingGroups.length; ++i) {
+            this.ensureGroupHost(existingGroups[i]);
+        }
+
         const existingNodes = Array.isArray(this.graph._nodes)
             ? this.graph._nodes
             : [];
@@ -287,19 +342,27 @@ export class SceneSyncController {
         for (const host of this.nodeHosts.values()) {
             host.destroy();
         }
+        for (const host of this.groupHosts.values()) {
+            host.destroy();
+        }
         for (const view of this.linkViews.values()) {
             view.destroy();
         }
         for (const uninstall of this.dirtyBridgeUninstallers.values()) {
             uninstall();
         }
+        for (const uninstall of this.groupDirtyBridgeUninstallers.values()) {
+            uninstall();
+        }
 
         this.nodeHosts.clear();
+        this.groupHosts.clear();
         this.linkViews.clear();
         this.linksByNodeId.clear();
         this.nodesById.clear();
         this.linksById.clear();
         this.dirtyBridgeUninstallers.clear();
+        this.groupDirtyBridgeUninstallers.clear();
         this.activeLinkIds.clear();
         this.pendingSettledNodeRepaints.clear();
     }
@@ -356,6 +419,33 @@ export class SceneSyncController {
         );
         this.appHost.legacyNodeLayer.add(nodeHost.root);
         return nodeHost;
+    }
+
+    private ensureGroupHost(group: GraphMutationGroupLike): GroupHost {
+        const existingHost = this.groupHosts.get(group);
+        if (existingHost) {
+            this.installGroupDirtyBridge(group);
+            existingHost.repaint();
+            return existingHost;
+        }
+
+        const groupHost = new GraphGroupHost(group);
+        this.groupHosts.set(group, groupHost);
+        this.installGroupDirtyBridge(group);
+        this.appHost.groupLayer.add(groupHost.root);
+        groupHost.repaint();
+        this.requestSceneRender(groupHost.captureRenderBounds());
+        return groupHost;
+    }
+
+    private removeGroupHost(group: GraphMutationGroupLike): void {
+        const groupHost = this.groupHosts.get(group);
+        const previousBounds = groupHost?.captureRenderBounds() || null;
+        groupHost?.destroy();
+        this.groupHosts.delete(group);
+        this.groupDirtyBridgeUninstallers.get(group)?.();
+        this.groupDirtyBridgeUninstallers.delete(group);
+        this.requestSceneRender(previousBounds);
     }
 
     private removeNodeHost(nodeId: GraphMutationNodeId): void {
@@ -488,6 +578,40 @@ export class SceneSyncController {
             delete targetNode.setDirtyCanvas;
             if (hadOwnProperty) {
                 targetNode.setDirtyCanvas = ownSetDirtyCanvas;
+            }
+        });
+    }
+
+    private installGroupDirtyBridge(group: GraphMutationGroupLike): void {
+        if (this.groupDirtyBridgeUninstallers.has(group)) {
+            return;
+        }
+
+        const hadOwnProperty = Object.prototype.hasOwnProperty.call(
+            group,
+            "setDirtyCanvas"
+        );
+        const ownSetDirtyCanvas = group.setDirtyCanvas;
+
+        group.setDirtyCanvas = (
+            _dirtyForeground: boolean,
+            _dirtyBackground?: boolean
+        ): void => {
+            const groupHost = this.groupHosts.get(group);
+            const previousBounds = groupHost?.captureRenderBounds() || null;
+            this.ensureGroupHost(group).repaint();
+
+            const nextBounds =
+                this.groupHosts.get(group)?.captureRenderBounds() || null;
+            this.requestSceneRender(
+                mergeRenderBounds(previousBounds, nextBounds)
+            );
+        };
+
+        this.groupDirtyBridgeUninstallers.set(group, () => {
+            delete group.setDirtyCanvas;
+            if (hadOwnProperty) {
+                group.setDirtyCanvas = ownSetDirtyCanvas;
             }
         });
     }

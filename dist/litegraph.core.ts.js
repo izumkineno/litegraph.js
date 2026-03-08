@@ -5803,7 +5803,11 @@ var LiteGraphTSMigration = (function(exports) {
             submenu: {
               title: "Group",
               extra: group,
-              options: buildGroupMenuOptions(menuClass)
+              options: buildRuntimeGroupMenuOptions(
+                context,
+                group,
+                event2
+              )
             }
           }
         );
@@ -5817,6 +5821,126 @@ var LiteGraphTSMigration = (function(exports) {
       options,
       graphcanvas.getCanvasWindow()
     );
+  }
+  function buildRuntimeGroupMenuOptions(context, group, event2) {
+    return [
+      {
+        content: "Title",
+        callback: () => showGroupPropertyDialog(context, group, "title", "Title", event2)
+      },
+      {
+        content: "Color",
+        has_submenu: true,
+        callback: (_value, _options, e2, menu) => showGroupColorMenu(context, group, e2 || event2, menu)
+      },
+      {
+        content: "Font size",
+        callback: () => showGroupPropertyDialog(
+          context,
+          group,
+          "font_size",
+          "Font size",
+          event2,
+          "Number"
+        )
+      },
+      null,
+      {
+        content: "Remove",
+        callback: () => {
+          var _a3, _b3, _c2, _d2, _e2, _f;
+          (_b3 = (_a3 = group == null ? void 0 : group.graph) == null ? void 0 : _a3.beforeChange) == null ? void 0 : _b3.call(_a3);
+          (_d2 = (_c2 = context.graphcanvas.graph).remove) == null ? void 0 : _d2.call(_c2, group);
+          (_f = (_e2 = group == null ? void 0 : group.graph) == null ? void 0 : _e2.afterChange) == null ? void 0 : _f.call(_e2);
+          refreshGroupRuntime(context, group);
+        }
+      }
+    ];
+  }
+  function showGroupColorMenu(context, group, event2, menu) {
+    const { host, menuClass } = context;
+    const values = [
+      {
+        value: null,
+        content: "<span style='display: block; padding-left: 4px;'>No color</span>"
+      }
+    ];
+    for (const key in menuClass.node_colors) {
+      const color = menuClass.node_colors[key];
+      values.push({
+        value: key,
+        content: "<span style='display: block; color: #999; padding-left: 4px; border-left: 8px solid " + (color.color || "#999") + "; background-color:" + (color.bgcolor || "transparent") + "'>" + key + "</span>"
+      });
+    }
+    new host.ContextMenu(
+      values,
+      {
+        event: event2,
+        parentMenu: menu,
+        extra: group,
+        callback: (value) => {
+          var _a3, _b3, _c2, _d2, _e2;
+          const paletteKey = value == null ? void 0 : value.value;
+          (_b3 = (_a3 = group.graph) == null ? void 0 : _a3.beforeChange) == null ? void 0 : _b3.call(_a3);
+          group.color = paletteKey ? ((_c2 = menuClass.node_colors[paletteKey]) == null ? void 0 : _c2.groupcolor) || group.color : void 0;
+          (_e2 = (_d2 = group.graph) == null ? void 0 : _d2.afterChange) == null ? void 0 : _e2.call(_d2);
+          refreshGroupRuntime(context, group);
+        }
+      },
+      context.graphcanvas.getCanvasWindow()
+    );
+  }
+  function showGroupPropertyDialog(context, group, property, label, event2, type = "String") {
+    var _a3, _b3;
+    const dialog = context.graphcanvas.createDialog(
+      "<span class='name'>" + label + "</span><input autofocus type='text' class='value'/><button>OK</button>",
+      {
+        event: event2,
+        checkForInput: false
+      }
+    );
+    const input = dialog.querySelector("input");
+    if (input) {
+      input.value = String((_a3 = group == null ? void 0 : group[property]) != null ? _a3 : "");
+      input.focus();
+      input.addEventListener("blur", function() {
+        this.focus();
+      });
+      input.addEventListener("keydown", (e2) => {
+        dialog.is_modified = true;
+        if (e2.key === "Escape") {
+          dialog.close();
+        } else if (e2.key === "Enter") {
+          commit();
+        } else {
+          return;
+        }
+        e2.preventDefault();
+        e2.stopPropagation();
+      });
+    }
+    (_b3 = dialog.querySelector("button")) == null ? void 0 : _b3.addEventListener("click", commit);
+    function commit() {
+      var _a4, _b4, _c2, _d2, _e2;
+      let nextValue = (_a4 = input == null ? void 0 : input.value) != null ? _a4 : "";
+      if (type === "Number") {
+        nextValue = Number(nextValue);
+      }
+      (_c2 = (_b4 = group.graph) == null ? void 0 : _b4.beforeChange) == null ? void 0 : _c2.call(_b4);
+      group[property] = nextValue;
+      (_e2 = (_d2 = group.graph) == null ? void 0 : _d2.afterChange) == null ? void 0 : _e2.call(_d2);
+      refreshGroupRuntime(context, group);
+      dialog.close();
+    }
+  }
+  function refreshGroupRuntime(context, group) {
+    var _a3, _b3, _c2, _d2;
+    if (context.graphcanvas.sceneSyncController) {
+      (_b3 = (_a3 = context.graphcanvas.sceneSyncController).syncGroupChanged) == null ? void 0 : _b3.call(_a3, group);
+      (_d2 = (_c2 = context.graphcanvas.sceneSyncController).repaintGroupHost) == null ? void 0 : _d2.call(_c2, group);
+      return;
+    }
+    context.graphcanvas.setDirty(true, true);
   }
   function handleContextMenuAction(context, node2, value, options) {
     if (!value) {
@@ -6443,6 +6567,29 @@ var LiteGraphTSMigration = (function(exports) {
       }
       return _a2.host();
     }
+    static isGroupTarget(target) {
+      const host = _a2.callbackHost();
+      if (host.LGraphGroup && target.constructor === host.LGraphGroup) {
+        return true;
+      }
+      const candidate = target;
+      return Boolean(
+        !("id" in candidate) && candidate._bounding && candidate.pos && candidate.size && "font_size" in candidate
+      );
+    }
+    static requestTargetRefresh(target) {
+      var _a3, _b3, _c2, _d2, _e2, _f, _g, _h2;
+      const graphcanvas = _a2.active_canvas;
+      const hasGroupHost = Boolean(
+        (_c2 = (_b3 = (_a3 = graphcanvas == null ? void 0 : graphcanvas.sceneSyncController) == null ? void 0 : _a3.groupHosts) == null ? void 0 : _b3.has) == null ? void 0 : _c2.call(_b3, target)
+      );
+      if (graphcanvas && (hasGroupHost || _a2.isGroupTarget(target))) {
+        (_e2 = (_d2 = graphcanvas.sceneSyncController) == null ? void 0 : _d2.syncGroupChanged) == null ? void 0 : _e2.call(_d2, target);
+        (_g = (_f = graphcanvas.sceneSyncController) == null ? void 0 : _f.repaintGroupHost) == null ? void 0 : _g.call(_f, target);
+        return;
+      }
+      (_h2 = target.setDirtyCanvas) == null ? void 0 : _h2.call(target, true, true);
+    }
     /** Create menu for `Add Group` */
     static onGroupAdd(_info, _entry, mouse_event) {
       const canvas = _a2.active_canvas;
@@ -6995,7 +7142,6 @@ var LiteGraphTSMigration = (function(exports) {
         }
       }
       function setValue(nextValue) {
-        var _a4;
         let safeValue = nextValue;
         if (item.type == "Number") {
           safeValue = Number(safeValue);
@@ -7006,7 +7152,7 @@ var LiteGraphTSMigration = (function(exports) {
         if (dialog.parentNode) {
           dialog.parentNode.removeChild(dialog);
         }
-        (_a4 = node2.setDirtyCanvas) == null ? void 0 : _a4.call(node2, true, true);
+        _a2.requestTargetRefresh(node2);
       }
     }
     static getPropertyPrintableValue(value, values) {
@@ -7105,7 +7251,6 @@ var LiteGraphTSMigration = (function(exports) {
         node: node2
       });
       function inner_clicked(v2) {
-        var _a3;
         if (!node2) {
           return;
         }
@@ -7126,7 +7271,9 @@ var LiteGraphTSMigration = (function(exports) {
         };
         const graphcanvas = _a2.active_canvas;
         const targets = [];
-        if (!graphcanvas.selected_nodes || Object.keys(graphcanvas.selected_nodes).length <= 1) {
+        if (_a2.isGroupTarget(node2)) {
+          targets.push(node2);
+        } else if (!graphcanvas.selected_nodes || Object.keys(graphcanvas.selected_nodes).length <= 1) {
           targets.push(node2);
         } else {
           for (const i2 in graphcanvas.selected_nodes) {
@@ -7139,7 +7286,7 @@ var LiteGraphTSMigration = (function(exports) {
         for (let index = 0; index < targets.length; index += 1) {
           const target = targets[index];
           fApplyColor(target);
-          (_a3 = target.setDirtyCanvas) == null ? void 0 : _a3.call(target, true, true);
+          _a2.requestTargetRefresh(target);
         }
       }
       return false;
@@ -8607,7 +8754,7 @@ var LiteGraphTSMigration = (function(exports) {
   function toMutationKey$1(nodeId) {
     return String(nodeId);
   }
-  function toFiniteNumber$a(value, fallback = 0) {
+  function toFiniteNumber$b(value, fallback = 0) {
     const numericValue = Number(value);
     return Number.isFinite(numericValue) ? numericValue : fallback;
   }
@@ -8621,7 +8768,7 @@ var LiteGraphTSMigration = (function(exports) {
     return "mouseup";
   }
   function resolveButtons(event2) {
-    return toFiniteNumber$a(event2.buttons);
+    return toFiniteNumber$b(event2.buttons);
   }
   function resolveButton(event2) {
     const pointerEvent = event2;
@@ -8652,21 +8799,21 @@ var LiteGraphTSMigration = (function(exports) {
   function buildLocalPosMap(event2, targets) {
     const localPosByNodeId = /* @__PURE__ */ new Map();
     const pagePoint = event2.getPagePoint();
-    const pageX = toFiniteNumber$a(pagePoint.x);
-    const pageY = toFiniteNumber$a(pagePoint.y);
+    const pageX = toFiniteNumber$b(pagePoint.x);
+    const pageY = toFiniteNumber$b(pagePoint.y);
     for (let i2 = 0; i2 < targets.length; ++i2) {
       const target = targets[i2];
       if (target.nodePosition) {
         localPosByNodeId.set(toMutationKey$1(target.nodeId), [
-          pageX - toFiniteNumber$a(target.nodePosition[0]),
-          pageY - toFiniteNumber$a(target.nodePosition[1])
+          pageX - toFiniteNumber$b(target.nodePosition[0]),
+          pageY - toFiniteNumber$b(target.nodePosition[1])
         ]);
         continue;
       }
       const localPoint = event2.getInnerPoint(target.nodeRoot);
       localPosByNodeId.set(toMutationKey$1(target.nodeId), [
-        toFiniteNumber$a(localPoint.x),
-        toFiniteNumber$a(localPoint.y)
+        toFiniteNumber$b(localPoint.x),
+        toFiniteNumber$b(localPoint.y)
       ]);
     }
     return localPosByNodeId;
@@ -8674,11 +8821,11 @@ var LiteGraphTSMigration = (function(exports) {
   function createLegacyPointerEvent(options) {
     const { event: event2, hostElement } = options;
     const pagePoint = event2.getPagePoint();
-    const canvasX = toFiniteNumber$a(pagePoint.x);
-    const canvasY = toFiniteNumber$a(pagePoint.y);
+    const canvasX = toFiniteNumber$b(pagePoint.x);
+    const canvasY = toFiniteNumber$b(pagePoint.y);
     const hostRect = hostElement.getBoundingClientRect();
-    const clientX = toFiniteNumber$a(event2.clientX, hostRect.left + canvasX);
-    const clientY = toFiniteNumber$a(event2.clientY, hostRect.top + canvasY);
+    const clientX = toFiniteNumber$b(event2.clientX, hostRect.left + canvasX);
+    const clientY = toFiniteNumber$b(event2.clientY, hostRect.top + canvasY);
     const button = resolveButton(event2);
     const buttons = resolveButtons(event2);
     const localPosByNodeId = buildLocalPosMap(event2, options.targets || []);
@@ -8698,22 +8845,22 @@ var LiteGraphTSMigration = (function(exports) {
       type: resolveMouseType(options.type),
       canvasX,
       canvasY,
-      pageX: toFiniteNumber$a(event2.pageX, clientX),
-      pageY: toFiniteNumber$a(event2.pageY, clientY),
+      pageX: toFiniteNumber$b(event2.pageX, clientX),
+      pageY: toFiniteNumber$b(event2.pageY, clientY),
       clientX,
       clientY,
-      screenX: toFiniteNumber$a(event2.screenX, clientX),
-      screenY: toFiniteNumber$a(event2.screenY, clientY),
+      screenX: toFiniteNumber$b(event2.screenX, clientX),
+      screenY: toFiniteNumber$b(event2.screenY, clientY),
       offsetX: canvasX,
       offsetY: canvasY,
-      deltaX: toFiniteNumber$a(options.deltaX),
-      deltaY: toFiniteNumber$a(options.deltaY),
-      deltax: toFiniteNumber$a(options.deltaX),
-      deltay: toFiniteNumber$a(options.deltaY),
+      deltaX: toFiniteNumber$b(options.deltaX),
+      deltaY: toFiniteNumber$b(options.deltaY),
+      deltax: toFiniteNumber$b(options.deltaX),
+      deltay: toFiniteNumber$b(options.deltaY),
       which: resolveWhich(button),
       button,
       buttons,
-      click_time: Math.max(0, toFiniteNumber$a(options.clickTime)),
+      click_time: Math.max(0, toFiniteNumber$b(options.clickTime)),
       dragging: Boolean(options.dragging),
       shiftKey: Boolean(event2.shiftKey),
       ctrlKey: Boolean(event2.ctrlKey),
@@ -8937,9 +9084,37 @@ var LiteGraphTSMigration = (function(exports) {
       graph[key] = userHook || void 0;
     }
   }
+  function restoreGraphMethod(graph, key, hadOwnProperty, originalMethod) {
+    delete graph[key];
+    if (hadOwnProperty && typeof originalMethod === "function") {
+      graph[key] = originalMethod;
+    }
+  }
+  function isGroupLike(value) {
+    if (!value || typeof value !== "object") {
+      return false;
+    }
+    const candidate = value;
+    const hasBounding = Array.isArray(candidate._bounding) || ArrayBuffer.isView(candidate._bounding);
+    const hasSize = Array.isArray(candidate.size) || ArrayBuffer.isView(candidate.size);
+    const hasPosition = Array.isArray(candidate.pos) || ArrayBuffer.isView(candidate.pos);
+    return !("id" in candidate) && hasBounding && hasPosition && hasSize && typeof candidate.isPointInside === "function";
+  }
   function teardownGraphInstrumentation(state) {
     const { graph } = state;
     state.linksProxy.destroy();
+    restoreGraphMethod(
+      graph,
+      "add",
+      state.hadOwnAdd,
+      state.originalAdd || null
+    );
+    restoreGraphMethod(
+      graph,
+      "remove",
+      state.hadOwnRemove,
+      state.originalRemove || null
+    );
     restoreGraphHook(
       graph,
       "onNodeAdded",
@@ -8952,10 +9127,12 @@ var LiteGraphTSMigration = (function(exports) {
       state.hadOwnOnNodeRemoved,
       state.userOnNodeRemoved
     );
-    delete graph.clear;
-    if (state.hadOwnClear && state.originalClear) {
-      graph.clear = state.originalClear;
-    }
+    restoreGraphMethod(
+      graph,
+      "clear",
+      state.hadOwnClear,
+      state.originalClear || null
+    );
     instrumentedGraphs.delete(graph);
   }
   function instrumentGraph(graph) {
@@ -8967,6 +9144,8 @@ var LiteGraphTSMigration = (function(exports) {
     state.graph = graph;
     state.refCount = 0;
     state.listeners = /* @__PURE__ */ new Set();
+    state.hadOwnAdd = Object.prototype.hasOwnProperty.call(graph, "add");
+    state.hadOwnRemove = Object.prototype.hasOwnProperty.call(graph, "remove");
     state.hadOwnOnNodeAdded = Object.prototype.hasOwnProperty.call(
       graph,
       "onNodeAdded"
@@ -8976,9 +9155,36 @@ var LiteGraphTSMigration = (function(exports) {
       "onNodeRemoved"
     );
     state.hadOwnClear = Object.prototype.hasOwnProperty.call(graph, "clear");
+    state.originalAdd = typeof graph.add === "function" ? graph.add.bind(graph) : void 0;
+    state.originalRemove = typeof graph.remove === "function" ? graph.remove.bind(graph) : void 0;
     state.userOnNodeAdded = typeof graph.onNodeAdded === "function" ? graph.onNodeAdded : null;
     state.userOnNodeRemoved = typeof graph.onNodeRemoved === "function" ? graph.onNodeRemoved : null;
     state.originalClear = typeof graph.clear === "function" ? graph.clear.bind(graph) : void 0;
+    state.addBridge = (...args) => {
+      var _a3;
+      const result = (_a3 = state.originalAdd) == null ? void 0 : _a3.call(state, ...args);
+      const candidate = args[0];
+      if (isGroupLike(candidate) && Array.isArray(graph._groups) && graph._groups.includes(candidate)) {
+        dispatchGraphMutation(state, "group:add", {
+          graph,
+          group: candidate
+        });
+      }
+      return result;
+    };
+    state.removeBridge = (...args) => {
+      var _a3;
+      const candidate = args[0];
+      const removedGroup = isGroupLike(candidate) ? candidate : null;
+      const result = (_a3 = state.originalRemove) == null ? void 0 : _a3.call(state, ...args);
+      if (removedGroup) {
+        dispatchGraphMutation(state, "group:remove", {
+          graph,
+          group: removedGroup
+        });
+      }
+      return result;
+    };
     state.nodeAddedBridge = (node2) => {
       var _a3;
       (_a3 = state.userOnNodeAdded) == null ? void 0 : _a3.call(graph, node2);
@@ -9021,6 +9227,12 @@ var LiteGraphTSMigration = (function(exports) {
         state.userOnNodeRemoved = typeof nextHook === "function" ? nextHook : null;
       }
     });
+    if (typeof state.originalAdd === "function") {
+      graph.add = state.addBridge;
+    }
+    if (typeof state.originalRemove === "function") {
+      graph.remove = state.removeBridge;
+    }
     graph.clear = state.clearBridge;
     state.linksProxy = new GraphLinksProxy(graph, {
       onLinkAdded: (linkId, link) => {
@@ -11516,17 +11728,17 @@ var LiteGraphTSMigration = (function(exports) {
   const PORT_DIRECTION_RIGHT = 2;
   const PORT_DIRECTION_DOWN = 3;
   const PORT_DIRECTION_LEFT = 4;
-  function toFiniteNumber$9(value, fallback = 0) {
+  function toFiniteNumber$a(value, fallback = 0) {
     const numericValue = Number(value);
     return Number.isFinite(numericValue) ? numericValue : fallback;
   }
   function toPoint$1(value) {
     if (Array.isArray(value) || ArrayBuffer.isView(value) || typeof value === "object" && value !== null && "0" in value && "1" in value) {
       const indexedValue = value;
-      return [toFiniteNumber$9(indexedValue[0]), toFiniteNumber$9(indexedValue[1])];
+      return [toFiniteNumber$a(indexedValue[0]), toFiniteNumber$a(indexedValue[1])];
     }
     const point = value;
-    return [toFiniteNumber$9(point.x), toFiniteNumber$9(point.y)];
+    return [toFiniteNumber$a(point.x), toFiniteNumber$a(point.y)];
   }
   function distance(a2, b2) {
     const dx = b2[0] - a2[0];
@@ -11575,10 +11787,10 @@ var LiteGraphTSMigration = (function(exports) {
         if (!bounds) {
           continue;
         }
-        const left = toFiniteNumber$9(bounds[0]);
-        const top = toFiniteNumber$9(bounds[1]);
-        const width2 = toFiniteNumber$9(bounds[2]);
-        const height = toFiniteNumber$9(bounds[3]);
+        const left = toFiniteNumber$a(bounds[0]);
+        const top = toFiniteNumber$a(bounds[1]);
+        const width2 = toFiniteNumber$a(bounds[2]);
+        const height = toFiniteNumber$a(bounds[3]);
         if (x2 >= left && x2 <= left + width2 && y2 >= top && y2 <= top + height) {
           return node2;
         }
@@ -11638,7 +11850,7 @@ var LiteGraphTSMigration = (function(exports) {
         slotIndex
       );
       if (hostAnchor) {
-        return [toFiniteNumber$9(hostAnchor[0]), toFiniteNumber$9(hostAnchor[1])];
+        return [toFiniteNumber$a(hostAnchor[0]), toFiniteNumber$a(hostAnchor[1])];
       }
       const node2 = this.getNodeById(nodeId);
       if (!node2 || typeof node2.getConnectionPos !== "function") {
@@ -11651,8 +11863,8 @@ var LiteGraphTSMigration = (function(exports) {
       if (typeof rawPoint === "object" && rawPoint !== null && "0" in rawPoint) {
         const indexedPoint = rawPoint;
         return [
-          toFiniteNumber$9(indexedPoint[0]),
-          toFiniteNumber$9(indexedPoint[1])
+          toFiniteNumber$a(indexedPoint[0]),
+          toFiniteNumber$a(indexedPoint[1])
         ];
       }
       return toPoint$1(rawPoint);
@@ -11665,14 +11877,14 @@ var LiteGraphTSMigration = (function(exports) {
         slotIndex
       );
       if (hostDirection != null) {
-        const normalizedDirection = toFiniteNumber$9(hostDirection, 0);
+        const normalizedDirection = toFiniteNumber$a(hostDirection, 0);
         if (normalizedDirection) {
           return normalizedDirection;
         }
       }
       const slotList = kind === "input" ? node2.inputs : node2.outputs;
       const resolvedSlot = slot || (slotList == null ? void 0 : slotList[slotIndex]) || null;
-      const explicitDir = toFiniteNumber$9(resolvedSlot == null ? void 0 : resolvedSlot.dir, 0);
+      const explicitDir = toFiniteNumber$a(resolvedSlot == null ? void 0 : resolvedSlot.dir, 0);
       if (explicitDir) {
         return explicitDir;
       }
@@ -11755,7 +11967,7 @@ var LiteGraphTSMigration = (function(exports) {
       return this.buildLinkCurve(start, end, startDir, endDir).path;
     }
     getPointOnLinkCurve(curve, t2) {
-      const clampedT = Math.max(0, Math.min(1, toFiniteNumber$9(t2, 0)));
+      const clampedT = Math.max(0, Math.min(1, toFiniteNumber$a(t2, 0)));
       const oneMinusT = 1 - clampedT;
       const c1 = oneMinusT * oneMinusT * oneMinusT;
       const c2 = 3 * oneMinusT * oneMinusT * clampedT;
@@ -11897,7 +12109,7 @@ var LiteGraphTSMigration = (function(exports) {
       return this.sceneSyncController.nodeHosts.get(node2.id) || null;
     }
   }
-  function toFiniteNumber$8(value, fallback = 0) {
+  function toFiniteNumber$9(value, fallback = 0) {
     const numericValue = Number(value);
     return Number.isFinite(numericValue) ? numericValue : fallback;
   }
@@ -11988,10 +12200,10 @@ var LiteGraphTSMigration = (function(exports) {
     }
     syncWorldTransform() {
       const zoomLayer = this.appHost.treeZoomLayer;
-      this.appHost.overlayWorld.x = toFiniteNumber$8(zoomLayer.x);
-      this.appHost.overlayWorld.y = toFiniteNumber$8(zoomLayer.y);
-      this.appHost.overlayWorld.scaleX = toFiniteNumber$8(zoomLayer.scaleX, 1);
-      this.appHost.overlayWorld.scaleY = toFiniteNumber$8(zoomLayer.scaleY, 1);
+      this.appHost.overlayWorld.x = toFiniteNumber$9(zoomLayer.x);
+      this.appHost.overlayWorld.y = toFiniteNumber$9(zoomLayer.y);
+      this.appHost.overlayWorld.scaleX = toFiniteNumber$9(zoomLayer.scaleX, 1);
+      this.appHost.overlayWorld.scaleY = toFiniteNumber$9(zoomLayer.scaleY, 1);
     }
     measureCurveBounds(curve, strokeWidth) {
       const padding = Math.ceil(strokeWidth + 8);
@@ -12148,13 +12360,19 @@ var LiteGraphTSMigration = (function(exports) {
       return Boolean(this.activeSelection);
     }
   }
-  function toFiniteNumber$7(value) {
+  function toFiniteNumber$8(value) {
     const numericValue = Number(value);
     return Number.isFinite(numericValue) ? numericValue : 0;
   }
   function isDraggableNode(node2) {
     const pos2 = node2 == null ? void 0 : node2.pos;
     return Boolean(node2) && typeof node2 === "object" && Boolean(pos2) && (Array.isArray(pos2) || ArrayBuffer.isView(pos2));
+  }
+  function isDraggableGroup(group) {
+    const candidate = group;
+    const pos2 = candidate == null ? void 0 : candidate.pos;
+    const size = candidate == null ? void 0 : candidate.size;
+    return Boolean(group) && typeof group === "object" && Boolean(pos2) && Boolean(size) && (Array.isArray(pos2) || ArrayBuffer.isView(pos2)) && (Array.isArray(size) || ArrayBuffer.isView(size)) && Array.isArray(candidate == null ? void 0 : candidate._nodes) && typeof (candidate == null ? void 0 : candidate.move) === "function" && typeof (candidate == null ? void 0 : candidate.recomputeInsideNodes) === "function";
   }
   function getPointerDistance(a2, b2) {
     const dx = a2.x - b2.x;
@@ -12201,16 +12419,16 @@ var LiteGraphTSMigration = (function(exports) {
         const worldPoint = source.getWorldPoint();
         const graphPoint = source.getInnerPoint();
         const normalizedPagePoint = {
-          x: toFiniteNumber$7(pagePoint.x),
-          y: toFiniteNumber$7(pagePoint.y)
+          x: toFiniteNumber$8(pagePoint.x),
+          y: toFiniteNumber$8(pagePoint.y)
         };
         const normalizedWorldPoint = {
-          x: toFiniteNumber$7(worldPoint.x),
-          y: toFiniteNumber$7(worldPoint.y)
+          x: toFiniteNumber$8(worldPoint.x),
+          y: toFiniteNumber$8(worldPoint.y)
         };
         const normalizedGraphPoint = {
-          x: toFiniteNumber$7(graphPoint.x),
-          y: toFiniteNumber$7(graphPoint.y)
+          x: toFiniteNumber$8(graphPoint.x),
+          y: toFiniteNumber$8(graphPoint.y)
         };
         this.pointerIsDown = true;
         this.pointerDownAt = Date.now();
@@ -12233,6 +12451,26 @@ var LiteGraphTSMigration = (function(exports) {
           normalizedGraphPoint.y
         );
         if (!(hit == null ? void 0 : hit.host)) {
+          const group = this.resolveInteractiveGroupAt(normalizedGraphPoint);
+          if (group && !this.canvas.read_only) {
+            const resizing = this.isPointerNearGroupResizeHandle(
+              group,
+              normalizedGraphPoint
+            );
+            if (!resizing) {
+              group.recomputeInsideNodes();
+            }
+            this.session = {
+              kind: "group-drag",
+              group,
+              lastGraphPoint: normalizedGraphPoint,
+              resizing,
+              movedNodeIds: /* @__PURE__ */ new Set()
+            };
+            this.view.style.cursor = resizing ? "se-resize" : "move";
+            this.stopEvent(event2);
+            return;
+          }
           this.session = {
             kind: "background-press",
             additive: Boolean(event2.ctrlKey || event2.metaKey || event2.shiftKey),
@@ -12351,7 +12589,7 @@ var LiteGraphTSMigration = (function(exports) {
         this.dispatchPointerMoveWhileDown(event2);
       };
       this.handleDocumentPointerUp = (event2) => {
-        var _a3, _b3, _c2, _d2, _e2, _f, _g, _h2;
+        var _a3, _b3, _c2, _d2, _e2, _f, _g, _h2, _i2;
         if (!this.pointerIsDown && event2.button !== 0) {
           return;
         }
@@ -12363,16 +12601,16 @@ var LiteGraphTSMigration = (function(exports) {
         const worldPoint = source.getWorldPoint();
         const graphPoint = source.getInnerPoint();
         const normalizedPagePoint = {
-          x: toFiniteNumber$7(pagePoint.x),
-          y: toFiniteNumber$7(pagePoint.y)
+          x: toFiniteNumber$8(pagePoint.x),
+          y: toFiniteNumber$8(pagePoint.y)
         };
         const normalizedWorldPoint = {
-          x: toFiniteNumber$7(worldPoint.x),
-          y: toFiniteNumber$7(worldPoint.y)
+          x: toFiniteNumber$8(worldPoint.x),
+          y: toFiniteNumber$8(worldPoint.y)
         };
         const normalizedGraphPoint = {
-          x: toFiniteNumber$7(graphPoint.x),
-          y: toFiniteNumber$7(graphPoint.y)
+          x: toFiniteNumber$8(graphPoint.x),
+          y: toFiniteNumber$8(graphPoint.y)
         };
         if (((_a3 = this.session) == null ? void 0 : _a3.kind) === "connection") {
           this.connectionController.finish(
@@ -12415,6 +12653,9 @@ var LiteGraphTSMigration = (function(exports) {
           this.stopEvent(event2);
         } else if (((_h2 = this.session) == null ? void 0 : _h2.kind) === "node-drag") {
           this.finishNodeDrag(this.session);
+          this.stopEvent(event2);
+        } else if (((_i2 = this.session) == null ? void 0 : _i2.kind) === "group-drag") {
+          this.finishGroupDrag(this.session, event2.ctrlKey);
           this.stopEvent(event2);
         } else {
           this.dispatchLegacyPointerUp(source, normalizedPagePoint, event2);
@@ -12509,8 +12750,8 @@ var LiteGraphTSMigration = (function(exports) {
       const targets = this.collectTargets(this.toLegacyHost((hit == null ? void 0 : hit.host) || null));
       const shouldDispatch = targets.length > 0 || Boolean(this.canvas.node_widget) || Boolean(this.canvas.node_over) || Boolean(this.canvas.node_capturing_input) || Boolean(this.canvas.node_dragged) || Boolean(this.canvas.resizing_node) || Boolean(this.canvas.connecting_node);
       const normalizedPagePoint = {
-        x: toFiniteNumber$7(pagePoint.x),
-        y: toFiniteNumber$7(pagePoint.y)
+        x: toFiniteNumber$8(pagePoint.x),
+        y: toFiniteNumber$8(pagePoint.y)
       };
       const deltaX2 = this.lastPagePoint ? normalizedPagePoint.x - this.lastPagePoint.x : 0;
       const deltaY = this.lastPagePoint ? normalizedPagePoint.y - this.lastPagePoint.y : 0;
@@ -12532,7 +12773,7 @@ var LiteGraphTSMigration = (function(exports) {
       this.stopEvent(event2);
     }
     dispatchPointerMoveWhileDown(event2) {
-      var _a3, _b3, _c2, _d2, _e2;
+      var _a3, _b3, _c2, _d2, _e2, _f, _g, _h2;
       if (!this.pointerIsDown || !this.session) {
         return;
       }
@@ -12541,16 +12782,16 @@ var LiteGraphTSMigration = (function(exports) {
       const worldPoint = source.getWorldPoint();
       const graphPoint = source.getInnerPoint();
       const normalizedPagePoint = {
-        x: toFiniteNumber$7(pagePoint.x),
-        y: toFiniteNumber$7(pagePoint.y)
+        x: toFiniteNumber$8(pagePoint.x),
+        y: toFiniteNumber$8(pagePoint.y)
       };
       const normalizedWorldPoint = {
-        x: toFiniteNumber$7(worldPoint.x),
-        y: toFiniteNumber$7(worldPoint.y)
+        x: toFiniteNumber$8(worldPoint.x),
+        y: toFiniteNumber$8(worldPoint.y)
       };
       const normalizedGraphPoint = {
-        x: toFiniteNumber$7(graphPoint.x),
-        y: toFiniteNumber$7(graphPoint.y)
+        x: toFiniteNumber$8(graphPoint.x),
+        y: toFiniteNumber$8(graphPoint.y)
       };
       if (this.session.kind === "connection") {
         this.connectionController.update(
@@ -12584,6 +12825,45 @@ var LiteGraphTSMigration = (function(exports) {
           normalizedGraphPoint.x,
           normalizedGraphPoint.y
         );
+        this.lastPagePoint = normalizedPagePoint;
+        this.stopEvent(event2);
+        return;
+      }
+      if (this.session.kind === "group-drag") {
+        if (this.session.resizing) {
+          this.session.group.size = [
+            normalizedGraphPoint.x - this.session.group.pos[0],
+            normalizedGraphPoint.y - this.session.group.pos[1]
+          ];
+          (_a3 = this.canvas.sceneSyncController) == null ? void 0 : _a3.syncGroupChanged(
+            this.session.group
+          );
+          this.view.style.cursor = "se-resize";
+        } else {
+          const deltaX2 = normalizedGraphPoint.x - this.session.lastGraphPoint.x;
+          const deltaY = normalizedGraphPoint.y - this.session.lastGraphPoint.y;
+          if (deltaX2 || deltaY) {
+            this.session.group.move(deltaX2, deltaY, event2.ctrlKey);
+            if (!event2.ctrlKey) {
+              const movedNodeIds = this.collectGroupNodeIds(
+                this.session.group
+              );
+              for (let i2 = 0; i2 < movedNodeIds.length; ++i2) {
+                this.session.movedNodeIds.add(movedNodeIds[i2]);
+              }
+              (_b3 = this.canvas.sceneSyncController) == null ? void 0 : _b3.syncGroupChanged(
+                this.session.group,
+                movedNodeIds
+              );
+            } else {
+              (_c2 = this.canvas.sceneSyncController) == null ? void 0 : _c2.syncGroupChanged(
+                this.session.group
+              );
+            }
+            this.session.lastGraphPoint = normalizedGraphPoint;
+          }
+          this.view.style.cursor = "move";
+        }
         this.lastPagePoint = normalizedPagePoint;
         this.stopEvent(event2);
         return;
@@ -12645,7 +12925,7 @@ var LiteGraphTSMigration = (function(exports) {
           const pressedSession = this.session;
           const dragNodes = this.collectDragNodes(this.session.node);
           this.dragTransactionNode = this.session.node;
-          (_b3 = (_a3 = this.graphRef).beforeChange) == null ? void 0 : _b3.call(_a3, this.session.node);
+          (_e2 = (_d2 = this.graphRef).beforeChange) == null ? void 0 : _e2.call(_d2, this.session.node);
           this.session = {
             kind: "node-drag",
             node: this.session.node,
@@ -12653,7 +12933,7 @@ var LiteGraphTSMigration = (function(exports) {
             lastGraphPoint: normalizedGraphPoint,
             host: this.session.host
           };
-          (_c2 = this.session.host) == null ? void 0 : _c2.updateInteractionState({
+          (_f = this.session.host) == null ? void 0 : _f.updateInteractionState({
             pressed: false,
             dragging: true,
             pressedPart: null,
@@ -12683,7 +12963,7 @@ var LiteGraphTSMigration = (function(exports) {
           }
         });
         if (didResize) {
-          (_d2 = this.canvas.sceneSyncController) == null ? void 0 : _d2.repaintNodeHost(
+          (_g = this.canvas.sceneSyncController) == null ? void 0 : _g.repaintNodeHost(
             this.session.node.id
           );
         }
@@ -12704,7 +12984,7 @@ var LiteGraphTSMigration = (function(exports) {
           }
           this.session.lastGraphPoint = normalizedGraphPoint;
         }
-        (_e2 = this.session.host) == null ? void 0 : _e2.updateInteractionState({
+        (_h2 = this.session.host) == null ? void 0 : _h2.updateInteractionState({
           hovered: true,
           pressed: false,
           dragging: true,
@@ -12787,6 +13067,44 @@ var LiteGraphTSMigration = (function(exports) {
       });
       (_g = (_f = this.graphRef).afterChange) == null ? void 0 : _g.call(_f, this.dragTransactionNode || session.node);
       (_i2 = (_h2 = this.graphRef).change) == null ? void 0 : _i2.call(_h2);
+    }
+    finishGroupDrag(session, ctrlKey) {
+      var _a3, _b3, _c2;
+      const diffX = session.group.pos[0] - Math.round(session.group.pos[0]);
+      const diffY = session.group.pos[1] - Math.round(session.group.pos[1]);
+      if (diffX || diffY) {
+        session.group.move(diffX, diffY, ctrlKey);
+      }
+      session.group.pos[0] = Math.round(session.group.pos[0]);
+      session.group.pos[1] = Math.round(session.group.pos[1]);
+      if (!ctrlKey) {
+        const movedNodeIds = this.collectGroupNodeIds(session.group);
+        for (let i2 = 0; i2 < movedNodeIds.length; ++i2) {
+          session.movedNodeIds.add(movedNodeIds[i2]);
+        }
+      }
+      const finalizedMovedNodeIds = Array.from(session.movedNodeIds);
+      (_a3 = this.canvas.sceneSyncController) == null ? void 0 : _a3.syncGroupChanged(
+        session.group,
+        finalizedMovedNodeIds
+      );
+      if (finalizedMovedNodeIds.length) {
+        const nodesById = /* @__PURE__ */ new Map();
+        for (let i2 = 0; i2 < session.group._nodes.length; ++i2) {
+          const node2 = session.group._nodes[i2];
+          if (isDraggableNode(node2)) {
+            nodesById.set(node2.id, node2);
+          }
+        }
+        for (let i2 = 0; i2 < finalizedMovedNodeIds.length; ++i2) {
+          const movedNode = nodesById.get(finalizedMovedNodeIds[i2]);
+          if (!movedNode) {
+            continue;
+          }
+          this.emitNodeMoved(movedNode);
+          (_c2 = (_b3 = this.canvas).onNodeMoved) == null ? void 0 : _c2.call(_b3, movedNode);
+        }
+      }
     }
     finishNodeResize(session) {
       var _a3, _b3, _c2, _d2, _e2, _f, _g, _h2, _i2;
@@ -12888,8 +13206,8 @@ var LiteGraphTSMigration = (function(exports) {
         clientY: event2.clientY
       });
       const localPos = host.getLocalPoint(
-        toFiniteNumber$7(worldPoint.x),
-        toFiniteNumber$7(worldPoint.y)
+        toFiniteNumber$8(worldPoint.x),
+        toFiniteNumber$8(worldPoint.y)
       );
       const propertyName = entry.schema.property;
       const widgetMeta = {
@@ -12916,7 +13234,7 @@ var LiteGraphTSMigration = (function(exports) {
           widgetMeta
         );
         if (node2.graph) {
-          node2.graph._version = toFiniteNumber$7(
+          node2.graph._version = toFiniteNumber$8(
             node2.graph._version
           ) + 1;
         }
@@ -13033,6 +13351,39 @@ var LiteGraphTSMigration = (function(exports) {
         nodeId: node2.id,
         node: node2
       });
+    }
+    collectGroupNodeIds(group) {
+      const nodeIds = [];
+      for (let i2 = 0; i2 < group._nodes.length; ++i2) {
+        const node2 = group._nodes[i2];
+        if ((node2 == null ? void 0 : node2.id) === void 0 || (node2 == null ? void 0 : node2.id) === null) {
+          continue;
+        }
+        nodeIds.push(node2.id);
+      }
+      return nodeIds;
+    }
+    resolveInteractiveGroupAt(graphPoint) {
+      var _a3, _b3;
+      const group = (_b3 = (_a3 = this.graphRef).getGroupOnPos) == null ? void 0 : _b3.call(_a3, graphPoint.x, graphPoint.y);
+      return isDraggableGroup(group) ? group : null;
+    }
+    isPointerNearGroupResizeHandle(group, graphPoint) {
+      const resizeCorner = {
+        x: toFiniteNumber$8(group.pos[0]) + toFiniteNumber$8(group.size[0]),
+        y: toFiniteNumber$8(group.pos[1]) + toFiniteNumber$8(group.size[1])
+      };
+      return getPointerDistance(graphPoint, resizeCorner) * this.getViewportScale() < 10;
+    }
+    getViewportScale() {
+      return Math.max(
+        1e-4,
+        Math.abs(
+          toFiniteNumber$8(
+            this.appHost.treeZoomLayer.scaleX || 1
+          )
+        )
+      );
     }
     hasLegacyInteractiveCapture() {
       return Boolean(this.canvas.node_widget || this.canvas.node_capturing_input);
@@ -13170,7 +13521,7 @@ var LiteGraphTSMigration = (function(exports) {
         return void 0;
       }
       const pos2 = rawPos;
-      return [toFiniteNumber$7(pos2[0]), toFiniteNumber$7(pos2[1])];
+      return [toFiniteNumber$8(pos2[0]), toFiniteNumber$8(pos2[1])];
     }
     dispatchContextMenu(event2) {
       var _a3, _b3, _c2, _d2, _e2, _f, _g;
@@ -13477,6 +13828,7 @@ var LiteGraphTSMigration = (function(exports) {
   function createLeaferLayerRegistry(app) {
     const groundRoot = createLayerGroup("litegraph-ground-root");
     const treeRoot = createLayerGroup("litegraph-tree-root", true);
+    const groupLayer = createLayerGroup("litegraph-group-layer");
     const linkLayerBack = createLayerGroup("litegraph-link-layer-back");
     const legacyNodeLayer = createLayerGroup("litegraph-legacy-node-layer", true);
     const modernNodeLayer = createLayerGroup("litegraph-modern-node-layer", true);
@@ -13487,6 +13839,7 @@ var LiteGraphTSMigration = (function(exports) {
     app.ground.add(groundRoot);
     app.tree.zoomLayer.add(treeRoot);
     treeRoot.add([
+      groupLayer,
       linkLayerBack,
       legacyNodeLayer,
       modernNodeLayer,
@@ -13502,6 +13855,7 @@ var LiteGraphTSMigration = (function(exports) {
       treeZoomLayer: app.tree.zoomLayer,
       groundRoot,
       treeRoot,
+      groupLayer,
       linkLayerBack,
       legacyNodeLayer,
       modernNodeLayer,
@@ -13537,6 +13891,7 @@ var LiteGraphTSMigration = (function(exports) {
       this.treeZoomLayer = this.layers.treeZoomLayer;
       this.groundRoot = this.layers.groundRoot;
       this.treeRoot = this.layers.treeRoot;
+      this.groupLayer = this.layers.groupLayer;
       this.linkLayerBack = this.layers.linkLayerBack;
       this.legacyNodeLayer = this.layers.legacyNodeLayer;
       this.modernNodeLayer = this.layers.modernNodeLayer;
@@ -13567,6 +13922,154 @@ var LiteGraphTSMigration = (function(exports) {
       if (!this.view.style.overflow) {
         this.view.style.overflow = "hidden";
       }
+    }
+  }
+  function colorToString(c2) {
+    const source = c2;
+    return "rgba(" + Math.round(source[0] * 255).toFixed() + "," + Math.round(source[1] * 255).toFixed() + "," + Math.round(source[2] * 255).toFixed() + "," + (source.length == 4 ? source[3].toFixed(2) : "1.0") + ")";
+  }
+  function hex2num(hex) {
+    if (hex.charAt(0) == "#") {
+      hex = hex.slice(1);
+    }
+    hex = hex.toUpperCase();
+    const hexAlphabets = "0123456789ABCDEF";
+    const value = [0, 0, 0];
+    let k2 = 0;
+    let int1;
+    let int2;
+    for (let i2 = 0; i2 < 6; i2 += 2) {
+      int1 = hexAlphabets.indexOf(hex.charAt(i2));
+      int2 = hexAlphabets.indexOf(hex.charAt(i2 + 1));
+      value[k2] = int1 * 16 + int2;
+      k2++;
+    }
+    return value;
+  }
+  function num2hex(triplet) {
+    const hexAlphabets = "0123456789ABCDEF";
+    let hex = "#";
+    let int1;
+    let int2;
+    for (let i2 = 0; i2 < 3; i2++) {
+      int1 = triplet[i2] / 16;
+      int2 = triplet[i2] % 16;
+      hex += hexAlphabets.charAt(int1) + hexAlphabets.charAt(int2);
+    }
+    return hex;
+  }
+  function toFiniteNumber$7(value, fallback = 0) {
+    const numericValue = Number(value);
+    return Number.isFinite(numericValue) ? numericValue : fallback;
+  }
+  function toAlphaFill(color, alpha) {
+    if (typeof color !== "string") {
+      return `rgba(136,136,170,${alpha})`;
+    }
+    const normalized = color.trim();
+    const expandedHex = /^#[0-9a-fA-F]{3}$/.test(normalized) ? `#${normalized[1]}${normalized[1]}${normalized[2]}${normalized[2]}${normalized[3]}${normalized[3]}` : normalized;
+    if (/^#[0-9a-fA-F]{6}$/.test(expandedHex)) {
+      const [r2, g2, b2] = hex2num(expandedHex);
+      return `rgba(${r2},${g2},${b2},${alpha})`;
+    }
+    return normalized;
+  }
+  class GraphGroupHost {
+    constructor(group) {
+      this.group = group;
+      this.root = new ye$1({
+        name: "litegraph-group-host",
+        hittable: false,
+        visible: true,
+        data: {
+          litegraphPlaceholderKind: "graph-group"
+        }
+      });
+      this.fillRect = new xe$1({
+        name: "litegraph-group-fill",
+        x: 0,
+        y: 0,
+        width: 140,
+        height: 80,
+        fill: toAlphaFill(group.color, 0.25),
+        stroke: "transparent",
+        hittable: false
+      });
+      this.strokeRect = new xe$1({
+        name: "litegraph-group-stroke",
+        x: 0.5,
+        y: 0.5,
+        width: 140,
+        height: 80,
+        fill: "transparent",
+        stroke: typeof group.color === "string" ? group.color : "#88A",
+        strokeWidth: 1,
+        hittable: false
+      });
+      this.titleText = new hi$1({
+        name: "litegraph-group-title",
+        x: 4,
+        y: 4,
+        text: typeof group.title === "string" ? group.title : "Group",
+        fontSize: Math.max(12, toFiniteNumber$7(group.font_size, 24)),
+        fill: typeof group.color === "string" ? group.color : "#88A",
+        hittable: false
+      });
+      this.root.add([this.fillRect, this.strokeRect, this.titleText]);
+    }
+    repaint() {
+      const position = this.resolvePosition();
+      const size = this.resolveSize();
+      const fontSize = Math.max(12, toFiniteNumber$7(this.group.font_size, 24));
+      const color = typeof this.group.color === "string" && this.group.color ? this.group.color : "#88A";
+      this.root.x = position[0];
+      this.root.y = position[1];
+      this.fillRect.width = size[0];
+      this.fillRect.height = size[1];
+      this.fillRect.fill = toAlphaFill(color, 0.25);
+      this.strokeRect.width = size[0];
+      this.strokeRect.height = size[1];
+      this.strokeRect.stroke = color;
+      this.titleText.text = typeof this.group.title === "string" ? this.group.title : "Group";
+      this.titleText.fontSize = fontSize;
+      this.titleText.fill = color;
+    }
+    destroy() {
+      this.root.destroy();
+    }
+    captureRenderBounds() {
+      const worldBounds = this.root.worldRenderBounds || null;
+      if ((worldBounds == null ? void 0 : worldBounds.width) && (worldBounds == null ? void 0 : worldBounds.height)) {
+        return {
+          x: toFiniteNumber$7(worldBounds.x),
+          y: toFiniteNumber$7(worldBounds.y),
+          width: Math.max(0, toFiniteNumber$7(worldBounds.width)),
+          height: Math.max(0, toFiniteNumber$7(worldBounds.height))
+        };
+      }
+      const [x2, y2] = this.resolvePosition();
+      const [width2, height] = this.resolveSize();
+      const fontSize = Math.max(12, toFiniteNumber$7(this.group.font_size, 24));
+      return {
+        x: x2,
+        y: y2,
+        width: width2,
+        height: Math.max(height, fontSize + 8)
+      };
+    }
+    resolvePosition() {
+      const pos2 = this.group.pos || this.group._pos;
+      return [
+        toFiniteNumber$7(pos2 == null ? void 0 : pos2[0]),
+        toFiniteNumber$7(pos2 == null ? void 0 : pos2[1])
+      ];
+    }
+    resolveSize() {
+      const size = this.group.size || this.group._size;
+      return [
+        Math.max(140, toFiniteNumber$7(size == null ? void 0 : size[0], 140)),
+        Math.max(80, toFiniteNumber$7(size == null ? void 0 : size[1], 80))
+      ];
     }
   }
   const DEFAULT_PADDING = 8;
@@ -18325,12 +18828,14 @@ var LiteGraphTSMigration = (function(exports) {
       this.appHost = appHost;
       this.renderHost = renderHost;
       this.nodeHosts = /* @__PURE__ */ new Map();
+      this.groupHosts = /* @__PURE__ */ new Map();
       this.linkViews = /* @__PURE__ */ new Map();
       this.linksByNodeId = /* @__PURE__ */ new Map();
       this.unsubscribers = [];
       this.nodesById = /* @__PURE__ */ new Map();
       this.linksById = /* @__PURE__ */ new Map();
       this.dirtyBridgeUninstallers = /* @__PURE__ */ new Map();
+      this.groupDirtyBridgeUninstallers = /* @__PURE__ */ new Map();
       this.activeLinkIds = /* @__PURE__ */ new Set();
       this.pendingSettledNodeRepaints = /* @__PURE__ */ new Set();
       this.runtimeAnimationFrame = null;
@@ -18373,6 +18878,12 @@ var LiteGraphTSMigration = (function(exports) {
         }),
         this.bus.on("node:moved", ({ nodeId, node: node2 }) => {
           this.syncNodeMoved(nodeId, node2);
+        }),
+        this.bus.on("group:add", ({ group }) => {
+          this.ensureGroupHost(group);
+        }),
+        this.bus.on("group:remove", ({ group }) => {
+          this.removeGroupHost(group);
         }),
         this.bus.on("link:add", ({ linkId, link }) => {
           this.ensureLinkView(linkId, link);
@@ -18434,6 +18945,32 @@ var LiteGraphTSMigration = (function(exports) {
         this.syncLinkView(linkId, link);
       }
     }
+    repaintGroupHost(group) {
+      this.ensureGroupHost(group).repaint();
+    }
+    syncGroupChanged(group, movedNodeIds = []) {
+      var _a3;
+      const groupHost = this.ensureGroupHost(group);
+      let dirtyBounds = groupHost.captureRenderBounds();
+      for (let i2 = 0; i2 < movedNodeIds.length; ++i2) {
+        dirtyBounds = mergeRenderBounds(
+          dirtyBounds,
+          this.captureNodeClusterBounds(movedNodeIds[i2])
+        );
+      }
+      groupHost.repaint();
+      for (let i2 = 0; i2 < movedNodeIds.length; ++i2) {
+        const nodeId = movedNodeIds[i2];
+        (_a3 = this.nodeHosts.get(nodeId)) == null ? void 0 : _a3.syncPosition();
+        this.updateIncidentLinks(nodeId);
+        dirtyBounds = mergeRenderBounds(
+          dirtyBounds,
+          this.captureNodeClusterBounds(nodeId)
+        );
+      }
+      dirtyBounds = mergeRenderBounds(dirtyBounds, groupHost.captureRenderBounds());
+      this.requestSceneRender(dirtyBounds);
+    }
     syncNodeMoved(nodeId, node2) {
       var _a3;
       if (node2) {
@@ -18446,6 +18983,10 @@ var LiteGraphTSMigration = (function(exports) {
       this.requestSceneRender(mergeRenderBounds(previousBounds, nextBounds));
     }
     hydrateFromGraph() {
+      const existingGroups = Array.isArray(this.graph._groups) ? this.graph._groups : [];
+      for (let i2 = 0; i2 < existingGroups.length; ++i2) {
+        this.ensureGroupHost(existingGroups[i2]);
+      }
       const existingNodes = Array.isArray(this.graph._nodes) ? this.graph._nodes : [];
       for (let i2 = 0; i2 < existingNodes.length; ++i2) {
         this.ensureNodeHost(existingNodes[i2]);
@@ -18459,18 +19000,26 @@ var LiteGraphTSMigration = (function(exports) {
       for (const host of this.nodeHosts.values()) {
         host.destroy();
       }
+      for (const host of this.groupHosts.values()) {
+        host.destroy();
+      }
       for (const view of this.linkViews.values()) {
         view.destroy();
       }
       for (const uninstall of this.dirtyBridgeUninstallers.values()) {
         uninstall();
       }
+      for (const uninstall of this.groupDirtyBridgeUninstallers.values()) {
+        uninstall();
+      }
       this.nodeHosts.clear();
+      this.groupHosts.clear();
       this.linkViews.clear();
       this.linksByNodeId.clear();
       this.nodesById.clear();
       this.linksById.clear();
       this.dirtyBridgeUninstallers.clear();
+      this.groupDirtyBridgeUninstallers.clear();
       this.activeLinkIds.clear();
       this.pendingSettledNodeRepaints.clear();
     }
@@ -18513,6 +19062,31 @@ var LiteGraphTSMigration = (function(exports) {
       );
       this.appHost.legacyNodeLayer.add(nodeHost.root);
       return nodeHost;
+    }
+    ensureGroupHost(group) {
+      const existingHost = this.groupHosts.get(group);
+      if (existingHost) {
+        this.installGroupDirtyBridge(group);
+        existingHost.repaint();
+        return existingHost;
+      }
+      const groupHost = new GraphGroupHost(group);
+      this.groupHosts.set(group, groupHost);
+      this.installGroupDirtyBridge(group);
+      this.appHost.groupLayer.add(groupHost.root);
+      groupHost.repaint();
+      this.requestSceneRender(groupHost.captureRenderBounds());
+      return groupHost;
+    }
+    removeGroupHost(group) {
+      var _a3;
+      const groupHost = this.groupHosts.get(group);
+      const previousBounds = (groupHost == null ? void 0 : groupHost.captureRenderBounds()) || null;
+      groupHost == null ? void 0 : groupHost.destroy();
+      this.groupHosts.delete(group);
+      (_a3 = this.groupDirtyBridgeUninstallers.get(group)) == null ? void 0 : _a3();
+      this.groupDirtyBridgeUninstallers.delete(group);
+      this.requestSceneRender(previousBounds);
     }
     removeNodeHost(nodeId) {
       var _a3;
@@ -18617,6 +19191,32 @@ var LiteGraphTSMigration = (function(exports) {
         delete targetNode.setDirtyCanvas;
         if (hadOwnProperty) {
           targetNode.setDirtyCanvas = ownSetDirtyCanvas;
+        }
+      });
+    }
+    installGroupDirtyBridge(group) {
+      if (this.groupDirtyBridgeUninstallers.has(group)) {
+        return;
+      }
+      const hadOwnProperty = Object.prototype.hasOwnProperty.call(
+        group,
+        "setDirtyCanvas"
+      );
+      const ownSetDirtyCanvas = group.setDirtyCanvas;
+      group.setDirtyCanvas = (_dirtyForeground, _dirtyBackground) => {
+        var _a3;
+        const groupHost = this.groupHosts.get(group);
+        const previousBounds = (groupHost == null ? void 0 : groupHost.captureRenderBounds()) || null;
+        this.ensureGroupHost(group).repaint();
+        const nextBounds = ((_a3 = this.groupHosts.get(group)) == null ? void 0 : _a3.captureRenderBounds()) || null;
+        this.requestSceneRender(
+          mergeRenderBounds(previousBounds, nextBounds)
+        );
+      };
+      this.groupDirtyBridgeUninstallers.set(group, () => {
+        delete group.setDirtyCanvas;
+        if (hadOwnProperty) {
+          group.setDirtyCanvas = ownSetDirtyCanvas;
         }
       });
     }
@@ -27931,40 +28531,6 @@ var LiteGraphTSMigration = (function(exports) {
       }
       return closest;
     }
-  }
-  function colorToString(c2) {
-    const source = c2;
-    return "rgba(" + Math.round(source[0] * 255).toFixed() + "," + Math.round(source[1] * 255).toFixed() + "," + Math.round(source[2] * 255).toFixed() + "," + (source.length == 4 ? source[3].toFixed(2) : "1.0") + ")";
-  }
-  function hex2num(hex) {
-    if (hex.charAt(0) == "#") {
-      hex = hex.slice(1);
-    }
-    hex = hex.toUpperCase();
-    const hexAlphabets = "0123456789ABCDEF";
-    const value = [0, 0, 0];
-    let k2 = 0;
-    let int1;
-    let int2;
-    for (let i2 = 0; i2 < 6; i2 += 2) {
-      int1 = hexAlphabets.indexOf(hex.charAt(i2));
-      int2 = hexAlphabets.indexOf(hex.charAt(i2 + 1));
-      value[k2] = int1 * 16 + int2;
-      k2++;
-    }
-    return value;
-  }
-  function num2hex(triplet) {
-    const hexAlphabets = "0123456789ABCDEF";
-    let hex = "#";
-    let int1;
-    let int2;
-    for (let i2 = 0; i2 < 3; i2++) {
-      int1 = triplet[i2] / 16;
-      int2 = triplet[i2] % 16;
-      hex += hexAlphabets.charAt(int1) + hexAlphabets.charAt(int2);
-    }
-    return hex;
   }
   function getParameterNames(func) {
     return (func + "").replace(/[/][/].*$/gm, "").replace(/\s+/g, "").replace(/[/][*][^/*]*[*][/]/g, "").split("){", 1)[0].replace(/^[^(]*[(]/, "").replace(/=[^,]+/g, "").split(",").filter(Boolean);

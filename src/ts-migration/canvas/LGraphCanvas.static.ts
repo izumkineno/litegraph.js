@@ -71,6 +71,13 @@ interface LGraphCanvasRuntimeLike {
     ) => void;
     deselectAllNodes?: () => void;
     selectNodes?: (nodes: Record<string, LGraphNodeLike>) => void;
+    sceneSyncController?: {
+        groupHosts?: {
+            has?: (group: unknown) => boolean;
+        };
+        syncGroupChanged?: (group: unknown) => void;
+        repaintGroupHost?: (group: unknown) => void;
+    } | null;
     dirty_canvas?: boolean;
     dirty_bgcanvas?: boolean;
     closeSubgraph?: () => void;
@@ -111,6 +118,11 @@ interface MenuEntryLike {
     callback?: (...args: unknown[]) => unknown;
     className?: string;
 }
+
+type RefreshableTargetLike = {
+    constructor?: unknown;
+    setDirtyCanvas?: (...args: any[]) => void;
+};
 
 class DefaultContextMenu implements ContextMenuLike {
     constructor(
@@ -200,6 +212,43 @@ export class LGraphCanvas {
             return resolveCanvasStaticHost(activeCtor);
         }
         return LGraphCanvas.host();
+    }
+
+    private static isGroupTarget(target: RefreshableTargetLike): boolean {
+        const host = LGraphCanvas.callbackHost();
+        if (host.LGraphGroup && target.constructor === host.LGraphGroup) {
+            return true;
+        }
+
+        const candidate = target as {
+            id?: unknown;
+            _bounding?: unknown;
+            pos?: unknown;
+            size?: unknown;
+            font_size?: unknown;
+        };
+
+        return Boolean(
+            !("id" in candidate) &&
+                candidate._bounding &&
+                candidate.pos &&
+                candidate.size &&
+                "font_size" in candidate
+        );
+    }
+
+    private static requestTargetRefresh(target: RefreshableTargetLike): void {
+        const graphcanvas = LGraphCanvas.active_canvas;
+        const hasGroupHost = Boolean(
+            graphcanvas?.sceneSyncController?.groupHosts?.has?.(target)
+        );
+        if (graphcanvas && (hasGroupHost || LGraphCanvas.isGroupTarget(target))) {
+            graphcanvas.sceneSyncController?.syncGroupChanged?.(target);
+            graphcanvas.sceneSyncController?.repaintGroupHost?.(target);
+            return;
+        }
+
+        target.setDirtyCanvas?.(true, true);
     }
 
     /** Create menu for `Add Group` */
@@ -930,7 +979,7 @@ export class LGraphCanvas {
             if (dialog.parentNode) {
                 dialog.parentNode.removeChild(dialog);
             }
-            node.setDirtyCanvas?.(true, true);
+            LGraphCanvas.requestTargetRefresh(node);
         }
     }
 
@@ -1097,7 +1146,9 @@ export class LGraphCanvas {
 
             const graphcanvas = LGraphCanvas.active_canvas as LGraphCanvasRuntimeLike;
             const targets: LGraphNodeLike[] = [];
-            if (
+            if (LGraphCanvas.isGroupTarget(node)) {
+                targets.push(node);
+            } else if (
                 !graphcanvas.selected_nodes ||
                 Object.keys(graphcanvas.selected_nodes).length <= 1
             ) {
@@ -1114,7 +1165,7 @@ export class LGraphCanvas {
             for (let index = 0; index < targets.length; index += 1) {
                 const target = targets[index];
                 fApplyColor(target);
-                target.setDirtyCanvas?.(true, true);
+                LGraphCanvas.requestTargetRefresh(target);
             }
         }
 
