@@ -16,7 +16,7 @@ class WidgetTestNode extends ModernNodeBase {
         return { inputs: [], outputs: [] };
     }
 
-    protected mountView(): unknown {
+    protected mountContent(): unknown {
         return null;
     }
 }

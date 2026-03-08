@@ -71,6 +71,49 @@
                 }, 10);
             }
 
+            defineActionParts() {
+                if (this.flags && this.flags.collapsed) {
+                    return [];
+                }
+                return [
+                    {
+                        id: "subgraph-left",
+                        action: "subgraph-left",
+                        label: "+",
+                        placement: "footer-left",
+                        onTrigger: function(context) {
+                            if (context.graphcanvas) {
+                                context.graphcanvas.showSubgraphPropertiesDialog(
+                                    context.node
+                                );
+                            }
+                        },
+                    },
+                    {
+                        id: "subgraph-right",
+                        action: "subgraph-right",
+                        label: "+",
+                        placement: "footer-right",
+                        onTrigger: function(context) {
+                            if (context.graphcanvas) {
+                                context.graphcanvas.showSubgraphPropertiesDialogRight(
+                                    context.node
+                                );
+                            }
+                        },
+                    },
+                ];
+            }
+
+            getShellState(context) {
+                var shellState = ns.BaseNode.prototype.getShellState.call(
+                    this,
+                    context
+                );
+                shellState.summaryText = "Double-click to open";
+                return shellState;
+            }
+
             onAction(action, param) {
                 this.subgraph.onAction(action, param);
             }

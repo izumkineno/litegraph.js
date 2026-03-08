@@ -1,12 +1,15 @@
 import * as leafer from "leafer-ui";
-import { Group, Rect, Text, UI } from "leafer-ui";
+import { Group, Path, Rect, Text, UI } from "leafer-ui";
 
 import {
     MODERN_NODE_STATE_KEY,
     ModernNodeChangeMask,
+    type ModernActionPartSchema,
     type ModernNodeChangeMaskValue,
     type ModernNodeLifecycleContext,
     type ModernNodePortLayout,
+    type ModernPortPresentation,
+    type ModernShellState,
 } from "./ModernNodeContracts";
 import type {
     ModernWidgetRenderContext,
@@ -36,6 +39,7 @@ export type ModernNodePartKind =
     | "collapse"
     | "resize"
     | "widget"
+    | "action-part"
     | "input-port"
     | "output-port";
 
@@ -56,25 +60,42 @@ export interface ModernNodeWidgetLayout extends ModernNodeRectLike {
 
 export interface ModernNodePortVisualLayout extends ModernNodeRectLike {
     index: number;
-    dir?: number;
-    radius?: number;
+    anchorX: number;
+    anchorY: number;
+    dir: number;
+    radius: number;
+    label: string;
+    hiddenLabelWhenCollapsed: boolean;
+    shape: string;
+    colorOn: string;
+    colorOff: string;
+    active: boolean;
+}
+
+export interface ModernNodeActionPartLayout extends ModernNodeRectLike {
+    index: number;
+    id: string;
+    action: string;
+    cursor?: string;
 }
 
 export interface ModernNodeShellLayout {
     width: number;
     height: number;
-    body?: ModernNodeRectLike | null;
     header?: ModernNodeRectLike | null;
+    body?: ModernNodeRectLike | null;
     collapse?: ModernNodeRectLike | null;
     resize?: ModernNodeRectLike | null;
     widgets?: ModernNodeWidgetLayout[];
     inputPorts?: ModernNodePortVisualLayout[];
     outputPorts?: ModernNodePortVisualLayout[];
+    actionParts?: ModernNodeActionPartLayout[];
 }
 
 export interface ModernNodePartHit {
     kind: ModernNodePartKind;
     index?: number;
+    id?: string;
     action?: string;
     cursor?: string;
     bounds?: ModernNodeRectLike | null;
@@ -89,17 +110,51 @@ export interface ModernNodeInteractionState {
     pressedPart: ModernNodePartHit | null;
 }
 
-interface ModernNodeShellState {
-    layout?: ModernNodeShellLayout;
-    widgetRoot?: Group | null;
-    applyInteractionState?: (state: ModernNodeInteractionState) => void;
-}
-
 interface ModernWidgetEntry {
     schema: ModernWidgetSchema;
     renderer: ModernWidgetRenderer;
     handle: ModernWidgetViewHandle;
     layout: ModernNodeWidgetLayout;
+}
+
+interface ModernActionPartEntry {
+    schema: ModernActionPartSchema<ModernNodeLike, ModernNodeHost>;
+    root: Group;
+    background: Rect;
+    label: Text;
+    layout: ModernNodeActionPartLayout;
+}
+
+interface ModernPortEntry {
+    kind: NodeViewPortKind;
+    slotIndex: number;
+    layout: ModernNodePortVisualLayout;
+    root: Group;
+    marker: UI | Group;
+    label: Text;
+}
+
+interface ShellParts {
+    shell: Group;
+    selectionOutline: Rect;
+    header: Rect;
+    body: Rect;
+    title: Text;
+    summary: Text;
+    collapseOverlay: Rect;
+    signalLamp: Rect;
+    resizeHandle: Group;
+    resizeHandleGlyph: Path;
+    inputPortLayer: Group;
+    outputPortLayer: Group;
+    widgetLayer: Group;
+    contentLayer: Group;
+    actionPartLayer: Group;
+}
+
+interface StoredModernNodeState {
+    layout: ModernNodeShellLayout;
+    shellState: ModernShellState;
 }
 
 export interface ModernNodeBuildContext {
@@ -109,6 +164,7 @@ export interface ModernNodeBuildContext {
     readonly content: UI | Group | null;
     readonly changeMask: ModernNodeChangeMaskValue;
     readonly interactionState: ModernNodeInteractionState;
+    readonly shellState: Readonly<ModernShellState>;
     readonly leafer: typeof leafer;
 }
 
@@ -116,12 +172,38 @@ export interface ModernNodeLike extends GraphMutationNodeLike {
     pos: [number, number] | Float32Array;
     size: [number, number] | Float32Array;
     title?: string;
+    color?: string | null;
+    bgcolor?: string | null;
+    boxcolor?: string | null;
+    title_text_color?: string | null;
+    outlinecolor?: string | null;
+    mode?: number;
+    execute_triggered?: number;
+    action_triggered?: number;
     inputs?: Array<unknown> | null;
     outputs?: Array<unknown> | null;
     is_selected?: boolean;
+    flags?: { collapsed?: boolean } | null;
     ensureModernPorts?: () => void;
     defineWidgets?: () => ReadonlyArray<ModernWidgetSchema>;
+    defineActionParts?: (
+        context: ModernNodeLifecycleContext<ModernNodeLike, ModernNodeHost>
+    ) => ReadonlyArray<ModernActionPartSchema<ModernNodeLike, ModernNodeHost>>;
+    getShellState?: (
+        context: ModernNodeLifecycleContext<ModernNodeLike, ModernNodeHost>
+    ) => ModernShellState | null | undefined;
+    getPortPresentation?: (
+        kind: NodeViewPortKind,
+        slotIndex: number,
+        context: ModernNodeLifecycleContext<ModernNodeLike, ModernNodeHost>
+    ) => ModernPortPresentation | null;
     consumeModernChangeMask?: () => ModernNodeChangeMaskValue;
+    mountContent?: (
+        context: ModernNodeLifecycleContext<ModernNodeLike, ModernNodeHost>
+    ) => unknown;
+    patchContent?: (
+        context: ModernNodeLifecycleContext<ModernNodeLike, ModernNodeHost>
+    ) => void;
     mountView?: (
         context: ModernNodeLifecycleContext<ModernNodeLike, ModernNodeHost>
     ) => unknown;
@@ -140,45 +222,58 @@ export interface ModernNodeLike extends GraphMutationNodeLike {
         slotIndex: number,
         out?: [number, number]
     ) => [number, number] | Float32Array;
+    getTitle?: () => string;
+    onActionPart?: (
+        action: string,
+        part: ModernActionPartSchema<ModernNodeLike, ModernNodeHost>,
+        event?: PointerEvent,
+        graphcanvas?: unknown
+    ) => void;
 }
+
+const TITLE_HEIGHT = 30;
+const SLOT_HEIGHT = 20;
+const BODY_MIN_WIDTH = 120;
+const BODY_MIN_HEIGHT = 30;
+const BODY_PADDING_X = 10;
+const BODY_PADDING_Y = 8;
+const OUTLINE_PADDING = 5;
+const RESIZE_HANDLE_SIZE = 14;
 
 function toFiniteNumber(value: unknown, fallback = 0): number {
     const numericValue = Number(value);
     return Number.isFinite(numericValue) ? numericValue : fallback;
 }
 
-function toPoint(value: unknown): [number, number] | null {
+function toPoint(
+    value:
+        | { x?: unknown; y?: unknown }
+        | ArrayLike<unknown>
+        | null
+        | undefined
+): [number, number] | null {
+    if (!value) {
+        return null;
+    }
     if (
-        value &&
         typeof value === "object" &&
-        ("0" in (value as Record<string, unknown>) ||
-            ArrayBuffer.isView(value as ArrayBufferView))
+        value !== null &&
+        ("0" in value || ArrayBuffer.isView(value as ArrayBufferView))
     ) {
         const indexed = value as ArrayLike<unknown>;
         return [toFiniteNumber(indexed[0]), toFiniteNumber(indexed[1])];
     }
-
-    if (
-        value &&
-        typeof value === "object" &&
-        "x" in (value as Record<string, unknown>) &&
-        "y" in (value as Record<string, unknown>)
-    ) {
-        const point = value as { x?: unknown; y?: unknown };
-        return [toFiniteNumber(point.x), toFiniteNumber(point.y)];
-    }
-
-    return null;
+    const point = value as { x?: unknown; y?: unknown };
+    return [toFiniteNumber(point.x), toFiniteNumber(point.y)];
 }
 
 function pointInsideRect(
     point: readonly [number, number],
-    rect: ModernNodeRectLike | null | undefined
+    rect?: ModernNodeRectLike | null
 ): boolean {
     if (!rect) {
         return false;
     }
-
     return (
         point[0] >= rect.x &&
         point[0] <= rect.x + rect.width &&
@@ -187,75 +282,310 @@ function pointInsideRect(
     );
 }
 
-function clonePartHit(
-    hit: ModernNodePartHit | null | undefined
-): ModernNodePartHit | null {
-    if (!hit) {
-        return null;
-    }
-
-    return {
-        kind: hit.kind,
-        index: hit.index,
-        action: hit.action,
-        cursor: hit.cursor,
-        bounds: hit.bounds || null,
-    };
-}
-
 function samePart(
-    left: ModernNodePartHit | null | undefined,
-    right: ModernNodePartHit | null | undefined
+    a: ModernNodePartHit | null,
+    b: ModernNodePartHit | null
 ): boolean {
+    if (!a && !b) {
+        return true;
+    }
+    if (!a || !b) {
+        return false;
+    }
     return (
-        left?.kind === right?.kind &&
-        left?.index === right?.index &&
-        left?.action === right?.action
+        a.kind === b.kind &&
+        a.index === b.index &&
+        a.id === b.id &&
+        a.action === b.action
     );
 }
 
-function createFallbackContent(node: ModernNodeLike): Group {
-    const width = Math.max(toFiniteNumber(node.size?.[0], 160), 120);
-    const height = Math.max(toFiniteNumber(node.size?.[1], 80), 60);
-    const group = new Group({
-        name: `litegraph-modern-node-fallback:${String(node.id)}`,
-        hittable: false,
-    });
-    group.add([
-        new Rect({
-            x: 0,
-            y: 0,
-            width,
-            height,
-            cornerRadius: 14,
-            fill: "#1F2733",
-            stroke: "#87B6FF",
-            strokeWidth: 2,
-            hittable: false,
-        }),
-        new Text({
-            x: 14,
-            y: 12,
-            text: String(node.title || node.id || "Modern Node"),
-            fontSize: 16,
-            fontWeight: "bold",
-            fill: "#F7FAFF",
-            hittable: false,
-        }),
-    ]);
-    return group;
+function clonePartHit(part: ModernNodePartHit | null): ModernNodePartHit | null {
+    return part ? { ...part, bounds: part.bounds ? { ...part.bounds } : null } : null;
 }
 
-function toUI(result: unknown, node: ModernNodeLike): UI | Group {
-    if (result instanceof UI) {
-        return result;
+function toUI(value: unknown): UI | Group | null {
+    if (!value || typeof value !== "object") {
+        return null;
+    }
+    return value as UI | Group;
+}
+
+function createText(config: Record<string, unknown>): Text {
+    return new Text({
+        fontSize: 12,
+        fontFamily:
+            "'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif",
+        fill: "#E8EDF2",
+        hittable: false,
+        textWrap: "none",
+        textOverflow: "hide",
+        verticalAlign: "middle",
+        ...config,
+    });
+}
+
+function cloneRect(rect: ModernNodeRectLike): ModernNodeRectLike {
+    return {
+        x: rect.x,
+        y: rect.y,
+        width: rect.width,
+        height: rect.height,
+    };
+}
+
+function getLiteGraphConstants(): {
+    NODE_TITLE_HEIGHT: number;
+    NODE_SLOT_HEIGHT: number;
+    NODE_DEFAULT_COLOR: string;
+    NODE_DEFAULT_BGCOLOR: string;
+    NODE_DEFAULT_BOXCOLOR: string;
+    NODE_MODES_COLORS: string[];
+    LINK_COLOR: string;
+    EVENT_LINK_COLOR: string;
+    BOX_SHAPE: number;
+    ARROW_SHAPE: number;
+    GRID_SHAPE: number;
+    EVENT: number;
+    ACTION: number;
+} {
+    const host = globalThis as typeof globalThis & {
+        LiteGraph?: Record<string, unknown>;
+    };
+    const liteGraph = host.LiteGraph || {};
+    return {
+        NODE_TITLE_HEIGHT: toFiniteNumber(liteGraph.NODE_TITLE_HEIGHT, TITLE_HEIGHT),
+        NODE_SLOT_HEIGHT: toFiniteNumber(liteGraph.NODE_SLOT_HEIGHT, SLOT_HEIGHT),
+        NODE_DEFAULT_COLOR: String(liteGraph.NODE_DEFAULT_COLOR || "#333333"),
+        NODE_DEFAULT_BGCOLOR: String(liteGraph.NODE_DEFAULT_BGCOLOR || "#353535"),
+        NODE_DEFAULT_BOXCOLOR: String(liteGraph.NODE_DEFAULT_BOXCOLOR || "#666666"),
+        NODE_MODES_COLORS: Array.isArray(liteGraph.NODE_MODES_COLORS)
+            ? (liteGraph.NODE_MODES_COLORS as string[])
+            : ["#666666", "#422222", "#333333", "#224422", "#662266"],
+        LINK_COLOR: String(liteGraph.LINK_COLOR || "#9A9"),
+        EVENT_LINK_COLOR: String(liteGraph.EVENT_LINK_COLOR || "#A86"),
+        BOX_SHAPE: toFiniteNumber(liteGraph.BOX_SHAPE, 1),
+        ARROW_SHAPE: toFiniteNumber(liteGraph.ARROW_SHAPE, 5),
+        GRID_SHAPE: toFiniteNumber(liteGraph.GRID_SHAPE, 6),
+        EVENT: toFiniteNumber(liteGraph.EVENT, -1),
+        ACTION: toFiniteNumber(liteGraph.ACTION, -1),
+    };
+}
+
+let textMeasureCanvas: HTMLCanvasElement | null = null;
+let textMeasureContext: CanvasRenderingContext2D | null = null;
+
+function measureTextWidth(text: string, font = "14px Arial"): number {
+    if (
+        typeof document === "undefined" ||
+        typeof document.createElement !== "function"
+    ) {
+        return text.length * 7.2;
+    }
+    if (!textMeasureCanvas) {
+        textMeasureCanvas = document.createElement("canvas");
+        textMeasureContext = textMeasureCanvas.getContext("2d");
+    }
+    if (!textMeasureContext) {
+        return text.length * 7.2;
+    }
+    textMeasureContext.font = font;
+    return textMeasureContext.measureText(text).width;
+}
+
+function mergeShellState(
+    defaults: ModernShellState,
+    incoming: ModernShellState | null | undefined
+): ModernShellState {
+    return {
+        ...defaults,
+        ...(incoming || {}),
+    };
+}
+
+function defaultShellState(node: ModernNodeLike): ModernShellState {
+    const constants = getLiteGraphConstants();
+    const ctor = (node.constructor || {}) as unknown as Record<string, unknown>;
+    const triggeredColor =
+        toFiniteNumber(node.action_triggered) > 0
+            ? "#FFFFFF"
+            : toFiniteNumber(node.execute_triggered) > 0
+              ? "#AAAAAA"
+              : null;
+    const modeColor =
+        node.mode != null && constants.NODE_MODES_COLORS[node.mode]
+            ? constants.NODE_MODES_COLORS[node.mode]
+            : null;
+    return {
+        title:
+            (typeof node.getTitle === "function" && node.getTitle()) ||
+            node.title ||
+            (node as { type?: string }).type ||
+            "Node",
+        titleMode: "default",
+        titleColor:
+            (node.color as string | null | undefined) ||
+            (ctor.title_color as string | undefined) ||
+            (ctor.color as string | undefined) ||
+            constants.NODE_DEFAULT_COLOR,
+        titleTextColor:
+            (node.title_text_color as string | null | undefined) || "#F5F7FA",
+        boxColor:
+            (node.boxcolor as string | null | undefined) ||
+            triggeredColor ||
+            modeColor ||
+            constants.NODE_DEFAULT_BOXCOLOR,
+        bodyColor:
+            (node.bgcolor as string | null | undefined) ||
+            (ctor.bgcolor as string | undefined) ||
+            constants.NODE_DEFAULT_BGCOLOR,
+        borderColor:
+            (node.outlinecolor as string | null | undefined) || "#243342",
+        showSignalLamp: true,
+        collapsible: true,
+        resizable: true,
+        showCollapsedSlots: true,
+        allowNodeHover: false,
+        summaryText: "",
+    };
+}
+
+function partStateFor(
+    interaction: ModernNodeInteractionState,
+    targetKind: ModernNodePartKind,
+    index?: number,
+    id?: string
+): "" | "hover" | "press" {
+    const pressed =
+        interaction.pressedPart &&
+        interaction.pressedPart.kind === targetKind &&
+        interaction.pressedPart.index === index &&
+        interaction.pressedPart.id === id;
+    if (pressed) {
+        return "press";
     }
 
-    if (result && typeof result === "object") {
-        return new Group(result as Record<string, unknown>);
-    }
+    const hovered =
+        interaction.hoveredPart &&
+        interaction.hoveredPart.kind === targetKind &&
+        interaction.hoveredPart.index === index &&
+        interaction.hoveredPart.id === id;
+    return hovered ? "hover" : "";
+}
 
-    return createFallbackContent(node);
+function signatureOfWidgets(schemas: readonly ModernWidgetSchema[]): string {
+    return schemas.map((schema) => `${schema.id}:${schema.type}`).join("|");
+}
+
+function signatureOfActionParts<
+    TNode extends { id: number | string },
+    THost,
+>(
+    schemas: readonly ModernActionPartSchema<TNode, THost>[]
+): string {
+    return schemas
+        .map((schema) => `${schema.id}:${schema.action || ""}:${schema.placement || ""}`)
+        .join("|");
+}
+
+function createPortMarker(shape: string, color: string): UI | Group {
+    const marker = (() => {
+        switch (shape) {
+            case "box":
+                return new Rect({
+                    x: -4,
+                    y: -4,
+                    width: 8,
+                    height: 8,
+                    cornerRadius: 2,
+                    fill: color,
+                    stroke: "#10151A",
+                    strokeWidth: 1,
+                    hittable: false,
+                }) as UI | Group;
+            case "arrow":
+                return new Path({
+                    path: "M -5 -4 L 5 0 L -5 4 Z",
+                    fill: color,
+                    stroke: "#10151A",
+                    strokeWidth: 1,
+                    hittable: false,
+                }) as UI | Group;
+            case "grid": {
+                const group = new Group({ hittable: false });
+                group.add([
+                    new Rect({
+                        x: -5,
+                        y: -5,
+                        width: 4,
+                        height: 4,
+                        fill: color,
+                        cornerRadius: 1,
+                        hittable: false,
+                    }),
+                    new Rect({
+                        x: 1,
+                        y: -5,
+                        width: 4,
+                        height: 4,
+                        fill: color,
+                        cornerRadius: 1,
+                        hittable: false,
+                    }),
+                    new Rect({
+                        x: -5,
+                        y: 1,
+                        width: 4,
+                        height: 4,
+                        fill: color,
+                        cornerRadius: 1,
+                        hittable: false,
+                    }),
+                    new Rect({
+                        x: 1,
+                        y: 1,
+                        width: 4,
+                        height: 4,
+                        fill: color,
+                        cornerRadius: 1,
+                        hittable: false,
+                    }),
+                ]);
+                return group as UI | Group;
+            }
+            default:
+                return new Rect({
+                    x: -4,
+                    y: -4,
+                    width: 8,
+                    height: 8,
+                    cornerRadius: 999,
+                    fill: color,
+                    stroke: "#10151A",
+                    strokeWidth: 1,
+                    hittable: false,
+                }) as UI | Group;
+        }
+    })();
+    (marker as unknown as Record<string, unknown>).__litegraphPortShape = shape;
+    return marker;
+}
+
+function setShapeColor(shape: UI | Group, color: string): void {
+    const shapeData = shape as unknown as Record<string, unknown>;
+    if ("fill" in shapeData) {
+        shapeData.fill = color;
+    }
+    if ((shape as Group).children) {
+        const children = (((shape as Group).children || []) as unknown) as Array<
+            Record<string, unknown>
+        >;
+        for (let i = 0; i < children.length; ++i) {
+            if ("fill" in children[i]) {
+                children[i].fill = color;
+            }
+        }
+    }
 }
 
 export class ModernNodeHost implements NodeViewHost {
@@ -263,14 +593,7 @@ export class ModernNodeHost implements NodeViewHost {
     readonly node: ModernNodeLike;
     readonly root: Group;
 
-    private content: UI | Group | null = null;
-    private widgetRoot: Group | null = null;
-    private widgetEntries: ModernWidgetEntry[] = [];
-    private widgetValueSnapshot = new Map<string, unknown>();
-    private lastWidgetSignature = "";
-    private mounted = false;
-    private portLayoutCache = new Map<string, ModernNodePortLayout | null>();
-    private lastSlotSignature = "";
+    private readonly shell: ShellParts;
     private readonly interactionState: ModernNodeInteractionState = {
         hovered: false,
         pressed: false,
@@ -279,6 +602,19 @@ export class ModernNodeHost implements NodeViewHost {
         hoveredPart: null,
         pressedPart: null,
     };
+    private shellState: ModernShellState = {};
+    private shellLayout: ModernNodeShellLayout = {
+        width: BODY_MIN_WIDTH,
+        height: BODY_MIN_HEIGHT,
+    };
+    private content: UI | Group | null = null;
+    private widgetEntries: ModernWidgetEntry[] = [];
+    private actionPartEntries: ModernActionPartEntry[] = [];
+    private portEntries = new Map<string, ModernPortEntry>();
+    private widgetValueSnapshot = new Map<string, unknown>();
+    private lastWidgetSignature = "";
+    private lastActionPartSignature = "";
+    private mounted = false;
     private resizeAnchor: {
         startWorldX: number;
         startWorldY: number;
@@ -297,56 +633,52 @@ export class ModernNodeHost implements NodeViewHost {
                 litegraphRuntime: "modern",
             },
         });
-
+        this.shell = this.createShellParts();
+        this.root.add(this.shell.shell);
         this.repaint();
     }
 
     repaint(): void {
         this.node.ensureModernPorts?.();
         const changeMask = this.consumeChangeMask();
+        this.shellState = this.resolveShellState(changeMask);
+        this.shellLayout = this.computeShellLayout(this.shellState);
 
         if (!this.mounted) {
-            const mountedContent = this.mountContent(changeMask);
-            this.content = toUI(mountedContent, this.node);
-            this.root.add(this.content);
-            this.widgetRoot = this.ensureWidgetRoot();
+            this.content = toUI(this.mountContent(changeMask));
+            if (this.content) {
+                this.content.hittable = false;
+                this.shell.contentLayer.add(this.content);
+            }
             this.mounted = true;
-            this.invalidatePortLayoutCache();
         } else if (changeMask !== ModernNodeChangeMask.None) {
             this.patchContent(changeMask);
         }
 
         this.syncWidgets(changeMask);
-
-        if (this.didSlotSignatureChange()) {
-            this.invalidatePortLayoutCache();
-        }
-
-        if (
-            (changeMask & ModernNodeChangeMask.Layout) !== 0 ||
-            (changeMask & ModernNodeChangeMask.Ports) !== 0
-        ) {
-            this.invalidatePortLayoutCache();
-        }
-
-        this.root.selected = Boolean((this.node as { is_selected?: boolean }).is_selected);
+        this.syncActionParts(changeMask);
+        this.syncPorts();
+        this.applyShellLayout();
+        this.syncContentLayout();
         this.applyInteractionState();
         this.syncPosition();
+        this.storeInspectableState();
     }
 
     syncPosition(): void {
         this.root.x = toFiniteNumber(this.node.pos?.[0]);
-        const collapsed = Boolean(
-            (this.node as { flags?: { collapsed?: boolean } }).flags?.collapsed
-        );
-        const collapsedOffset = collapsed
-            ? toFiniteNumber(this.getShellState()?.layout?.height, 30)
-            : 0;
-        this.root.y = toFiniteNumber(this.node.pos?.[1]) - collapsedOffset;
+        this.root.y = toFiniteNumber(this.node.pos?.[1]);
     }
 
     destroy(): void {
         this.clearWidgets();
+        this.clearActionParts();
+        for (const entry of this.portEntries.values()) {
+            entry.root.destroy();
+            entry.label.destroy();
+        }
+        this.portEntries.clear();
+        this.content?.destroy();
         this.root.destroy();
     }
 
@@ -354,9 +686,7 @@ export class ModernNodeHost implements NodeViewHost {
         return this.interactionState;
     }
 
-    updateInteractionState(
-        patch: Partial<ModernNodeInteractionState>
-    ): void {
+    updateInteractionState(patch: Partial<ModernNodeInteractionState>): void {
         const nextHoveredPart =
             patch.hoveredPart === undefined
                 ? this.interactionState.hoveredPart
@@ -411,30 +741,25 @@ export class ModernNodeHost implements NodeViewHost {
         worldY: number
     ): ModernNodePartHit | null {
         const localPoint = this.getLocalPoint(worldX, worldY);
-        const layout = this.getShellState()?.layout;
-        if (!layout) {
-            return this.hitFallbackPart(localPoint);
-        }
-
-        if (pointInsideRect(localPoint, layout.resize)) {
-            return {
-                kind: "resize",
-                cursor: "se-resize",
-                bounds: layout.resize || null,
-            };
-        }
-
-        if (pointInsideRect(localPoint, layout.collapse)) {
-            return {
-                kind: "collapse",
-                cursor: "pointer",
-                bounds: layout.collapse || null,
-            };
-        }
+        const layout = this.shellLayout;
 
         const widgetHit = this.hitWidgetPart(localPoint, layout.widgets);
         if (widgetHit) {
             return widgetHit;
+        }
+
+        const actionPartHit = this.hitActionPart(localPoint, layout.actionParts);
+        if (actionPartHit) {
+            return actionPartHit;
+        }
+
+        const outputPortHit = this.hitPortPart(
+            localPoint,
+            "output-port",
+            layout.outputPorts
+        );
+        if (outputPortHit) {
+            return outputPortHit;
         }
 
         const inputPortHit = this.hitPortPart(
@@ -446,13 +771,20 @@ export class ModernNodeHost implements NodeViewHost {
             return inputPortHit;
         }
 
-        const outputPortHit = this.hitPortPart(
-            localPoint,
-            "output-port",
-            layout.outputPorts
-        );
-        if (outputPortHit) {
-            return outputPortHit;
+        if (pointInsideRect(localPoint, layout.collapse)) {
+            return {
+                kind: "collapse",
+                cursor: "pointer",
+                bounds: layout.collapse || null,
+            };
+        }
+
+        if (pointInsideRect(localPoint, layout.resize)) {
+            return {
+                kind: "resize",
+                cursor: "se-resize",
+                bounds: layout.resize || null,
+            };
         }
 
         if (pointInsideRect(localPoint, layout.header)) {
@@ -469,7 +801,7 @@ export class ModernNodeHost implements NodeViewHost {
             };
         }
 
-        return this.hitFallbackPart(localPoint);
+        return null;
     }
 
     beginResize(worldX: number, worldY: number): void {
@@ -477,7 +809,7 @@ export class ModernNodeHost implements NodeViewHost {
             startWorldX: worldX,
             startWorldY: worldY,
             startWidth: Math.max(toFiniteNumber(this.node.size?.[0], 160), 80),
-            startHeight: Math.max(toFiniteNumber(this.node.size?.[1], 80), 60),
+            startHeight: Math.max(toFiniteNumber(this.node.size?.[1], 80), 30),
         };
         this.updateInteractionState({
             resizing: true,
@@ -492,14 +824,14 @@ export class ModernNodeHost implements NodeViewHost {
         }
 
         const nextWidth = Math.max(
-            120,
+            BODY_MIN_WIDTH,
             Math.round(
                 this.resizeAnchor.startWidth +
                     (worldX - this.resizeAnchor.startWorldX)
             )
         );
         const nextHeight = Math.max(
-            60,
+            BODY_MIN_HEIGHT,
             Math.round(
                 this.resizeAnchor.startHeight +
                     (worldY - this.resizeAnchor.startWorldY)
@@ -532,222 +864,40 @@ export class ModernNodeHost implements NodeViewHost {
         return this.widgetEntries[index] || null;
     }
 
-    private ensureWidgetRoot(): Group {
-        const shellWidgetRoot = this.getShellState()?.widgetRoot;
-        if (shellWidgetRoot) {
-            this.widgetRoot = shellWidgetRoot;
-            return shellWidgetRoot;
-        }
-
-        if (!this.widgetRoot) {
-            this.widgetRoot = new Group({
-                name: `litegraph-modern-node-widgets:${String(this.node.id)}`,
-                hittable: false,
-            });
-            this.root.add(this.widgetRoot);
-        }
-
-        return this.widgetRoot;
+    getActionPartEntry(index: number): ModernActionPartEntry | null {
+        return this.actionPartEntries[index] || null;
     }
 
-    private clearWidgets(): void {
-        for (let i = 0; i < this.widgetEntries.length; ++i) {
-            const entry = this.widgetEntries[i];
-            if (entry.handle.destroy) {
-                entry.handle.destroy();
-            } else {
-                const root = entry.handle.root as { destroy?: () => void } | undefined;
-                root?.destroy?.();
-            }
+    executeActionPart(
+        part: ModernNodePartHit,
+        event?: PointerEvent,
+        graphcanvas?: unknown
+    ): void {
+        if (part.index == null) {
+            return;
         }
-
-        this.widgetEntries = [];
-        this.widgetValueSnapshot.clear();
-        this.lastWidgetSignature = "";
-        this.patchShellWidgetLayout([]);
-    }
-
-    private syncWidgets(changeMask: ModernNodeChangeMaskValue): void {
-        const collapsed = Boolean(
-            (this.node as { flags?: { collapsed?: boolean } }).flags?.collapsed
-        );
-        const schemas = collapsed
-            ? []
-            : Array.isArray(this.node.defineWidgets?.())
-              ? [...(this.node.defineWidgets?.() || [])]
-              : [];
-        const widgetRoot = this.ensureWidgetRoot();
-        widgetRoot.visible = !collapsed;
-
-        const nextSignature = schemas
-            .map((schema) => `${schema.id}:${schema.type}`)
-            .join("|");
-        const needsRebuild =
-            this.widgetEntries.length !== schemas.length ||
-            this.lastWidgetSignature !== nextSignature ||
-            (changeMask & ModernNodeChangeMask.Layout) !== 0;
-
-        if (!schemas.length) {
-            this.clearWidgets();
+        const entry = this.actionPartEntries[part.index];
+        if (!entry || entry.schema.disabled) {
             return;
         }
 
-        const bodyBounds = this.getWidgetBodyBounds();
-        const nextLayout: ModernNodeWidgetLayout[] = [];
-
-        if (needsRebuild) {
-            this.clearWidgets();
-            for (let index = 0; index < schemas.length; ++index) {
-                const schema = schemas[index];
-                const renderer = resolveModernWidgetRenderer(schema.type);
-                if (!renderer) {
-                    continue;
-                }
-
-                const bounds = resolveWidgetBounds(bodyBounds, index, schemas.length);
-                const context = this.createWidgetContext(schema, bounds);
-                const handle = renderer.createView(context);
-                this.addWidgetHandle(widgetRoot, handle);
-
-                const layout = this.toWidgetLayout(index, schema, handle);
-                this.widgetEntries.push({
-                    schema,
-                    renderer,
-                    handle,
-                    layout,
-                });
-                nextLayout.push(layout);
-                this.widgetValueSnapshot.set(schema.id, schema.value);
-            }
-            this.lastWidgetSignature = nextSignature;
-        } else {
-            for (let index = 0; index < this.widgetEntries.length; ++index) {
-                const entry = this.widgetEntries[index];
-                const schema = schemas[index];
-                const bounds = resolveWidgetBounds(bodyBounds, index, schemas.length);
-                entry.schema = schema;
-                const context = this.createWidgetContext(schema, bounds);
-                entry.renderer.patchView(context, entry.handle, changeMask);
-                entry.layout = this.toWidgetLayout(index, schema, entry.handle);
-                nextLayout.push(entry.layout);
-                this.widgetValueSnapshot.set(schema.id, schema.value);
-            }
-        }
-
-        this.patchShellWidgetLayout(nextLayout);
-        this.applyWidgetInteractionState();
-    }
-
-    private getWidgetBodyBounds(): ModernNodeRectLike {
-        const shellLayout = this.getShellState()?.layout;
-        if (shellLayout?.body) {
-            return {
-                x: shellLayout.body.x,
-                y: shellLayout.body.y,
-                width: shellLayout.body.width,
-                height: shellLayout.body.height,
-            };
-        }
-
-        return {
-            x: 0,
-            y: 0,
-            width: Math.max(toFiniteNumber(this.node.size?.[0], 120), 80),
-            height: Math.max(toFiniteNumber(this.node.size?.[1], 60), 24),
-        };
-    }
-
-    private createWidgetContext(
-        schema: ModernWidgetSchema,
-        bounds: ModernNodeRectLike
-    ): ModernWidgetRenderContext<ModernNodeLike, ModernNodeHost> {
-        return {
+        entry.schema.onTrigger?.({
             node: this.node,
             host: this,
-            schema,
-            bounds,
-            leafer,
-        };
-    }
+            graphcanvas,
+            event,
+        });
 
-    private addWidgetHandle(root: Group, handle: ModernWidgetViewHandle): void {
-        if (handle.root instanceof UI) {
-            root.add(handle.root);
-            return;
-        }
-
-        const candidate = handle.root as { parent?: unknown } | undefined;
-        if (candidate && typeof candidate === "object" && !candidate.parent) {
-            root.add(handle.root as Group);
-        }
-    }
-
-    private toWidgetLayout(
-        index: number,
-        schema: ModernWidgetSchema,
-        handle: ModernWidgetViewHandle
-    ): ModernNodeWidgetLayout {
-        return {
-            index,
-            id: schema.id,
-            type: schema.type,
-            x: handle.bounds.x,
-            y: handle.bounds.y,
-            width: handle.bounds.width,
-            height: handle.bounds.height,
-            action: "edit",
-            actionZones: handle.actionZones as
-                | Record<string, ModernNodeRectLike>
-                | undefined,
-        };
-    }
-
-    private patchShellWidgetLayout(layout: ModernNodeWidgetLayout[]): void {
-        const shellState = this.getShellState();
-        if (!shellState?.layout) {
-            return;
-        }
-        shellState.layout.widgets = layout;
-    }
-
-    private applyWidgetInteractionState(): void {
-        const hoveredIndex =
-            this.interactionState.hoveredPart?.kind === "widget"
-                ? this.interactionState.hoveredPart.index
-                : null;
-        const pressedIndex =
-            this.interactionState.pressedPart?.kind === "widget"
-                ? this.interactionState.pressedPart.index
-                : null;
-
-        for (let i = 0; i < this.widgetEntries.length; ++i) {
-            const entry = this.widgetEntries[i];
-            const widgetRoot = entry.handle.root as Record<string, unknown>;
-            if (!widgetRoot || typeof widgetRoot !== "object") {
-                continue;
-            }
-
-            widgetRoot.disabled = Boolean(entry.schema.disabled);
-            if (entry.schema.disabled) {
-                widgetRoot.state = "";
-                continue;
-            }
-
-            if (pressedIndex === i) {
-                widgetRoot.state = "press";
-            } else if (hoveredIndex === i) {
-                widgetRoot.state = "hover";
-            } else {
-                widgetRoot.state = "";
-            }
-        }
+        this.node.onActionPart?.(
+            entry.schema.action || entry.schema.id,
+            entry.schema,
+            event,
+            graphcanvas
+        );
     }
 
     getLocalPoint(worldX: number, worldY: number): readonly [number, number] {
-        const point = this.root.getInnerPoint({
-            x: worldX,
-            y: worldY,
-        });
+        const point = this.root.getInnerPoint({ x: worldX, y: worldY });
         return [toFiniteNumber(point.x), toFiniteNumber(point.y)];
     }
 
@@ -757,13 +907,9 @@ export class ModernNodeHost implements NodeViewHost {
     ): readonly [number, number] | null {
         const layout = this.resolvePortLayout(kind, slotIndex);
         if (layout) {
-            if (layout.space === "world") {
-                return [layout.x, layout.y];
-            }
-
             return [
-                toFiniteNumber(this.root.x) + layout.x,
-                toFiniteNumber(this.root.y) + layout.y,
+                toFiniteNumber(this.root.x) + layout.anchorX,
+                toFiniteNumber(this.root.y) + layout.anchorY,
             ];
         }
 
@@ -775,13 +921,8 @@ export class ModernNodeHost implements NodeViewHost {
 
     getPortDirection(
         kind: NodeViewPortKind,
-        slotIndex: number
+        _slotIndex: number
     ): number | null {
-        const layout = this.resolvePortLayout(kind, slotIndex);
-        if (layout?.dir != null) {
-            return toFiniteNumber(layout.dir);
-        }
-
         return kind === "input" ? PORT_DIRECTION_LEFT : PORT_DIRECTION_RIGHT;
     }
 
@@ -789,30 +930,31 @@ export class ModernNodeHost implements NodeViewHost {
         let bestHit: (NodeViewPortHit & { distance: number }) | null = null;
         const kinds: NodeViewPortKind[] = ["output", "input"];
 
-        for (let kindIndex = 0; kindIndex < kinds.length; ++kindIndex) {
-            const kind = kinds[kindIndex];
-            const slotCount = this.getSlotCount(kind);
-            for (let slotIndex = 0; slotIndex < slotCount; ++slotIndex) {
-                const anchor = this.getPortAnchor(kind, slotIndex);
+        for (let i = 0; i < kinds.length; ++i) {
+            const kind = kinds[i];
+            const layouts =
+                kind === "input"
+                    ? this.shellLayout.inputPorts || []
+                    : this.shellLayout.outputPorts || [];
+            for (let slotIndex = 0; slotIndex < layouts.length; ++slotIndex) {
+                const layout = layouts[slotIndex];
+                const anchor = this.getPortAnchor(kind, layout.index);
                 if (!anchor) {
                     continue;
                 }
-
-                const radius =
-                    this.resolvePortLayout(kind, slotIndex)?.radius ?? 12;
                 const dx = worldX - anchor[0];
                 const dy = worldY - anchor[1];
                 const dist = Math.sqrt(dx * dx + dy * dy);
-                if (dist > radius) {
+                if (dist > layout.radius) {
                     continue;
                 }
 
                 if (!bestHit || dist < bestHit.distance) {
                     bestHit = {
                         kind,
-                        slotIndex,
+                        slotIndex: layout.index,
                         anchor,
-                        dir: this.getPortDirection(kind, slotIndex) || undefined,
+                        dir: layout.dir,
                         distance: dist,
                     };
                 }
@@ -831,29 +973,119 @@ export class ModernNodeHost implements NodeViewHost {
         };
     }
 
-    private mountContent(changeMask: ModernNodeChangeMaskValue): unknown {
-        const context = this.createContextWithMask(changeMask);
+    private createShellParts(): ShellParts {
+        const shell = new Group({
+            name: `litegraph-modern-shell:${String(this.node.id)}`,
+            hittable: false,
+        });
+        const selectionOutline = new Rect({
+            fill: "rgba(0,0,0,0)",
+            stroke: "#76A8FF",
+            strokeWidth: 2,
+            cornerRadius: 12,
+            visible: false,
+            hittable: false,
+        });
+        const header = new Rect({
+            fill: "#333333",
+            stroke: "#243342",
+            strokeWidth: 1,
+            cornerRadius: [10, 10, 0, 0],
+            hittable: false,
+        });
+        const body = new Rect({
+            fill: "#353535",
+            stroke: "#243342",
+            strokeWidth: 1.25,
+            cornerRadius: [0, 0, 10, 10],
+            hittable: false,
+        });
+        const title = createText({
+            x: 42,
+            y: -TITLE_HEIGHT + TITLE_HEIGHT / 2,
+            text: "",
+            fontWeight: "bold",
+        });
+        const summary = createText({
+            x: BODY_PADDING_X,
+            y: 18,
+            text: "",
+            fontSize: 11,
+            fill: "#A5B4C1",
+        });
+        const collapseOverlay = new Rect({
+            x: 0,
+            y: -TITLE_HEIGHT,
+            width: TITLE_HEIGHT,
+            height: TITLE_HEIGHT,
+            cornerRadius: [10, 0, 0, 0],
+            fill: "rgba(255,255,255,0)",
+            stroke: "rgba(255,255,255,0)",
+            strokeWidth: 0,
+            hittable: false,
+        });
+        const signalLamp = new Rect({
+            x: 8,
+            y: -TITLE_HEIGHT + 8,
+            width: 14,
+            height: 14,
+            cornerRadius: 999,
+            fill: "#666666",
+            stroke: "#10151A",
+            strokeWidth: 1,
+            hittable: false,
+        });
+        const resizeHandleGlyph = new Path({
+            path: "M 2 12 L 12 2 M 6 12 L 12 6 M 10 12 L 12 10",
+            stroke: "#8593A0",
+            strokeWidth: 1,
+            opacity: 0.9,
+            hittable: false,
+        });
+        const resizeHandle = new Group({
+            visible: false,
+            hittable: false,
+        });
+        resizeHandle.add(resizeHandleGlyph);
+        const inputPortLayer = new Group({ name: "input-ports", hittable: false });
+        const outputPortLayer = new Group({ name: "output-ports", hittable: false });
+        const widgetLayer = new Group({ name: "widgets", hittable: false });
+        const contentLayer = new Group({ name: "content", hittable: false });
+        const actionPartLayer = new Group({ name: "action-parts", hittable: false });
 
-        if (typeof this.node.mountView === "function") {
-            return this.node.mountView(context);
-        }
+        shell.add([
+            selectionOutline,
+            header,
+            body,
+            collapseOverlay,
+            signalLamp,
+            title,
+            summary,
+            inputPortLayer,
+            outputPortLayer,
+            contentLayer,
+            widgetLayer,
+            actionPartLayer,
+            resizeHandle,
+        ]);
 
-        if (typeof this.node.buildUI === "function") {
-            return this.node.buildUI(context);
-        }
-
-        return null;
-    }
-
-    private patchContent(changeMask: ModernNodeChangeMaskValue): void {
-        const context = this.createContextWithMask(changeMask);
-
-        if (typeof this.node.patchView === "function") {
-            this.node.patchView(context);
-            return;
-        }
-
-        this.node.updateUI?.(context);
+        return {
+            shell,
+            selectionOutline,
+            header,
+            body,
+            title,
+            summary,
+            collapseOverlay,
+            signalLamp,
+            resizeHandle,
+            resizeHandleGlyph,
+            inputPortLayer,
+            outputPortLayer,
+            widgetLayer,
+            contentLayer,
+            actionPartLayer,
+        };
     }
 
     private consumeChangeMask(): ModernNodeChangeMaskValue {
@@ -861,96 +1093,940 @@ export class ModernNodeHost implements NodeViewHost {
         if (rawMask == null) {
             return ModernNodeChangeMask.All;
         }
-
-        const normalizedMask = toFiniteNumber(
-            rawMask,
-            ModernNodeChangeMask.None
-        );
-        if (normalizedMask <= ModernNodeChangeMask.None) {
-            return ModernNodeChangeMask.None;
-        }
-
-        return normalizedMask;
+        const normalizedMask = toFiniteNumber(rawMask, ModernNodeChangeMask.None);
+        return normalizedMask <= ModernNodeChangeMask.None
+            ? ModernNodeChangeMask.None
+            : normalizedMask;
     }
 
-    private didSlotSignatureChange(): boolean {
-        const nextSignature = `${this.getSlotCount("input")}:${this.getSlotCount("output")}`;
-        if (nextSignature === this.lastSlotSignature) {
-            return false;
-        }
-
-        this.lastSlotSignature = nextSignature;
-        return true;
-    }
-
-    private invalidatePortLayoutCache(): void {
-        this.portLayoutCache.clear();
-    }
-
-    private createContextWithMask(
+    private resolveShellState(
         changeMask: ModernNodeChangeMaskValue
-    ): ModernNodeBuildContext {
+    ): ModernShellState {
+        const context = this.createLifecycleContext(changeMask);
+        return mergeShellState(
+            defaultShellState(this.node),
+            this.node.getShellState?.(context)
+        );
+    }
+
+    private computeShellLayout(
+        shellState: ModernShellState
+    ): ModernNodeShellLayout {
+        const constants = getLiteGraphConstants();
+        const titleHeight = constants.NODE_TITLE_HEIGHT;
+        const bodyHeight = Math.max(
+            toFiniteNumber(this.node.size?.[1], BODY_MIN_HEIGHT),
+            BODY_MIN_HEIGHT
+        );
+        const isCollapsed = Boolean(this.node.flags?.collapsed);
+        const expandedWidth = Math.max(
+            toFiniteNumber(this.node.size?.[0], BODY_MIN_WIDTH),
+            BODY_MIN_WIDTH
+        );
+        const collapsedWidth =
+            shellState.collapsedWidth != null
+                ? Math.max(toFiniteNumber(shellState.collapsedWidth, expandedWidth), 48)
+                : Math.min(
+                      expandedWidth,
+                      measureTextWidth(String(shellState.title || "")) + titleHeight * 2
+                  );
+        const width = isCollapsed ? collapsedWidth : expandedWidth;
+        const header: ModernNodeRectLike = {
+            x: 0,
+            y: -titleHeight,
+            width,
+            height: titleHeight,
+        };
+        const body: ModernNodeRectLike | null = isCollapsed
+            ? null
+            : {
+                  x: 0,
+                  y: 0,
+                  width,
+                  height: bodyHeight,
+              };
+        const collapse = shellState.collapsible
+            ? {
+                  x: 0,
+                  y: -titleHeight,
+                  width: titleHeight,
+                  height: titleHeight,
+              }
+            : null;
+        const resize =
+            shellState.resizable && body
+                ? {
+                      x: body.width - RESIZE_HANDLE_SIZE,
+                      y: body.height - RESIZE_HANDLE_SIZE,
+                      width: RESIZE_HANDLE_SIZE,
+                      height: RESIZE_HANDLE_SIZE,
+                  }
+                : null;
+
         return {
-            ...this.createContext(),
-            changeMask,
+            width,
+            height: body ? body.height : 0,
+            header,
+            body,
+            collapse,
+            resize,
+            widgets: [],
+            actionParts: [],
+            inputPorts: [],
+            outputPorts: [],
         };
     }
 
-    private createContext(): ModernNodeBuildContext {
+    private applyShellLayout(): void {
+        const layout = this.shellLayout;
+        const shellState = this.shellState;
+        const header = layout.header || {
+            x: 0,
+            y: -TITLE_HEIGHT,
+            width: layout.width,
+            height: TITLE_HEIGHT,
+        };
+        const body = layout.body;
+        const totalHeight = header.height + (body?.height || 0);
+
+        this.shell.header.x = header.x;
+        this.shell.header.y = header.y;
+        this.shell.header.width = header.width;
+        this.shell.header.height = header.height;
+        this.shell.header.fill = shellState.titleColor || "#333333";
+        this.shell.header.stroke = shellState.borderColor || "#243342";
+        this.shell.header.cornerRadius = body ? [10, 10, 0, 0] : [10, 10, 10, 10];
+
+        this.shell.body.visible = Boolean(body);
+        if (body) {
+            this.shell.body.x = body.x;
+            this.shell.body.y = body.y;
+            this.shell.body.width = body.width;
+            this.shell.body.height = body.height;
+            this.shell.body.fill = shellState.bodyColor || "#353535";
+            this.shell.body.stroke = shellState.borderColor || "#243342";
+            this.shell.body.cornerRadius = [0, 0, 10, 10];
+        }
+
+        this.shell.title.text = String(shellState.title || "");
+        this.shell.title.fill = shellState.titleTextColor || "#F5F7FA";
+        this.shell.title.x = (layout.collapse ? header.height : 10) + 10;
+        this.shell.title.y = header.y + header.height / 2;
+        this.shell.title.width = Math.max(24, header.width - this.shell.title.x - 14);
+        this.shell.title.visible = shellState.titleMode !== "hidden";
+
+        this.shell.summary.text = String(shellState.summaryText || "");
+        this.shell.summary.visible = Boolean(
+            body &&
+                !this.widgetEntries.length &&
+                !this.content &&
+                shellState.summaryText
+        );
+        this.shell.summary.x = BODY_PADDING_X;
+        this.shell.summary.y = 16;
+        this.shell.summary.width = Math.max(20, layout.width - BODY_PADDING_X * 2);
+
+        this.shell.signalLamp.visible = shellState.showSignalLamp !== false;
+        this.shell.signalLamp.x = 8;
+        this.shell.signalLamp.y = header.y + 8;
+        this.shell.signalLamp.fill = shellState.boxColor || "#666666";
+
+        this.shell.collapseOverlay.visible = Boolean(layout.collapse);
+        if (layout.collapse) {
+            this.shell.collapseOverlay.x = layout.collapse.x;
+            this.shell.collapseOverlay.y = layout.collapse.y;
+            this.shell.collapseOverlay.width = layout.collapse.width;
+            this.shell.collapseOverlay.height = layout.collapse.height;
+        }
+
+        this.shell.resizeHandle.visible = Boolean(layout.resize);
+        if (layout.resize) {
+            this.shell.resizeHandle.x = layout.resize.x;
+            this.shell.resizeHandle.y = layout.resize.y;
+        }
+
+        this.shell.selectionOutline.x = -OUTLINE_PADDING;
+        this.shell.selectionOutline.y = header.y - OUTLINE_PADDING;
+        this.shell.selectionOutline.width = layout.width + OUTLINE_PADDING * 2;
+        this.shell.selectionOutline.height = totalHeight + OUTLINE_PADDING * 2;
+        this.shell.selectionOutline.visible = Boolean(this.node.is_selected);
+    }
+
+    private syncContentLayout(): void {
+        const contentArea = this.getContentArea();
+        this.shell.contentLayer.visible = Boolean(contentArea);
+        if (!this.content || !contentArea) {
+            return;
+        }
+
+        this.content.x = contentArea.x;
+        this.content.y = contentArea.y;
+        if ("width" in (this.content as unknown as Record<string, unknown>)) {
+            (this.content as unknown as Record<string, unknown>).width =
+                contentArea.width;
+        }
+        if ("height" in (this.content as unknown as Record<string, unknown>)) {
+            (this.content as unknown as Record<string, unknown>).height =
+                contentArea.height;
+        }
+    }
+
+    private syncWidgets(changeMask: ModernNodeChangeMaskValue): void {
+        const collapsed = Boolean(this.node.flags?.collapsed);
+        const schemas = collapsed
+            ? []
+            : Array.isArray(this.node.defineWidgets?.())
+              ? [...(this.node.defineWidgets?.() || [])]
+              : [];
+        this.shell.widgetLayer.visible = !collapsed && schemas.length > 0;
+
+        const nextSignature = signatureOfWidgets(schemas);
+        const needsRebuild =
+            this.widgetEntries.length !== schemas.length ||
+            this.lastWidgetSignature !== nextSignature ||
+            (changeMask & ModernNodeChangeMask.Layout) !== 0;
+
+        if (!schemas.length) {
+            this.clearWidgets();
+            this.patchShellWidgetLayout([]);
+            this.lastWidgetSignature = "";
+            return;
+        }
+
+        const widgetArea = this.resolveWidgetArea();
+        const layouts: ModernNodeWidgetLayout[] = [];
+        for (let i = 0; i < schemas.length; ++i) {
+            const layout = resolveWidgetBounds(widgetArea, i, schemas.length);
+            layouts.push({
+                ...layout,
+                index: i,
+                id: schemas[i].id,
+                type: schemas[i].type,
+                action: schemas[i].type === "toggle" ? "toggle" : "activate",
+                actionZones: this.widgetEntries[i]?.handle.actionZones,
+            });
+        }
+
+        if (needsRebuild) {
+            this.clearWidgets();
+            for (let i = 0; i < schemas.length; ++i) {
+                const schema = schemas[i];
+                const renderer = resolveModernWidgetRenderer(schema.type);
+                if (!renderer) {
+                    continue;
+                }
+                const context = this.createWidgetContext(schema, layouts[i]);
+                const handle = renderer.createView(context);
+                this.addWidgetHandle(handle);
+                this.widgetEntries.push({
+                    schema,
+                    renderer,
+                    handle,
+                    layout: layouts[i],
+                });
+                this.widgetValueSnapshot.set(schema.id, schema.value);
+            }
+            this.lastWidgetSignature = nextSignature;
+        } else {
+            for (let i = 0; i < schemas.length; ++i) {
+                const entry = this.widgetEntries[i];
+                if (!entry) {
+                    continue;
+                }
+                entry.schema = schemas[i];
+                entry.layout = layouts[i];
+                entry.renderer.patchView(
+                    this.createWidgetContext(entry.schema, layouts[i]),
+                    entry.handle,
+                    changeMask
+                );
+                this.widgetValueSnapshot.set(entry.schema.id, entry.schema.value);
+            }
+        }
+
+        for (let i = 0; i < this.widgetEntries.length; ++i) {
+            this.widgetEntries[i].layout.actionZones =
+                this.widgetEntries[i].handle.actionZones;
+        }
+        this.patchShellWidgetLayout(layouts);
+    }
+
+    private syncActionParts(changeMask: ModernNodeChangeMaskValue): void {
+        const collapsed = Boolean(this.node.flags?.collapsed);
+        const actionParts = collapsed
+            ? []
+            : Array.isArray(this.node.defineActionParts?.(this.createLifecycleContext(changeMask)))
+              ? [
+                    ...(this.node.defineActionParts?.(
+                        this.createLifecycleContext(changeMask)
+                    ) || []),
+                ]
+              : [];
+        const visibleParts = actionParts.filter((schema) => schema.visible !== false);
+        this.shell.actionPartLayer.visible = visibleParts.length > 0;
+
+        const nextSignature = signatureOfActionParts(visibleParts);
+        const needsRebuild =
+            this.actionPartEntries.length !== visibleParts.length ||
+            this.lastActionPartSignature !== nextSignature ||
+            (changeMask & ModernNodeChangeMask.Layout) !== 0;
+        const layouts = this.computeActionPartLayouts(visibleParts);
+
+        if (needsRebuild) {
+            this.clearActionParts();
+            for (let i = 0; i < visibleParts.length; ++i) {
+                const schema = visibleParts[i];
+                const layout = layouts[i];
+                const root = new Group({
+                    x: layout.x,
+                    y: layout.y,
+                    width: layout.width,
+                    height: layout.height,
+                    hittable: false,
+                });
+                const background = new Rect({
+                    x: 0,
+                    y: 0,
+                    width: layout.width,
+                    height: layout.height,
+                    fill: "#1C2430",
+                    stroke: "#2E455D",
+                    strokeWidth: 1,
+                    cornerRadius:
+                        schema.placement === "footer-left"
+                            ? [0, 0, 10, 0]
+                            : schema.placement === "footer-right"
+                              ? [0, 0, 0, 10]
+                              : 8,
+                    hittable: false,
+                });
+                const label = createText({
+                    x: 0,
+                    y: layout.height / 2,
+                    width: layout.width,
+                    textAlign: "center",
+                    text: String(schema.label || schema.id),
+                    fontSize: 18,
+                });
+                root.add([background, label]);
+                this.shell.actionPartLayer.add(root);
+                this.actionPartEntries.push({
+                    schema,
+                    root,
+                    background,
+                    label,
+                    layout,
+                });
+            }
+            this.lastActionPartSignature = nextSignature;
+        } else {
+            for (let i = 0; i < visibleParts.length; ++i) {
+                const entry = this.actionPartEntries[i];
+                entry.schema = visibleParts[i];
+                entry.layout = layouts[i];
+                entry.root.x = entry.layout.x;
+                entry.root.y = entry.layout.y;
+                entry.root.width = entry.layout.width;
+                entry.root.height = entry.layout.height;
+                entry.background.width = entry.layout.width;
+                entry.background.height = entry.layout.height;
+                entry.label.width = entry.layout.width;
+                entry.label.y = entry.layout.height / 2;
+                entry.label.text = String(entry.schema.label || entry.schema.id);
+            }
+        }
+
+        this.shellLayout.actionParts = layouts;
+    }
+
+    private syncPorts(): void {
+        const inputLayouts = this.buildPortLayouts("input");
+        const outputLayouts = this.buildPortLayouts("output");
+        this.shellLayout.inputPorts = inputLayouts;
+        this.shellLayout.outputPorts = outputLayouts;
+        this.syncPortLayer("input", inputLayouts);
+        this.syncPortLayer("output", outputLayouts);
+    }
+
+    private mountContent(changeMask: ModernNodeChangeMaskValue): unknown {
+        const lifecycleContext = this.createLifecycleContext(changeMask);
+        if (typeof this.node.mountContent === "function") {
+            return this.node.mountContent(lifecycleContext);
+        }
+        if (typeof this.node.mountView === "function") {
+            return this.node.mountView(lifecycleContext);
+        }
+        if (typeof this.node.buildUI === "function") {
+            return this.node.buildUI(this.createContextWithMask(changeMask, this.shellState));
+        }
+        return null;
+    }
+
+    private patchContent(changeMask: ModernNodeChangeMaskValue): void {
+        const lifecycleContext = this.createLifecycleContext(changeMask);
+        if (typeof this.node.patchContent === "function") {
+            this.node.patchContent(lifecycleContext);
+            return;
+        }
+        if (typeof this.node.patchView === "function") {
+            this.node.patchView(lifecycleContext);
+            return;
+        }
+        this.node.updateUI?.(this.createContextWithMask(changeMask, this.shellState));
+    }
+
+    private getContentArea(): ModernNodeRectLike | null {
+        const body = this.shellLayout.body;
+        if (!body) {
+            return null;
+        }
+        const footerHeight = this.hasFooterActionParts() ? TITLE_HEIGHT : 0;
         return {
-            node: this.node,
-            host: this,
-            root: this.root,
-            content: this.content,
-            changeMask: ModernNodeChangeMask.All,
-            interactionState: this.interactionState,
-            leafer,
+            x: BODY_PADDING_X,
+            y: BODY_PADDING_Y,
+            width: Math.max(16, body.width - BODY_PADDING_X * 2),
+            height: Math.max(0, body.height - BODY_PADDING_Y * 2 - footerHeight),
         };
     }
 
-    private getSlotCount(kind: NodeViewPortKind): number {
-        const list = kind === "input" ? this.node.inputs : this.node.outputs;
-        return Array.isArray(list) ? list.length : 0;
+    private hasFooterActionParts(): boolean {
+        const schemas = this.node.defineActionParts?.(
+            this.createLifecycleContext(ModernNodeChangeMask.Layout)
+        );
+        return Boolean(
+            Array.isArray(schemas) &&
+                schemas.some(
+                    (schema) =>
+                        schema.visible !== false &&
+                        (schema.placement === "footer-left" ||
+                            schema.placement === "footer-right")
+                )
+        );
+    }
+
+    private patchShellWidgetLayout(layout: ModernNodeWidgetLayout[]): void {
+        this.shellLayout.widgets = layout;
+    }
+
+    private resolveWidgetArea(): ModernNodeRectLike {
+        const body = this.shellLayout.body || {
+            x: 0,
+            y: 0,
+            width: this.shellLayout.width,
+            height: BODY_MIN_HEIGHT,
+        };
+        const footerHeight = this.hasFooterActionParts() ? TITLE_HEIGHT : 0;
+        return {
+            x: BODY_PADDING_X,
+            y: BODY_PADDING_Y,
+            width: Math.max(20, body.width - BODY_PADDING_X * 2),
+            height: Math.max(20, body.height - BODY_PADDING_Y * 2 - footerHeight),
+        };
+    }
+
+    private addWidgetHandle(handle: ModernWidgetViewHandle): void {
+        const root = toUI(handle.root);
+        if (!root) {
+            return;
+        }
+        root.hittable = false;
+        this.shell.widgetLayer.add(root);
+    }
+
+    private computeActionPartLayouts(
+        schemas: readonly ModernActionPartSchema<ModernNodeLike, ModernNodeHost>[]
+    ): ModernNodeActionPartLayout[] {
+        const body = this.shellLayout.body;
+        if (!body) {
+            return [];
+        }
+
+        const layouts: ModernNodeActionPartLayout[] = [];
+        for (let i = 0; i < schemas.length; ++i) {
+            const schema = schemas[i];
+            let bounds: ModernNodeRectLike | null = schema.bounds
+                ? cloneRect(schema.bounds)
+                : null;
+
+            if (!bounds) {
+                if (schema.placement === "footer-left") {
+                    bounds = {
+                        x: 0,
+                        y: body.height - TITLE_HEIGHT,
+                        width: body.width / 2,
+                        height: TITLE_HEIGHT,
+                    };
+                } else if (schema.placement === "footer-right") {
+                    bounds = {
+                        x: body.width / 2,
+                        y: body.height - TITLE_HEIGHT,
+                        width: body.width / 2,
+                        height: TITLE_HEIGHT,
+                    };
+                } else if (schema.placement === "header-right") {
+                    bounds = {
+                        x: body.width - TITLE_HEIGHT,
+                        y: -TITLE_HEIGHT,
+                        width: TITLE_HEIGHT,
+                        height: TITLE_HEIGHT,
+                    };
+                } else {
+                    bounds = {
+                        x: BODY_PADDING_X,
+                        y: BODY_PADDING_Y,
+                        width: Math.max(24, body.width - BODY_PADDING_X * 2),
+                        height: 24,
+                    };
+                }
+            }
+
+            layouts.push({
+                ...bounds,
+                index: i,
+                id: schema.id,
+                action: schema.action || schema.id,
+                cursor: schema.cursor || "pointer",
+            });
+        }
+
+        return layouts;
+    }
+
+    private buildPortLayouts(kind: NodeViewPortKind): ModernNodePortVisualLayout[] {
+        const slotList = kind === "input" ? this.node.inputs : this.node.outputs;
+        const slots = Array.isArray(slotList) ? slotList : [];
+        const isCollapsed = Boolean(this.node.flags?.collapsed);
+        if (isCollapsed && this.shellState.showCollapsedSlots === false) {
+            return [];
+        }
+
+        const layouts: ModernNodePortVisualLayout[] = [];
+        for (let i = 0; i < slots.length; ++i) {
+            const presentation = this.resolvePortPresentation(kind, i, slots[i]);
+            const anchor = this.resolvePortAnchorLocal(kind, i);
+            if (!anchor) {
+                continue;
+            }
+            const radius = Math.max(
+                toFiniteNumber(
+                    presentation.radius,
+                    this.node.getPortLayout?.(
+                        kind,
+                        i,
+                        this.createContextWithMask(
+                            ModernNodeChangeMask.Ports,
+                            this.shellState
+                        )
+                    )?.radius
+                ),
+                6
+            );
+            const label = String(presentation.label || "");
+            layouts.push({
+                index: i,
+                x: anchor[0] - radius,
+                y: anchor[1] - radius,
+                width: radius * 2,
+                height: radius * 2,
+                anchorX: anchor[0],
+                anchorY: anchor[1],
+                dir: toFiniteNumber(
+                    presentation.dir,
+                    kind === "input" ? PORT_DIRECTION_LEFT : PORT_DIRECTION_RIGHT
+                ),
+                radius,
+                label,
+                hiddenLabelWhenCollapsed: Boolean(
+                    isCollapsed && presentation.hideLabelWhenCollapsed !== false
+                ),
+                shape: presentation.shape || "circle",
+                colorOn: presentation.colorOn || getLiteGraphConstants().LINK_COLOR,
+                colorOff: presentation.colorOff || "#6E7681",
+                active: this.isPortActive(kind, i, slots[i]),
+            });
+        }
+        return layouts;
+    }
+
+    private resolvePortPresentation(
+        kind: NodeViewPortKind,
+        slotIndex: number,
+        slot: unknown
+    ): ModernPortPresentation {
+        const constants = getLiteGraphConstants();
+        const slotRecord = (slot || {}) as Record<string, unknown>;
+        const explicit =
+            this.node.getPortPresentation?.(
+                kind,
+                slotIndex,
+                this.createLifecycleContext(ModernNodeChangeMask.Ports)
+            ) || null;
+
+        let shape = explicit?.shape || "circle";
+        if (!explicit?.shape) {
+            if (
+                toFiniteNumber(slotRecord.shape) === constants.BOX_SHAPE ||
+                slotRecord.type === constants.EVENT ||
+                slotRecord.type === constants.ACTION
+            ) {
+                shape = "box";
+            } else if (toFiniteNumber(slotRecord.shape) === constants.ARROW_SHAPE) {
+                shape = "arrow";
+            } else if (toFiniteNumber(slotRecord.shape) === constants.GRID_SHAPE) {
+                shape = "grid";
+            }
+        }
+
+        const defaultActiveColor =
+            slotRecord.type === constants.EVENT || slotRecord.type === constants.ACTION
+                ? constants.EVENT_LINK_COLOR
+                : constants.LINK_COLOR;
+
+        return {
+            label: String(explicit?.label || slotRecord.label || slotRecord.name || ""),
+            shape,
+            dir: explicit?.dir,
+            colorOn:
+                explicit?.colorOn ||
+                String(slotRecord.color_on || slotRecord.color || defaultActiveColor),
+            colorOff: explicit?.colorOff || String(slotRecord.color_off || "#6E7681"),
+            hideLabelWhenCollapsed: explicit?.hideLabelWhenCollapsed !== false,
+            radius: explicit?.radius,
+        };
+    }
+
+    private resolvePortAnchorLocal(
+        kind: NodeViewPortKind,
+        slotIndex: number
+    ): [number, number] | null {
+        const explicit = this.node.getPortLayout?.(
+            kind,
+            slotIndex,
+            this.createContextWithMask(ModernNodeChangeMask.Ports, this.shellState)
+        );
+        if (explicit) {
+            if (explicit.space === "world") {
+                return [
+                    explicit.x - toFiniteNumber(this.node.pos?.[0]),
+                    explicit.y - toFiniteNumber(this.node.pos?.[1]),
+                ];
+            }
+            return [toFiniteNumber(explicit.x), toFiniteNumber(explicit.y)];
+        }
+
+        const anchor = toPoint(
+            this.node.getConnectionPos?.(kind === "input", slotIndex)
+        );
+        if (!anchor) {
+            return null;
+        }
+        return [
+            anchor[0] - toFiniteNumber(this.node.pos?.[0]),
+            anchor[1] - toFiniteNumber(this.node.pos?.[1]),
+        ];
+    }
+
+    private isPortActive(
+        kind: NodeViewPortKind,
+        _slotIndex: number,
+        slot: unknown
+    ): boolean {
+        const slotRecord = (slot || {}) as Record<string, unknown>;
+        if (kind === "input") {
+            return slotRecord.link != null;
+        }
+        return Array.isArray(slotRecord.links) && slotRecord.links.length > 0;
+    }
+
+    private syncPortLayer(
+        kind: NodeViewPortKind,
+        layouts: readonly ModernNodePortVisualLayout[]
+    ): void {
+        const layer =
+            kind === "input" ? this.shell.inputPortLayer : this.shell.outputPortLayer;
+        const activeKeys = new Set<string>();
+
+        for (let i = 0; i < layouts.length; ++i) {
+            const layout = layouts[i];
+            const key = `${kind}:${layout.index}`;
+            activeKeys.add(key);
+            let entry = this.portEntries.get(key);
+            const markerColor = layout.active ? layout.colorOn : layout.colorOff;
+            if (!entry) {
+                const root = new Group({
+                    x: layout.anchorX,
+                    y: layout.anchorY,
+                    hittable: false,
+                });
+                const marker = createPortMarker(layout.shape, markerColor);
+                const label = createText({
+                    x: kind === "input" ? layout.anchorX + 10 : layout.anchorX - 90,
+                    y: layout.anchorY,
+                    width: 80,
+                    textAlign: kind === "input" ? "left" : "right",
+                    fontSize: 11,
+                    fill: "#D5DEE7",
+                    text: layout.label,
+                });
+                root.add(marker);
+                layer.add([root, label]);
+                entry = {
+                    kind,
+                    slotIndex: layout.index,
+                    layout,
+                    root,
+                    marker,
+                    label,
+                };
+                this.portEntries.set(key, entry);
+            }
+
+            entry.layout = layout;
+            entry.root.x = layout.anchorX;
+            entry.root.y = layout.anchorY;
+            if (!this.isSameMarkerShape(entry.marker, layout.shape)) {
+                entry.marker.destroy();
+                entry.marker = createPortMarker(layout.shape, markerColor);
+                entry.root.add(entry.marker);
+            } else {
+                setShapeColor(entry.marker, markerColor);
+            }
+
+            entry.label.text = layout.label;
+            entry.label.visible = !layout.hiddenLabelWhenCollapsed && Boolean(layout.label);
+            entry.label.x = kind === "input" ? layout.anchorX + 10 : layout.anchorX - 90;
+            entry.label.y = layout.anchorY;
+            entry.label.width = 80;
+        }
+
+        for (const [key, entry] of this.portEntries.entries()) {
+            if (!key.startsWith(`${kind}:`) || activeKeys.has(key)) {
+                continue;
+            }
+            entry.root.destroy();
+            entry.label.destroy();
+            this.portEntries.delete(key);
+        }
+    }
+
+    private isSameMarkerShape(marker: UI | Group, shape: string): boolean {
+        return (
+            ((marker as unknown as Record<string, unknown>).__litegraphPortShape as
+                | string
+                | undefined) === shape
+        );
     }
 
     private resolvePortLayout(
         kind: NodeViewPortKind,
         slotIndex: number
-    ): ModernNodePortLayout | null {
-        const cacheKey = `${kind}:${slotIndex}`;
-        if (this.portLayoutCache.has(cacheKey)) {
-            return this.portLayoutCache.get(cacheKey) || null;
+    ): ModernNodePortVisualLayout | null {
+        const list =
+            kind === "input"
+                ? this.shellLayout.inputPorts || []
+                : this.shellLayout.outputPorts || [];
+        for (let i = 0; i < list.length; ++i) {
+            if (list[i].index === slotIndex) {
+                return list[i];
+            }
         }
-
-        const resolvedLayout =
-            this.node.getPortLayout?.(
-                kind,
-                slotIndex,
-                this.createContextWithMask(ModernNodeChangeMask.Ports)
-            ) || null;
-        this.portLayoutCache.set(cacheKey, resolvedLayout);
-
-        return resolvedLayout;
+        return null;
     }
 
-    private getShellState(): ModernNodeShellState | null {
-        if (!this.content || typeof this.content !== "object") {
-            return null;
-        }
-
-        return (
-            (this.content as unknown as Record<string, unknown>)[
-                MODERN_NODE_STATE_KEY
-            ] as ModernNodeShellState | undefined
-        ) || null;
+    private storeInspectableState(): void {
+        (this.root as unknown as Record<string, unknown>)[MODERN_NODE_STATE_KEY] = {
+            layout: this.shellLayout,
+            shellState: this.shellState,
+        } satisfies StoredModernNodeState;
     }
 
     private applyInteractionState(): void {
-        this.root.selected = Boolean(
-            (this.node as { is_selected?: boolean }).is_selected
-        );
-        this.getShellState()?.applyInteractionState?.(this.interactionState);
+        const shellState = this.shellState;
+        const headerHoverEnabled = Boolean(shellState.allowNodeHover);
+        const headerState = headerHoverEnabled
+            ? partStateFor(this.interactionState, "header")
+            : "";
+        const bodyState = headerHoverEnabled
+            ? partStateFor(this.interactionState, "body")
+            : "";
+        const collapseState = partStateFor(this.interactionState, "collapse");
+        const resizeState = partStateFor(this.interactionState, "resize");
+
+        this.root.selected = Boolean(this.node.is_selected);
+        this.shell.selectionOutline.visible = Boolean(this.node.is_selected);
+
+        this.shell.header.stroke =
+            headerState === "press"
+                ? "#76A8FF"
+                : headerState === "hover"
+                  ? "#4E6D94"
+                  : shellState.borderColor || "#243342";
+        if (this.shellLayout.body) {
+            this.shell.body.stroke =
+                bodyState === "press"
+                    ? "#76A8FF"
+                    : bodyState === "hover"
+                      ? "#4E6D94"
+                      : shellState.borderColor || "#243342";
+        }
+
+        this.shell.collapseOverlay.fill =
+            collapseState === "press"
+                ? "rgba(255,255,255,0.16)"
+                : collapseState === "hover"
+                  ? "rgba(255,255,255,0.08)"
+                  : "rgba(255,255,255,0)";
+        this.shell.resizeHandleGlyph.stroke =
+            resizeState === "press"
+                ? "#76A8FF"
+                : resizeState === "hover"
+                  ? "#C7D5E0"
+                  : "#8593A0";
+
         this.applyWidgetInteractionState();
+        this.applyActionPartInteractionState();
+        this.applyPortInteractionState();
+    }
+
+    private clearWidgets(): void {
+        for (let i = 0; i < this.widgetEntries.length; ++i) {
+            const handle = this.widgetEntries[i].handle;
+            if (handle.destroy) {
+                handle.destroy();
+            } else {
+                toUI(handle.root)?.destroy();
+            }
+        }
+        this.widgetEntries = [];
+        this.widgetValueSnapshot.clear();
+    }
+
+    private clearActionParts(): void {
+        for (let i = 0; i < this.actionPartEntries.length; ++i) {
+            this.actionPartEntries[i].root.destroy();
+        }
+        this.actionPartEntries = [];
+    }
+
+    private createLifecycleContext(
+        changeMask: ModernNodeChangeMaskValue
+    ): ModernNodeLifecycleContext<ModernNodeLike, ModernNodeHost> {
+        return {
+            node: this.node,
+            host: this,
+            root: this.root,
+            content: this.content,
+            changeMask,
+            interactionState: this.interactionState,
+            leafer,
+            shellState: this.shellState,
+        };
+    }
+
+    private createContextWithMask(
+        changeMask: ModernNodeChangeMaskValue,
+        shellState: ModernShellState
+    ): ModernNodeBuildContext {
+        return {
+            node: this.node,
+            host: this,
+            root: this.root,
+            content: this.content,
+            changeMask,
+            interactionState: this.interactionState,
+            shellState,
+            leafer,
+        };
+    }
+
+    private createWidgetContext(
+        schema: ModernWidgetSchema,
+        bounds: ModernNodeRectLike
+    ): ModernWidgetRenderContext<ModernNodeLike, ModernNodeHost> {
+        return {
+            node: this.node,
+            host: this,
+            schema,
+            bounds,
+            leafer,
+        };
+    }
+
+    private applyWidgetInteractionState(): void {
+        const hoveredIndex =
+            this.interactionState.hoveredPart?.kind === "widget"
+                ? this.interactionState.hoveredPart.index
+                : null;
+        const pressedIndex =
+            this.interactionState.pressedPart?.kind === "widget"
+                ? this.interactionState.pressedPart.index
+                : null;
+
+        for (let i = 0; i < this.widgetEntries.length; ++i) {
+            const entry = this.widgetEntries[i];
+            const widgetRoot = entry.handle.root as Record<string, unknown>;
+            if (!widgetRoot || typeof widgetRoot !== "object") {
+                continue;
+            }
+            widgetRoot.disabled = Boolean(entry.schema.disabled);
+            if (entry.schema.disabled) {
+                widgetRoot.state = "";
+                continue;
+            }
+            if (pressedIndex === i) {
+                widgetRoot.state = "press";
+            } else if (hoveredIndex === i) {
+                widgetRoot.state = "hover";
+            } else {
+                widgetRoot.state = "";
+            }
+        }
+    }
+
+    private applyActionPartInteractionState(): void {
+        for (let i = 0; i < this.actionPartEntries.length; ++i) {
+            const entry = this.actionPartEntries[i];
+            const state = partStateFor(
+                this.interactionState,
+                "action-part",
+                i,
+                entry.schema.id
+            );
+            entry.background.fill =
+                state === "press"
+                    ? "#17304F"
+                    : state === "hover"
+                      ? "#223951"
+                      : "#1C2430";
+            entry.background.stroke =
+                state === "press"
+                    ? "#76A8FF"
+                    : state === "hover"
+                      ? "#4E6D94"
+                      : "#2E455D";
+        }
+    }
+
+    private applyPortInteractionState(): void {
+        for (const entry of this.portEntries.values()) {
+            const partKind: ModernNodePartKind =
+                entry.kind === "input" ? "input-port" : "output-port";
+            const state = partStateFor(
+                this.interactionState,
+                partKind,
+                entry.slotIndex
+            );
+            const baseColor = entry.layout.active
+                ? entry.layout.colorOn
+                : entry.layout.colorOff;
+            const color =
+                state === "press"
+                    ? "#FFFFFF"
+                    : state === "hover"
+                      ? "#B9D7FF"
+                      : baseColor;
+            setShapeColor(entry.marker, color);
+        }
     }
 
     private hitWidgetPart(
@@ -982,10 +2058,9 @@ export class ModernNodeHost implements NodeViewHost {
                     };
                 }
             }
+
             if (widget.actionZones) {
-                const zoneEntries = Object.entries(widget.actionZones);
-                for (let zoneIndex = 0; zoneIndex < zoneEntries.length; ++zoneIndex) {
-                    const [action, rect] = zoneEntries[zoneIndex];
+                for (const [action, rect] of Object.entries(widget.actionZones)) {
                     if (pointInsideRect(point, rect)) {
                         return {
                             kind: "widget",
@@ -1005,6 +2080,31 @@ export class ModernNodeHost implements NodeViewHost {
                     action: widget.action || "activate",
                     cursor: "pointer",
                     bounds: widget,
+                };
+            }
+        }
+
+        return null;
+    }
+
+    private hitActionPart(
+        point: readonly [number, number],
+        actionParts?: ModernNodeActionPartLayout[] | null
+    ): ModernNodePartHit | null {
+        if (!actionParts?.length) {
+            return null;
+        }
+
+        for (let i = 0; i < actionParts.length; ++i) {
+            const part = actionParts[i];
+            if (pointInsideRect(point, part)) {
+                return {
+                    kind: "action-part",
+                    index: part.index,
+                    id: part.id,
+                    action: part.action,
+                    cursor: part.cursor || "pointer",
+                    bounds: part,
                 };
             }
         }
@@ -1034,30 +2134,5 @@ export class ModernNodeHost implements NodeViewHost {
         }
 
         return null;
-    }
-
-    private hitFallbackPart(
-        point: readonly [number, number]
-    ): ModernNodePartHit | null {
-        const width = Math.max(toFiniteNumber(this.node.size?.[0], 120), 120);
-        const height = Math.max(toFiniteNumber(this.node.size?.[1], 60), 60);
-        if (
-            point[0] < 0 ||
-            point[1] < 0 ||
-            point[0] > width ||
-            point[1] > height
-        ) {
-            return null;
-        }
-
-        return {
-            kind: point[1] <= 32 ? "header" : "body",
-            bounds: {
-                x: 0,
-                y: 0,
-                width,
-                height,
-            },
-        };
     }
 }

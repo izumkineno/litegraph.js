@@ -17,7 +17,7 @@ class DemoModernNode extends ModernNodeBase {
         };
     }
 
-    protected mountView(_context: any): unknown {
+    protected mountContent(_context: any): unknown {
         return null;
     }
 }
@@ -33,7 +33,7 @@ class DemoModernNodeB extends ModernNodeBase {
         };
     }
 
-    protected mountView(_context: any): unknown {
+    protected mountContent(_context: any): unknown {
         return null;
     }
 }
@@ -105,7 +105,7 @@ describe("modern node API", () => {
         ).toBe("modern");
         expect(
             discriminateNodeRuntime({
-                mountView: () => null,
+                mountContent: () => null,
             })
         ).toBe("modern");
         expect(discriminateNodeRuntime({ id: 1 })).toBe("legacy");

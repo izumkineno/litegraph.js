@@ -9,10 +9,11 @@
         return;
     }
 
-    var MODERN_STATE_KEY =
-        (LiteGraph.ModernNodeContracts &&
-            LiteGraph.ModernNodeContracts.MODERN_NODE_STATE_KEY) ||
-        "__litegraphModernState";
+    var ModernNodeChangeMask =
+        LiteGraph.ModernNodeChangeMask || ns.ModernNodeChangeMask || {};
+
+    var measureCanvas = null;
+    var measureContext = null;
 
     function toFiniteNumber(value, fallback) {
         var numericValue = Number(value);
@@ -50,138 +51,182 @@
         return { inputs: inputs, outputs: outputs };
     }
 
-    function createDefaultNodeView(context) {
-        var leafer = context.leafer;
-        var Group = leafer.Group;
-        var Rect = leafer.Rect;
-        var Text = leafer.Text;
-        var node = context.node;
-        var width = Math.max(toFiniteNumber(node.size && node.size[0], 180), 120);
-        var height = Math.max(toFiniteNumber(node.size && node.size[1], 60), 28);
-        var titleHeight = 18;
-        var widgetRoot = new Group({
-            name: "litegraph-modern-widget-root",
-            hittable: false,
-        });
-
-        var root = new Group({
-            name: "litegraph-modern-node-shell",
-            hittable: false,
-        });
-        var titleBar = new Rect({
-            x: 0,
-            y: -titleHeight,
-            width: width,
-            height: titleHeight,
-            cornerRadius: [8, 8, 0, 0],
-            fill: "#101A29",
-            stroke: "#32475F",
-            strokeWidth: 1,
-            hittable: false,
-        });
-        var body = new Rect({
-            x: 0,
-            y: 0,
-            width: width,
-            height: height,
-            cornerRadius: 10,
-            fill: "#0F1621",
-            stroke: "#32475F",
-            strokeWidth: 1.5,
-            hittable: false,
-        });
-        var title = new Text({
-            x: 10,
-            y: -titleHeight / 2,
-            text: String(node.title || node.type || "Node"),
-            fontSize: 11,
-            fontWeight: "bold",
-            fill: "#E6EEF8",
-            hittable: false,
-            verticalAlign: "middle",
-        });
-        var summary = new Text({
-            x: 10,
-            y: height / 2,
-            text: "",
-            fontSize: 11,
-            fill: "#8FA6BF",
-            hittable: false,
-            verticalAlign: "middle",
-        });
-
-        root.add([titleBar, body, summary, widgetRoot, title]);
-        root[MODERN_STATE_KEY] = {
-            titleBar: titleBar,
-            body: body,
-            title: title,
-            summary: summary,
-            widgetRoot: widgetRoot,
-            layout: {
-                width: width,
-                height: height,
-                body: { x: 0, y: 0, width: width, height: height },
-                header: { x: 0, y: -titleHeight, width: width, height: titleHeight },
-            },
-            applyInteractionState: function(state) {
-                var pressed = state && state.pressed;
-                var hovered = state && state.hovered;
-                titleBar.stroke = pressed
-                    ? "#76A8FF"
-                    : hovered
-                      ? "#4E6D94"
-                      : "#32475F";
-                body.stroke = pressed
-                    ? "#76A8FF"
-                    : hovered
-                      ? "#4E6D94"
-                      : "#32475F";
-            },
-        };
-
-        return root;
+    function ensureMeasureContext() {
+        if (measureContext) {
+            return measureContext;
+        }
+        if (typeof document === "undefined" || !document.createElement) {
+            return null;
+        }
+        measureCanvas = document.createElement("canvas");
+        measureContext = measureCanvas.getContext("2d");
+        if (measureContext) {
+            measureContext.font = "14px Arial";
+        }
+        return measureContext;
     }
 
-    function patchDefaultNodeView(context) {
-        var node = context.node;
-        var content = context.content;
-        var state = content && content[MODERN_STATE_KEY];
-        if (!state) {
-            return;
+    function measureTitleWidth(text) {
+        var value = String(text || "");
+        var ctx = ensureMeasureContext();
+        if (ctx && typeof ctx.measureText === "function") {
+            return ctx.measureText(value).width;
         }
+        return value.length * 7.2;
+    }
 
-        var width = Math.max(toFiniteNumber(node.size && node.size[0], 180), 120);
-        var height = Math.max(toFiniteNumber(node.size && node.size[1], 60), 28);
-        var hasWidgets =
-            typeof node.defineWidgets === "function" &&
-            node.defineWidgets().length > 0;
-        if (state.titleBar) {
-            state.titleBar.width = width;
+    function getNodeTitle(node) {
+        if (node && typeof node.getTitle === "function") {
+            return String(node.getTitle() || node.title || node.type || "Node");
         }
-        state.body.width = width;
-        state.body.height = height;
-        state.title.text = String(node.title || node.type || "Node");
-        state.summary.text = getNodeSummary(node);
-        state.summary.visible = !hasWidgets;
-        state.summary.y = height / 2;
-        state.layout.width = width;
-        state.layout.height = height;
-        if (state.layout.body) {
-            state.layout.body.width = width;
-            state.layout.body.height = height;
-        }
-        if (state.layout.header) {
-            state.layout.header.width = width;
-        }
+        return String((node && (node.title || node.type)) || "Node");
     }
 
     function getNodeSummary(node) {
-        if (typeof node.getTitle === "function") {
+        if (!node) {
             return "";
         }
+
+        if (typeof node.getSummaryText === "function") {
+            return String(node.getSummaryText() || "");
+        }
+
+        if (Array.isArray(node.widgets) && node.widgets.length) {
+            return "";
+        }
+
         var inputCount = Array.isArray(node.inputs) ? node.inputs.length : 0;
         var outputCount = Array.isArray(node.outputs) ? node.outputs.length : 0;
+        if (!inputCount && !outputCount) {
+            return "";
+        }
         return inputCount + " in / " + outputCount + " out";
+    }
+
+    function resolveModeBoxColor(node) {
+        if (node && node.action_triggered) {
+            return "#FFFFFF";
+        }
+        if (node && node.execute_triggered) {
+            return "#AAAAAA";
+        }
+        if (
+            node &&
+            node.mode != null &&
+            Array.isArray(LiteGraph.NODE_MODES_COLORS) &&
+            LiteGraph.NODE_MODES_COLORS[node.mode]
+        ) {
+            return LiteGraph.NODE_MODES_COLORS[node.mode];
+        }
+        return null;
+    }
+
+    function resolveShellState(node) {
+        var constructorRef = node && node.constructor ? node.constructor : {};
+        return {
+            title: getNodeTitle(node),
+            titleMode: "default",
+            titleColor:
+                node.color ||
+                constructorRef.title_color ||
+                constructorRef.color ||
+                LiteGraph.NODE_DEFAULT_COLOR ||
+                "#333333",
+            titleTextColor:
+                node.title_text_color ||
+                constructorRef.title_text_color ||
+                "#F5F7FA",
+            boxColor:
+                node.boxcolor ||
+                resolveModeBoxColor(node) ||
+                LiteGraph.NODE_DEFAULT_BOXCOLOR ||
+                "#666666",
+            bodyColor:
+                node.bgcolor ||
+                constructorRef.bgcolor ||
+                LiteGraph.NODE_DEFAULT_BGCOLOR ||
+                "#353535",
+            borderColor:
+                node.outlinecolor ||
+                constructorRef.outlinecolor ||
+                "#1F2D3D",
+            showSignalLamp: true,
+            collapsible: constructorRef.collapsable !== false,
+            resizable: node.resizable !== false,
+            showCollapsedSlots: true,
+            allowNodeHover: false,
+            summaryText: getNodeSummary(node),
+        };
+    }
+
+    function resolveCollapsedWidth(node) {
+        var titleHeight = toFiniteNumber(LiteGraph.NODE_TITLE_HEIGHT, 30);
+        var nodeWidth = Math.max(toFiniteNumber(node.size && node.size[0], 140), 80);
+        return Math.min(nodeWidth, measureTitleWidth(getNodeTitle(node)) + titleHeight * 2);
+    }
+
+    function resolvePortShape(slot) {
+        if (!slot) {
+            return "circle";
+        }
+        if (
+            slot.shape === LiteGraph.BOX_SHAPE ||
+            slot.type === LiteGraph.EVENT ||
+            slot.type === LiteGraph.ACTION
+        ) {
+            return "box";
+        }
+        if (slot.shape === LiteGraph.ARROW_SHAPE) {
+            return "arrow";
+        }
+        if (slot.shape === LiteGraph.GRID_SHAPE) {
+            return "grid";
+        }
+        return "circle";
+    }
+
+    function resolvePortColor(slot) {
+        if (!slot) {
+            return {
+                colorOn: LiteGraph.LINK_COLOR || "#9A9",
+                colorOff: "#6E7681",
+            };
+        }
+
+        var activeColor =
+            slot.type === LiteGraph.EVENT || slot.type === LiteGraph.ACTION
+                ? LiteGraph.EVENT_LINK_COLOR || "#A86"
+                : LiteGraph.LINK_COLOR || "#9A9";
+
+        if (typeof slot.color_on === "string") {
+            activeColor = slot.color_on;
+        } else if (typeof slot.color === "string") {
+            activeColor = slot.color;
+        }
+
+        return {
+            colorOn: activeColor,
+            colorOff: typeof slot.color_off === "string" ? slot.color_off : "#6E7681",
+        };
+    }
+
+    function resolvePortPresentation(node, kind, slotIndex) {
+        var slotList = kind === "input" ? node.inputs : node.outputs;
+        var slot = Array.isArray(slotList) ? slotList[slotIndex] : null;
+        if (!slot) {
+            return null;
+        }
+
+        var colors = resolvePortColor(slot);
+        return {
+            label: slot.label || slot.name || "",
+            shape: resolvePortShape(slot),
+            dir: slot.dir,
+            colorOn: colors.colorOn,
+            colorOff: colors.colorOff,
+            hideLabelWhenCollapsed: true,
+            radius: 10,
+        };
     }
 
     class BaseNode extends LiteGraph.ModernNodeBase {
@@ -189,13 +234,28 @@
             return buildSlotSchemaFromNode(this);
         }
 
-        mountView(context) {
-            return createDefaultNodeView(context);
+        getShellState() {
+            var shellState = resolveShellState(this);
+            if (this.flags && this.flags.collapsed) {
+                shellState.summaryText = "";
+            }
+            shellState.collapsedWidth = resolveCollapsedWidth(this);
+            return shellState;
         }
 
-        patchView(context) {
-            patchDefaultNodeView(context);
+        getPortPresentation(kind, slotIndex) {
+            return resolvePortPresentation(this, kind, slotIndex);
         }
+
+        defineActionParts() {
+            return [];
+        }
+
+        mountContent() {
+            return null;
+        }
+
+        patchContent() {}
 
         syncModernPorts() {
             this.refreshModernPorts();
@@ -241,10 +301,9 @@
     }
 
     ns.__baseRuntimeReady = true;
-    ns.MODERN_STATE_KEY = MODERN_STATE_KEY;
     ns.ModernNodeBase = LiteGraph.ModernNodeBase;
     ns.ModernNodeContracts = LiteGraph.ModernNodeContracts;
-    ns.ModernNodeChangeMask = LiteGraph.ModernNodeChangeMask;
+    ns.ModernNodeChangeMask = ModernNodeChangeMask;
     ns.registerNode = function(nodeClass) {
         return LiteGraph.registerModernNode(nodeClass);
     };
@@ -253,9 +312,10 @@
     };
     ns.BaseNode = BaseNode;
     ns.buildSlotSchemaFromNode = buildSlotSchemaFromNode;
-    ns.createDefaultNodeView = createDefaultNodeView;
-    ns.patchDefaultNodeView = patchDefaultNodeView;
     ns.getNodeSummary = getNodeSummary;
+    ns.resolveShellState = resolveShellState;
+    ns.resolvePortPresentation = resolvePortPresentation;
+    ns.resolveCollapsedWidth = resolveCollapsedWidth;
     ns.registerBaseNodeClass = registerBaseNodeClass;
     ns.baseModules = ns.baseModules || [];
     ns.baseModuleMap = ns.baseModuleMap || {};

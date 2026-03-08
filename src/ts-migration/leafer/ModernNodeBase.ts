@@ -4,11 +4,14 @@ import type { NodeViewPortKind } from "./NodeViewHost";
 import {
     MODERN_NODE_MARKER_KEY,
     ModernNodeChangeMask,
+    type ModernActionPartSchema,
     type ModernNodeChangeMaskValue,
     type ModernNodeLifecycleContext,
     type ModernNodePortDefinition,
     type ModernNodePortLayout,
+    type ModernPortPresentation,
     type ModernNodePortSchema,
+    type ModernShellState,
 } from "./ModernNodeContracts";
 import type { ModernWidgetSchema } from "./ModernWidgetContracts";
 
@@ -37,13 +40,45 @@ export abstract class ModernNodeBase extends LGraphNodeCanvasCollab {
         return [];
     }
 
-    protected abstract mountView(
+    defineActionParts(
+        _context: ModernNodeLifecycleContext<this>
+    ): ReadonlyArray<ModernActionPartSchema<this>> {
+        return [];
+    }
+
+    getShellState(
+        _context: ModernNodeLifecycleContext<this>
+    ): ModernShellState | null {
+        return null;
+    }
+
+    getPortPresentation(
+        _kind: NodeViewPortKind,
+        _slotIndex: number,
+        _context: ModernNodeLifecycleContext<this>
+    ): ModernPortPresentation | null {
+        return null;
+    }
+
+    protected abstract mountContent(
         context: ModernNodeLifecycleContext<this>
     ): unknown;
 
-    protected patchView(
+    protected patchContent(
         _context: ModernNodeLifecycleContext<this>
     ): void {}
+
+    protected mountView(
+        context: ModernNodeLifecycleContext<this>
+    ): unknown {
+        return this.mountContent(context);
+    }
+
+    protected patchView(
+        context: ModernNodeLifecycleContext<this>
+    ): void {
+        this.patchContent(context);
+    }
 
     getPortLayout?(
         _kind: NodeViewPortKind,
@@ -57,12 +92,12 @@ export abstract class ModernNodeBase extends LGraphNodeCanvasCollab {
 
     buildUI(context: ModernNodeLifecycleContext<this>): unknown {
         this.ensureModernPorts();
-        return this.mountView(context);
+        return this.mountContent(context);
     }
 
     updateUI(context: ModernNodeLifecycleContext<this>): void {
         this.ensureModernPorts();
-        this.patchView(context);
+        this.patchContent(context);
     }
 
     ensureModernPorts(force = false): void {

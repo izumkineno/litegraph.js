@@ -952,6 +952,9 @@ export class InteractionController {
         }
 
         if (session.part.kind === "collapse") {
+            if (Date.now() - this.pointerDownAt > 300) {
+                return;
+            }
             this.graphRef.beforeChange?.(session.node);
             (
                 session.node as { collapse?: (force?: boolean) => void }
@@ -969,6 +972,12 @@ export class InteractionController {
                 session.part,
                 event
             );
+            this.canvas.sceneSyncController?.repaintNodeHost(session.node.id);
+            return;
+        }
+
+        if (session.part.kind === "action-part") {
+            session.host.executeActionPart(session.part, event, this.canvas);
             this.canvas.sceneSyncController?.repaintNodeHost(session.node.id);
         }
     }
@@ -1227,6 +1236,7 @@ export class InteractionController {
         switch (part.kind) {
             case "collapse":
             case "widget":
+            case "action-part":
                 return "pointer";
             case "resize":
                 return "se-resize";

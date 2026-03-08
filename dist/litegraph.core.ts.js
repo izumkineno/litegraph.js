@@ -12782,7 +12782,7 @@ var LiteGraphTSMigration = (function(exports) {
       (_i2 = (_h2 = this.graphRef).change) == null ? void 0 : _i2.call(_h2);
     }
     finishModernPress(session, graphPoint, event2) {
-      var _a3, _b3, _c2, _d2, _e2, _f, _g, _h2, _i2, _j;
+      var _a3, _b3, _c2, _d2, _e2, _f, _g, _h2, _i2, _j, _k;
       const releasePart = session.host.getInteractivePartAt(
         graphPoint.x,
         graphPoint.y
@@ -12797,6 +12797,9 @@ var LiteGraphTSMigration = (function(exports) {
         return;
       }
       if (session.part.kind === "collapse") {
+        if (Date.now() - this.pointerDownAt > 300) {
+          return;
+        }
         (_b3 = (_a3 = this.graphRef).beforeChange) == null ? void 0 : _b3.call(_a3, session.node);
         (_d2 = (_c2 = session.node).collapse) == null ? void 0 : _d2.call(_c2, false);
         (_f = (_e2 = this.graphRef).afterChange) == null ? void 0 : _f.call(_e2, session.node);
@@ -12812,6 +12815,11 @@ var LiteGraphTSMigration = (function(exports) {
           event2
         );
         (_j = this.canvas.sceneSyncController) == null ? void 0 : _j.repaintNodeHost(session.node.id);
+        return;
+      }
+      if (session.part.kind === "action-part") {
+        session.host.executeActionPart(session.part, event2, this.canvas);
+        (_k = this.canvas.sceneSyncController) == null ? void 0 : _k.repaintNodeHost(session.node.id);
       }
     }
     finishModernTap(session, graphPoint, event2) {
@@ -12991,6 +12999,7 @@ var LiteGraphTSMigration = (function(exports) {
       switch (part.kind) {
         case "collapse":
         case "widget":
+        case "action-part":
           return "pointer";
         case "resize":
           return "se-resize";
@@ -13955,7 +13964,7 @@ var LiteGraphTSMigration = (function(exports) {
     if (runtimeNode[MODERN_NODE_MARKER_KEY]) {
       return true;
     }
-    return typeof runtimeNode.mountView === "function" || typeof runtimeNode.patchView === "function" || typeof runtimeNode.consumeModernChangeMask === "function" || typeof runtimeNode.requestModernPatch === "function";
+    return typeof runtimeNode.mountContent === "function" || typeof runtimeNode.patchContent === "function" || typeof runtimeNode.getShellState === "function" || typeof runtimeNode.defineActionParts === "function" || typeof runtimeNode.getPortPresentation === "function" || typeof runtimeNode.mountView === "function" || typeof runtimeNode.patchView === "function" || typeof runtimeNode.consumeModernChangeMask === "function" || typeof runtimeNode.requestModernPatch === "function";
   }
   class LLink {
     constructor(id, type, origin_id, origin_slot, target_id, target_slot) {
@@ -16139,18 +16148,33 @@ var LiteGraphTSMigration = (function(exports) {
     defineWidgets() {
       return [];
     }
-    patchView(_context) {
+    defineActionParts(_context) {
+      return [];
+    }
+    getShellState(_context) {
+      return null;
+    }
+    getPortPresentation(_kind, _slotIndex, _context) {
+      return null;
+    }
+    patchContent(_context) {
+    }
+    mountView(context) {
+      return this.mountContent(context);
+    }
+    patchView(context) {
+      this.patchContent(context);
     }
     onNodeCreated() {
       this.ensureModernPorts();
     }
     buildUI(context) {
       this.ensureModernPorts();
-      return this.mountView(context);
+      return this.mountContent(context);
     }
     updateUI(context) {
       this.ensureModernPorts();
-      this.patchView(context);
+      this.patchContent(context);
     }
     ensureModernPorts(force = false) {
       if (this.modernPortsHydrated && !force) {
@@ -16333,7 +16357,7 @@ var LiteGraphTSMigration = (function(exports) {
     if (isModernNodeContract(node2)) {
       return "modern";
     }
-    if (typeof node2.buildUI === "function" || typeof node2.updateUI === "function" || typeof node2.renderLeafer === "function" || typeof node2.getPortLayout === "function") {
+    if (typeof node2.mountContent === "function" || typeof node2.patchContent === "function" || typeof node2.getShellState === "function" || typeof node2.defineActionParts === "function" || typeof node2.getPortPresentation === "function" || typeof node2.buildUI === "function" || typeof node2.updateUI === "function" || typeof node2.renderLeafer === "function" || typeof node2.getPortLayout === "function") {
       return "modern";
     }
     return "legacy";
@@ -16741,20 +16765,28 @@ var LiteGraphTSMigration = (function(exports) {
       height: rowHeight
     };
   }
+  const TITLE_HEIGHT = 30;
+  const SLOT_HEIGHT = 20;
+  const BODY_MIN_WIDTH = 120;
+  const BODY_MIN_HEIGHT = 30;
+  const BODY_PADDING_X = 10;
+  const BODY_PADDING_Y = 8;
+  const OUTLINE_PADDING = 5;
+  const RESIZE_HANDLE_SIZE = 14;
   function toFiniteNumber$2(value, fallback = 0) {
     const numericValue = Number(value);
     return Number.isFinite(numericValue) ? numericValue : fallback;
   }
   function toPoint(value) {
-    if (value && typeof value === "object" && ("0" in value || ArrayBuffer.isView(value))) {
+    if (!value) {
+      return null;
+    }
+    if (typeof value === "object" && value !== null && ("0" in value || ArrayBuffer.isView(value))) {
       const indexed = value;
       return [toFiniteNumber$2(indexed[0]), toFiniteNumber$2(indexed[1])];
     }
-    if (value && typeof value === "object" && "x" in value && "y" in value) {
-      const point = value;
-      return [toFiniteNumber$2(point.x), toFiniteNumber$2(point.y)];
-    }
-    return null;
+    const point = value;
+    return [toFiniteNumber$2(point.x), toFiniteNumber$2(point.y)];
   }
   function pointInsideRect(point, rect) {
     if (!rect) {
@@ -16762,73 +16794,219 @@ var LiteGraphTSMigration = (function(exports) {
     }
     return point[0] >= rect.x && point[0] <= rect.x + rect.width && point[1] >= rect.y && point[1] <= rect.y + rect.height;
   }
-  function clonePartHit(hit) {
-    if (!hit) {
+  function samePart(a2, b2) {
+    if (!a2 && !b2) {
+      return true;
+    }
+    if (!a2 || !b2) {
+      return false;
+    }
+    return a2.kind === b2.kind && a2.index === b2.index && a2.id === b2.id && a2.action === b2.action;
+  }
+  function clonePartHit(part) {
+    return part ? { ...part, bounds: part.bounds ? { ...part.bounds } : null } : null;
+  }
+  function toUI(value) {
+    if (!value || typeof value !== "object") {
       return null;
     }
+    return value;
+  }
+  function createText(config) {
+    return new hi$1({
+      fontSize: 12,
+      fontFamily: "'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif",
+      fill: "#E8EDF2",
+      hittable: false,
+      textWrap: "none",
+      textOverflow: "hide",
+      verticalAlign: "middle",
+      ...config
+    });
+  }
+  function cloneRect(rect) {
     return {
-      kind: hit.kind,
-      index: hit.index,
-      action: hit.action,
-      cursor: hit.cursor,
-      bounds: hit.bounds || null
+      x: rect.x,
+      y: rect.y,
+      width: rect.width,
+      height: rect.height
     };
   }
-  function samePart(left, right) {
-    return (left == null ? void 0 : left.kind) === (right == null ? void 0 : right.kind) && (left == null ? void 0 : left.index) === (right == null ? void 0 : right.index) && (left == null ? void 0 : left.action) === (right == null ? void 0 : right.action);
+  function getLiteGraphConstants() {
+    const host = globalThis;
+    const liteGraph = host.LiteGraph || {};
+    return {
+      NODE_TITLE_HEIGHT: toFiniteNumber$2(liteGraph.NODE_TITLE_HEIGHT, TITLE_HEIGHT),
+      NODE_SLOT_HEIGHT: toFiniteNumber$2(liteGraph.NODE_SLOT_HEIGHT, SLOT_HEIGHT),
+      NODE_DEFAULT_COLOR: String(liteGraph.NODE_DEFAULT_COLOR || "#333333"),
+      NODE_DEFAULT_BGCOLOR: String(liteGraph.NODE_DEFAULT_BGCOLOR || "#353535"),
+      NODE_DEFAULT_BOXCOLOR: String(liteGraph.NODE_DEFAULT_BOXCOLOR || "#666666"),
+      NODE_MODES_COLORS: Array.isArray(liteGraph.NODE_MODES_COLORS) ? liteGraph.NODE_MODES_COLORS : ["#666666", "#422222", "#333333", "#224422", "#662266"],
+      LINK_COLOR: String(liteGraph.LINK_COLOR || "#9A9"),
+      EVENT_LINK_COLOR: String(liteGraph.EVENT_LINK_COLOR || "#A86"),
+      BOX_SHAPE: toFiniteNumber$2(liteGraph.BOX_SHAPE, 1),
+      ARROW_SHAPE: toFiniteNumber$2(liteGraph.ARROW_SHAPE, 5),
+      GRID_SHAPE: toFiniteNumber$2(liteGraph.GRID_SHAPE, 6),
+      EVENT: toFiniteNumber$2(liteGraph.EVENT, -1),
+      ACTION: toFiniteNumber$2(liteGraph.ACTION, -1)
+    };
   }
-  function createFallbackContent(node2) {
-    var _a3, _b3;
-    const width2 = Math.max(toFiniteNumber$2((_a3 = node2.size) == null ? void 0 : _a3[0], 160), 120);
-    const height = Math.max(toFiniteNumber$2((_b3 = node2.size) == null ? void 0 : _b3[1], 80), 60);
-    const group = new ye$1({
-      name: `litegraph-modern-node-fallback:${String(node2.id)}`,
-      hittable: false
-    });
-    group.add([
-      new xe$1({
-        x: 0,
-        y: 0,
-        width: width2,
-        height,
-        cornerRadius: 14,
-        fill: "#1F2733",
-        stroke: "#87B6FF",
-        strokeWidth: 2,
-        hittable: false
-      }),
-      new hi$1({
-        x: 14,
-        y: 12,
-        text: String(node2.title || node2.id || "Modern Node"),
-        fontSize: 16,
-        fontWeight: "bold",
-        fill: "#F7FAFF",
-        hittable: false
-      })
-    ]);
-    return group;
+  let textMeasureCanvas = null;
+  let textMeasureContext = null;
+  function measureTextWidth(text, font = "14px Arial") {
+    if (typeof document === "undefined" || typeof document.createElement !== "function") {
+      return text.length * 7.2;
+    }
+    if (!textMeasureCanvas) {
+      textMeasureCanvas = document.createElement("canvas");
+      textMeasureContext = textMeasureCanvas.getContext("2d");
+    }
+    if (!textMeasureContext) {
+      return text.length * 7.2;
+    }
+    textMeasureContext.font = font;
+    return textMeasureContext.measureText(text).width;
   }
-  function toUI(result, node2) {
-    if (result instanceof ge$1) {
-      return result;
+  function mergeShellState(defaults, incoming) {
+    return {
+      ...defaults,
+      ...incoming || {}
+    };
+  }
+  function defaultShellState(node2) {
+    const constants = getLiteGraphConstants();
+    const ctor = node2.constructor || {};
+    const triggeredColor = toFiniteNumber$2(node2.action_triggered) > 0 ? "#FFFFFF" : toFiniteNumber$2(node2.execute_triggered) > 0 ? "#AAAAAA" : null;
+    const modeColor = node2.mode != null && constants.NODE_MODES_COLORS[node2.mode] ? constants.NODE_MODES_COLORS[node2.mode] : null;
+    return {
+      title: typeof node2.getTitle === "function" && node2.getTitle() || node2.title || node2.type || "Node",
+      titleMode: "default",
+      titleColor: node2.color || ctor.title_color || ctor.color || constants.NODE_DEFAULT_COLOR,
+      titleTextColor: node2.title_text_color || "#F5F7FA",
+      boxColor: node2.boxcolor || triggeredColor || modeColor || constants.NODE_DEFAULT_BOXCOLOR,
+      bodyColor: node2.bgcolor || ctor.bgcolor || constants.NODE_DEFAULT_BGCOLOR,
+      borderColor: node2.outlinecolor || "#243342",
+      showSignalLamp: true,
+      collapsible: true,
+      resizable: true,
+      showCollapsedSlots: true,
+      allowNodeHover: false,
+      summaryText: ""
+    };
+  }
+  function partStateFor(interaction, targetKind, index, id) {
+    const pressed = interaction.pressedPart && interaction.pressedPart.kind === targetKind && interaction.pressedPart.index === index && interaction.pressedPart.id === id;
+    if (pressed) {
+      return "press";
     }
-    if (result && typeof result === "object") {
-      return new ye$1(result);
+    const hovered = interaction.hoveredPart && interaction.hoveredPart.kind === targetKind && interaction.hoveredPart.index === index && interaction.hoveredPart.id === id;
+    return hovered ? "hover" : "";
+  }
+  function signatureOfWidgets(schemas) {
+    return schemas.map((schema) => `${schema.id}:${schema.type}`).join("|");
+  }
+  function signatureOfActionParts(schemas) {
+    return schemas.map((schema) => `${schema.id}:${schema.action || ""}:${schema.placement || ""}`).join("|");
+  }
+  function createPortMarker(shape, color) {
+    const marker = (() => {
+      switch (shape) {
+        case "box":
+          return new xe$1({
+            x: -4,
+            y: -4,
+            width: 8,
+            height: 8,
+            cornerRadius: 2,
+            fill: color,
+            stroke: "#10151A",
+            strokeWidth: 1,
+            hittable: false
+          });
+        case "arrow":
+          return new di$1({
+            path: "M -5 -4 L 5 0 L -5 4 Z",
+            fill: color,
+            stroke: "#10151A",
+            strokeWidth: 1,
+            hittable: false
+          });
+        case "grid": {
+          const group = new ye$1({ hittable: false });
+          group.add([
+            new xe$1({
+              x: -5,
+              y: -5,
+              width: 4,
+              height: 4,
+              fill: color,
+              cornerRadius: 1,
+              hittable: false
+            }),
+            new xe$1({
+              x: 1,
+              y: -5,
+              width: 4,
+              height: 4,
+              fill: color,
+              cornerRadius: 1,
+              hittable: false
+            }),
+            new xe$1({
+              x: -5,
+              y: 1,
+              width: 4,
+              height: 4,
+              fill: color,
+              cornerRadius: 1,
+              hittable: false
+            }),
+            new xe$1({
+              x: 1,
+              y: 1,
+              width: 4,
+              height: 4,
+              fill: color,
+              cornerRadius: 1,
+              hittable: false
+            })
+          ]);
+          return group;
+        }
+        default:
+          return new xe$1({
+            x: -4,
+            y: -4,
+            width: 8,
+            height: 8,
+            cornerRadius: 999,
+            fill: color,
+            stroke: "#10151A",
+            strokeWidth: 1,
+            hittable: false
+          });
+      }
+    })();
+    marker.__litegraphPortShape = shape;
+    return marker;
+  }
+  function setShapeColor(shape, color) {
+    const shapeData = shape;
+    if ("fill" in shapeData) {
+      shapeData.fill = color;
     }
-    return createFallbackContent(node2);
+    if (shape.children) {
+      const children = shape.children || [];
+      for (let i2 = 0; i2 < children.length; ++i2) {
+        if ("fill" in children[i2]) {
+          children[i2].fill = color;
+        }
+      }
+    }
   }
   class ModernNodeHost {
     constructor(node2) {
       this.runtime = "modern";
-      this.content = null;
-      this.widgetRoot = null;
-      this.widgetEntries = [];
-      this.widgetValueSnapshot = /* @__PURE__ */ new Map();
-      this.lastWidgetSignature = "";
-      this.mounted = false;
-      this.portLayoutCache = /* @__PURE__ */ new Map();
-      this.lastSlotSignature = "";
       this.interactionState = {
         hovered: false,
         pressed: false,
@@ -16837,6 +17015,19 @@ var LiteGraphTSMigration = (function(exports) {
         hoveredPart: null,
         pressedPart: null
       };
+      this.shellState = {};
+      this.shellLayout = {
+        width: BODY_MIN_WIDTH,
+        height: BODY_MIN_HEIGHT
+      };
+      this.content = null;
+      this.widgetEntries = [];
+      this.actionPartEntries = [];
+      this.portEntries = /* @__PURE__ */ new Map();
+      this.widgetValueSnapshot = /* @__PURE__ */ new Map();
+      this.lastWidgetSignature = "";
+      this.lastActionPartSignature = "";
+      this.mounted = false;
       this.resizeAnchor = null;
       this.node = node2;
       ensureDefaultModernWidgetRenderers();
@@ -16848,44 +17039,50 @@ var LiteGraphTSMigration = (function(exports) {
           litegraphRuntime: "modern"
         }
       });
+      this.shell = this.createShellParts();
+      this.root.add(this.shell.shell);
       this.repaint();
     }
     repaint() {
       var _a3, _b3;
       (_b3 = (_a3 = this.node).ensureModernPorts) == null ? void 0 : _b3.call(_a3);
       const changeMask = this.consumeChangeMask();
+      this.shellState = this.resolveShellState(changeMask);
+      this.shellLayout = this.computeShellLayout(this.shellState);
       if (!this.mounted) {
-        const mountedContent = this.mountContent(changeMask);
-        this.content = toUI(mountedContent, this.node);
-        this.root.add(this.content);
-        this.widgetRoot = this.ensureWidgetRoot();
+        this.content = toUI(this.mountContent(changeMask));
+        if (this.content) {
+          this.content.hittable = false;
+          this.shell.contentLayer.add(this.content);
+        }
         this.mounted = true;
-        this.invalidatePortLayoutCache();
       } else if (changeMask !== ModernNodeChangeMask.None) {
         this.patchContent(changeMask);
       }
       this.syncWidgets(changeMask);
-      if (this.didSlotSignatureChange()) {
-        this.invalidatePortLayoutCache();
-      }
-      if ((changeMask & ModernNodeChangeMask.Layout) !== 0 || (changeMask & ModernNodeChangeMask.Ports) !== 0) {
-        this.invalidatePortLayoutCache();
-      }
-      this.root.selected = Boolean(this.node.is_selected);
+      this.syncActionParts(changeMask);
+      this.syncPorts();
+      this.applyShellLayout();
+      this.syncContentLayout();
       this.applyInteractionState();
       this.syncPosition();
+      this.storeInspectableState();
     }
     syncPosition() {
-      var _a3, _b3, _c2, _d2, _e2;
+      var _a3, _b3;
       this.root.x = toFiniteNumber$2((_a3 = this.node.pos) == null ? void 0 : _a3[0]);
-      const collapsed = Boolean(
-        (_b3 = this.node.flags) == null ? void 0 : _b3.collapsed
-      );
-      const collapsedOffset = collapsed ? toFiniteNumber$2((_d2 = (_c2 = this.getShellState()) == null ? void 0 : _c2.layout) == null ? void 0 : _d2.height, 30) : 0;
-      this.root.y = toFiniteNumber$2((_e2 = this.node.pos) == null ? void 0 : _e2[1]) - collapsedOffset;
+      this.root.y = toFiniteNumber$2((_b3 = this.node.pos) == null ? void 0 : _b3[1]);
     }
     destroy() {
+      var _a3;
       this.clearWidgets();
+      this.clearActionParts();
+      for (const entry of this.portEntries.values()) {
+        entry.root.destroy();
+        entry.label.destroy();
+      }
+      this.portEntries.clear();
+      (_a3 = this.content) == null ? void 0 : _a3.destroy();
       this.root.destroy();
     }
     getInteractionState() {
@@ -16918,29 +17115,23 @@ var LiteGraphTSMigration = (function(exports) {
       });
     }
     getInteractivePartAt(worldX, worldY) {
-      var _a3;
       const localPoint = this.getLocalPoint(worldX, worldY);
-      const layout = (_a3 = this.getShellState()) == null ? void 0 : _a3.layout;
-      if (!layout) {
-        return this.hitFallbackPart(localPoint);
-      }
-      if (pointInsideRect(localPoint, layout.resize)) {
-        return {
-          kind: "resize",
-          cursor: "se-resize",
-          bounds: layout.resize || null
-        };
-      }
-      if (pointInsideRect(localPoint, layout.collapse)) {
-        return {
-          kind: "collapse",
-          cursor: "pointer",
-          bounds: layout.collapse || null
-        };
-      }
+      const layout = this.shellLayout;
       const widgetHit = this.hitWidgetPart(localPoint, layout.widgets);
       if (widgetHit) {
         return widgetHit;
+      }
+      const actionPartHit = this.hitActionPart(localPoint, layout.actionParts);
+      if (actionPartHit) {
+        return actionPartHit;
+      }
+      const outputPortHit = this.hitPortPart(
+        localPoint,
+        "output-port",
+        layout.outputPorts
+      );
+      if (outputPortHit) {
+        return outputPortHit;
       }
       const inputPortHit = this.hitPortPart(
         localPoint,
@@ -16950,13 +17141,19 @@ var LiteGraphTSMigration = (function(exports) {
       if (inputPortHit) {
         return inputPortHit;
       }
-      const outputPortHit = this.hitPortPart(
-        localPoint,
-        "output-port",
-        layout.outputPorts
-      );
-      if (outputPortHit) {
-        return outputPortHit;
+      if (pointInsideRect(localPoint, layout.collapse)) {
+        return {
+          kind: "collapse",
+          cursor: "pointer",
+          bounds: layout.collapse || null
+        };
+      }
+      if (pointInsideRect(localPoint, layout.resize)) {
+        return {
+          kind: "resize",
+          cursor: "se-resize",
+          bounds: layout.resize || null
+        };
       }
       if (pointInsideRect(localPoint, layout.header)) {
         return {
@@ -16970,7 +17167,7 @@ var LiteGraphTSMigration = (function(exports) {
           bounds: layout.body || null
         };
       }
-      return this.hitFallbackPart(localPoint);
+      return null;
     }
     beginResize(worldX, worldY) {
       var _a3, _b3;
@@ -16978,7 +17175,7 @@ var LiteGraphTSMigration = (function(exports) {
         startWorldX: worldX,
         startWorldY: worldY,
         startWidth: Math.max(toFiniteNumber$2((_a3 = this.node.size) == null ? void 0 : _a3[0], 160), 80),
-        startHeight: Math.max(toFiniteNumber$2((_b3 = this.node.size) == null ? void 0 : _b3[1], 80), 60)
+        startHeight: Math.max(toFiniteNumber$2((_b3 = this.node.size) == null ? void 0 : _b3[1], 80), 30)
       };
       this.updateInteractionState({
         resizing: true,
@@ -16992,13 +17189,13 @@ var LiteGraphTSMigration = (function(exports) {
         return false;
       }
       const nextWidth = Math.max(
-        120,
+        BODY_MIN_WIDTH,
         Math.round(
           this.resizeAnchor.startWidth + (worldX - this.resizeAnchor.startWorldX)
         )
       );
       const nextHeight = Math.max(
-        60,
+        BODY_MIN_HEIGHT,
         Math.round(
           this.resizeAnchor.startHeight + (worldY - this.resizeAnchor.startWorldY)
         )
@@ -17022,109 +17219,890 @@ var LiteGraphTSMigration = (function(exports) {
     getWidgetEntry(index) {
       return this.widgetEntries[index] || null;
     }
-    ensureWidgetRoot() {
-      var _a3;
-      const shellWidgetRoot = (_a3 = this.getShellState()) == null ? void 0 : _a3.widgetRoot;
-      if (shellWidgetRoot) {
-        this.widgetRoot = shellWidgetRoot;
-        return shellWidgetRoot;
-      }
-      if (!this.widgetRoot) {
-        this.widgetRoot = new ye$1({
-          name: `litegraph-modern-node-widgets:${String(this.node.id)}`,
-          hittable: false
-        });
-        this.root.add(this.widgetRoot);
-      }
-      return this.widgetRoot;
+    getActionPartEntry(index) {
+      return this.actionPartEntries[index] || null;
     }
-    clearWidgets() {
-      var _a3;
-      for (let i2 = 0; i2 < this.widgetEntries.length; ++i2) {
-        const entry = this.widgetEntries[i2];
-        if (entry.handle.destroy) {
-          entry.handle.destroy();
-        } else {
-          const root = entry.handle.root;
-          (_a3 = root == null ? void 0 : root.destroy) == null ? void 0 : _a3.call(root);
+    executeActionPart(part, event2, graphcanvas) {
+      var _a3, _b3, _c2, _d2;
+      if (part.index == null) {
+        return;
+      }
+      const entry = this.actionPartEntries[part.index];
+      if (!entry || entry.schema.disabled) {
+        return;
+      }
+      (_b3 = (_a3 = entry.schema).onTrigger) == null ? void 0 : _b3.call(_a3, {
+        node: this.node,
+        host: this,
+        graphcanvas,
+        event: event2
+      });
+      (_d2 = (_c2 = this.node).onActionPart) == null ? void 0 : _d2.call(
+        _c2,
+        entry.schema.action || entry.schema.id,
+        entry.schema,
+        event2,
+        graphcanvas
+      );
+    }
+    getLocalPoint(worldX, worldY) {
+      const point = this.root.getInnerPoint({ x: worldX, y: worldY });
+      return [toFiniteNumber$2(point.x), toFiniteNumber$2(point.y)];
+    }
+    getPortAnchor(kind, slotIndex) {
+      var _a3, _b3;
+      const layout = this.resolvePortLayout(kind, slotIndex);
+      if (layout) {
+        return [
+          toFiniteNumber$2(this.root.x) + layout.anchorX,
+          toFiniteNumber$2(this.root.y) + layout.anchorY
+        ];
+      }
+      const fallbackPoint = toPoint(
+        (_b3 = (_a3 = this.node).getConnectionPos) == null ? void 0 : _b3.call(_a3, kind === "input", slotIndex)
+      );
+      return fallbackPoint || null;
+    }
+    getPortDirection(kind, _slotIndex) {
+      return kind === "input" ? PORT_DIRECTION_LEFT : PORT_DIRECTION_RIGHT;
+    }
+    hitPortAt(worldX, worldY) {
+      let bestHit = null;
+      const kinds = ["output", "input"];
+      for (let i2 = 0; i2 < kinds.length; ++i2) {
+        const kind = kinds[i2];
+        const layouts = kind === "input" ? this.shellLayout.inputPorts || [] : this.shellLayout.outputPorts || [];
+        for (let slotIndex = 0; slotIndex < layouts.length; ++slotIndex) {
+          const layout = layouts[slotIndex];
+          const anchor = this.getPortAnchor(kind, layout.index);
+          if (!anchor) {
+            continue;
+          }
+          const dx = worldX - anchor[0];
+          const dy = worldY - anchor[1];
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist > layout.radius) {
+            continue;
+          }
+          if (!bestHit || dist < bestHit.distance) {
+            bestHit = {
+              kind,
+              slotIndex: layout.index,
+              anchor,
+              dir: layout.dir,
+              distance: dist
+            };
+          }
         }
       }
-      this.widgetEntries = [];
-      this.widgetValueSnapshot.clear();
-      this.lastWidgetSignature = "";
-      this.patchShellWidgetLayout([]);
+      if (!bestHit) {
+        return null;
+      }
+      return {
+        kind: bestHit.kind,
+        slotIndex: bestHit.slotIndex,
+        anchor: bestHit.anchor,
+        dir: bestHit.dir
+      };
+    }
+    createShellParts() {
+      const shell = new ye$1({
+        name: `litegraph-modern-shell:${String(this.node.id)}`,
+        hittable: false
+      });
+      const selectionOutline = new xe$1({
+        fill: "rgba(0,0,0,0)",
+        stroke: "#76A8FF",
+        strokeWidth: 2,
+        cornerRadius: 12,
+        visible: false,
+        hittable: false
+      });
+      const header = new xe$1({
+        fill: "#333333",
+        stroke: "#243342",
+        strokeWidth: 1,
+        cornerRadius: [10, 10, 0, 0],
+        hittable: false
+      });
+      const body = new xe$1({
+        fill: "#353535",
+        stroke: "#243342",
+        strokeWidth: 1.25,
+        cornerRadius: [0, 0, 10, 10],
+        hittable: false
+      });
+      const title = createText({
+        x: 42,
+        y: -TITLE_HEIGHT + TITLE_HEIGHT / 2,
+        text: "",
+        fontWeight: "bold"
+      });
+      const summary = createText({
+        x: BODY_PADDING_X,
+        y: 18,
+        text: "",
+        fontSize: 11,
+        fill: "#A5B4C1"
+      });
+      const collapseOverlay = new xe$1({
+        x: 0,
+        y: -TITLE_HEIGHT,
+        width: TITLE_HEIGHT,
+        height: TITLE_HEIGHT,
+        cornerRadius: [10, 0, 0, 0],
+        fill: "rgba(255,255,255,0)",
+        stroke: "rgba(255,255,255,0)",
+        strokeWidth: 0,
+        hittable: false
+      });
+      const signalLamp = new xe$1({
+        x: 8,
+        y: -TITLE_HEIGHT + 8,
+        width: 14,
+        height: 14,
+        cornerRadius: 999,
+        fill: "#666666",
+        stroke: "#10151A",
+        strokeWidth: 1,
+        hittable: false
+      });
+      const resizeHandleGlyph = new di$1({
+        path: "M 2 12 L 12 2 M 6 12 L 12 6 M 10 12 L 12 10",
+        stroke: "#8593A0",
+        strokeWidth: 1,
+        opacity: 0.9,
+        hittable: false
+      });
+      const resizeHandle = new ye$1({
+        visible: false,
+        hittable: false
+      });
+      resizeHandle.add(resizeHandleGlyph);
+      const inputPortLayer = new ye$1({ name: "input-ports", hittable: false });
+      const outputPortLayer = new ye$1({ name: "output-ports", hittable: false });
+      const widgetLayer = new ye$1({ name: "widgets", hittable: false });
+      const contentLayer = new ye$1({ name: "content", hittable: false });
+      const actionPartLayer = new ye$1({ name: "action-parts", hittable: false });
+      shell.add([
+        selectionOutline,
+        header,
+        body,
+        collapseOverlay,
+        signalLamp,
+        title,
+        summary,
+        inputPortLayer,
+        outputPortLayer,
+        contentLayer,
+        widgetLayer,
+        actionPartLayer,
+        resizeHandle
+      ]);
+      return {
+        shell,
+        selectionOutline,
+        header,
+        body,
+        title,
+        summary,
+        collapseOverlay,
+        signalLamp,
+        resizeHandle,
+        resizeHandleGlyph,
+        inputPortLayer,
+        outputPortLayer,
+        widgetLayer,
+        contentLayer,
+        actionPartLayer
+      };
+    }
+    consumeChangeMask() {
+      var _a3, _b3;
+      const rawMask = (_b3 = (_a3 = this.node).consumeModernChangeMask) == null ? void 0 : _b3.call(_a3);
+      if (rawMask == null) {
+        return ModernNodeChangeMask.All;
+      }
+      const normalizedMask = toFiniteNumber$2(rawMask, ModernNodeChangeMask.None);
+      return normalizedMask <= ModernNodeChangeMask.None ? ModernNodeChangeMask.None : normalizedMask;
+    }
+    resolveShellState(changeMask) {
+      var _a3, _b3;
+      const context = this.createLifecycleContext(changeMask);
+      return mergeShellState(
+        defaultShellState(this.node),
+        (_b3 = (_a3 = this.node).getShellState) == null ? void 0 : _b3.call(_a3, context)
+      );
+    }
+    computeShellLayout(shellState) {
+      var _a3, _b3, _c2;
+      const constants = getLiteGraphConstants();
+      const titleHeight = constants.NODE_TITLE_HEIGHT;
+      const bodyHeight = Math.max(
+        toFiniteNumber$2((_a3 = this.node.size) == null ? void 0 : _a3[1], BODY_MIN_HEIGHT),
+        BODY_MIN_HEIGHT
+      );
+      const isCollapsed = Boolean((_b3 = this.node.flags) == null ? void 0 : _b3.collapsed);
+      const expandedWidth = Math.max(
+        toFiniteNumber$2((_c2 = this.node.size) == null ? void 0 : _c2[0], BODY_MIN_WIDTH),
+        BODY_MIN_WIDTH
+      );
+      const collapsedWidth = shellState.collapsedWidth != null ? Math.max(toFiniteNumber$2(shellState.collapsedWidth, expandedWidth), 48) : Math.min(
+        expandedWidth,
+        measureTextWidth(String(shellState.title || "")) + titleHeight * 2
+      );
+      const width2 = isCollapsed ? collapsedWidth : expandedWidth;
+      const header = {
+        x: 0,
+        y: -titleHeight,
+        width: width2,
+        height: titleHeight
+      };
+      const body = isCollapsed ? null : {
+        x: 0,
+        y: 0,
+        width: width2,
+        height: bodyHeight
+      };
+      const collapse = shellState.collapsible ? {
+        x: 0,
+        y: -titleHeight,
+        width: titleHeight,
+        height: titleHeight
+      } : null;
+      const resize = shellState.resizable && body ? {
+        x: body.width - RESIZE_HANDLE_SIZE,
+        y: body.height - RESIZE_HANDLE_SIZE,
+        width: RESIZE_HANDLE_SIZE,
+        height: RESIZE_HANDLE_SIZE
+      } : null;
+      return {
+        width: width2,
+        height: body ? body.height : 0,
+        header,
+        body,
+        collapse,
+        resize,
+        widgets: [],
+        actionParts: [],
+        inputPorts: [],
+        outputPorts: []
+      };
+    }
+    applyShellLayout() {
+      const layout = this.shellLayout;
+      const shellState = this.shellState;
+      const header = layout.header || {
+        x: 0,
+        y: -TITLE_HEIGHT,
+        width: layout.width,
+        height: TITLE_HEIGHT
+      };
+      const body = layout.body;
+      const totalHeight = header.height + ((body == null ? void 0 : body.height) || 0);
+      this.shell.header.x = header.x;
+      this.shell.header.y = header.y;
+      this.shell.header.width = header.width;
+      this.shell.header.height = header.height;
+      this.shell.header.fill = shellState.titleColor || "#333333";
+      this.shell.header.stroke = shellState.borderColor || "#243342";
+      this.shell.header.cornerRadius = body ? [10, 10, 0, 0] : [10, 10, 10, 10];
+      this.shell.body.visible = Boolean(body);
+      if (body) {
+        this.shell.body.x = body.x;
+        this.shell.body.y = body.y;
+        this.shell.body.width = body.width;
+        this.shell.body.height = body.height;
+        this.shell.body.fill = shellState.bodyColor || "#353535";
+        this.shell.body.stroke = shellState.borderColor || "#243342";
+        this.shell.body.cornerRadius = [0, 0, 10, 10];
+      }
+      this.shell.title.text = String(shellState.title || "");
+      this.shell.title.fill = shellState.titleTextColor || "#F5F7FA";
+      this.shell.title.x = (layout.collapse ? header.height : 10) + 10;
+      this.shell.title.y = header.y + header.height / 2;
+      this.shell.title.width = Math.max(24, header.width - this.shell.title.x - 14);
+      this.shell.title.visible = shellState.titleMode !== "hidden";
+      this.shell.summary.text = String(shellState.summaryText || "");
+      this.shell.summary.visible = Boolean(
+        body && !this.widgetEntries.length && !this.content && shellState.summaryText
+      );
+      this.shell.summary.x = BODY_PADDING_X;
+      this.shell.summary.y = 16;
+      this.shell.summary.width = Math.max(20, layout.width - BODY_PADDING_X * 2);
+      this.shell.signalLamp.visible = shellState.showSignalLamp !== false;
+      this.shell.signalLamp.x = 8;
+      this.shell.signalLamp.y = header.y + 8;
+      this.shell.signalLamp.fill = shellState.boxColor || "#666666";
+      this.shell.collapseOverlay.visible = Boolean(layout.collapse);
+      if (layout.collapse) {
+        this.shell.collapseOverlay.x = layout.collapse.x;
+        this.shell.collapseOverlay.y = layout.collapse.y;
+        this.shell.collapseOverlay.width = layout.collapse.width;
+        this.shell.collapseOverlay.height = layout.collapse.height;
+      }
+      this.shell.resizeHandle.visible = Boolean(layout.resize);
+      if (layout.resize) {
+        this.shell.resizeHandle.x = layout.resize.x;
+        this.shell.resizeHandle.y = layout.resize.y;
+      }
+      this.shell.selectionOutline.x = -OUTLINE_PADDING;
+      this.shell.selectionOutline.y = header.y - OUTLINE_PADDING;
+      this.shell.selectionOutline.width = layout.width + OUTLINE_PADDING * 2;
+      this.shell.selectionOutline.height = totalHeight + OUTLINE_PADDING * 2;
+      this.shell.selectionOutline.visible = Boolean(this.node.is_selected);
+    }
+    syncContentLayout() {
+      const contentArea = this.getContentArea();
+      this.shell.contentLayer.visible = Boolean(contentArea);
+      if (!this.content || !contentArea) {
+        return;
+      }
+      this.content.x = contentArea.x;
+      this.content.y = contentArea.y;
+      if ("width" in this.content) {
+        this.content.width = contentArea.width;
+      }
+      if ("height" in this.content) {
+        this.content.height = contentArea.height;
+      }
     }
     syncWidgets(changeMask) {
-      var _a3, _b3, _c2, _d2, _e2;
-      const collapsed = Boolean(
-        (_a3 = this.node.flags) == null ? void 0 : _a3.collapsed
-      );
+      var _a3, _b3, _c2, _d2, _e2, _f;
+      const collapsed = Boolean((_a3 = this.node.flags) == null ? void 0 : _a3.collapsed);
       const schemas = collapsed ? [] : Array.isArray((_c2 = (_b3 = this.node).defineWidgets) == null ? void 0 : _c2.call(_b3)) ? [...((_e2 = (_d2 = this.node).defineWidgets) == null ? void 0 : _e2.call(_d2)) || []] : [];
-      const widgetRoot = this.ensureWidgetRoot();
-      widgetRoot.visible = !collapsed;
-      const nextSignature = schemas.map((schema) => `${schema.id}:${schema.type}`).join("|");
+      this.shell.widgetLayer.visible = !collapsed && schemas.length > 0;
+      const nextSignature = signatureOfWidgets(schemas);
       const needsRebuild = this.widgetEntries.length !== schemas.length || this.lastWidgetSignature !== nextSignature || (changeMask & ModernNodeChangeMask.Layout) !== 0;
       if (!schemas.length) {
         this.clearWidgets();
+        this.patchShellWidgetLayout([]);
+        this.lastWidgetSignature = "";
         return;
       }
-      const bodyBounds = this.getWidgetBodyBounds();
-      const nextLayout = [];
+      const widgetArea = this.resolveWidgetArea();
+      const layouts = [];
+      for (let i2 = 0; i2 < schemas.length; ++i2) {
+        const layout = resolveWidgetBounds(widgetArea, i2, schemas.length);
+        layouts.push({
+          ...layout,
+          index: i2,
+          id: schemas[i2].id,
+          type: schemas[i2].type,
+          action: schemas[i2].type === "toggle" ? "toggle" : "activate",
+          actionZones: (_f = this.widgetEntries[i2]) == null ? void 0 : _f.handle.actionZones
+        });
+      }
       if (needsRebuild) {
         this.clearWidgets();
-        for (let index = 0; index < schemas.length; ++index) {
-          const schema = schemas[index];
+        for (let i2 = 0; i2 < schemas.length; ++i2) {
+          const schema = schemas[i2];
           const renderer = resolveModernWidgetRenderer(schema.type);
           if (!renderer) {
             continue;
           }
-          const bounds = resolveWidgetBounds(bodyBounds, index, schemas.length);
-          const context = this.createWidgetContext(schema, bounds);
+          const context = this.createWidgetContext(schema, layouts[i2]);
           const handle = renderer.createView(context);
-          this.addWidgetHandle(widgetRoot, handle);
-          const layout = this.toWidgetLayout(index, schema, handle);
+          this.addWidgetHandle(handle);
           this.widgetEntries.push({
             schema,
             renderer,
             handle,
-            layout
+            layout: layouts[i2]
           });
-          nextLayout.push(layout);
           this.widgetValueSnapshot.set(schema.id, schema.value);
         }
         this.lastWidgetSignature = nextSignature;
       } else {
-        for (let index = 0; index < this.widgetEntries.length; ++index) {
-          const entry = this.widgetEntries[index];
-          const schema = schemas[index];
-          const bounds = resolveWidgetBounds(bodyBounds, index, schemas.length);
-          entry.schema = schema;
-          const context = this.createWidgetContext(schema, bounds);
-          entry.renderer.patchView(context, entry.handle, changeMask);
-          entry.layout = this.toWidgetLayout(index, schema, entry.handle);
-          nextLayout.push(entry.layout);
-          this.widgetValueSnapshot.set(schema.id, schema.value);
+        for (let i2 = 0; i2 < schemas.length; ++i2) {
+          const entry = this.widgetEntries[i2];
+          if (!entry) {
+            continue;
+          }
+          entry.schema = schemas[i2];
+          entry.layout = layouts[i2];
+          entry.renderer.patchView(
+            this.createWidgetContext(entry.schema, layouts[i2]),
+            entry.handle,
+            changeMask
+          );
+          this.widgetValueSnapshot.set(entry.schema.id, entry.schema.value);
         }
       }
-      this.patchShellWidgetLayout(nextLayout);
-      this.applyWidgetInteractionState();
-    }
-    getWidgetBodyBounds() {
-      var _a3, _b3, _c2;
-      const shellLayout = (_a3 = this.getShellState()) == null ? void 0 : _a3.layout;
-      if (shellLayout == null ? void 0 : shellLayout.body) {
-        return {
-          x: shellLayout.body.x,
-          y: shellLayout.body.y,
-          width: shellLayout.body.width,
-          height: shellLayout.body.height
-        };
+      for (let i2 = 0; i2 < this.widgetEntries.length; ++i2) {
+        this.widgetEntries[i2].layout.actionZones = this.widgetEntries[i2].handle.actionZones;
       }
+      this.patchShellWidgetLayout(layouts);
+    }
+    syncActionParts(changeMask) {
+      var _a3, _b3, _c2, _d2, _e2;
+      const collapsed = Boolean((_a3 = this.node.flags) == null ? void 0 : _a3.collapsed);
+      const actionParts = collapsed ? [] : Array.isArray((_c2 = (_b3 = this.node).defineActionParts) == null ? void 0 : _c2.call(_b3, this.createLifecycleContext(changeMask))) ? [
+        ...((_e2 = (_d2 = this.node).defineActionParts) == null ? void 0 : _e2.call(
+          _d2,
+          this.createLifecycleContext(changeMask)
+        )) || []
+      ] : [];
+      const visibleParts = actionParts.filter((schema) => schema.visible !== false);
+      this.shell.actionPartLayer.visible = visibleParts.length > 0;
+      const nextSignature = signatureOfActionParts(visibleParts);
+      const needsRebuild = this.actionPartEntries.length !== visibleParts.length || this.lastActionPartSignature !== nextSignature || (changeMask & ModernNodeChangeMask.Layout) !== 0;
+      const layouts = this.computeActionPartLayouts(visibleParts);
+      if (needsRebuild) {
+        this.clearActionParts();
+        for (let i2 = 0; i2 < visibleParts.length; ++i2) {
+          const schema = visibleParts[i2];
+          const layout = layouts[i2];
+          const root = new ye$1({
+            x: layout.x,
+            y: layout.y,
+            width: layout.width,
+            height: layout.height,
+            hittable: false
+          });
+          const background = new xe$1({
+            x: 0,
+            y: 0,
+            width: layout.width,
+            height: layout.height,
+            fill: "#1C2430",
+            stroke: "#2E455D",
+            strokeWidth: 1,
+            cornerRadius: schema.placement === "footer-left" ? [0, 0, 10, 0] : schema.placement === "footer-right" ? [0, 0, 0, 10] : 8,
+            hittable: false
+          });
+          const label = createText({
+            x: 0,
+            y: layout.height / 2,
+            width: layout.width,
+            textAlign: "center",
+            text: String(schema.label || schema.id),
+            fontSize: 18
+          });
+          root.add([background, label]);
+          this.shell.actionPartLayer.add(root);
+          this.actionPartEntries.push({
+            schema,
+            root,
+            background,
+            label,
+            layout
+          });
+        }
+        this.lastActionPartSignature = nextSignature;
+      } else {
+        for (let i2 = 0; i2 < visibleParts.length; ++i2) {
+          const entry = this.actionPartEntries[i2];
+          entry.schema = visibleParts[i2];
+          entry.layout = layouts[i2];
+          entry.root.x = entry.layout.x;
+          entry.root.y = entry.layout.y;
+          entry.root.width = entry.layout.width;
+          entry.root.height = entry.layout.height;
+          entry.background.width = entry.layout.width;
+          entry.background.height = entry.layout.height;
+          entry.label.width = entry.layout.width;
+          entry.label.y = entry.layout.height / 2;
+          entry.label.text = String(entry.schema.label || entry.schema.id);
+        }
+      }
+      this.shellLayout.actionParts = layouts;
+    }
+    syncPorts() {
+      const inputLayouts = this.buildPortLayouts("input");
+      const outputLayouts = this.buildPortLayouts("output");
+      this.shellLayout.inputPorts = inputLayouts;
+      this.shellLayout.outputPorts = outputLayouts;
+      this.syncPortLayer("input", inputLayouts);
+      this.syncPortLayer("output", outputLayouts);
+    }
+    mountContent(changeMask) {
+      const lifecycleContext = this.createLifecycleContext(changeMask);
+      if (typeof this.node.mountContent === "function") {
+        return this.node.mountContent(lifecycleContext);
+      }
+      if (typeof this.node.mountView === "function") {
+        return this.node.mountView(lifecycleContext);
+      }
+      if (typeof this.node.buildUI === "function") {
+        return this.node.buildUI(this.createContextWithMask(changeMask, this.shellState));
+      }
+      return null;
+    }
+    patchContent(changeMask) {
+      var _a3, _b3;
+      const lifecycleContext = this.createLifecycleContext(changeMask);
+      if (typeof this.node.patchContent === "function") {
+        this.node.patchContent(lifecycleContext);
+        return;
+      }
+      if (typeof this.node.patchView === "function") {
+        this.node.patchView(lifecycleContext);
+        return;
+      }
+      (_b3 = (_a3 = this.node).updateUI) == null ? void 0 : _b3.call(_a3, this.createContextWithMask(changeMask, this.shellState));
+    }
+    getContentArea() {
+      const body = this.shellLayout.body;
+      if (!body) {
+        return null;
+      }
+      const footerHeight = this.hasFooterActionParts() ? TITLE_HEIGHT : 0;
       return {
-        x: 0,
-        y: 0,
-        width: Math.max(toFiniteNumber$2((_b3 = this.node.size) == null ? void 0 : _b3[0], 120), 80),
-        height: Math.max(toFiniteNumber$2((_c2 = this.node.size) == null ? void 0 : _c2[1], 60), 24)
+        x: BODY_PADDING_X,
+        y: BODY_PADDING_Y,
+        width: Math.max(16, body.width - BODY_PADDING_X * 2),
+        height: Math.max(0, body.height - BODY_PADDING_Y * 2 - footerHeight)
+      };
+    }
+    hasFooterActionParts() {
+      var _a3, _b3;
+      const schemas = (_b3 = (_a3 = this.node).defineActionParts) == null ? void 0 : _b3.call(
+        _a3,
+        this.createLifecycleContext(ModernNodeChangeMask.Layout)
+      );
+      return Boolean(
+        Array.isArray(schemas) && schemas.some(
+          (schema) => schema.visible !== false && (schema.placement === "footer-left" || schema.placement === "footer-right")
+        )
+      );
+    }
+    patchShellWidgetLayout(layout) {
+      this.shellLayout.widgets = layout;
+    }
+    resolveWidgetArea() {
+      const body = this.shellLayout.body || {
+        width: this.shellLayout.width,
+        height: BODY_MIN_HEIGHT
+      };
+      const footerHeight = this.hasFooterActionParts() ? TITLE_HEIGHT : 0;
+      return {
+        x: BODY_PADDING_X,
+        y: BODY_PADDING_Y,
+        width: Math.max(20, body.width - BODY_PADDING_X * 2),
+        height: Math.max(20, body.height - BODY_PADDING_Y * 2 - footerHeight)
+      };
+    }
+    addWidgetHandle(handle) {
+      const root = toUI(handle.root);
+      if (!root) {
+        return;
+      }
+      root.hittable = false;
+      this.shell.widgetLayer.add(root);
+    }
+    computeActionPartLayouts(schemas) {
+      const body = this.shellLayout.body;
+      if (!body) {
+        return [];
+      }
+      const layouts = [];
+      for (let i2 = 0; i2 < schemas.length; ++i2) {
+        const schema = schemas[i2];
+        let bounds = schema.bounds ? cloneRect(schema.bounds) : null;
+        if (!bounds) {
+          if (schema.placement === "footer-left") {
+            bounds = {
+              x: 0,
+              y: body.height - TITLE_HEIGHT,
+              width: body.width / 2,
+              height: TITLE_HEIGHT
+            };
+          } else if (schema.placement === "footer-right") {
+            bounds = {
+              x: body.width / 2,
+              y: body.height - TITLE_HEIGHT,
+              width: body.width / 2,
+              height: TITLE_HEIGHT
+            };
+          } else if (schema.placement === "header-right") {
+            bounds = {
+              x: body.width - TITLE_HEIGHT,
+              y: -TITLE_HEIGHT,
+              width: TITLE_HEIGHT,
+              height: TITLE_HEIGHT
+            };
+          } else {
+            bounds = {
+              x: BODY_PADDING_X,
+              y: BODY_PADDING_Y,
+              width: Math.max(24, body.width - BODY_PADDING_X * 2),
+              height: 24
+            };
+          }
+        }
+        layouts.push({
+          ...bounds,
+          index: i2,
+          id: schema.id,
+          action: schema.action || schema.id,
+          cursor: schema.cursor || "pointer"
+        });
+      }
+      return layouts;
+    }
+    buildPortLayouts(kind) {
+      var _a3, _b3, _c2, _d2;
+      const slotList = kind === "input" ? this.node.inputs : this.node.outputs;
+      const slots = Array.isArray(slotList) ? slotList : [];
+      const isCollapsed = Boolean((_a3 = this.node.flags) == null ? void 0 : _a3.collapsed);
+      if (isCollapsed && this.shellState.showCollapsedSlots === false) {
+        return [];
+      }
+      const layouts = [];
+      for (let i2 = 0; i2 < slots.length; ++i2) {
+        const presentation = this.resolvePortPresentation(kind, i2, slots[i2]);
+        const anchor = this.resolvePortAnchorLocal(kind, i2);
+        if (!anchor) {
+          continue;
+        }
+        const radius = Math.max(
+          toFiniteNumber$2(
+            presentation.radius,
+            (_d2 = (_c2 = (_b3 = this.node).getPortLayout) == null ? void 0 : _c2.call(
+              _b3,
+              kind,
+              i2,
+              this.createContextWithMask(
+                ModernNodeChangeMask.Ports,
+                this.shellState
+              )
+            )) == null ? void 0 : _d2.radius
+          ),
+          6
+        );
+        const label = String(presentation.label || "");
+        layouts.push({
+          index: i2,
+          x: anchor[0] - radius,
+          y: anchor[1] - radius,
+          width: radius * 2,
+          height: radius * 2,
+          anchorX: anchor[0],
+          anchorY: anchor[1],
+          dir: toFiniteNumber$2(
+            presentation.dir,
+            kind === "input" ? PORT_DIRECTION_LEFT : PORT_DIRECTION_RIGHT
+          ),
+          radius,
+          label,
+          hiddenLabelWhenCollapsed: Boolean(
+            isCollapsed && presentation.hideLabelWhenCollapsed !== false
+          ),
+          shape: presentation.shape || "circle",
+          colorOn: presentation.colorOn || getLiteGraphConstants().LINK_COLOR,
+          colorOff: presentation.colorOff || "#6E7681",
+          active: this.isPortActive(kind, i2, slots[i2])
+        });
+      }
+      return layouts;
+    }
+    resolvePortPresentation(kind, slotIndex, slot) {
+      var _a3, _b3;
+      const constants = getLiteGraphConstants();
+      const slotRecord = slot || {};
+      const explicit = ((_b3 = (_a3 = this.node).getPortPresentation) == null ? void 0 : _b3.call(
+        _a3,
+        kind,
+        slotIndex,
+        this.createLifecycleContext(ModernNodeChangeMask.Ports)
+      )) || null;
+      let shape = (explicit == null ? void 0 : explicit.shape) || "circle";
+      if (!(explicit == null ? void 0 : explicit.shape)) {
+        if (toFiniteNumber$2(slotRecord.shape) === constants.BOX_SHAPE || slotRecord.type === constants.EVENT || slotRecord.type === constants.ACTION) {
+          shape = "box";
+        } else if (toFiniteNumber$2(slotRecord.shape) === constants.ARROW_SHAPE) {
+          shape = "arrow";
+        } else if (toFiniteNumber$2(slotRecord.shape) === constants.GRID_SHAPE) {
+          shape = "grid";
+        }
+      }
+      const defaultActiveColor = slotRecord.type === constants.EVENT || slotRecord.type === constants.ACTION ? constants.EVENT_LINK_COLOR : constants.LINK_COLOR;
+      return {
+        label: String((explicit == null ? void 0 : explicit.label) || slotRecord.label || slotRecord.name || ""),
+        shape,
+        dir: explicit == null ? void 0 : explicit.dir,
+        colorOn: (explicit == null ? void 0 : explicit.colorOn) || String(slotRecord.color_on || slotRecord.color || defaultActiveColor),
+        colorOff: (explicit == null ? void 0 : explicit.colorOff) || String(slotRecord.color_off || "#6E7681"),
+        hideLabelWhenCollapsed: (explicit == null ? void 0 : explicit.hideLabelWhenCollapsed) !== false,
+        radius: explicit == null ? void 0 : explicit.radius
+      };
+    }
+    resolvePortAnchorLocal(kind, slotIndex) {
+      var _a3, _b3, _c2, _d2, _e2, _f, _g, _h2;
+      const explicit = (_b3 = (_a3 = this.node).getPortLayout) == null ? void 0 : _b3.call(
+        _a3,
+        kind,
+        slotIndex,
+        this.createContextWithMask(ModernNodeChangeMask.Ports, this.shellState)
+      );
+      if (explicit) {
+        if (explicit.space === "world") {
+          return [
+            explicit.x - toFiniteNumber$2((_c2 = this.node.pos) == null ? void 0 : _c2[0]),
+            explicit.y - toFiniteNumber$2((_d2 = this.node.pos) == null ? void 0 : _d2[1])
+          ];
+        }
+        return [toFiniteNumber$2(explicit.x), toFiniteNumber$2(explicit.y)];
+      }
+      const anchor = toPoint(
+        (_f = (_e2 = this.node).getConnectionPos) == null ? void 0 : _f.call(_e2, kind === "input", slotIndex)
+      );
+      if (!anchor) {
+        return null;
+      }
+      return [
+        anchor[0] - toFiniteNumber$2((_g = this.node.pos) == null ? void 0 : _g[0]),
+        anchor[1] - toFiniteNumber$2((_h2 = this.node.pos) == null ? void 0 : _h2[1])
+      ];
+    }
+    isPortActive(kind, _slotIndex, slot) {
+      const slotRecord = slot || {};
+      if (kind === "input") {
+        return slotRecord.link != null;
+      }
+      return Array.isArray(slotRecord.links) && slotRecord.links.length > 0;
+    }
+    syncPortLayer(kind, layouts) {
+      const layer = kind === "input" ? this.shell.inputPortLayer : this.shell.outputPortLayer;
+      const activeKeys = /* @__PURE__ */ new Set();
+      for (let i2 = 0; i2 < layouts.length; ++i2) {
+        const layout = layouts[i2];
+        const key = `${kind}:${layout.index}`;
+        activeKeys.add(key);
+        let entry = this.portEntries.get(key);
+        const markerColor = layout.active ? layout.colorOn : layout.colorOff;
+        if (!entry) {
+          const root = new ye$1({
+            x: layout.anchorX,
+            y: layout.anchorY,
+            hittable: false
+          });
+          const marker = createPortMarker(layout.shape, markerColor);
+          const label = createText({
+            x: kind === "input" ? layout.anchorX + 10 : layout.anchorX - 90,
+            y: layout.anchorY,
+            width: 80,
+            textAlign: kind === "input" ? "left" : "right",
+            fontSize: 11,
+            fill: "#D5DEE7",
+            text: layout.label
+          });
+          root.add(marker);
+          layer.add([root, label]);
+          entry = {
+            kind,
+            slotIndex: layout.index,
+            layout,
+            root,
+            marker,
+            label
+          };
+          this.portEntries.set(key, entry);
+        }
+        entry.layout = layout;
+        entry.root.x = layout.anchorX;
+        entry.root.y = layout.anchorY;
+        if (!this.isSameMarkerShape(entry.marker, layout.shape)) {
+          entry.marker.destroy();
+          entry.marker = createPortMarker(layout.shape, markerColor);
+          entry.root.add(entry.marker);
+        } else {
+          setShapeColor(entry.marker, markerColor);
+        }
+        entry.label.text = layout.label;
+        entry.label.visible = !layout.hiddenLabelWhenCollapsed && Boolean(layout.label);
+        entry.label.x = kind === "input" ? layout.anchorX + 10 : layout.anchorX - 90;
+        entry.label.y = layout.anchorY;
+        entry.label.width = 80;
+      }
+      for (const [key, entry] of this.portEntries.entries()) {
+        if (!key.startsWith(`${kind}:`) || activeKeys.has(key)) {
+          continue;
+        }
+        entry.root.destroy();
+        entry.label.destroy();
+        this.portEntries.delete(key);
+      }
+    }
+    isSameMarkerShape(marker, shape) {
+      return marker.__litegraphPortShape === shape;
+    }
+    resolvePortLayout(kind, slotIndex) {
+      const list = kind === "input" ? this.shellLayout.inputPorts || [] : this.shellLayout.outputPorts || [];
+      for (let i2 = 0; i2 < list.length; ++i2) {
+        if (list[i2].index === slotIndex) {
+          return list[i2];
+        }
+      }
+      return null;
+    }
+    storeInspectableState() {
+      this.root[MODERN_NODE_STATE_KEY] = {
+        layout: this.shellLayout,
+        shellState: this.shellState
+      };
+    }
+    applyInteractionState() {
+      const shellState = this.shellState;
+      const headerHoverEnabled = Boolean(shellState.allowNodeHover);
+      const headerState = headerHoverEnabled ? partStateFor(this.interactionState, "header") : "";
+      const bodyState = headerHoverEnabled ? partStateFor(this.interactionState, "body") : "";
+      const collapseState = partStateFor(this.interactionState, "collapse");
+      const resizeState = partStateFor(this.interactionState, "resize");
+      this.root.selected = Boolean(this.node.is_selected);
+      this.shell.selectionOutline.visible = Boolean(this.node.is_selected);
+      this.shell.header.stroke = headerState === "press" ? "#76A8FF" : headerState === "hover" ? "#4E6D94" : shellState.borderColor || "#243342";
+      if (this.shellLayout.body) {
+        this.shell.body.stroke = bodyState === "press" ? "#76A8FF" : bodyState === "hover" ? "#4E6D94" : shellState.borderColor || "#243342";
+      }
+      this.shell.collapseOverlay.fill = collapseState === "press" ? "rgba(255,255,255,0.16)" : collapseState === "hover" ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0)";
+      this.shell.resizeHandleGlyph.stroke = resizeState === "press" ? "#76A8FF" : resizeState === "hover" ? "#C7D5E0" : "#8593A0";
+      this.applyWidgetInteractionState();
+      this.applyActionPartInteractionState();
+      this.applyPortInteractionState();
+    }
+    clearWidgets() {
+      var _a3;
+      for (let i2 = 0; i2 < this.widgetEntries.length; ++i2) {
+        const handle = this.widgetEntries[i2].handle;
+        if (handle.destroy) {
+          handle.destroy();
+        } else {
+          (_a3 = toUI(handle.root)) == null ? void 0 : _a3.destroy();
+        }
+      }
+      this.widgetEntries = [];
+      this.widgetValueSnapshot.clear();
+    }
+    clearActionParts() {
+      for (let i2 = 0; i2 < this.actionPartEntries.length; ++i2) {
+        this.actionPartEntries[i2].root.destroy();
+      }
+      this.actionPartEntries = [];
+    }
+    createLifecycleContext(changeMask) {
+      return {
+        node: this.node,
+        host: this,
+        root: this.root,
+        content: this.content,
+        changeMask,
+        interactionState: this.interactionState,
+        leafer,
+        shellState: this.shellState
+      };
+    }
+    createContextWithMask(changeMask, shellState) {
+      return {
+        node: this.node,
+        host: this,
+        root: this.root,
+        content: this.content,
+        changeMask,
+        interactionState: this.interactionState,
+        shellState,
+        leafer
       };
     }
     createWidgetContext(schema, bounds) {
@@ -17135,36 +18113,6 @@ var LiteGraphTSMigration = (function(exports) {
         bounds,
         leafer
       };
-    }
-    addWidgetHandle(root, handle) {
-      if (handle.root instanceof ge$1) {
-        root.add(handle.root);
-        return;
-      }
-      const candidate = handle.root;
-      if (candidate && typeof candidate === "object" && !candidate.parent) {
-        root.add(handle.root);
-      }
-    }
-    toWidgetLayout(index, schema, handle) {
-      return {
-        index,
-        id: schema.id,
-        type: schema.type,
-        x: handle.bounds.x,
-        y: handle.bounds.y,
-        width: handle.bounds.width,
-        height: handle.bounds.height,
-        action: "edit",
-        actionZones: handle.actionZones
-      };
-    }
-    patchShellWidgetLayout(layout) {
-      const shellState = this.getShellState();
-      if (!(shellState == null ? void 0 : shellState.layout)) {
-        return;
-      }
-      shellState.layout.widgets = layout;
     }
     applyWidgetInteractionState() {
       var _a3, _b3;
@@ -17190,171 +18138,31 @@ var LiteGraphTSMigration = (function(exports) {
         }
       }
     }
-    getLocalPoint(worldX, worldY) {
-      const point = this.root.getInnerPoint({
-        x: worldX,
-        y: worldY
-      });
-      return [toFiniteNumber$2(point.x), toFiniteNumber$2(point.y)];
-    }
-    getPortAnchor(kind, slotIndex) {
-      var _a3, _b3;
-      const layout = this.resolvePortLayout(kind, slotIndex);
-      if (layout) {
-        if (layout.space === "world") {
-          return [layout.x, layout.y];
-        }
-        return [
-          toFiniteNumber$2(this.root.x) + layout.x,
-          toFiniteNumber$2(this.root.y) + layout.y
-        ];
+    applyActionPartInteractionState() {
+      for (let i2 = 0; i2 < this.actionPartEntries.length; ++i2) {
+        const entry = this.actionPartEntries[i2];
+        const state = partStateFor(
+          this.interactionState,
+          "action-part",
+          i2,
+          entry.schema.id
+        );
+        entry.background.fill = state === "press" ? "#17304F" : state === "hover" ? "#223951" : "#1C2430";
+        entry.background.stroke = state === "press" ? "#76A8FF" : state === "hover" ? "#4E6D94" : "#2E455D";
       }
-      const fallbackPoint = toPoint(
-        (_b3 = (_a3 = this.node).getConnectionPos) == null ? void 0 : _b3.call(_a3, kind === "input", slotIndex)
-      );
-      return fallbackPoint || null;
     }
-    getPortDirection(kind, slotIndex) {
-      const layout = this.resolvePortLayout(kind, slotIndex);
-      if ((layout == null ? void 0 : layout.dir) != null) {
-        return toFiniteNumber$2(layout.dir);
+    applyPortInteractionState() {
+      for (const entry of this.portEntries.values()) {
+        const partKind = entry.kind === "input" ? "input-port" : "output-port";
+        const state = partStateFor(
+          this.interactionState,
+          partKind,
+          entry.slotIndex
+        );
+        const baseColor = entry.layout.active ? entry.layout.colorOn : entry.layout.colorOff;
+        const color = state === "press" ? "#FFFFFF" : state === "hover" ? "#B9D7FF" : baseColor;
+        setShapeColor(entry.marker, color);
       }
-      return kind === "input" ? PORT_DIRECTION_LEFT : PORT_DIRECTION_RIGHT;
-    }
-    hitPortAt(worldX, worldY) {
-      var _a3, _b3;
-      let bestHit = null;
-      const kinds = ["output", "input"];
-      for (let kindIndex = 0; kindIndex < kinds.length; ++kindIndex) {
-        const kind = kinds[kindIndex];
-        const slotCount = this.getSlotCount(kind);
-        for (let slotIndex = 0; slotIndex < slotCount; ++slotIndex) {
-          const anchor = this.getPortAnchor(kind, slotIndex);
-          if (!anchor) {
-            continue;
-          }
-          const radius = (_b3 = (_a3 = this.resolvePortLayout(kind, slotIndex)) == null ? void 0 : _a3.radius) != null ? _b3 : 12;
-          const dx = worldX - anchor[0];
-          const dy = worldY - anchor[1];
-          const dist = Math.sqrt(dx * dx + dy * dy);
-          if (dist > radius) {
-            continue;
-          }
-          if (!bestHit || dist < bestHit.distance) {
-            bestHit = {
-              kind,
-              slotIndex,
-              anchor,
-              dir: this.getPortDirection(kind, slotIndex) || void 0,
-              distance: dist
-            };
-          }
-        }
-      }
-      if (!bestHit) {
-        return null;
-      }
-      return {
-        kind: bestHit.kind,
-        slotIndex: bestHit.slotIndex,
-        anchor: bestHit.anchor,
-        dir: bestHit.dir
-      };
-    }
-    mountContent(changeMask) {
-      const context = this.createContextWithMask(changeMask);
-      if (typeof this.node.mountView === "function") {
-        return this.node.mountView(context);
-      }
-      if (typeof this.node.buildUI === "function") {
-        return this.node.buildUI(context);
-      }
-      return null;
-    }
-    patchContent(changeMask) {
-      var _a3, _b3;
-      const context = this.createContextWithMask(changeMask);
-      if (typeof this.node.patchView === "function") {
-        this.node.patchView(context);
-        return;
-      }
-      (_b3 = (_a3 = this.node).updateUI) == null ? void 0 : _b3.call(_a3, context);
-    }
-    consumeChangeMask() {
-      var _a3, _b3;
-      const rawMask = (_b3 = (_a3 = this.node).consumeModernChangeMask) == null ? void 0 : _b3.call(_a3);
-      if (rawMask == null) {
-        return ModernNodeChangeMask.All;
-      }
-      const normalizedMask = toFiniteNumber$2(
-        rawMask,
-        ModernNodeChangeMask.None
-      );
-      if (normalizedMask <= ModernNodeChangeMask.None) {
-        return ModernNodeChangeMask.None;
-      }
-      return normalizedMask;
-    }
-    didSlotSignatureChange() {
-      const nextSignature = `${this.getSlotCount("input")}:${this.getSlotCount("output")}`;
-      if (nextSignature === this.lastSlotSignature) {
-        return false;
-      }
-      this.lastSlotSignature = nextSignature;
-      return true;
-    }
-    invalidatePortLayoutCache() {
-      this.portLayoutCache.clear();
-    }
-    createContextWithMask(changeMask) {
-      return {
-        ...this.createContext(),
-        changeMask
-      };
-    }
-    createContext() {
-      return {
-        node: this.node,
-        host: this,
-        root: this.root,
-        content: this.content,
-        changeMask: ModernNodeChangeMask.All,
-        interactionState: this.interactionState,
-        leafer
-      };
-    }
-    getSlotCount(kind) {
-      const list = kind === "input" ? this.node.inputs : this.node.outputs;
-      return Array.isArray(list) ? list.length : 0;
-    }
-    resolvePortLayout(kind, slotIndex) {
-      var _a3, _b3;
-      const cacheKey = `${kind}:${slotIndex}`;
-      if (this.portLayoutCache.has(cacheKey)) {
-        return this.portLayoutCache.get(cacheKey) || null;
-      }
-      const resolvedLayout = ((_b3 = (_a3 = this.node).getPortLayout) == null ? void 0 : _b3.call(
-        _a3,
-        kind,
-        slotIndex,
-        this.createContextWithMask(ModernNodeChangeMask.Ports)
-      )) || null;
-      this.portLayoutCache.set(cacheKey, resolvedLayout);
-      return resolvedLayout;
-    }
-    getShellState() {
-      if (!this.content || typeof this.content !== "object") {
-        return null;
-      }
-      return this.content[MODERN_NODE_STATE_KEY] || null;
-    }
-    applyInteractionState() {
-      var _a3, _b3;
-      this.root.selected = Boolean(
-        this.node.is_selected
-      );
-      (_b3 = (_a3 = this.getShellState()) == null ? void 0 : _a3.applyInteractionState) == null ? void 0 : _b3.call(_a3, this.interactionState);
-      this.applyWidgetInteractionState();
     }
     hitWidgetPart(point, widgets) {
       var _a3, _b3;
@@ -17382,9 +18190,7 @@ var LiteGraphTSMigration = (function(exports) {
           }
         }
         if (widget.actionZones) {
-          const zoneEntries = Object.entries(widget.actionZones);
-          for (let zoneIndex = 0; zoneIndex < zoneEntries.length; ++zoneIndex) {
-            const [action, rect] = zoneEntries[zoneIndex];
+          for (const [action, rect] of Object.entries(widget.actionZones)) {
             if (pointInsideRect(point, rect)) {
               return {
                 kind: "widget",
@@ -17408,6 +18214,25 @@ var LiteGraphTSMigration = (function(exports) {
       }
       return null;
     }
+    hitActionPart(point, actionParts) {
+      if (!(actionParts == null ? void 0 : actionParts.length)) {
+        return null;
+      }
+      for (let i2 = 0; i2 < actionParts.length; ++i2) {
+        const part = actionParts[i2];
+        if (pointInsideRect(point, part)) {
+          return {
+            kind: "action-part",
+            index: part.index,
+            id: part.id,
+            action: part.action,
+            cursor: part.cursor || "pointer",
+            bounds: part
+          };
+        }
+      }
+      return null;
+    }
     hitPortPart(point, kind, ports) {
       if (!(ports == null ? void 0 : ports.length)) {
         return null;
@@ -17424,23 +18249,6 @@ var LiteGraphTSMigration = (function(exports) {
         }
       }
       return null;
-    }
-    hitFallbackPart(point) {
-      var _a3, _b3;
-      const width2 = Math.max(toFiniteNumber$2((_a3 = this.node.size) == null ? void 0 : _a3[0], 120), 120);
-      const height = Math.max(toFiniteNumber$2((_b3 = this.node.size) == null ? void 0 : _b3[1], 60), 60);
-      if (point[0] < 0 || point[1] < 0 || point[0] > width2 || point[1] > height) {
-        return null;
-      }
-      return {
-        kind: point[1] <= 32 ? "header" : "body",
-        bounds: {
-          x: 0,
-          y: 0,
-          width: width2,
-          height
-        }
-      };
     }
   }
   function toMutationKey(id) {

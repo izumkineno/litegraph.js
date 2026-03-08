@@ -4,12 +4,17 @@ export {
     MODERN_NODE_STATE_KEY,
     ModernNodeChangeMask,
     isModernNodeContract,
+    type ModernActionPartCallbackContext,
+    type ModernActionPartSchema,
     type ModernNodeChangeMaskValue,
     type ModernNodeLifecycleContext,
     type ModernNodePortDefinition,
     type ModernNodePortLayout,
+    type ModernPortPresentation,
     type ModernNodePortSchema,
     type ModernNodeRuntimeLike,
+    type ModernPortShape,
+    type ModernShellState,
 } from "./ModernNodeContracts";
 export {
     attachModernNodeRegistryApi,

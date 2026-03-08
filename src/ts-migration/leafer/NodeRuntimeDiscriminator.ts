@@ -9,6 +9,11 @@ export interface RuntimeDiscriminatorNodeLike {
     id?: number | string;
     renderRuntime?: NodeRenderRuntime;
     [MODERN_NODE_MARKER_KEY]?: boolean;
+    mountContent?: unknown;
+    patchContent?: unknown;
+    getShellState?: unknown;
+    defineActionParts?: unknown;
+    getPortPresentation?: unknown;
     mountView?: unknown;
     patchView?: unknown;
     consumeModernChangeMask?: unknown;
@@ -33,6 +38,11 @@ export function discriminateNodeRuntime(
     }
 
     if (
+        typeof node.mountContent === "function" ||
+        typeof node.patchContent === "function" ||
+        typeof node.getShellState === "function" ||
+        typeof node.defineActionParts === "function" ||
+        typeof node.getPortPresentation === "function" ||
         typeof node.buildUI === "function" ||
         typeof node.updateUI === "function" ||
         typeof node.renderLeafer === "function" ||
