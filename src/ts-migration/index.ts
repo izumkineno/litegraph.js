@@ -69,6 +69,19 @@ import {
     CONTEXT_MENU_CLOSE_ALL_DIFF_ID,
     isContextMenuCloseAllCompatSynced,
 } from "./ui/context-menu-compat";
+import {
+    attachModernNodeRegistryApi,
+    ModernNodeContracts,
+    ModernNodeBase,
+    ModernNodeChangeMask,
+    getModernWidgetRenderer,
+    registerModernNode,
+    registerModernNodes,
+    registerModernWidget,
+    registerModernWidgets,
+    type ModernNodeConstructorLike,
+    type ModernWidgetRenderer,
+} from "./leafer";
 import { colorToString, hex2num, num2hex } from "./utils/color";
 import { getParameterNames } from "./utils/function-signature";
 import {
@@ -127,7 +140,17 @@ export {
     attachLiteGraphCommonJsExports,
     applyLiteGraphAssemblyCompat,
     attachLiteGraphAssemblyBridges,
+    ModernNodeBase,
+    ModernNodeContracts,
+    ModernNodeChangeMask,
+    getModernWidgetRenderer,
+    registerModernNode,
+    registerModernNodes,
+    registerModernWidget,
+    registerModernWidgets,
 };
+
+export type { ModernWidgetRenderer, ModernWidgetSchema } from "./leafer";
 
 export { LGraph, LGraphNode, LGraphGroup, DragAndScale, LGraphCanvas, ContextMenu };
 
@@ -182,6 +205,25 @@ export type LiteGraphNamespace = LiteGraphConstantsShape &
         LGraphCanvas: typeof LGraphCanvas;
         ContextMenu: typeof ContextMenu;
         CurveEditor: typeof CurveEditor;
+        ModernNodeBase: typeof ModernNodeBase;
+        ModernNodeContracts: typeof ModernNodeContracts;
+        ModernNodeChangeMask: typeof ModernNodeChangeMask;
+        registerModernNode: (
+            nodeClass: ModernNodeConstructorLike
+        ) => string;
+        registerModernNodes: (
+            nodeClasses: ReadonlyArray<ModernNodeConstructorLike>
+        ) => string[];
+        registerModernWidget: (
+            type: string,
+            renderer: ModernWidgetRenderer
+        ) => string;
+        registerModernWidgets: (
+            renderers: Record<string, ModernWidgetRenderer>
+        ) => string[];
+        getModernWidgetRenderer: (
+            type: string
+        ) => ModernWidgetRenderer | undefined;
     };
 
 export interface LiteGraphAssembly {
@@ -194,11 +236,52 @@ export interface LiteGraphAssembly {
     LGraphCanvas: typeof LGraphCanvas;
     ContextMenu: typeof ContextMenu;
     CurveEditor: typeof CurveEditor;
+    ModernNodeBase: typeof ModernNodeBase;
+    ModernNodeContracts: typeof ModernNodeContracts;
+    ModernNodeChangeMask: typeof ModernNodeChangeMask;
+    registerModernNode: (
+        nodeClass: ModernNodeConstructorLike
+    ) => string;
+    registerModernNodes: (
+        nodeClasses: ReadonlyArray<ModernNodeConstructorLike>
+    ) => string[];
+    registerModernWidget: (
+        type: string,
+        renderer: ModernWidgetRenderer
+    ) => string;
+    registerModernWidgets: (
+        renderers: Record<string, ModernWidgetRenderer>
+    ) => string[];
+    getModernWidgetRenderer: (
+        type: string
+    ) => ModernWidgetRenderer | undefined;
     registry: LiteGraphRegistry;
     runtime: LiteGraphRuntime;
 }
 
 export interface LiteGraphAssemblyOptions extends LiteGraphAssemblyBridgeOptions {}
+
+function installModernNodeApi(liteGraph: LiteGraphNamespace): void {
+    attachModernNodeRegistryApi(liteGraph);
+    liteGraph.ModernNodeBase = ModernNodeBase;
+    liteGraph.ModernNodeContracts = ModernNodeContracts;
+    liteGraph.ModernNodeChangeMask = ModernNodeChangeMask;
+    liteGraph.registerModernNode = (nodeClass: ModernNodeConstructorLike): string =>
+        registerModernNode(nodeClass, liteGraph);
+    liteGraph.registerModernNodes = (
+        nodeClasses: ReadonlyArray<ModernNodeConstructorLike>
+    ): string[] => registerModernNodes(nodeClasses, liteGraph);
+    liteGraph.registerModernWidget = (
+        type: string,
+        renderer: ModernWidgetRenderer
+    ): string => registerModernWidget(type, renderer);
+    liteGraph.registerModernWidgets = (
+        renderers: Record<string, ModernWidgetRenderer>
+    ): string[] => registerModernWidgets(renderers);
+    liteGraph.getModernWidgetRenderer = (
+        type: string
+    ): ModernWidgetRenderer | undefined => getModernWidgetRenderer(type);
+}
 
 function createAssemblyBundle(
     liteGraph: LiteGraphNamespace,
@@ -215,6 +298,14 @@ function createAssemblyBundle(
         LGraphCanvas,
         ContextMenu,
         CurveEditor,
+        ModernNodeBase,
+        ModernNodeContracts,
+        ModernNodeChangeMask,
+        registerModernNode: liteGraph.registerModernNode,
+        registerModernNodes: liteGraph.registerModernNodes,
+        registerModernWidget: liteGraph.registerModernWidget,
+        registerModernWidgets: liteGraph.registerModernWidgets,
+        getModernWidgetRenderer: liteGraph.getModernWidgetRenderer,
         registry,
         runtime,
     };
@@ -230,6 +321,7 @@ export function assembleLiteGraph(
     options: LiteGraphAssemblyOptions = {}
 ): LiteGraphAssembly {
     const { liteGraph, registry, runtime } = createLiteGraphNamespace();
+    installModernNodeApi(liteGraph as LiteGraphNamespace);
     const bundle = createAssemblyBundle(
         liteGraph as LiteGraphNamespace,
         registry,

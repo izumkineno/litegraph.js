@@ -1,6 +1,6 @@
 var LiteGraphTSMigration = (function(exports) {
   "use strict";
-  var _a2, _b, _c, _d;
+  var _a2, _b2, _c, _d;
   var t;
   !(function(t2) {
     t2[t2.No = 0] = "No", t2[t2.Yes = 1] = "Yes", t2[t2.NoAndSkip = 2] = "NoAndSkip", t2[t2.YesAndSkip = 3] = "YesAndSkip";
@@ -2776,7 +2776,7 @@ var LiteGraphTSMigration = (function(exports) {
       return e3 || (s2 ? t2.__bubbleMap = {} : ha);
     }
   }
-  const { on: ca, on_: ua, off: _a, off_: pa, once: fa, emit: ga, emitEvent: ya, hasEvent: ma, destroy: xa } = la.prototype, wa = { on: ca, on_: ua, off: _a, off_: pa, once: fa, emit: ga, emitEvent: ya, hasEvent: ma, destroyEventer: xa }, ba = ee$2.get("setAttr"), Ba = { __setAttr(t2, e2, r2) {
+  const { on: ca, on_: ua, off: _a$1, off_: pa, once: fa, emit: ga, emitEvent: ya, hasEvent: ma, destroy: xa } = la.prototype, wa = { on: ca, on_: ua, off: _a$1, off_: pa, once: fa, emit: ga, emitEvent: ya, hasEvent: ma, destroyEventer: xa }, ba = ee$2.get("setAttr"), Ba = { __setAttr(t2, e2, r2) {
     if (this.leaferIsCreated) {
       const i2 = this.__.__getInput(t2);
       if (!r2 || n(e2) || s(e2) || (ba.warn(this.innerName, t2, e2), e2 = void 0), d$1(e2) || i2 !== e2) {
@@ -5116,12 +5116,12 @@ var LiteGraphTSMigration = (function(exports) {
     return typeof tuple[1] === "string";
   }
   function normalizeSerializedLLinkTuple(tuple) {
-    var _a3, _b2, _c2, _d2, _e2, _f, _g, _h2, _i2, _j, _k, _l;
+    var _a3, _b3, _c2, _d2, _e2, _f, _g, _h2, _i2, _j, _k, _l;
     const source = tuple;
     if (isSerializedLLinkDtsOrder(source)) {
       return [
         Number((_a3 = source[0]) != null ? _a3 : 0),
-        Number((_b2 = source[2]) != null ? _b2 : 0),
+        Number((_b3 = source[2]) != null ? _b3 : 0),
         Number((_c2 = source[3]) != null ? _c2 : 0),
         Number((_d2 = source[4]) != null ? _d2 : 0),
         Number((_e2 = source[5]) != null ? _e2 : 0),
@@ -5151,7 +5151,7 @@ var LiteGraphTSMigration = (function(exports) {
     ];
   }
   function parseSerializedLLinkInput(input) {
-    var _a3, _b2, _c2, _d2, _e2, _f;
+    var _a3, _b3, _c2, _d2, _e2, _f;
     if (Array.isArray(input)) {
       const normalized = normalizeSerializedLLinkTuple(input);
       return {
@@ -5166,7 +5166,7 @@ var LiteGraphTSMigration = (function(exports) {
     const shape = input;
     return {
       id: Number((_a3 = shape.id) != null ? _a3 : 0),
-      type: String((_b2 = shape.type) != null ? _b2 : ""),
+      type: String((_b3 = shape.type) != null ? _b3 : ""),
       origin_id: Number((_c2 = shape.origin_id) != null ? _c2 : 0),
       origin_slot: Number((_d2 = shape.origin_slot) != null ? _d2 : 0),
       target_id: Number((_e2 = shape.target_id) != null ? _e2 : 0),
@@ -5174,10 +5174,10 @@ var LiteGraphTSMigration = (function(exports) {
     };
   }
   function serializeLLinkShape(shape, order = "runtime") {
-    var _a3, _b2, _c2, _d2, _e2, _f;
+    var _a3, _b3, _c2, _d2, _e2, _f;
     const runtimeTuple = [
       Number((_a3 = shape.id) != null ? _a3 : 0),
-      Number((_b2 = shape.origin_id) != null ? _b2 : 0),
+      Number((_b3 = shape.origin_id) != null ? _b3 : 0),
       Number((_c2 = shape.origin_slot) != null ? _c2 : 0),
       Number((_d2 = shape.target_id) != null ? _d2 : 0),
       Number((_e2 = shape.target_slot) != null ? _e2 : 0),
@@ -5315,7 +5315,7 @@ var LiteGraphTSMigration = (function(exports) {
       canvasPrototype: bundle.LGraphCanvas.prototype
     });
   }
-  function clamp$1(v2, a2, b2) {
+  function clamp$2(v2, a2, b2) {
     return a2 > v2 ? a2 : b2 < v2 ? b2 : v2;
   }
   const defaultBridgeOptions = {
@@ -5355,7 +5355,7 @@ var LiteGraphTSMigration = (function(exports) {
       liteGraph.CurveEditor = runtime2.CurveEditor;
     }
     if (resolved.exposeClamp) {
-      globalScope.clamp = clamp$1;
+      globalScope.clamp = clamp$2;
     }
     if (resolved.installRequestAnimationFrameShim) {
       installRequestAnimationFrameShim(globalScope);
@@ -5443,7 +5443,7 @@ var LiteGraphTSMigration = (function(exports) {
     return options;
   }
   function buildNodeMenuOptions(canvas, menuClass, node2) {
-    var _a3, _b2, _c2, _d2, _e2, _f;
+    var _a3, _b3, _c2, _d2, _e2, _f;
     let options = [];
     if (node2.getMenuOptions) {
       options = node2.getMenuOptions(canvas);
@@ -5482,7 +5482,7 @@ var LiteGraphTSMigration = (function(exports) {
         null
       );
     }
-    if ((_b2 = (_a3 = node2.onGetInputs) == null ? void 0 : _a3.call(node2)) == null ? void 0 : _b2.length) {
+    if ((_b3 = (_a3 = node2.onGetInputs) == null ? void 0 : _a3.call(node2)) == null ? void 0 : _b3.length) {
       options[0].disabled = false;
     }
     if ((_d2 = (_c2 = node2.onGetOutputs) == null ? void 0 : _c2.call(node2)) == null ? void 0 : _d2.length) {
@@ -5536,12 +5536,12 @@ var LiteGraphTSMigration = (function(exports) {
     ];
   }
   function buildSlotMenuOptions(node2, slot) {
-    var _a3, _b2;
+    var _a3, _b3;
     if (node2.getSlotMenuOptions) {
       return node2.getSlotMenuOptions(slot);
     }
     const options = [];
-    if ((_b2 = (_a3 = slot == null ? void 0 : slot.output) == null ? void 0 : _a3.links) == null ? void 0 : _b2.length) {
+    if ((_b3 = (_a3 = slot == null ? void 0 : slot.output) == null ? void 0 : _a3.links) == null ? void 0 : _b3.length) {
       options.push({ content: "Disconnect Links", slot });
     }
     const slotDefinition = slot.input || slot.output;
@@ -5671,7 +5671,7 @@ var LiteGraphTSMigration = (function(exports) {
     return true;
   }
   function showConnectionMenuController(context, optPass) {
-    var _a3, _b2, _c2, _d2, _e2, _f, _g, _h2;
+    var _a3, _b3, _c2, _d2, _e2, _f, _g, _h2;
     const host = context.host;
     const opts = Object.assign(
       {
@@ -5692,7 +5692,7 @@ var LiteGraphTSMigration = (function(exports) {
     let slotX = isFrom ? opts.slotFrom : opts.slotTo;
     let slotIndex = false;
     if (typeof slotX === "string") {
-      slotIndex = isFrom ? (_a3 = nodeX.findOutputSlot) == null ? void 0 : _a3.call(nodeX, slotX, false) : (_b2 = nodeX.findInputSlot) == null ? void 0 : _b2.call(nodeX, slotX, false);
+      slotIndex = isFrom ? (_a3 = nodeX.findOutputSlot) == null ? void 0 : _a3.call(nodeX, slotX, false) : (_b3 = nodeX.findInputSlot) == null ? void 0 : _b3.call(nodeX, slotX, false);
       slotX = isFrom ? (_c2 = nodeX.outputs) == null ? void 0 : _c2[slotIndex] : (_d2 = nodeX.inputs) == null ? void 0 : _d2[slotIndex];
     } else if (typeof slotX === "object") {
       slotIndex = isFrom ? (_e2 = nodeX.findOutputSlot) == null ? void 0 : _e2.call(nodeX, slotX.name) : (_f = nodeX.findInputSlot) == null ? void 0 : _f.call(nodeX, slotX.name);
@@ -5762,7 +5762,7 @@ var LiteGraphTSMigration = (function(exports) {
     return false;
   }
   function processContextMenuController(context, node2, event2) {
-    var _a3, _b2, _c2, _d2, _e2;
+    var _a3, _b3, _c2, _d2, _e2;
     const { host, menuClass, graphcanvas } = context;
     const options = {
       event: event2,
@@ -5783,7 +5783,7 @@ var LiteGraphTSMigration = (function(exports) {
     if (slot) {
       menuInfo = buildSlotMenuOptions(node2, slot);
       options.title = (slot.input ? slot.input.type : slot.output.type) || "*";
-      if (((_b2 = slot.input) == null ? void 0 : _b2.type) == host.ACTION) {
+      if (((_b3 = slot.input) == null ? void 0 : _b3.type) == host.ACTION) {
         options.title = "Action";
       }
       if (((_c2 = slot.output) == null ? void 0 : _c2.type) == host.EVENT) {
@@ -5849,8 +5849,8 @@ var LiteGraphTSMigration = (function(exports) {
     }
   }
   function showRenameSlotDialog(context, node2, info, options) {
-    var _a3, _b2, _c2;
-    const slotInfo = info.input ? (_a3 = node2.getInputInfo) == null ? void 0 : _a3.call(node2, info.slot) : (_b2 = node2.getOutputInfo) == null ? void 0 : _b2.call(node2, info.slot);
+    var _a3, _b3, _c2;
+    const slotInfo = info.input ? (_a3 = node2.getInputInfo) == null ? void 0 : _a3.call(node2, info.slot) : (_b3 = node2.getOutputInfo) == null ? void 0 : _b3.call(node2, info.slot);
     const dialog = context.graphcanvas.createDialog(
       "<span class='name'>Name</span><input autofocus type='text'/><button>OK</button>",
       options
@@ -5887,9 +5887,9 @@ var LiteGraphTSMigration = (function(exports) {
   }
   const documentManagers = /* @__PURE__ */ new WeakMap();
   function resolveOwnerDocument(context) {
-    var _a3, _b2, _c2, _d2;
+    var _a3, _b3, _c2, _d2;
     const eventTarget = (_a3 = context.event) == null ? void 0 : _a3.target;
-    return context.ownerDocument || ((_b2 = context.mount) == null ? void 0 : _b2.ownerDocument) || ((_c2 = context.canvas) == null ? void 0 : _c2.ownerDocument) || (eventTarget == null ? void 0 : eventTarget.ownerDocument) || ((_d2 = context.ownerWindow) == null ? void 0 : _d2.document) || document;
+    return context.ownerDocument || ((_b3 = context.mount) == null ? void 0 : _b3.ownerDocument) || ((_c2 = context.canvas) == null ? void 0 : _c2.ownerDocument) || (eventTarget == null ? void 0 : eventTarget.ownerDocument) || ((_d2 = context.ownerWindow) == null ? void 0 : _d2.document) || document;
   }
   function resolveOwnerWindow(documentRef, context) {
     return documentRef.defaultView || context.ownerWindow || window;
@@ -7421,7 +7421,7 @@ var LiteGraphTSMigration = (function(exports) {
     }
   }
   function resolveMenuPanelHost(litegraph, menuClass) {
-    var _a3, _b2, _c2, _d2;
+    var _a3, _b3, _c2, _d2;
     const sourceHost = litegraph && typeof litegraph === "object" ? litegraph : emptyMenuHost;
     const classKey = menuClass;
     let classCache = menuHostCache.get(sourceHost);
@@ -7437,7 +7437,7 @@ var LiteGraphTSMigration = (function(exports) {
       ...sourceHost,
       ContextMenu: sourceHost.ContextMenu || menuClass.ContextMenu || DefaultContextMenu,
       ACTION: (_a3 = sourceHost.ACTION) != null ? _a3 : -1,
-      EVENT: (_b2 = sourceHost.EVENT) != null ? _b2 : -1,
+      EVENT: (_b3 = sourceHost.EVENT) != null ? _b3 : -1,
       NODE_MODES: sourceHost.NODE_MODES || ["Always", "On Event", "Never", "On Trigger"],
       LINK_RENDER_MODES: sourceHost.LINK_RENDER_MODES || [
         "Straight",
@@ -7539,15 +7539,15 @@ var LiteGraphTSMigration = (function(exports) {
     panel.node = node2;
     panel.classList.add("settings");
     const refresh = () => {
-      var _a3, _b2, _c2, _d2;
+      var _a3, _b3, _c2, _d2;
       panel.content.innerHTML = "";
       panel.addHTML(
         "<span class='node_type'>" + node2.type + "</span><span class='node_desc'>" + (node2.constructor.desc || "") + "</span><span class='separator'></span>"
       );
       panel.addHTML("<h3>Properties</h3>");
       const update = (name, value) => {
-        var _a4, _b3, _c3, _d3, _e2, _f, _g;
-        (_b3 = (_a4 = graphcanvas.graph).beforeChange) == null ? void 0 : _b3.call(_a4, node2);
+        var _a4, _b4, _c3, _d3, _e2, _f, _g;
+        (_b4 = (_a4 = graphcanvas.graph).beforeChange) == null ? void 0 : _b4.call(_a4, node2);
         if (name === "Title") {
           node2.title = value;
         } else if (name === "Mode") {
@@ -7590,7 +7590,7 @@ var LiteGraphTSMigration = (function(exports) {
       );
       for (const propertyName in node2.properties) {
         const value = node2.properties[propertyName];
-        const info = ((_b2 = node2.getPropertyInfo) == null ? void 0 : _b2.call(node2, propertyName)) || {};
+        const info = ((_b3 = node2.getPropertyInfo) == null ? void 0 : _b3.call(node2, propertyName)) || {};
         if ((_c2 = node2.onAddPropertyToPanel) == null ? void 0 : _c2.call(node2, propertyName, panel)) {
           continue;
         }
@@ -7606,11 +7606,11 @@ var LiteGraphTSMigration = (function(exports) {
       (_d2 = node2.onShowCustomPanelInfo) == null ? void 0 : _d2.call(node2, panel);
       panel.footer.innerHTML = "";
       panel.addButton("Delete", () => {
-        var _a4, _b3;
+        var _a4, _b4;
         if (node2.block_delete) {
           return;
         }
-        (_b3 = (_a4 = node2.graph).remove) == null ? void 0 : _b3.call(_a4, node2);
+        (_b4 = (_a4 = node2.graph).remove) == null ? void 0 : _b4.call(_a4, node2);
         panel.close();
       }).classList.add("delete");
     };
@@ -8231,7 +8231,7 @@ var LiteGraphTSMigration = (function(exports) {
       refreshHelper();
     }
     function select(name) {
-      var _a4, _b2, _c2, _d2, _e2, _f;
+      var _a4, _b3, _c2, _d2, _e2, _f;
       if (name) {
         if (graphcanvas.onSearchBoxSelection) {
           graphcanvas.onSearchBoxSelection(name, event2, graphcanvas);
@@ -8240,7 +8240,7 @@ var LiteGraphTSMigration = (function(exports) {
           if (extra) {
             name = extra.type;
           }
-          (_c2 = (_b2 = graphcanvas.graph).beforeChange) == null ? void 0 : _c2.call(_b2);
+          (_c2 = (_b3 = graphcanvas.graph).beforeChange) == null ? void 0 : _c2.call(_b3);
           const node2 = (_d2 = host.createNode) == null ? void 0 : _d2.call(host, name);
           if (node2) {
             node2.pos = graphcanvas.convertEventToCanvasOffset(event2);
@@ -8389,7 +8389,7 @@ var LiteGraphTSMigration = (function(exports) {
         ) : null;
         const search_limit = menuClass.search_limit !== void 0 ? menuClass.search_limit : -1;
         const inner_test_filter = (type, optsIn) => {
-          var _a5, _b2, _c2;
+          var _a5, _b3, _c2;
           const optsDef = {
             skipFilter: false,
             inTypeOverride: false,
@@ -8407,7 +8407,7 @@ var LiteGraphTSMigration = (function(exports) {
             let sV = sIn == null ? void 0 : sIn.value;
             if (local.inTypeOverride !== false) sV = local.inTypeOverride;
             if (sIn && sV) {
-              if (((_b2 = host.registered_slot_in_types) == null ? void 0 : _b2[sV]) && host.registered_slot_in_types[sV].nodes) {
+              if (((_b3 = host.registered_slot_in_types) == null ? void 0 : _b3[sV]) && host.registered_slot_in_types[sV].nodes) {
                 const doesInc = host.registered_slot_in_types[sV].nodes.includes(type);
                 if (doesInc === false) {
                   return false;
@@ -8474,8 +8474,8 @@ var LiteGraphTSMigration = (function(exports) {
     return dialog;
   }
   function showSubgraphIoPanel(context, node2, side) {
-    var _a3, _b2, _c2, _d2, _e2;
-    const oldPanel = (_b2 = (_a3 = context.canvas) == null ? void 0 : _a3.parentNode) == null ? void 0 : _b2.querySelector(".subgraph_dialog");
+    var _a3, _b3, _c2, _d2, _e2;
+    const oldPanel = (_b3 = (_a3 = context.canvas) == null ? void 0 : _a3.parentNode) == null ? void 0 : _b3.querySelector(".subgraph_dialog");
     (_c2 = oldPanel == null ? void 0 : oldPanel.close) == null ? void 0 : _c2.call(oldPanel);
     const isInputs = side === "inputs";
     const panel = context.createPanel(
@@ -8503,12 +8503,12 @@ var LiteGraphTSMigration = (function(exports) {
         elem.querySelector(".name").innerText = slot.name;
         elem.querySelector(".type").innerText = slot.type;
         (_a4 = elem.querySelector("button")) == null ? void 0 : _a4.addEventListener("click", function() {
-          var _a5, _b3;
+          var _a5, _b4;
           const index = Number(this.parentNode.dataset.slot);
           if (isInputs) {
             (_a5 = node2.removeInput) == null ? void 0 : _a5.call(node2, index);
           } else {
-            (_b3 = node2.removeOutput) == null ? void 0 : _b3.call(node2, index);
+            (_b4 = node2.removeOutput) == null ? void 0 : _b4.call(node2, index);
           }
           refresh();
         });
@@ -8517,11 +8517,11 @@ var LiteGraphTSMigration = (function(exports) {
     const html = " + <span class='label'>Name</span><input class='name'/><span class='label'>Type</span><input class='type'></input><button>+</button>";
     const addRow = panel.addHTML(html, "subgraph_property extra", true);
     const addSlot = function() {
-      var _a4, _b3, _c3, _d3;
+      var _a4, _b4, _c3, _d3;
       const parent = this.parentNode;
       const name = parent.querySelector(".name").value;
       const type = parent.querySelector(".type").value;
-      const findIndex = isInputs ? (_a4 = node2.findInputSlot) == null ? void 0 : _a4.call(node2, name) : (_b3 = node2.findOutputSlot) == null ? void 0 : _b3.call(node2, name);
+      const findIndex = isInputs ? (_a4 = node2.findInputSlot) == null ? void 0 : _a4.call(node2, name) : (_b4 = node2.findOutputSlot) == null ? void 0 : _b4.call(node2, name);
       if (!name || findIndex != -1) {
         return;
       }
@@ -8607,7 +8607,7 @@ var LiteGraphTSMigration = (function(exports) {
   function toMutationKey$1(nodeId) {
     return String(nodeId);
   }
-  function toFiniteNumber$8(value, fallback = 0) {
+  function toFiniteNumber$a(value, fallback = 0) {
     const numericValue = Number(value);
     return Number.isFinite(numericValue) ? numericValue : fallback;
   }
@@ -8621,7 +8621,7 @@ var LiteGraphTSMigration = (function(exports) {
     return "mouseup";
   }
   function resolveButtons(event2) {
-    return toFiniteNumber$8(event2.buttons);
+    return toFiniteNumber$a(event2.buttons);
   }
   function resolveButton(event2) {
     const pointerEvent = event2;
@@ -8652,21 +8652,21 @@ var LiteGraphTSMigration = (function(exports) {
   function buildLocalPosMap(event2, targets) {
     const localPosByNodeId = /* @__PURE__ */ new Map();
     const pagePoint = event2.getPagePoint();
-    const pageX = toFiniteNumber$8(pagePoint.x);
-    const pageY = toFiniteNumber$8(pagePoint.y);
+    const pageX = toFiniteNumber$a(pagePoint.x);
+    const pageY = toFiniteNumber$a(pagePoint.y);
     for (let i2 = 0; i2 < targets.length; ++i2) {
       const target = targets[i2];
       if (target.nodePosition) {
         localPosByNodeId.set(toMutationKey$1(target.nodeId), [
-          pageX - toFiniteNumber$8(target.nodePosition[0]),
-          pageY - toFiniteNumber$8(target.nodePosition[1])
+          pageX - toFiniteNumber$a(target.nodePosition[0]),
+          pageY - toFiniteNumber$a(target.nodePosition[1])
         ]);
         continue;
       }
       const localPoint = event2.getInnerPoint(target.nodeRoot);
       localPosByNodeId.set(toMutationKey$1(target.nodeId), [
-        toFiniteNumber$8(localPoint.x),
-        toFiniteNumber$8(localPoint.y)
+        toFiniteNumber$a(localPoint.x),
+        toFiniteNumber$a(localPoint.y)
       ]);
     }
     return localPosByNodeId;
@@ -8674,11 +8674,11 @@ var LiteGraphTSMigration = (function(exports) {
   function createLegacyPointerEvent(options) {
     const { event: event2, hostElement } = options;
     const pagePoint = event2.getPagePoint();
-    const canvasX = toFiniteNumber$8(pagePoint.x);
-    const canvasY = toFiniteNumber$8(pagePoint.y);
+    const canvasX = toFiniteNumber$a(pagePoint.x);
+    const canvasY = toFiniteNumber$a(pagePoint.y);
     const hostRect = hostElement.getBoundingClientRect();
-    const clientX = toFiniteNumber$8(event2.clientX, hostRect.left + canvasX);
-    const clientY = toFiniteNumber$8(event2.clientY, hostRect.top + canvasY);
+    const clientX = toFiniteNumber$a(event2.clientX, hostRect.left + canvasX);
+    const clientY = toFiniteNumber$a(event2.clientY, hostRect.top + canvasY);
     const button = resolveButton(event2);
     const buttons = resolveButtons(event2);
     const localPosByNodeId = buildLocalPosMap(event2, options.targets || []);
@@ -8698,22 +8698,22 @@ var LiteGraphTSMigration = (function(exports) {
       type: resolveMouseType(options.type),
       canvasX,
       canvasY,
-      pageX: toFiniteNumber$8(event2.pageX, clientX),
-      pageY: toFiniteNumber$8(event2.pageY, clientY),
+      pageX: toFiniteNumber$a(event2.pageX, clientX),
+      pageY: toFiniteNumber$a(event2.pageY, clientY),
       clientX,
       clientY,
-      screenX: toFiniteNumber$8(event2.screenX, clientX),
-      screenY: toFiniteNumber$8(event2.screenY, clientY),
+      screenX: toFiniteNumber$a(event2.screenX, clientX),
+      screenY: toFiniteNumber$a(event2.screenY, clientY),
       offsetX: canvasX,
       offsetY: canvasY,
-      deltaX: toFiniteNumber$8(options.deltaX),
-      deltaY: toFiniteNumber$8(options.deltaY),
-      deltax: toFiniteNumber$8(options.deltaX),
-      deltay: toFiniteNumber$8(options.deltaY),
+      deltaX: toFiniteNumber$a(options.deltaX),
+      deltaY: toFiniteNumber$a(options.deltaY),
+      deltax: toFiniteNumber$a(options.deltaX),
+      deltay: toFiniteNumber$a(options.deltaY),
       which: resolveWhich(button),
       button,
       buttons,
-      click_time: Math.max(0, toFiniteNumber$8(options.clickTime)),
+      click_time: Math.max(0, toFiniteNumber$a(options.clickTime)),
       dragging: Boolean(options.dragging),
       shiftKey: Boolean(event2.shiftKey),
       ctrlKey: Boolean(event2.ctrlKey),
@@ -9088,391 +9088,6 @@ var LiteGraphTSMigration = (function(exports) {
       if (this.instrumentationState.refCount <= 0) {
         teardownGraphInstrumentation(this.instrumentationState);
       }
-    }
-  }
-  const PORT_DIRECTION_UP = 1;
-  const PORT_DIRECTION_RIGHT = 2;
-  const PORT_DIRECTION_DOWN = 3;
-  const PORT_DIRECTION_LEFT = 4;
-  function toFiniteNumber$7(value, fallback = 0) {
-    const numericValue = Number(value);
-    return Number.isFinite(numericValue) ? numericValue : fallback;
-  }
-  function toPoint$1(value) {
-    if (Array.isArray(value) || ArrayBuffer.isView(value) || typeof value === "object" && value !== null && "0" in value && "1" in value) {
-      const indexedValue = value;
-      return [toFiniteNumber$7(indexedValue[0]), toFiniteNumber$7(indexedValue[1])];
-    }
-    const point = value;
-    return [toFiniteNumber$7(point.x), toFiniteNumber$7(point.y)];
-  }
-  function distance(a2, b2) {
-    const dx = b2[0] - a2[0];
-    const dy = b2[1] - a2[1];
-    return Math.sqrt(dx * dx + dy * dy);
-  }
-  function getOppositePortDirection(direction) {
-    if (direction === PORT_DIRECTION_UP) {
-      return PORT_DIRECTION_DOWN;
-    }
-    if (direction === PORT_DIRECTION_DOWN) {
-      return PORT_DIRECTION_UP;
-    }
-    if (direction === PORT_DIRECTION_LEFT) {
-      return PORT_DIRECTION_RIGHT;
-    }
-    return PORT_DIRECTION_LEFT;
-  }
-  class NodePortAdapter {
-    constructor(graph, options = {}) {
-      this.graph = graph;
-      this.options = options;
-    }
-    getNodeById(nodeId) {
-      var _a3;
-      if (typeof this.graph.getNodeById === "function") {
-        return this.graph.getNodeById(nodeId);
-      }
-      const nodes = Array.isArray(this.graph._nodes) ? this.graph._nodes : [];
-      for (let i2 = 0; i2 < nodes.length; ++i2) {
-        if (((_a3 = nodes[i2]) == null ? void 0 : _a3.id) === nodeId) {
-          return nodes[i2];
-        }
-      }
-      return null;
-    }
-    getNodeAt(x2, y2) {
-      var _a3;
-      if (typeof this.graph.getNodeOnPos === "function") {
-        return this.graph.getNodeOnPos(x2, y2, void 0, 5) || null;
-      }
-      const nodes = Array.isArray(this.graph._nodes) ? this.graph._nodes : [];
-      for (let i2 = nodes.length - 1; i2 >= 0; --i2) {
-        const node2 = nodes[i2];
-        const bounds = (_a3 = node2.getBounding) == null ? void 0 : _a3.call(node2, void 0, true);
-        if (!bounds) {
-          continue;
-        }
-        const left = toFiniteNumber$7(bounds[0]);
-        const top = toFiniteNumber$7(bounds[1]);
-        const width2 = toFiniteNumber$7(bounds[2]);
-        const height = toFiniteNumber$7(bounds[3]);
-        if (x2 >= left && x2 <= left + width2 && y2 >= top && y2 <= top + height) {
-          return node2;
-        }
-      }
-      return null;
-    }
-    hitPortAt(x2, y2) {
-      var _a3, _b2, _c2, _d2, _e2;
-      const node2 = this.getNodeAt(x2, y2);
-      if (!node2) {
-        return null;
-      }
-      const hostHit = (_d2 = (_c2 = (_b2 = (_a3 = this.options).resolveNodeHost) == null ? void 0 : _b2.call(_a3, node2.id)) == null ? void 0 : _c2.hitPortAt) == null ? void 0 : _d2.call(_c2, x2, y2);
-      if (hostHit) {
-        const slotList = hostHit.kind === "input" ? node2.inputs : node2.outputs;
-        const slot2 = (Array.isArray(slotList) ? slotList[hostHit.slotIndex] : null) || {};
-        return {
-          node: node2,
-          nodeId: node2.id,
-          kind: hostHit.kind,
-          slotIndex: hostHit.slotIndex,
-          slot: slot2,
-          anchor: hostHit.anchor,
-          dir: (_e2 = hostHit.dir) != null ? _e2 : this.getPortDirection(
-            node2,
-            hostHit.kind,
-            hostHit.slotIndex,
-            slot2
-          )
-        };
-      }
-      if (typeof node2.getSlotInPosition !== "function") {
-        return null;
-      }
-      const slotInfo = node2.getSlotInPosition(x2, y2);
-      if (!slotInfo) {
-        return null;
-      }
-      const kind = slotInfo.output ? "output" : "input";
-      const slot = slotInfo.output || slotInfo.input;
-      const anchor = slotInfo.link_pos ? toPoint$1(slotInfo.link_pos) : this.getPortAnchor(node2.id, kind, slotInfo.slot);
-      return {
-        node: node2,
-        nodeId: node2.id,
-        kind,
-        slotIndex: slotInfo.slot,
-        slot,
-        anchor,
-        dir: this.getPortDirection(node2, kind, slotInfo.slot, slot)
-      };
-    }
-    getPortAnchor(nodeId, kind, slotIndex) {
-      var _a3, _b2, _c2, _d2;
-      const hostAnchor = (_d2 = (_c2 = (_b2 = (_a3 = this.options).resolveNodeHost) == null ? void 0 : _b2.call(_a3, nodeId)) == null ? void 0 : _c2.getPortAnchor) == null ? void 0 : _d2.call(
-        _c2,
-        kind,
-        slotIndex
-      );
-      if (hostAnchor) {
-        return [toFiniteNumber$7(hostAnchor[0]), toFiniteNumber$7(hostAnchor[1])];
-      }
-      const node2 = this.getNodeById(nodeId);
-      if (!node2 || typeof node2.getConnectionPos !== "function") {
-        return [0, 0];
-      }
-      const rawPoint = node2.getConnectionPos(kind === "input", slotIndex);
-      if (!rawPoint) {
-        return [0, 0];
-      }
-      if (typeof rawPoint === "object" && rawPoint !== null && "0" in rawPoint) {
-        const indexedPoint = rawPoint;
-        return [
-          toFiniteNumber$7(indexedPoint[0]),
-          toFiniteNumber$7(indexedPoint[1])
-        ];
-      }
-      return toPoint$1(rawPoint);
-    }
-    getPortDirection(node2, kind, slotIndex, slot) {
-      var _a3, _b2, _c2, _d2;
-      const hostDirection = (_d2 = (_c2 = (_b2 = (_a3 = this.options).resolveNodeHost) == null ? void 0 : _b2.call(_a3, node2.id)) == null ? void 0 : _c2.getPortDirection) == null ? void 0 : _d2.call(
-        _c2,
-        kind,
-        slotIndex
-      );
-      if (hostDirection != null) {
-        const normalizedDirection = toFiniteNumber$7(hostDirection, 0);
-        if (normalizedDirection) {
-          return normalizedDirection;
-        }
-      }
-      const slotList = kind === "input" ? node2.inputs : node2.outputs;
-      const resolvedSlot = slot || (slotList == null ? void 0 : slotList[slotIndex]) || null;
-      const explicitDir = toFiniteNumber$7(resolvedSlot == null ? void 0 : resolvedSlot.dir, 0);
-      if (explicitDir) {
-        return explicitDir;
-      }
-      if (kind === "output") {
-        return node2.horizontal ? PORT_DIRECTION_DOWN : PORT_DIRECTION_RIGHT;
-      }
-      return node2.horizontal ? PORT_DIRECTION_UP : PORT_DIRECTION_LEFT;
-    }
-    getLinkLayout(link) {
-      var _a3, _b2;
-      const originNode = this.getNodeById(link.origin_id);
-      const targetNode = this.getNodeById(link.target_id);
-      if (!originNode || !targetNode) {
-        return null;
-      }
-      return {
-        start: this.getPortAnchor(link.origin_id, "output", link.origin_slot),
-        end: this.getPortAnchor(link.target_id, "input", link.target_slot),
-        startDir: this.getPortDirection(
-          originNode,
-          "output",
-          link.origin_slot,
-          (_a3 = originNode.outputs) == null ? void 0 : _a3[link.origin_slot]
-        ),
-        endDir: this.getPortDirection(
-          targetNode,
-          "input",
-          link.target_slot,
-          (_b2 = targetNode.inputs) == null ? void 0 : _b2[link.target_slot]
-        )
-      };
-    }
-    getLinkCurve(link) {
-      const layout = this.getLinkLayout(link);
-      if (!layout) {
-        return null;
-      }
-      return this.buildLinkCurve(
-        layout.start,
-        layout.end,
-        layout.startDir,
-        layout.endDir
-      );
-    }
-    buildLinkCurve(start, end, startDir, endDir) {
-      const safeStart = toPoint$1(start);
-      const safeEnd = toPoint$1(end);
-      const dist = Math.max(distance(safeStart, safeEnd), 16);
-      const c1 = [safeStart[0], safeStart[1]];
-      const c2 = [safeEnd[0], safeEnd[1]];
-      if (startDir === PORT_DIRECTION_LEFT) {
-        c1[0] += dist * -0.25;
-      } else if (startDir === PORT_DIRECTION_RIGHT) {
-        c1[0] += dist * 0.25;
-      } else if (startDir === PORT_DIRECTION_UP) {
-        c1[1] += dist * -0.25;
-      } else if (startDir === PORT_DIRECTION_DOWN) {
-        c1[1] += dist * 0.25;
-      }
-      if (endDir === PORT_DIRECTION_LEFT) {
-        c2[0] += dist * -0.25;
-      } else if (endDir === PORT_DIRECTION_RIGHT) {
-        c2[0] += dist * 0.25;
-      } else if (endDir === PORT_DIRECTION_UP) {
-        c2[1] += dist * -0.25;
-      } else if (endDir === PORT_DIRECTION_DOWN) {
-        c2[1] += dist * 0.25;
-      }
-      return {
-        start: safeStart,
-        end: safeEnd,
-        startDir,
-        endDir,
-        c1,
-        c2,
-        path: `M ${safeStart[0]} ${safeStart[1]} C ${c1[0]} ${c1[1]} ${c2[0]} ${c2[1]} ${safeEnd[0]} ${safeEnd[1]}`
-      };
-    }
-    buildLinkPath(start, end, startDir, endDir) {
-      return this.buildLinkCurve(start, end, startDir, endDir).path;
-    }
-    getPointOnLinkCurve(curve, t2) {
-      const clampedT = Math.max(0, Math.min(1, toFiniteNumber$7(t2, 0)));
-      const oneMinusT = 1 - clampedT;
-      const c1 = oneMinusT * oneMinusT * oneMinusT;
-      const c2 = 3 * oneMinusT * oneMinusT * clampedT;
-      const c3 = 3 * oneMinusT * clampedT * clampedT;
-      const c4 = clampedT * clampedT * clampedT;
-      return [
-        c1 * curve.start[0] + c2 * curve.c1[0] + c3 * curve.c2[0] + c4 * curve.end[0],
-        c1 * curve.start[1] + c2 * curve.c1[1] + c3 * curve.c2[1] + c4 * curve.end[1]
-      ];
-    }
-  }
-  class ConnectionController {
-    constructor(graph, sceneSyncController, overlayPrimitives, nodePortAdapter) {
-      this.graph = graph;
-      this.sceneSyncController = sceneSyncController;
-      this.overlayPrimitives = overlayPrimitives;
-      this.nodePortAdapter = nodePortAdapter;
-      this.activeConnection = null;
-    }
-    destroy() {
-      this.cancel();
-    }
-    begin(worldX, worldY) {
-      const source = this.nodePortAdapter.hitPortAt(worldX, worldY);
-      if (!source) {
-        return null;
-      }
-      this.activeConnection = { source };
-      this.update(worldX, worldY);
-      return source;
-    }
-    update(worldX, worldY) {
-      if (!this.activeConnection) {
-        return;
-      }
-      const { source } = this.activeConnection;
-      const target = this.getCompatibleTarget(worldX, worldY);
-      const endPoint = target ? target.anchor : [worldX, worldY];
-      const endDir = target ? target.dir : getOppositePortDirection(source.dir);
-      const curve = this.nodePortAdapter.buildLinkCurve(
-        source.anchor,
-        endPoint,
-        source.dir,
-        endDir
-      );
-      this.overlayPrimitives.setConnectionPreview(curve);
-    }
-    finish(worldX, worldY) {
-      if (!this.activeConnection) {
-        return false;
-      }
-      const { source } = this.activeConnection;
-      const target = this.getCompatibleTarget(worldX, worldY);
-      let connected = false;
-      if (target) {
-        connected = this.commitConnection(source, target);
-      }
-      this.cancel();
-      return connected;
-    }
-    cancel() {
-      this.activeConnection = null;
-      this.overlayPrimitives.hideConnectionPreview();
-    }
-    isActive() {
-      return Boolean(this.activeConnection);
-    }
-    getCompatibleTarget(worldX, worldY) {
-      const target = this.nodePortAdapter.hitPortAt(worldX, worldY);
-      if (!target || !this.activeConnection) {
-        return null;
-      }
-      const { source } = this.activeConnection;
-      if (source.kind === target.kind) {
-        return null;
-      }
-      if (source.nodeId === target.nodeId && source.slotIndex === target.slotIndex) {
-        return null;
-      }
-      return target;
-    }
-    commitConnection(source, target) {
-      var _a3, _b2;
-      let link = null;
-      if (source.kind === "output") {
-        const sourceNode = source.node;
-        if (typeof sourceNode.connect === "function") {
-          link = sourceNode.connect(
-            source.slotIndex,
-            target.node,
-            target.slotIndex
-          );
-        }
-      } else {
-        const sourceNode = source.node;
-        const targetNode = target.node;
-        if (typeof targetNode.connect === "function") {
-          link = targetNode.connect(
-            target.slotIndex,
-            sourceNode,
-            source.slotIndex
-          );
-        }
-      }
-      if (!link) {
-        return false;
-      }
-      this.sceneSyncController.repaintNodeHosts([
-        source.nodeId,
-        target.nodeId
-      ]);
-      (_b2 = (_a3 = this.graph).change) == null ? void 0 : _b2.call(_a3);
-      return true;
-    }
-  }
-  class HitTestService {
-    constructor(graph, sceneSyncController) {
-      this.graph = graph;
-      this.sceneSyncController = sceneSyncController;
-    }
-    hitNodeAt(canvasX, canvasY) {
-      if (typeof this.graph.getNodeOnPos !== "function") {
-        return null;
-      }
-      const node2 = this.graph.getNodeOnPos(canvasX, canvasY, void 0, 5);
-      if (!node2) {
-        return null;
-      }
-      const host = this.sceneSyncController.nodeHosts.get(node2.id);
-      if (!host) {
-        return null;
-      }
-      return { node: node2, host };
-    }
-    getHostForNode(node2) {
-      if (!node2) {
-        return null;
-      }
-      return this.sceneSyncController.nodeHosts.get(node2.id) || null;
     }
   }
   function I$1(t2, e2, i2, s2) {
@@ -11897,7 +11512,392 @@ var LiteGraphTSMigration = (function(exports) {
     visibleType: In,
     zoomLayerType: kt$2
   }, Symbol.toStringTag, { value: "Module" }));
-  function toFiniteNumber$6(value, fallback = 0) {
+  const PORT_DIRECTION_UP = 1;
+  const PORT_DIRECTION_RIGHT = 2;
+  const PORT_DIRECTION_DOWN = 3;
+  const PORT_DIRECTION_LEFT = 4;
+  function toFiniteNumber$9(value, fallback = 0) {
+    const numericValue = Number(value);
+    return Number.isFinite(numericValue) ? numericValue : fallback;
+  }
+  function toPoint$1(value) {
+    if (Array.isArray(value) || ArrayBuffer.isView(value) || typeof value === "object" && value !== null && "0" in value && "1" in value) {
+      const indexedValue = value;
+      return [toFiniteNumber$9(indexedValue[0]), toFiniteNumber$9(indexedValue[1])];
+    }
+    const point = value;
+    return [toFiniteNumber$9(point.x), toFiniteNumber$9(point.y)];
+  }
+  function distance(a2, b2) {
+    const dx = b2[0] - a2[0];
+    const dy = b2[1] - a2[1];
+    return Math.sqrt(dx * dx + dy * dy);
+  }
+  function getOppositePortDirection(direction) {
+    if (direction === PORT_DIRECTION_UP) {
+      return PORT_DIRECTION_DOWN;
+    }
+    if (direction === PORT_DIRECTION_DOWN) {
+      return PORT_DIRECTION_UP;
+    }
+    if (direction === PORT_DIRECTION_LEFT) {
+      return PORT_DIRECTION_RIGHT;
+    }
+    return PORT_DIRECTION_LEFT;
+  }
+  class NodePortAdapter {
+    constructor(graph, options = {}) {
+      this.graph = graph;
+      this.options = options;
+    }
+    getNodeById(nodeId) {
+      var _a3;
+      if (typeof this.graph.getNodeById === "function") {
+        return this.graph.getNodeById(nodeId);
+      }
+      const nodes = Array.isArray(this.graph._nodes) ? this.graph._nodes : [];
+      for (let i2 = 0; i2 < nodes.length; ++i2) {
+        if (((_a3 = nodes[i2]) == null ? void 0 : _a3.id) === nodeId) {
+          return nodes[i2];
+        }
+      }
+      return null;
+    }
+    getNodeAt(x2, y2) {
+      var _a3;
+      if (typeof this.graph.getNodeOnPos === "function") {
+        return this.graph.getNodeOnPos(x2, y2, void 0, 5) || null;
+      }
+      const nodes = Array.isArray(this.graph._nodes) ? this.graph._nodes : [];
+      for (let i2 = nodes.length - 1; i2 >= 0; --i2) {
+        const node2 = nodes[i2];
+        const bounds = (_a3 = node2.getBounding) == null ? void 0 : _a3.call(node2, void 0, true);
+        if (!bounds) {
+          continue;
+        }
+        const left = toFiniteNumber$9(bounds[0]);
+        const top = toFiniteNumber$9(bounds[1]);
+        const width2 = toFiniteNumber$9(bounds[2]);
+        const height = toFiniteNumber$9(bounds[3]);
+        if (x2 >= left && x2 <= left + width2 && y2 >= top && y2 <= top + height) {
+          return node2;
+        }
+      }
+      return null;
+    }
+    hitPortAt(x2, y2) {
+      var _a3, _b3, _c2, _d2, _e2;
+      const node2 = this.getNodeAt(x2, y2);
+      if (!node2) {
+        return null;
+      }
+      const hostHit = (_d2 = (_c2 = (_b3 = (_a3 = this.options).resolveNodeHost) == null ? void 0 : _b3.call(_a3, node2.id)) == null ? void 0 : _c2.hitPortAt) == null ? void 0 : _d2.call(_c2, x2, y2);
+      if (hostHit) {
+        const slotList = hostHit.kind === "input" ? node2.inputs : node2.outputs;
+        const slot2 = (Array.isArray(slotList) ? slotList[hostHit.slotIndex] : null) || {};
+        return {
+          node: node2,
+          nodeId: node2.id,
+          kind: hostHit.kind,
+          slotIndex: hostHit.slotIndex,
+          slot: slot2,
+          anchor: hostHit.anchor,
+          dir: (_e2 = hostHit.dir) != null ? _e2 : this.getPortDirection(
+            node2,
+            hostHit.kind,
+            hostHit.slotIndex,
+            slot2
+          )
+        };
+      }
+      if (typeof node2.getSlotInPosition !== "function") {
+        return null;
+      }
+      const slotInfo = node2.getSlotInPosition(x2, y2);
+      if (!slotInfo) {
+        return null;
+      }
+      const kind = slotInfo.output ? "output" : "input";
+      const slot = slotInfo.output || slotInfo.input;
+      const anchor = slotInfo.link_pos ? toPoint$1(slotInfo.link_pos) : this.getPortAnchor(node2.id, kind, slotInfo.slot);
+      return {
+        node: node2,
+        nodeId: node2.id,
+        kind,
+        slotIndex: slotInfo.slot,
+        slot,
+        anchor,
+        dir: this.getPortDirection(node2, kind, slotInfo.slot, slot)
+      };
+    }
+    getPortAnchor(nodeId, kind, slotIndex) {
+      var _a3, _b3, _c2, _d2;
+      const hostAnchor = (_d2 = (_c2 = (_b3 = (_a3 = this.options).resolveNodeHost) == null ? void 0 : _b3.call(_a3, nodeId)) == null ? void 0 : _c2.getPortAnchor) == null ? void 0 : _d2.call(
+        _c2,
+        kind,
+        slotIndex
+      );
+      if (hostAnchor) {
+        return [toFiniteNumber$9(hostAnchor[0]), toFiniteNumber$9(hostAnchor[1])];
+      }
+      const node2 = this.getNodeById(nodeId);
+      if (!node2 || typeof node2.getConnectionPos !== "function") {
+        return [0, 0];
+      }
+      const rawPoint = node2.getConnectionPos(kind === "input", slotIndex);
+      if (!rawPoint) {
+        return [0, 0];
+      }
+      if (typeof rawPoint === "object" && rawPoint !== null && "0" in rawPoint) {
+        const indexedPoint = rawPoint;
+        return [
+          toFiniteNumber$9(indexedPoint[0]),
+          toFiniteNumber$9(indexedPoint[1])
+        ];
+      }
+      return toPoint$1(rawPoint);
+    }
+    getPortDirection(node2, kind, slotIndex, slot) {
+      var _a3, _b3, _c2, _d2;
+      const hostDirection = (_d2 = (_c2 = (_b3 = (_a3 = this.options).resolveNodeHost) == null ? void 0 : _b3.call(_a3, node2.id)) == null ? void 0 : _c2.getPortDirection) == null ? void 0 : _d2.call(
+        _c2,
+        kind,
+        slotIndex
+      );
+      if (hostDirection != null) {
+        const normalizedDirection = toFiniteNumber$9(hostDirection, 0);
+        if (normalizedDirection) {
+          return normalizedDirection;
+        }
+      }
+      const slotList = kind === "input" ? node2.inputs : node2.outputs;
+      const resolvedSlot = slot || (slotList == null ? void 0 : slotList[slotIndex]) || null;
+      const explicitDir = toFiniteNumber$9(resolvedSlot == null ? void 0 : resolvedSlot.dir, 0);
+      if (explicitDir) {
+        return explicitDir;
+      }
+      if (kind === "output") {
+        return node2.horizontal ? PORT_DIRECTION_DOWN : PORT_DIRECTION_RIGHT;
+      }
+      return node2.horizontal ? PORT_DIRECTION_UP : PORT_DIRECTION_LEFT;
+    }
+    getLinkLayout(link) {
+      var _a3, _b3;
+      const originNode = this.getNodeById(link.origin_id);
+      const targetNode = this.getNodeById(link.target_id);
+      if (!originNode || !targetNode) {
+        return null;
+      }
+      return {
+        start: this.getPortAnchor(link.origin_id, "output", link.origin_slot),
+        end: this.getPortAnchor(link.target_id, "input", link.target_slot),
+        startDir: this.getPortDirection(
+          originNode,
+          "output",
+          link.origin_slot,
+          (_a3 = originNode.outputs) == null ? void 0 : _a3[link.origin_slot]
+        ),
+        endDir: this.getPortDirection(
+          targetNode,
+          "input",
+          link.target_slot,
+          (_b3 = targetNode.inputs) == null ? void 0 : _b3[link.target_slot]
+        )
+      };
+    }
+    getLinkCurve(link) {
+      const layout = this.getLinkLayout(link);
+      if (!layout) {
+        return null;
+      }
+      return this.buildLinkCurve(
+        layout.start,
+        layout.end,
+        layout.startDir,
+        layout.endDir
+      );
+    }
+    buildLinkCurve(start, end, startDir, endDir) {
+      const safeStart = toPoint$1(start);
+      const safeEnd = toPoint$1(end);
+      const dist = Math.max(distance(safeStart, safeEnd), 16);
+      const c1 = [safeStart[0], safeStart[1]];
+      const c2 = [safeEnd[0], safeEnd[1]];
+      if (startDir === PORT_DIRECTION_LEFT) {
+        c1[0] += dist * -0.25;
+      } else if (startDir === PORT_DIRECTION_RIGHT) {
+        c1[0] += dist * 0.25;
+      } else if (startDir === PORT_DIRECTION_UP) {
+        c1[1] += dist * -0.25;
+      } else if (startDir === PORT_DIRECTION_DOWN) {
+        c1[1] += dist * 0.25;
+      }
+      if (endDir === PORT_DIRECTION_LEFT) {
+        c2[0] += dist * -0.25;
+      } else if (endDir === PORT_DIRECTION_RIGHT) {
+        c2[0] += dist * 0.25;
+      } else if (endDir === PORT_DIRECTION_UP) {
+        c2[1] += dist * -0.25;
+      } else if (endDir === PORT_DIRECTION_DOWN) {
+        c2[1] += dist * 0.25;
+      }
+      return {
+        start: safeStart,
+        end: safeEnd,
+        startDir,
+        endDir,
+        c1,
+        c2,
+        path: `M ${safeStart[0]} ${safeStart[1]} C ${c1[0]} ${c1[1]} ${c2[0]} ${c2[1]} ${safeEnd[0]} ${safeEnd[1]}`
+      };
+    }
+    buildLinkPath(start, end, startDir, endDir) {
+      return this.buildLinkCurve(start, end, startDir, endDir).path;
+    }
+    getPointOnLinkCurve(curve, t2) {
+      const clampedT = Math.max(0, Math.min(1, toFiniteNumber$9(t2, 0)));
+      const oneMinusT = 1 - clampedT;
+      const c1 = oneMinusT * oneMinusT * oneMinusT;
+      const c2 = 3 * oneMinusT * oneMinusT * clampedT;
+      const c3 = 3 * oneMinusT * clampedT * clampedT;
+      const c4 = clampedT * clampedT * clampedT;
+      return [
+        c1 * curve.start[0] + c2 * curve.c1[0] + c3 * curve.c2[0] + c4 * curve.end[0],
+        c1 * curve.start[1] + c2 * curve.c1[1] + c3 * curve.c2[1] + c4 * curve.end[1]
+      ];
+    }
+  }
+  class ConnectionController {
+    constructor(graph, sceneSyncController, overlayPrimitives, nodePortAdapter) {
+      this.graph = graph;
+      this.sceneSyncController = sceneSyncController;
+      this.overlayPrimitives = overlayPrimitives;
+      this.nodePortAdapter = nodePortAdapter;
+      this.activeConnection = null;
+    }
+    destroy() {
+      this.cancel();
+    }
+    begin(worldX, worldY) {
+      const source = this.nodePortAdapter.hitPortAt(worldX, worldY);
+      if (!source) {
+        return null;
+      }
+      this.activeConnection = { source };
+      this.update(worldX, worldY);
+      return source;
+    }
+    update(worldX, worldY) {
+      if (!this.activeConnection) {
+        return;
+      }
+      const { source } = this.activeConnection;
+      const target = this.getCompatibleTarget(worldX, worldY);
+      const endPoint = target ? target.anchor : [worldX, worldY];
+      const endDir = target ? target.dir : getOppositePortDirection(source.dir);
+      const curve = this.nodePortAdapter.buildLinkCurve(
+        source.anchor,
+        endPoint,
+        source.dir,
+        endDir
+      );
+      this.overlayPrimitives.setConnectionPreview(curve);
+    }
+    finish(worldX, worldY) {
+      if (!this.activeConnection) {
+        return false;
+      }
+      const { source } = this.activeConnection;
+      const target = this.getCompatibleTarget(worldX, worldY);
+      let connected = false;
+      if (target) {
+        connected = this.commitConnection(source, target);
+      }
+      this.cancel();
+      return connected;
+    }
+    cancel() {
+      this.activeConnection = null;
+      this.overlayPrimitives.hideConnectionPreview();
+    }
+    isActive() {
+      return Boolean(this.activeConnection);
+    }
+    getCompatibleTarget(worldX, worldY) {
+      const target = this.nodePortAdapter.hitPortAt(worldX, worldY);
+      if (!target || !this.activeConnection) {
+        return null;
+      }
+      const { source } = this.activeConnection;
+      if (source.kind === target.kind) {
+        return null;
+      }
+      if (source.nodeId === target.nodeId && source.slotIndex === target.slotIndex) {
+        return null;
+      }
+      return target;
+    }
+    commitConnection(source, target) {
+      var _a3, _b3;
+      let link = null;
+      if (source.kind === "output") {
+        const sourceNode = source.node;
+        if (typeof sourceNode.connect === "function") {
+          link = sourceNode.connect(
+            source.slotIndex,
+            target.node,
+            target.slotIndex
+          );
+        }
+      } else {
+        const sourceNode = source.node;
+        const targetNode = target.node;
+        if (typeof targetNode.connect === "function") {
+          link = targetNode.connect(
+            target.slotIndex,
+            sourceNode,
+            source.slotIndex
+          );
+        }
+      }
+      if (!link) {
+        return false;
+      }
+      this.sceneSyncController.repaintNodeHosts([
+        source.nodeId,
+        target.nodeId
+      ]);
+      (_b3 = (_a3 = this.graph).change) == null ? void 0 : _b3.call(_a3);
+      return true;
+    }
+  }
+  class HitTestService {
+    constructor(graph, sceneSyncController) {
+      this.graph = graph;
+      this.sceneSyncController = sceneSyncController;
+    }
+    hitNodeAt(canvasX, canvasY) {
+      if (typeof this.graph.getNodeOnPos !== "function") {
+        return null;
+      }
+      const node2 = this.graph.getNodeOnPos(canvasX, canvasY, void 0, 5);
+      if (!node2) {
+        return null;
+      }
+      const host = this.sceneSyncController.nodeHosts.get(node2.id);
+      if (!host) {
+        return null;
+      }
+      return { node: node2, host };
+    }
+    getHostForNode(node2) {
+      if (!node2) {
+        return null;
+      }
+      return this.sceneSyncController.nodeHosts.get(node2.id) || null;
+    }
+  }
+  function toFiniteNumber$8(value, fallback = 0) {
     const numericValue = Number(value);
     return Number.isFinite(numericValue) ? numericValue : fallback;
   }
@@ -11988,10 +11988,10 @@ var LiteGraphTSMigration = (function(exports) {
     }
     syncWorldTransform() {
       const zoomLayer = this.appHost.treeZoomLayer;
-      this.appHost.overlayWorld.x = toFiniteNumber$6(zoomLayer.x);
-      this.appHost.overlayWorld.y = toFiniteNumber$6(zoomLayer.y);
-      this.appHost.overlayWorld.scaleX = toFiniteNumber$6(zoomLayer.scaleX, 1);
-      this.appHost.overlayWorld.scaleY = toFiniteNumber$6(zoomLayer.scaleY, 1);
+      this.appHost.overlayWorld.x = toFiniteNumber$8(zoomLayer.x);
+      this.appHost.overlayWorld.y = toFiniteNumber$8(zoomLayer.y);
+      this.appHost.overlayWorld.scaleX = toFiniteNumber$8(zoomLayer.scaleX, 1);
+      this.appHost.overlayWorld.scaleY = toFiniteNumber$8(zoomLayer.scaleY, 1);
     }
     measureCurveBounds(curve, strokeWidth) {
       const padding = Math.ceil(strokeWidth + 8);
@@ -12148,7 +12148,7 @@ var LiteGraphTSMigration = (function(exports) {
       return Boolean(this.activeSelection);
     }
   }
-  function toFiniteNumber$5(value) {
+  function toFiniteNumber$7(value) {
     const numericValue = Number(value);
     return Number.isFinite(numericValue) ? numericValue : 0;
   }
@@ -12184,12 +12184,11 @@ var LiteGraphTSMigration = (function(exports) {
       this.session = null;
       this.dragTransactionNode = null;
       this.hoveredModernHost = null;
-      this.hoveredModernPart = null;
       this.lastTapNodeId = null;
       this.lastTapPart = null;
       this.lastTapAt = 0;
       this.handleViewPointerDown = (event2) => {
-        var _a3, _b2, _c2, _d2;
+        var _a3, _b3, _c2, _d2;
         if (event2.button === 2) {
           this.stopPropagationOnly(event2, true);
           return;
@@ -12201,12 +12200,12 @@ var LiteGraphTSMigration = (function(exports) {
         const pagePoint = source.getPagePoint();
         const graphPoint = source.getInnerPoint();
         const normalizedPagePoint = {
-          x: toFiniteNumber$5(pagePoint.x),
-          y: toFiniteNumber$5(pagePoint.y)
+          x: toFiniteNumber$7(pagePoint.x),
+          y: toFiniteNumber$7(pagePoint.y)
         };
         const normalizedGraphPoint = {
-          x: toFiniteNumber$5(graphPoint.x),
-          y: toFiniteNumber$5(graphPoint.y)
+          x: toFiniteNumber$7(graphPoint.x),
+          y: toFiniteNumber$7(graphPoint.y)
         };
         this.pointerIsDown = true;
         this.pointerDownAt = Date.now();
@@ -12273,7 +12272,7 @@ var LiteGraphTSMigration = (function(exports) {
         }
         if (!isAlreadySelected || additiveSelection) {
           this.canvas.selectNodes([hit.node], additiveSelection);
-          (_b2 = this.canvas.sceneSyncController) == null ? void 0 : _b2.repaintAllNodeHosts();
+          (_b3 = this.canvas.sceneSyncController) == null ? void 0 : _b3.repaintAllNodeHosts();
         }
         if (modernHost) {
           modernHost.updateInteractionState({
@@ -12347,7 +12346,7 @@ var LiteGraphTSMigration = (function(exports) {
         this.dispatchPointerMoveWhileDown(event2);
       };
       this.handleDocumentPointerUp = (event2) => {
-        var _a3, _b2, _c2, _d2, _e2, _f, _g, _h2;
+        var _a3, _b3, _c2, _d2, _e2, _f, _g, _h2;
         if (!this.pointerIsDown && event2.button !== 0) {
           return;
         }
@@ -12358,12 +12357,12 @@ var LiteGraphTSMigration = (function(exports) {
         const pagePoint = source.getPagePoint();
         const graphPoint = source.getInnerPoint();
         const normalizedPagePoint = {
-          x: toFiniteNumber$5(pagePoint.x),
-          y: toFiniteNumber$5(pagePoint.y)
+          x: toFiniteNumber$7(pagePoint.x),
+          y: toFiniteNumber$7(pagePoint.y)
         };
         const normalizedGraphPoint = {
-          x: toFiniteNumber$5(graphPoint.x),
-          y: toFiniteNumber$5(graphPoint.y)
+          x: toFiniteNumber$7(graphPoint.x),
+          y: toFiniteNumber$7(graphPoint.y)
         };
         if (((_a3 = this.session) == null ? void 0 : _a3.kind) === "connection") {
           this.connectionController.finish(
@@ -12371,7 +12370,7 @@ var LiteGraphTSMigration = (function(exports) {
             normalizedGraphPoint.y
           );
           this.stopEvent(event2, true);
-        } else if (((_b2 = this.session) == null ? void 0 : _b2.kind) === "selection") {
+        } else if (((_b3 = this.session) == null ? void 0 : _b3.kind) === "selection") {
           this.selectionController.finish(
             normalizedGraphPoint.x,
             normalizedGraphPoint.y
@@ -12473,7 +12472,6 @@ var LiteGraphTSMigration = (function(exports) {
       this.dragTransactionNode = null;
       (_a3 = this.hoveredModernHost) == null ? void 0 : _a3.clearPointerState();
       this.hoveredModernHost = null;
-      this.hoveredModernPart = null;
       this.lastTapNodeId = null;
       this.lastTapPart = null;
       this.lastTapAt = 0;
@@ -12500,8 +12498,8 @@ var LiteGraphTSMigration = (function(exports) {
       const targets = this.collectTargets(this.toLegacyHost((hit == null ? void 0 : hit.host) || null));
       const shouldDispatch = targets.length > 0 || Boolean(this.canvas.node_widget) || Boolean(this.canvas.node_over) || Boolean(this.canvas.node_capturing_input) || Boolean(this.canvas.node_dragged) || Boolean(this.canvas.resizing_node) || Boolean(this.canvas.connecting_node);
       const normalizedPagePoint = {
-        x: toFiniteNumber$5(pagePoint.x),
-        y: toFiniteNumber$5(pagePoint.y)
+        x: toFiniteNumber$7(pagePoint.x),
+        y: toFiniteNumber$7(pagePoint.y)
       };
       const deltaX2 = this.lastPagePoint ? normalizedPagePoint.x - this.lastPagePoint.x : 0;
       const deltaY = this.lastPagePoint ? normalizedPagePoint.y - this.lastPagePoint.y : 0;
@@ -12523,7 +12521,7 @@ var LiteGraphTSMigration = (function(exports) {
       this.stopEvent(event2);
     }
     dispatchPointerMoveWhileDown(event2) {
-      var _a3, _b2, _c2, _d2, _e2;
+      var _a3, _b3, _c2, _d2, _e2;
       if (!this.pointerIsDown || !this.session) {
         return;
       }
@@ -12531,12 +12529,12 @@ var LiteGraphTSMigration = (function(exports) {
       const pagePoint = source.getPagePoint();
       const graphPoint = source.getInnerPoint();
       const normalizedPagePoint = {
-        x: toFiniteNumber$5(pagePoint.x),
-        y: toFiniteNumber$5(pagePoint.y)
+        x: toFiniteNumber$7(pagePoint.x),
+        y: toFiniteNumber$7(pagePoint.y)
       };
       const normalizedGraphPoint = {
-        x: toFiniteNumber$5(graphPoint.x),
-        y: toFiniteNumber$5(graphPoint.y)
+        x: toFiniteNumber$7(graphPoint.x),
+        y: toFiniteNumber$7(graphPoint.y)
       };
       if (this.session.kind === "connection") {
         this.connectionController.update(
@@ -12628,9 +12626,10 @@ var LiteGraphTSMigration = (function(exports) {
           this.pointerDownPagePoint,
           normalizedPagePoint
         ) >= 4) {
+          const pressedSession = this.session;
           const dragNodes = this.collectDragNodes(this.session.node);
           this.dragTransactionNode = this.session.node;
-          (_b2 = (_a3 = this.graphRef).beforeChange) == null ? void 0 : _b2.call(_a3, this.session.node);
+          (_b3 = (_a3 = this.graphRef).beforeChange) == null ? void 0 : _b3.call(_a3, this.session.node);
           this.session = {
             kind: "node-drag",
             node: this.session.node,
@@ -12642,7 +12641,7 @@ var LiteGraphTSMigration = (function(exports) {
             pressed: false,
             dragging: true,
             pressedPart: null,
-            hoveredPart: this.session.part
+            hoveredPart: pressedSession.part
           });
         } else {
           this.lastPagePoint = normalizedPagePoint;
@@ -12751,13 +12750,13 @@ var LiteGraphTSMigration = (function(exports) {
       this.stopEvent(event2);
     }
     finishNodeDrag(session) {
-      var _a3, _b2, _c2, _d2, _e2, _f, _g, _h2, _i2;
+      var _a3, _b3, _c2, _d2, _e2, _f, _g, _h2, _i2;
       for (let i2 = 0; i2 < session.dragNodes.length; ++i2) {
         const node2 = session.dragNodes[i2];
         node2.pos[0] = Math.round(node2.pos[0]);
         node2.pos[1] = Math.round(node2.pos[1]);
         if (((_a3 = this.graphRef.config) == null ? void 0 : _a3.align_to_grid) || this.canvas.align_to_grid) {
-          (_b2 = node2.alignToGrid) == null ? void 0 : _b2.call(node2);
+          (_b3 = node2.alignToGrid) == null ? void 0 : _b3.call(node2);
         }
         this.emitNodeMoved(node2);
         (_d2 = (_c2 = this.canvas).onNodeMoved) == null ? void 0 : _d2.call(_c2, node2);
@@ -12774,16 +12773,16 @@ var LiteGraphTSMigration = (function(exports) {
       (_i2 = (_h2 = this.graphRef).change) == null ? void 0 : _i2.call(_h2);
     }
     finishNodeResize(session) {
-      var _a3, _b2, _c2, _d2, _e2, _f, _g, _h2, _i2;
+      var _a3, _b3, _c2, _d2, _e2, _f, _g, _h2, _i2;
       session.host.endResize();
-      (_b2 = (_a3 = session.node).onResize) == null ? void 0 : _b2.call(_a3, session.node.size);
+      (_b3 = (_a3 = session.node).onResize) == null ? void 0 : _b3.call(_a3, session.node.size);
       (_d2 = (_c2 = session.node).setDirtyCanvas) == null ? void 0 : _d2.call(_c2, true, true);
       (_e2 = this.canvas.sceneSyncController) == null ? void 0 : _e2.repaintNodeHost(session.node.id);
       (_g = (_f = this.graphRef).afterChange) == null ? void 0 : _g.call(_f, this.dragTransactionNode || session.node);
       (_i2 = (_h2 = this.graphRef).change) == null ? void 0 : _i2.call(_h2);
     }
     finishModernPress(session, graphPoint, event2) {
-      var _a3, _b2, _c2, _d2, _e2, _f, _g, _h2, _i2, _j;
+      var _a3, _b3, _c2, _d2, _e2, _f, _g, _h2, _i2, _j;
       const releasePart = session.host.getInteractivePartAt(
         graphPoint.x,
         graphPoint.y
@@ -12798,7 +12797,7 @@ var LiteGraphTSMigration = (function(exports) {
         return;
       }
       if (session.part.kind === "collapse") {
-        (_b2 = (_a3 = this.graphRef).beforeChange) == null ? void 0 : _b2.call(_a3, session.node);
+        (_b3 = (_a3 = this.graphRef).beforeChange) == null ? void 0 : _b3.call(_a3, session.node);
         (_d2 = (_c2 = session.node).collapse) == null ? void 0 : _d2.call(_c2, false);
         (_f = (_e2 = this.graphRef).afterChange) == null ? void 0 : _f.call(_e2, session.node);
         (_h2 = (_g = this.graphRef).change) == null ? void 0 : _h2.call(_g);
@@ -12816,7 +12815,7 @@ var LiteGraphTSMigration = (function(exports) {
       }
     }
     finishModernTap(session, graphPoint, event2) {
-      var _a3, _b2, _c2, _d2, _e2;
+      var _a3, _b3, _c2, _d2, _e2;
       if (!session.host) {
         return;
       }
@@ -12844,18 +12843,20 @@ var LiteGraphTSMigration = (function(exports) {
         return;
       }
       const localPos = session.host.getLocalPoint(graphPoint.x, graphPoint.y);
-      (_b2 = (_a3 = session.node).onDblClick) == null ? void 0 : _b2.call(_a3, event2, localPos, this.canvas);
+      (_b3 = (_a3 = session.node).onDblClick) == null ? void 0 : _b3.call(_a3, event2, localPos, this.canvas);
       (_d2 = (_c2 = this.canvas).processNodeDblClicked) == null ? void 0 : _d2.call(_c2, session.node);
       (_e2 = this.canvas.sceneSyncController) == null ? void 0 : _e2.repaintNodeHost(session.node.id);
     }
     executeModernWidgetAction(node2, host, part, event2) {
-      var _a3, _b2, _c2, _d2, _e2, _f;
-      const widgets = node2.widgets;
-      if (!Array.isArray(widgets) || part.index == null) {
+      var _a3, _b3, _c2, _d2;
+      if (part.index == null) {
         return;
       }
-      const widget = widgets[part.index];
-      if (!widget || widget.disabled) {
+      const entry = host.getWidgetEntry(part.index);
+      if (!entry || entry.schema.disabled) {
+        return;
+      }
+      if (entry.schema.readonly && entry.schema.type !== "button") {
         return;
       }
       const pagePoint = this.appHost.app.getPagePointByClient({
@@ -12863,121 +12864,102 @@ var LiteGraphTSMigration = (function(exports) {
         clientY: event2.clientY
       });
       const localPos = host.getLocalPoint(
-        toFiniteNumber$5(pagePoint.x),
-        toFiniteNumber$5(pagePoint.y)
+        toFiniteNumber$7(pagePoint.x),
+        toFiniteNumber$7(pagePoint.y)
       );
-      const propertyName = (_a3 = widget.options) == null ? void 0 : _a3.property;
+      const propertyName = entry.schema.property;
+      const widgetMeta = {
+        ...entry.schema,
+        bounds: entry.layout,
+        actionZones: entry.handle.actionZones,
+        handle: entry.handle
+      };
       const applyValue = (nextValue) => {
-        var _a4, _b3, _c3, _d3;
-        const previousValue = widget.value;
-        widget.value = nextValue;
-        if (propertyName && ((_a4 = node2.properties) == null ? void 0 : _a4[propertyName]) !== void 0) {
-          (_b3 = node2.setProperty) == null ? void 0 : _b3.call(
+        var _a4, _b4, _c3;
+        const previousValue = entry.schema.value;
+        if (propertyName) {
+          (_a4 = node2.setProperty) == null ? void 0 : _a4.call(
             node2,
             propertyName,
             nextValue
           );
         }
-        if (typeof widget.callback === "function") {
-          widget.callback(nextValue, this.canvas, node2, localPos, event2);
-        }
-        (_c3 = node2.onWidgetChanged) == null ? void 0 : _c3.call(node2, widget.name, nextValue, previousValue, widget);
+        (_b4 = node2.onWidgetChanged) == null ? void 0 : _b4.call(
+          node2,
+          entry.schema.name,
+          nextValue,
+          previousValue,
+          widgetMeta
+        );
         if (node2.graph) {
-          node2.graph._version = toFiniteNumber$5(
+          node2.graph._version = toFiniteNumber$7(
             node2.graph._version
           ) + 1;
         }
-        (_d3 = node2.setDirtyCanvas) == null ? void 0 : _d3.call(node2, true, true);
+        (_c3 = node2.setDirtyCanvas) == null ? void 0 : _c3.call(node2, true, true);
       };
       const openPropertyEditor = () => {
-        var _a4, _b3;
+        var _a4, _b4, _c3;
         if (!propertyName) {
           return;
         }
-        (_b3 = (_a4 = this.canvas).showEditPropertyValue) == null ? void 0 : _b3.call(_a4, node2, propertyName, {
+        const previousValue = (_a4 = node2.properties) == null ? void 0 : _a4[propertyName];
+        (_c3 = (_b4 = this.canvas).showEditPropertyValue) == null ? void 0 : _c3.call(_b4, node2, propertyName, {
           position: [event2.clientX, event2.clientY],
           onclose: () => {
-            var _a5;
-            (_a5 = this.canvas.sceneSyncController) == null ? void 0 : _a5.repaintNodeHost(node2.id);
+            var _a5, _b5, _c4;
+            const nextValue = (_a5 = node2.properties) == null ? void 0 : _a5[propertyName];
+            if (nextValue !== previousValue) {
+              (_b5 = node2.onWidgetChanged) == null ? void 0 : _b5.call(
+                node2,
+                entry.schema.name,
+                nextValue,
+                previousValue,
+                widgetMeta
+              );
+            }
+            (_c4 = this.canvas.sceneSyncController) == null ? void 0 : _c4.repaintNodeHost(node2.id);
           }
         });
       };
-      switch (widget.type) {
-        case "button":
-          if (typeof widget.callback === "function") {
-            setTimeout(() => {
-              widget.callback(widget, this.canvas, node2, localPos, event2);
-            }, 10);
-          }
-          widget.clicked = true;
-          (_b2 = node2.setDirtyCanvas) == null ? void 0 : _b2.call(node2, true, true);
-          return;
-        case "toggle":
-          applyValue(!widget.value);
-          return;
-        case "number": {
-          const step = toFiniteNumber$5((_c2 = widget.options) == null ? void 0 : _c2.step) || 1;
-          const min = (_d2 = widget.options) == null ? void 0 : _d2.min;
-          const max = (_e2 = widget.options) == null ? void 0 : _e2.max;
-          if (part.action === "decrement") {
-            let nextValue = toFiniteNumber$5(widget.value) - step;
-            if (min != null) {
-              nextValue = Math.max(toFiniteNumber$5(min), nextValue);
-            }
-            applyValue(nextValue);
-            return;
-          }
-          if (part.action === "increment") {
-            let nextValue = toFiniteNumber$5(widget.value) + step;
-            if (max != null) {
-              nextValue = Math.min(toFiniteNumber$5(max), nextValue);
-            }
-            applyValue(nextValue);
-            return;
-          }
-          openPropertyEditor();
-          return;
+      const actionResult = (_b3 = (_a3 = entry.renderer).performAction) == null ? void 0 : _b3.call(
+        _a3,
+        {
+          node: node2,
+          host,
+          schema: entry.schema,
+          bounds: entry.handle.bounds,
+          handle: entry.handle,
+          action: part.action || "activate",
+          event: event2,
+          leafer
+        },
+        entry.handle
+      );
+      if ((actionResult == null ? void 0 : actionResult.nextValue) !== void 0) {
+        applyValue(actionResult.nextValue);
+        return;
+      }
+      if (actionResult == null ? void 0 : actionResult.openEditor) {
+        openPropertyEditor();
+        return;
+      }
+      if (entry.schema.type === "button") {
+        const callback = (_c2 = entry.schema.options) == null ? void 0 : _c2.callback;
+        if (typeof callback === "function") {
+          setTimeout(() => {
+            callback(widgetMeta, this.canvas, node2, localPos, event2);
+          }, 10);
         }
-        case "combo": {
-          let values = (_f = widget.options) == null ? void 0 : _f.values;
-          if (typeof values === "function") {
-            values = values(widget, node2);
-          }
-          if (!values) {
-            openPropertyEditor();
-            return;
-          }
-          const valuesList = Array.isArray(values) ? values : Object.keys(values);
-          if (!valuesList.length) {
-            return;
-          }
-          if (part.action === "increment" || part.action === "decrement") {
-            const currentIndex = Array.isArray(values) ? valuesList.indexOf(widget.value) : valuesList.indexOf(String(widget.value));
-            const delta2 = part.action === "increment" ? 1 : -1;
-            const nextIndex = Math.max(
-              0,
-              Math.min(valuesList.length - 1, currentIndex + delta2)
-            );
-            applyValue(
-              Array.isArray(values) ? valuesList[nextIndex] : nextIndex
-            );
-            return;
-          }
-          openPropertyEditor();
-          return;
-        }
-        case "text":
-        case "string":
-          openPropertyEditor();
-          return;
-        default:
-          if (propertyName) {
-            openPropertyEditor();
-          }
+        (_d2 = node2.setDirtyCanvas) == null ? void 0 : _d2.call(node2, true, true);
+        return;
+      }
+      if (propertyName) {
+        openPropertyEditor();
       }
     }
     updateModernHover(host, part) {
-      var _a3, _b2;
+      var _a3, _b3;
       if (this.hoveredModernHost && this.hoveredModernHost !== host) {
         this.hoveredModernHost.updateInteractionState({
           hovered: false,
@@ -12990,16 +12972,14 @@ var LiteGraphTSMigration = (function(exports) {
       }
       if (!host) {
         this.hoveredModernHost = null;
-        this.hoveredModernPart = null;
         return;
       }
       host.updateInteractionState({
         hovered: true,
         hoveredPart: part,
-        pressed: ((_a3 = this.session) == null ? void 0 : _a3.kind) === "modern-press" || ((_b2 = this.session) == null ? void 0 : _b2.kind) === "node-press"
+        pressed: ((_a3 = this.session) == null ? void 0 : _a3.kind) === "modern-press" || ((_b3 = this.session) == null ? void 0 : _b3.kind) === "node-press"
       });
       this.hoveredModernHost = host;
-      this.hoveredModernPart = part;
     }
     resolveCursorForModernPart(part) {
       if (!part) {
@@ -13164,10 +13144,10 @@ var LiteGraphTSMigration = (function(exports) {
         return void 0;
       }
       const pos2 = rawPos;
-      return [toFiniteNumber$5(pos2[0]), toFiniteNumber$5(pos2[1])];
+      return [toFiniteNumber$7(pos2[0]), toFiniteNumber$7(pos2[1])];
     }
     dispatchContextMenu(event2) {
-      var _a3, _b2, _c2, _d2, _e2, _f, _g;
+      var _a3, _b3, _c2, _d2, _e2, _f, _g;
       const source = this.createPointerSource(event2);
       const graphPoint = source.getInnerPoint();
       const hit = this.hitTestService.hitNodeAt(graphPoint.x, graphPoint.y);
@@ -13175,7 +13155,7 @@ var LiteGraphTSMigration = (function(exports) {
       if (this.canvas.allow_interaction === false || this.canvas.read_only) {
         return;
       }
-      const refWindow = ((_b2 = (_a3 = this.canvas).getCanvasWindow) == null ? void 0 : _b2.call(_a3)) || ((_c2 = this.view.ownerDocument) == null ? void 0 : _c2.defaultView) || window;
+      const refWindow = ((_b3 = (_a3 = this.canvas).getCanvasWindow) == null ? void 0 : _b3.call(_a3)) || ((_c2 = this.view.ownerDocument) == null ? void 0 : _c2.defaultView) || window;
       const liteGraphHost = globalThis.LiteGraph;
       (_d2 = liteGraphHost == null ? void 0 : liteGraphHost.closeAllContextMenus) == null ? void 0 : _d2.call(liteGraphHost, refWindow);
       if (node2) {
@@ -13578,9 +13558,9 @@ var LiteGraphTSMigration = (function(exports) {
     return Number.isFinite(titleHeight) ? titleHeight : DEFAULT_NODE_TITLE_HEIGHT;
   }
   function getCollapsedWidth(node2, renderHost, context) {
-    var _a3, _b2, _c2, _d2;
+    var _a3, _b3, _c2, _d2;
     if (!((_a3 = node2.flags) == null ? void 0 : _a3.collapsed)) {
-      return Number((_b2 = node2.size) == null ? void 0 : _b2[0]) || DEFAULT_NODE_WIDTH;
+      return Number((_b3 = node2.size) == null ? void 0 : _b3[0]) || DEFAULT_NODE_WIDTH;
     }
     const title = ((_c2 = node2.getTitle) == null ? void 0 : _c2.call(node2)) || String(node2.title || "");
     const baseWidth = Number((_d2 = node2.size) == null ? void 0 : _d2[0]) || DEFAULT_NODE_WIDTH;
@@ -13596,7 +13576,7 @@ var LiteGraphTSMigration = (function(exports) {
   }
   class LegacyNodePainter {
     static measure(node2, renderHost, context) {
-      var _a3, _b2, _c2, _d2, _e2, _f, _g;
+      var _a3, _b3, _c2, _d2, _e2, _f, _g;
       const padding = DEFAULT_PADDING;
       const titleHeight = getNodeTitleHeight(renderHost);
       let width2 = Math.max(
@@ -13604,7 +13584,7 @@ var LiteGraphTSMigration = (function(exports) {
         getCollapsedWidth(node2, renderHost, context)
       );
       let bodyHeight = Math.max(
-        ((_a3 = node2.flags) == null ? void 0 : _a3.collapsed) ? titleHeight : Number((_b2 = node2.size) == null ? void 0 : _b2[1]) || DEFAULT_NODE_HEIGHT,
+        ((_a3 = node2.flags) == null ? void 0 : _a3.collapsed) ? titleHeight : Number((_b3 = node2.size) == null ? void 0 : _b3[1]) || DEFAULT_NODE_HEIGHT,
         titleHeight
       );
       const computedSize = !((_c2 = node2.flags) == null ? void 0 : _c2.collapsed) && typeof node2.computeSize === "function" ? node2.computeSize() : null;
@@ -13677,27 +13657,27 @@ var LiteGraphTSMigration = (function(exports) {
       return resolvedBounds;
     }
   }
-  function toFiniteNumber$4(value, fallback = 0) {
+  function toFiniteNumber$6(value, fallback = 0) {
     const numericValue = Number(value);
     return Number.isFinite(numericValue) ? numericValue : fallback;
   }
-  function clamp(value, min, max) {
+  function clamp$1(value, min, max) {
     return Math.min(max, Math.max(min, value));
   }
   function resolveDevicePixelRatio(view) {
     var _a3;
     const windowRef = ((_a3 = view == null ? void 0 : view.ownerDocument) == null ? void 0 : _a3.defaultView) || window;
-    return Math.max(1, toFiniteNumber$4(windowRef.devicePixelRatio, 1));
+    return Math.max(1, toFiniteNumber$6(windowRef.devicePixelRatio, 1));
   }
   function resolveRasterRenderScale(options) {
     const devicePixelRatio2 = resolveDevicePixelRatio(options.view);
-    const zoomScale = Math.max(1, toFiniteNumber$4(options.zoomScale, 1));
+    const zoomScale = Math.max(1, toFiniteNumber$6(options.zoomScale, 1));
     const maxPixelRatio = Math.max(
       devicePixelRatio2,
-      toFiniteNumber$4(options.maxPixelRatio, 4)
+      toFiniteNumber$6(options.maxPixelRatio, 4)
     );
     const scaledRatio = devicePixelRatio2 * zoomScale;
-    return clamp(Math.ceil(scaledRatio * 2) / 2, devicePixelRatio2, maxPixelRatio);
+    return clamp$1(Math.ceil(scaledRatio * 2) / 2, devicePixelRatio2, maxPixelRatio);
   }
   class LegacyNodeHost {
     constructor(node2, renderHost, options = {}) {
@@ -13745,7 +13725,7 @@ var LiteGraphTSMigration = (function(exports) {
       this.repaint();
     }
     repaint() {
-      var _a3, _b2;
+      var _a3, _b3;
       const bounds = LegacyNodePainter.measure(
         this.node,
         this.renderHost,
@@ -13763,7 +13743,7 @@ var LiteGraphTSMigration = (function(exports) {
         renderScale
       );
       this.positionOffsetX = bounds.x - Number(((_a3 = this.node.pos) == null ? void 0 : _a3[0]) || 0);
-      this.positionOffsetY = bounds.y - Number(((_b2 = this.node.pos) == null ? void 0 : _b2[1]) || 0);
+      this.positionOffsetY = bounds.y - Number(((_b3 = this.node.pos) == null ? void 0 : _b3[1]) || 0);
       this.syncPosition();
       this.surface.x = 0;
       this.surface.y = 0;
@@ -13796,9 +13776,9 @@ var LiteGraphTSMigration = (function(exports) {
       return this.lastBounds;
     }
     syncPosition() {
-      var _a3, _b2;
+      var _a3, _b3;
       this.root.x = Number(((_a3 = this.node.pos) == null ? void 0 : _a3[0]) || 0) + this.positionOffsetX;
-      this.root.y = Number(((_b2 = this.node.pos) == null ? void 0 : _b2[1]) || 0) + this.positionOffsetY;
+      this.root.y = Number(((_b3 = this.node.pos) == null ? void 0 : _b3[1]) || 0) + this.positionOffsetY;
     }
     ensureCanvasSize(width2, height, renderScale) {
       const pixelWidth = Math.max(1, Math.ceil(width2 * renderScale));
@@ -13824,12 +13804,12 @@ var LiteGraphTSMigration = (function(exports) {
   const LINK_BORDER_COLOR = "transparent";
   const LINK_BORDER_EXTRA_WIDTH = 0;
   const LINK_FLOW_DOT_COUNT = 5;
-  function toFiniteNumber$3(value, fallback = 0) {
+  function toFiniteNumber$5(value, fallback = 0) {
     const numericValue = Number(value);
     return Number.isFinite(numericValue) ? numericValue : fallback;
   }
   function toOpacity(value, fallback = 1) {
-    return Math.max(0, Math.min(1, toFiniteNumber$3(value, fallback)));
+    return Math.max(0, Math.min(1, toFiniteNumber$5(value, fallback)));
   }
   class LinkViewHost {
     constructor(name, options = {}) {
@@ -13883,7 +13863,7 @@ var LiteGraphTSMigration = (function(exports) {
       }
       const strokeWidth = Math.max(
         1,
-        toFiniteNumber$3(presentation.strokeWidth, 3)
+        toFiniteNumber$5(presentation.strokeWidth, 3)
       );
       this.getViewportScale();
       const stroke = presentation.stroke || "#9A9";
@@ -13919,7 +13899,7 @@ var LiteGraphTSMigration = (function(exports) {
       }
       const flowColor = flow.color || "#FFF";
       const flowOpacity = toOpacity(flow.opacity, 1);
-      const dotRadius = Math.max(1, toFiniteNumber$3(flow.dotRadius, 5));
+      const dotRadius = Math.max(1, toFiniteNumber$5(flow.dotRadius, 5));
       const dots = flow.dots || [];
       this.flowPath.visible = true;
       this.flowPath.path = path;
@@ -13953,7 +13933,2802 @@ var LiteGraphTSMigration = (function(exports) {
       }
     }
   }
-  const MODERN_STATE_KEY = "__litegraphModernState";
+  const MODERN_NODE_MARKER_KEY = "__litegraphModernNode";
+  const MODERN_NODE_STATE_KEY = "__litegraphModernState";
+  const ModernNodeChangeMask = {
+    None: 0,
+    Data: 1 << 0,
+    Layout: 1 << 1,
+    Style: 1 << 2,
+    Ports: 1 << 3,
+    Interaction: 1 << 4,
+    All: (1 << 5) - 1
+  };
+  function isModernNodeContract(node2) {
+    if (!node2 || typeof node2 !== "object") {
+      return false;
+    }
+    const runtimeNode = node2;
+    if (runtimeNode.renderRuntime === "modern") {
+      return true;
+    }
+    if (runtimeNode[MODERN_NODE_MARKER_KEY]) {
+      return true;
+    }
+    return typeof runtimeNode.mountView === "function" || typeof runtimeNode.patchView === "function" || typeof runtimeNode.consumeModernChangeMask === "function" || typeof runtimeNode.requestModernPatch === "function";
+  }
+  class LLink {
+    constructor(id, type, origin_id, origin_slot, target_id, target_slot) {
+      this.id = id;
+      this.type = type;
+      this.origin_id = origin_id;
+      this.origin_slot = origin_slot;
+      this.target_id = target_id;
+      this.target_slot = target_slot;
+      this._data = null;
+      this._pos = new Float32Array(2);
+    }
+    configure(o2) {
+      const parsed = parseSerializedLLinkInput(o2);
+      this.id = parsed.id;
+      this.type = parsed.type;
+      this.origin_id = parsed.origin_id;
+      this.origin_slot = parsed.origin_slot;
+      this.target_id = parsed.target_id;
+      this.target_slot = parsed.target_slot;
+    }
+    serialize() {
+      return [
+        this.id,
+        this.origin_id,
+        this.origin_slot,
+        this.target_id,
+        this.target_slot,
+        this.type
+      ];
+    }
+  }
+  const defaultLiteGraphNodeHost = {
+    use_uuids: false,
+    uuidv4: () => "",
+    NODE_WIDTH: 140,
+    INPUT: 1,
+    OUTPUT: 2,
+    cloneObject: (obj, target) => {
+      if (obj == null) {
+        return null;
+      }
+      const cloned = JSON.parse(JSON.stringify(obj));
+      if (!target) {
+        return cloned;
+      }
+      for (const key in cloned) {
+        target[key] = cloned[key];
+      }
+      return target;
+    }
+  };
+  const resolveNodeStateHost = createClassHostResolver(defaultLiteGraphNodeHost, {
+    cacheKey: "LGraphNode.state",
+    fallbackOwners: [() => LGraphNode$1]
+  });
+  let LGraphNode$1 = (_b2 = class {
+    constructor(title) {
+      this.graph_version = 0;
+      this.is_selected = false;
+      this.mouseOver = false;
+      this._pos = new Float32Array(10);
+      this.title = "Unnamed";
+      this.type = null;
+      this.size = [140, 60];
+      this.graph = null;
+      this.id = -1;
+      this.inputs = [];
+      this.outputs = [];
+      this.connections = [];
+      this.properties = {};
+      this.properties_info = [];
+      this.flags = {};
+      this._ctor(title);
+    }
+    get pos() {
+      if (!this._pos) {
+        this._pos = new Float32Array(10);
+      }
+      return this._pos;
+    }
+    set pos(v2) {
+      if (!v2 || v2.length < 2) {
+        return;
+      }
+      if (!this._pos) {
+        this._pos = new Float32Array(10);
+      }
+      this._pos[0] = v2[0];
+      this._pos[1] = v2[1];
+    }
+    getClassMeta() {
+      return this.constructor;
+    }
+    _ctor(title) {
+      const host = resolveNodeStateHost(this);
+      this.title = title || "Unnamed";
+      this.size = [host.NODE_WIDTH, 60];
+      this.graph = null;
+      this._pos = new Float32Array(10);
+      Object.defineProperty(this, "pos", {
+        set: (v2) => {
+          if (!v2 || v2.length < 2) {
+            return;
+          }
+          this._pos[0] = v2[0];
+          this._pos[1] = v2[1];
+        },
+        get: () => this._pos,
+        enumerable: true
+      });
+      if (host.use_uuids) {
+        this.id = host.uuidv4();
+      } else {
+        this.id = -1;
+      }
+      this.type = null;
+      this.inputs = [];
+      this.outputs = [];
+      this.connections = [];
+      this.properties = {};
+      this.properties_info = [];
+      this.flags = {};
+    }
+    /**
+     * configure a node from an object containing the serialized info
+     * @method configure
+     */
+    configure(info) {
+      var _a3;
+      if (this.graph) {
+        this.graph._version++;
+      }
+      const self = this;
+      const infoRecord = info;
+      for (const j2 in infoRecord) {
+        if (j2 == "properties") {
+          const properties = info.properties;
+          for (const k2 in properties) {
+            this.properties[k2] = properties[k2];
+            if (this.onPropertyChanged) {
+              this.onPropertyChanged(k2, properties[k2]);
+            }
+          }
+          continue;
+        }
+        const fieldValue = infoRecord[j2];
+        if (fieldValue == null) {
+          continue;
+        } else if (typeof fieldValue == "object") {
+          const selfField = self[j2];
+          const configuredField = selfField;
+          if (configuredField && configuredField.configure) {
+            configuredField.configure(fieldValue);
+          } else {
+            self[j2] = resolveNodeStateHost(this).cloneObject(
+              fieldValue,
+              selfField
+            );
+          }
+        } else {
+          self[j2] = fieldValue;
+        }
+      }
+      if (!info.title) {
+        this.title = this.getClassMeta().title;
+      }
+      if (this.inputs) {
+        for (let i2 = 0; i2 < this.inputs.length; ++i2) {
+          const input = this.inputs[i2];
+          const link_info = this.graph && input ? this.graph.links[input.link] : null;
+          if (this.onConnectionsChange) {
+            this.onConnectionsChange(
+              resolveNodeStateHost(this).INPUT,
+              i2,
+              true,
+              link_info,
+              input
+            );
+          }
+          if (this.onInputAdded) {
+            this.onInputAdded(input);
+          }
+        }
+      }
+      if (this.outputs) {
+        for (let i2 = 0; i2 < this.outputs.length; ++i2) {
+          const output = this.outputs[i2];
+          if (!output.links) {
+            continue;
+          }
+          for (let j2 = 0; j2 < output.links.length; ++j2) {
+            const link_info = this.graph ? this.graph.links[output.links[j2]] : null;
+            if (this.onConnectionsChange) {
+              this.onConnectionsChange(
+                resolveNodeStateHost(this).OUTPUT,
+                i2,
+                true,
+                link_info,
+                output
+              );
+            }
+          }
+          if (this.onOutputAdded) {
+            this.onOutputAdded(output);
+          }
+        }
+      }
+      if (this.widgets) {
+        for (let i2 = 0; i2 < this.widgets.length; ++i2) {
+          const widget = this.widgets[i2] || null;
+          if (!widget) {
+            continue;
+          }
+          const propertyName = (_a3 = widget.options) == null ? void 0 : _a3.property;
+          if (propertyName && this.properties[propertyName] != void 0) {
+            widget.value = JSON.parse(
+              JSON.stringify(this.properties[propertyName])
+            );
+          }
+        }
+        if (info.widgets_values) {
+          for (let i2 = 0; i2 < info.widgets_values.length; ++i2) {
+            if (this.widgets[i2]) {
+              this.widgets[i2].value = info.widgets_values[i2];
+            }
+          }
+        }
+      }
+      if (this.onConfigure) {
+        this.onConfigure(info);
+      }
+    }
+    /**
+     * serialize the content
+     * @method serialize
+     */
+    serialize() {
+      const host = resolveNodeStateHost(this);
+      const o2 = {
+        id: this.id,
+        type: this.type,
+        pos: this.pos,
+        size: this.size,
+        flags: host.cloneObject(this.flags),
+        order: this.order,
+        mode: this.mode
+      };
+      if (this.constructor === _b2 && this.last_serialization) {
+        return this.last_serialization;
+      }
+      if (this.inputs) {
+        o2.inputs = this.inputs;
+      }
+      if (this.outputs) {
+        for (let i2 = 0; i2 < this.outputs.length; i2++) {
+          delete this.outputs[i2]._data;
+        }
+        o2.outputs = this.outputs;
+      }
+      if (this.title && this.title != this.getClassMeta().title) {
+        o2.title = this.title;
+      }
+      if (this.properties) {
+        o2.properties = host.cloneObject(this.properties);
+      }
+      if (this.widgets && this.serialize_widgets) {
+        o2.widgets_values = [];
+        for (let i2 = 0; i2 < this.widgets.length; ++i2) {
+          if (this.widgets[i2]) {
+            o2.widgets_values[i2] = this.widgets[i2].value;
+          } else {
+            o2.widgets_values[i2] = null;
+          }
+        }
+      }
+      if (!o2.type) {
+        o2.type = this.getClassMeta().type;
+      }
+      if (this.color) {
+        o2.color = this.color;
+      }
+      if (this.bgcolor) {
+        o2.bgcolor = this.bgcolor;
+      }
+      if (this.boxcolor) {
+        o2.boxcolor = this.boxcolor;
+      }
+      if (this.shape) {
+        o2.shape = this.shape;
+      }
+      if (this.onSerialize) {
+        if (this.onSerialize(o2)) {
+          console.warn(
+            "node onSerialize shouldnt return anything, data should be stored in the object pass in the first parameter"
+          );
+        }
+      }
+      return o2;
+    }
+    /* Creates a clone of this node */
+    clone() {
+      const createNode = resolveNodeStateHost(this).createNode;
+      const node2 = createNode(this.type);
+      if (!node2) {
+        return null;
+      }
+      const data = resolveNodeStateHost(this).cloneObject(
+        this.serialize()
+      );
+      if (data.inputs) {
+        for (let i2 = 0; i2 < data.inputs.length; ++i2) {
+          data.inputs[i2].link = null;
+        }
+      }
+      if (data.outputs) {
+        for (let i2 = 0; i2 < data.outputs.length; ++i2) {
+          const outputSlot = data.outputs[i2];
+          if (!outputSlot) {
+            continue;
+          }
+          if (outputSlot.links) {
+            outputSlot.links.length = 0;
+          }
+        }
+      }
+      delete data.id;
+      const host = resolveNodeStateHost(this);
+      if (host.use_uuids) {
+        data.id = host.uuidv4();
+      }
+      node2.configure(data);
+      return node2;
+    }
+    /**
+     * serialize and stringify
+     * @method toString
+     */
+    toString() {
+      return JSON.stringify(this.serialize());
+    }
+    /**
+     * get the title string
+     * @method getTitle
+     */
+    getTitle() {
+      return this.title || this.getClassMeta().title;
+    }
+    /**
+     * sets the value of a property
+     * @method setProperty
+     * @param {String} name
+     * @param {*} value
+     */
+    setProperty(name, value) {
+      var _a3;
+      if (!this.properties) {
+        this.properties = {};
+      }
+      if (value === this.properties[name]) {
+        return;
+      }
+      const prev_value = this.properties[name];
+      this.properties[name] = value;
+      if (this.onPropertyChanged) {
+        if (this.onPropertyChanged(name, value, prev_value) === false) {
+          this.properties[name] = prev_value;
+        }
+      }
+      if (this.widgets) {
+        for (let i2 = 0; i2 < this.widgets.length; ++i2) {
+          const widget = this.widgets[i2];
+          if (!widget) {
+            continue;
+          }
+          const propertyName = (_a3 = widget.options) == null ? void 0 : _a3.property;
+          if (propertyName == name) {
+            widget.value = value;
+            break;
+          }
+        }
+      }
+    }
+  }, _b2.liteGraph = defaultLiteGraphNodeHost, _b2);
+  const defaultExecutionHost$1 = {
+    EVENT: -1,
+    ACTION: -1,
+    ON_TRIGGER: 3,
+    use_deferred_actions: true,
+    getTime: () => Date.now()
+  };
+  const resolveNodeExecutionHost = createClassHostResolver(defaultExecutionHost$1, {
+    cacheKey: "LGraphNode.execution",
+    fallbackOwners: [() => LGraphNode$1]
+  });
+  class LGraphNodeExecution extends LGraphNode$1 {
+    getExecutionGraph() {
+      return this.graph || null;
+    }
+    /**
+     * sets the output data
+     * @method setOutputData
+     * @param {number} slot
+     * @param {*} data
+     */
+    setOutputData(slot, data) {
+      if (!this.outputs) {
+        return;
+      }
+      if (slot == -1 || slot >= this.outputs.length) {
+        return;
+      }
+      const output_info = this.outputs[slot];
+      if (!output_info) {
+        return;
+      }
+      output_info._data = data;
+      const graph = this.getExecutionGraph();
+      if (output_info.links) {
+        for (let i2 = 0; i2 < output_info.links.length; i2++) {
+          const link_id = output_info.links[i2];
+          const link = graph.links[String(link_id)];
+          if (link) {
+            link.data = data;
+          }
+        }
+      }
+    }
+    /**
+     * sets the output data type, useful when you want to be able to overwrite the data type
+     * @method setOutputDataType
+     * @param {number} slot
+     * @param {String} datatype
+     */
+    setOutputDataType(slot, type) {
+      if (!this.outputs) {
+        return;
+      }
+      if (slot == -1 || slot >= this.outputs.length) {
+        return;
+      }
+      const output_info = this.outputs[slot];
+      if (!output_info) {
+        return;
+      }
+      output_info.type = type;
+      const graph = this.getExecutionGraph();
+      if (output_info.links) {
+        for (let i2 = 0; i2 < output_info.links.length; i2++) {
+          const link_id = output_info.links[i2];
+          graph.links[String(link_id)].type = type;
+        }
+      }
+    }
+    /**
+     * Retrieves the input data (data traveling through the connection) from one slot
+     * @method getInputData
+     * @param {number} slot
+     * @param {boolean} force_update if set to true it will force the connected node of this slot to output data into this link
+     * @return {*} data or if it is not connected returns undefined
+     */
+    getInputData(slot, force_update) {
+      if (!this.inputs) {
+        return void 0;
+      }
+      const input = this.inputs[slot];
+      if (!input || slot >= this.inputs.length || input.link == null) {
+        return void 0;
+      }
+      const graph = this.getExecutionGraph();
+      const link_id = input.link;
+      const link = graph.links[String(link_id)];
+      if (!link) {
+        return null;
+      }
+      if (!force_update) {
+        return link.data;
+      }
+      const node2 = graph.getNodeById(link.origin_id);
+      if (!node2) {
+        return link.data;
+      }
+      if (node2.updateOutputData) {
+        node2.updateOutputData(link.origin_slot);
+      } else if (node2.onExecute) {
+        node2.onExecute();
+      }
+      return link.data;
+    }
+    /**
+     * Retrieves the input data type (in case this supports multiple input types)
+     * @method getInputDataType
+     * @param {number} slot
+     * @return {String} datatype in string format
+     */
+    getInputDataType(slot) {
+      if (!this.inputs) {
+        return null;
+      }
+      const input = this.inputs[slot];
+      if (!input || slot >= this.inputs.length || input.link == null) {
+        return null;
+      }
+      const graph = this.getExecutionGraph();
+      const link_id = input.link;
+      const link = graph.links[String(link_id)];
+      if (!link) {
+        return null;
+      }
+      const node2 = graph.getNodeById(link.origin_id);
+      if (!node2) {
+        return link.type || null;
+      }
+      const outputs = node2.outputs;
+      const output_info = outputs ? outputs[link.origin_slot] : null;
+      if (output_info) {
+        return output_info.type || null;
+      }
+      return null;
+    }
+    /**
+     * Retrieves the input data from one slot using its name instead of slot number
+     * @method getInputDataByName
+     * @param {String} slot_name
+     * @param {boolean} force_update if set to true it will force the connected node of this slot to output data into this link
+     * @return {*} data or if it is not connected returns null
+     */
+    getInputDataByName(slot_name, force_update) {
+      const withFindInputSlot = this;
+      const slot = withFindInputSlot.findInputSlot(slot_name);
+      if (slot == -1) {
+        return null;
+      }
+      return this.getInputData(slot, force_update);
+    }
+    /**
+     * tells you if there is a connection in one input slot
+     * @method isInputConnected
+     * @param {number} slot
+     * @return {boolean}
+     */
+    isInputConnected(slot) {
+      if (!this.inputs) {
+        return false;
+      }
+      return slot < this.inputs.length && this.inputs[slot].link != null;
+    }
+    /**
+     * tells you info about an input connection (which node, type, etc)
+     * @method getInputInfo
+     * @param {number} slot
+     * @return {Object} object or null { link: id, name: string, type: string or 0 }
+     */
+    getInputInfo(slot) {
+      if (!this.inputs) {
+        return null;
+      }
+      if (slot < this.inputs.length) {
+        return this.inputs[slot];
+      }
+      return null;
+    }
+    /**
+     * Returns the link info in the connection of an input slot
+     * @method getInputLink
+     * @param {number} slot
+     * @return {LLink} object or null
+     */
+    getInputLink(slot) {
+      if (!this.inputs) {
+        return null;
+      }
+      if (slot < this.inputs.length) {
+        const slot_info = this.inputs[slot];
+        const graph = this.getExecutionGraph();
+        return graph.links[String(slot_info.link)] || null;
+      }
+      return null;
+    }
+    /**
+     * returns the node connected in the input slot
+     * @method getInputNode
+     * @param {number} slot
+     * @return {LGraphNode} node or null
+     */
+    getInputNode(slot) {
+      if (!this.inputs) {
+        return null;
+      }
+      if (slot >= this.inputs.length) {
+        return null;
+      }
+      const input = this.inputs[slot];
+      if (!input || input.link === null) {
+        return null;
+      }
+      const graph = this.getExecutionGraph();
+      const link_info = graph.links[String(input.link)];
+      if (!link_info) {
+        return null;
+      }
+      return graph.getNodeById(link_info.origin_id);
+    }
+    /**
+     * returns the value of an input with this name, otherwise checks if there is a property with that name
+     * @method getInputOrProperty
+     * @param {string} name
+     * @return {*} value
+     */
+    getInputOrProperty(name) {
+      const properties = this.properties;
+      if (!this.inputs || !this.inputs.length) {
+        return properties ? properties[name] : null;
+      }
+      const graph = this.getExecutionGraph();
+      for (let i2 = 0, l2 = this.inputs.length; i2 < l2; ++i2) {
+        const input_info = this.inputs[i2];
+        if (name == input_info.name && input_info.link != null) {
+          const link = graph.links[String(input_info.link)];
+          if (link) {
+            return link.data;
+          }
+        }
+      }
+      return properties ? properties[name] : void 0;
+    }
+    /**
+     * tells you the last output data that went in that slot
+     * @method getOutputData
+     * @param {number} slot
+     * @return {Object}  object or null
+     */
+    getOutputData(slot) {
+      var _a3;
+      if (!this.outputs) {
+        return null;
+      }
+      if (slot >= this.outputs.length) {
+        return null;
+      }
+      const info = this.outputs[slot];
+      return (_a3 = info._data) != null ? _a3 : null;
+    }
+    /**
+     * tells you info about an output connection (which node, type, etc)
+     * @method getOutputInfo
+     * @param {number} slot
+     * @return {Object}  object or null { name: string, type: string, links: [ ids of links in number ] }
+     */
+    getOutputInfo(slot) {
+      if (!this.outputs) {
+        return null;
+      }
+      if (slot < this.outputs.length) {
+        return this.outputs[slot];
+      }
+      return null;
+    }
+    /**
+     * tells you if there is a connection in one output slot
+     * @method isOutputConnected
+     * @param {number} slot
+     * @return {boolean}
+     */
+    isOutputConnected(slot) {
+      if (!this.outputs) {
+        return false;
+      }
+      return Boolean(
+        slot < this.outputs.length && this.outputs[slot].links && this.outputs[slot].links.length
+      );
+    }
+    /**
+     * tells you if there is any connection in the output slots
+     * @method isAnyOutputConnected
+     * @return {boolean}
+     */
+    isAnyOutputConnected() {
+      var _a3;
+      if (!this.outputs) {
+        return false;
+      }
+      for (let i2 = 0; i2 < this.outputs.length; ++i2) {
+        const links = (_a3 = this.outputs[i2]) == null ? void 0 : _a3.links;
+        if (links && links.length) {
+          return true;
+        }
+      }
+      return false;
+    }
+    /**
+     * retrieves all the nodes connected to this output slot
+     * @method getOutputNodes
+     * @param {number} slot
+     * @return {array}
+     */
+    getOutputNodes(slot) {
+      if (!this.outputs || this.outputs.length == 0) {
+        return null;
+      }
+      if (slot >= this.outputs.length) {
+        return null;
+      }
+      const output = this.outputs[slot];
+      if (!output.links || output.links.length == 0) {
+        return null;
+      }
+      const graph = this.getExecutionGraph();
+      const result = [];
+      for (let i2 = 0; i2 < output.links.length; i2++) {
+        const link_id = output.links[i2];
+        const link = graph.links[String(link_id)];
+        if (link) {
+          const target_node = graph.getNodeById(link.target_id);
+          if (target_node) {
+            result.push(target_node);
+          }
+        }
+      }
+      return result;
+    }
+    /**
+     * Triggers the execution of actions that were deferred when the action was triggered
+     * @method executePendingActions
+     */
+    executePendingActions() {
+      if (!this._waiting_actions || !this._waiting_actions.length) {
+        return;
+      }
+      for (let i2 = 0; i2 < this._waiting_actions.length; ++i2) {
+        const p2 = this._waiting_actions[i2];
+        this.onAction(
+          p2[0],
+          p2[1],
+          p2[2],
+          p2[3],
+          p2[4]
+        );
+      }
+      this._waiting_actions.length = 0;
+    }
+    /**
+     * Triggers the node code execution, place a boolean/counter to mark the node as being executed
+     * @method doExecute
+     * @param {*} param
+     * @param {*} options
+     */
+    doExecute(param, options) {
+      const runtimeOptions = options || {};
+      const graph = this.getExecutionGraph();
+      if (this.onExecute) {
+        if (!runtimeOptions.action_call) {
+          runtimeOptions.action_call = this.id + "_exec_" + Math.floor(Math.random() * 9999);
+        }
+        graph.nodes_executing[String(this.id)] = true;
+        this.onExecute(param, runtimeOptions);
+        graph.nodes_executing[String(this.id)] = false;
+        this.exec_version = graph.iteration;
+        if (runtimeOptions.action_call) {
+          this.action_call = runtimeOptions.action_call;
+          graph.nodes_executedAction[String(this.id)] = runtimeOptions.action_call;
+        }
+      }
+      this.execute_triggered = 2;
+      if (this.onAfterExecuteNode) {
+        this.onAfterExecuteNode(param, runtimeOptions);
+      }
+    }
+    /**
+     * Triggers an action, wrapped by logics to control execution flow
+     * @method actionDo
+     * @param {String} action name
+     * @param {*} param
+     */
+    actionDo(action, param, options, action_slot) {
+      const runtimeOptions = options || {};
+      const graph = this.getExecutionGraph();
+      if (this.onAction) {
+        if (!runtimeOptions.action_call) {
+          runtimeOptions.action_call = this.id + "_" + (action ? action : "action") + "_" + Math.floor(Math.random() * 9999);
+        }
+        graph.nodes_actioning[String(this.id)] = action ? action : "actioning";
+        this.onAction(action, param, runtimeOptions, action_slot);
+        graph.nodes_actioning[String(this.id)] = false;
+        if (runtimeOptions.action_call) {
+          this.action_call = runtimeOptions.action_call;
+          graph.nodes_executedAction[String(this.id)] = runtimeOptions.action_call;
+        }
+      }
+      this.action_triggered = 2;
+      if (this.onAfterExecuteNode) {
+        this.onAfterExecuteNode(param, runtimeOptions);
+      }
+    }
+    /**
+     * Triggers an event in this node, this will trigger any output with the same name
+     * @method trigger
+     * @param {String} event name ( "on_play", ... ) if action is equivalent to false then the event is send to all
+     * @param {*} param
+     */
+    trigger(action, param, options) {
+      if (!this.outputs || !this.outputs.length) {
+        return;
+      }
+      const host = resolveNodeExecutionHost(this);
+      const graph = this.getExecutionGraph();
+      if (graph) {
+        graph._last_trigger_time = host.getTime();
+      }
+      for (let i2 = 0; i2 < this.outputs.length; ++i2) {
+        const output = this.outputs[i2];
+        if (!output || output.type !== host.EVENT || action && output.name != action) {
+          continue;
+        }
+        this.triggerSlot(i2, param, null, options);
+      }
+    }
+    /**
+     * Triggers a slot event in this node: cycle output slots and launch execute/action on connected nodes
+     * @method triggerSlot
+     * @param {Number} slot the index of the output slot
+     * @param {*} param
+     * @param {Number} link_id [optional] in case you want to trigger and specific output link in a slot
+     */
+    triggerSlot(slot, param, link_id, options) {
+      const runtimeOptions = options || {};
+      if (!this.outputs) {
+        return;
+      }
+      if (slot == null) {
+        console.error("slot must be a number");
+        return;
+      }
+      if (slot.constructor !== Number) {
+        console.warn(
+          "slot must be a number, use node.trigger('name') if you want to use a string"
+        );
+      }
+      const output = this.outputs[slot];
+      if (!output) {
+        return;
+      }
+      const links = output.links;
+      if (!links || !links.length) {
+        return;
+      }
+      const host = resolveNodeExecutionHost(this);
+      const graph = this.getExecutionGraph();
+      if (!graph) {
+        return;
+      }
+      graph._last_trigger_time = host.getTime();
+      for (let k2 = 0; k2 < links.length; ++k2) {
+        const id = links[k2];
+        if (link_id != null && link_id != id) {
+          continue;
+        }
+        const link_info = graph.links[String(links[k2])];
+        if (!link_info) {
+          continue;
+        }
+        link_info._last_time = host.getTime();
+        const node2 = graph.getNodeById(link_info.target_id);
+        if (!node2) {
+          continue;
+        }
+        if (node2.mode === host.ON_TRIGGER) {
+          if (!runtimeOptions.action_call) {
+            runtimeOptions.action_call = this.id + "_trigg_" + Math.floor(Math.random() * 9999);
+          }
+          if (node2.onExecute) {
+            node2.doExecute(
+              param,
+              runtimeOptions
+            );
+          }
+        } else if (node2.onAction) {
+          if (!runtimeOptions.action_call) {
+            runtimeOptions.action_call = this.id + "_act_" + Math.floor(Math.random() * 9999);
+          }
+          const target_connection = node2.inputs[link_info.target_slot];
+          if (host.use_deferred_actions && node2.onExecute) {
+            if (!node2._waiting_actions) {
+              node2._waiting_actions = [];
+            }
+            node2._waiting_actions.push([
+              target_connection.name,
+              param,
+              runtimeOptions,
+              link_info.target_slot
+            ]);
+          } else {
+            node2.actionDo(
+              target_connection.name,
+              param,
+              runtimeOptions,
+              link_info.target_slot
+            );
+          }
+        }
+      }
+    }
+    /**
+     * clears the trigger slot animation
+     * @method clearTriggeredSlot
+     * @param {Number} slot the index of the output slot
+     * @param {Number} link_id [optional] in case you want to trigger and specific output link in a slot
+     */
+    clearTriggeredSlot(slot, link_id) {
+      if (!this.outputs) {
+        return;
+      }
+      const output = this.outputs[slot];
+      if (!output) {
+        return;
+      }
+      const links = output.links;
+      if (!links || !links.length) {
+        return;
+      }
+      const graph = this.getExecutionGraph();
+      for (let k2 = 0; k2 < links.length; ++k2) {
+        const id = links[k2];
+        if (link_id != null && link_id != id) {
+          continue;
+        }
+        const link_info = graph.links[String(links[k2])];
+        if (!link_info) {
+          continue;
+        }
+        link_info._last_time = 0;
+      }
+    }
+  }
+  const defaultPortsWidgetsHost = {
+    NODE_TEXT_SIZE: 14,
+    NODE_WIDTH: 140,
+    NODE_SLOT_HEIGHT: 20,
+    NODE_WIDGET_HEIGHT: 20,
+    auto_load_slot_types: false
+  };
+  const resolvePortsWidgetsHost = createClassHostResolver(defaultPortsWidgetsHost, {
+    cacheKey: "LGraphNode.ports-widgets",
+    fallbackOwners: [() => LGraphNodePortsWidgets]
+  });
+  class LGraphNodePortsWidgets extends LGraphNodeExecution {
+    getPortsWidgetsClassMeta() {
+      return this.constructor;
+    }
+    getGraphLinksMap() {
+      const graphLike = this.graph;
+      return graphLike.links || {};
+    }
+    /**
+     * changes node size and triggers callback
+     * @method setSize
+     * @param {vec2} size
+     */
+    setSize(size) {
+      this.size = size;
+      if (this.onResize) {
+        this.onResize(this.size);
+      }
+    }
+    /**
+     * add a new property to this node
+     * @method addProperty
+     * @param {string} name
+     * @param {*} default_value
+     * @param {string} type string defining the output type ("vec3","number",...)
+     * @param {Object} extra_info this can be used to have special properties of the property (like values, etc)
+     */
+    addProperty(name, default_value, type, extra_info) {
+      const o2 = { name, type, default_value };
+      if (extra_info) {
+        for (const i2 in extra_info) {
+          o2[i2] = extra_info[i2];
+        }
+      }
+      if (!this.properties_info) {
+        this.properties_info = [];
+      }
+      this.properties_info.push(o2);
+      if (!this.properties) {
+        this.properties = {};
+      }
+      this.properties[name] = default_value;
+      return o2;
+    }
+    /**
+     * add a new output slot to use in this node
+     * @method addOutput
+     * @param {string} name
+     * @param {string} type string defining the output type ("vec3","number",...)
+     * @param {Object} extra_info this can be used to have special properties of an output (label, special color, position, etc)
+     */
+    addOutput(name, type, extra_info) {
+      const output = {
+        name,
+        type,
+        links: null
+      };
+      if (extra_info) {
+        for (const i2 in extra_info) {
+          output[i2] = extra_info[i2];
+        }
+      }
+      if (!this.outputs) {
+        this.outputs = [];
+      }
+      this.outputs.push(output);
+      if (this.onOutputAdded) {
+        this.onOutputAdded(output);
+      }
+      const host = resolvePortsWidgetsHost(this);
+      if (host.auto_load_slot_types) {
+        host.registerNodeAndSlotType(this, type, true);
+      }
+      this.setSize(this.computeSize());
+      this.setDirtyCanvas(true, true);
+      return output;
+    }
+    /**
+     * add a new output slot to use in this node
+     * @method addOutputs
+     * @param {Array} array of triplets like [[name,type,extra_info],[...]]
+     */
+    addOutputs(array) {
+      const host = resolvePortsWidgetsHost(this);
+      for (let i2 = 0; i2 < array.length; ++i2) {
+        const info = array[i2];
+        const o2 = {
+          name: info[0],
+          type: info[1],
+          link: null
+        };
+        if (array[2]) {
+          for (const j2 in info[2]) {
+            o2[j2] = info[2][j2];
+          }
+        }
+        if (!this.outputs) {
+          this.outputs = [];
+        }
+        this.outputs.push(o2);
+        if (this.onOutputAdded) {
+          this.onOutputAdded(o2);
+        }
+        if (host.auto_load_slot_types) {
+          host.registerNodeAndSlotType(this, info[1], true);
+        }
+      }
+      this.setSize(this.computeSize());
+      this.setDirtyCanvas(true, true);
+    }
+    /**
+     * remove an existing output slot
+     * @method removeOutput
+     * @param {number} slot
+     */
+    removeOutput(slot) {
+      this.disconnectOutput(
+        slot
+      );
+      this.outputs.splice(slot, 1);
+      for (let i2 = slot; i2 < this.outputs.length; ++i2) {
+        if (!this.outputs[i2] || !this.outputs[i2].links) {
+          continue;
+        }
+        const links = this.outputs[i2].links;
+        for (let j2 = 0; j2 < links.length; ++j2) {
+          const link = this.getGraphLinksMap()[String(links[j2])];
+          if (!link) {
+            continue;
+          }
+          link.origin_slot = link.origin_slot - 1;
+        }
+      }
+      this.setSize(this.computeSize());
+      if (this.onOutputRemoved) {
+        this.onOutputRemoved(slot);
+      }
+      this.setDirtyCanvas(true, true);
+    }
+    /**
+     * add a new input slot to use in this node
+     * @method addInput
+     * @param {string} name
+     * @param {string} type string defining the input type ("vec3","number",...), it its a generic one use 0
+     * @param {Object} extra_info this can be used to have special properties of an input (label, color, position, etc)
+     */
+    addInput(name, type, extra_info) {
+      const normalizedType = type || 0;
+      const input = {
+        name,
+        type: normalizedType,
+        link: null
+      };
+      if (extra_info) {
+        for (const i2 in extra_info) {
+          input[i2] = extra_info[i2];
+        }
+      }
+      if (!this.inputs) {
+        this.inputs = [];
+      }
+      this.inputs.push(input);
+      this.setSize(this.computeSize());
+      if (this.onInputAdded) {
+        this.onInputAdded(input);
+      }
+      const host = resolvePortsWidgetsHost(this);
+      host.registerNodeAndSlotType(this, normalizedType);
+      this.setDirtyCanvas(true, true);
+      return input;
+    }
+    /**
+     * add several new input slots in this node
+     * @method addInputs
+     * @param {Array} array of triplets like [[name,type,extra_info],[...]]
+     */
+    addInputs(array) {
+      const host = resolvePortsWidgetsHost(this);
+      for (let i2 = 0; i2 < array.length; ++i2) {
+        const info = array[i2];
+        const o2 = { name: info[0], type: info[1], link: null };
+        if (array[2]) {
+          for (const j2 in info[2]) {
+            o2[j2] = info[2][j2];
+          }
+        }
+        if (!this.inputs) {
+          this.inputs = [];
+        }
+        this.inputs.push(o2);
+        if (this.onInputAdded) {
+          this.onInputAdded(o2);
+        }
+        host.registerNodeAndSlotType(this, info[1]);
+      }
+      this.setSize(this.computeSize());
+      this.setDirtyCanvas(true, true);
+    }
+    /**
+     * remove an existing input slot
+     * @method removeInput
+     * @param {number} slot
+     */
+    removeInput(slot) {
+      this.disconnectInput(
+        slot
+      );
+      const slot_info = this.inputs.splice(slot, 1);
+      for (let i2 = slot; i2 < this.inputs.length; ++i2) {
+        if (!this.inputs[i2]) {
+          continue;
+        }
+        const link = this.getGraphLinksMap()[String(this.inputs[i2].link)];
+        if (!link) {
+          continue;
+        }
+        link.target_slot = link.target_slot - 1;
+      }
+      this.setSize(this.computeSize());
+      if (this.onInputRemoved) {
+        this.onInputRemoved(slot, slot_info[0]);
+      }
+      this.setDirtyCanvas(true, true);
+    }
+    /**
+     * add an special connection to this node (used for special kinds of graphs)
+     * @method addConnection
+     * @param {string} name
+     * @param {string} type string defining the input type ("vec3","number",...)
+     * @param {[x,y]} pos position of the connection inside the node
+     * @param {string} direction if is input or output
+     */
+    addConnection(name, type, pos2, direction) {
+      const o2 = {
+        name,
+        type,
+        pos: pos2,
+        direction,
+        links: null
+      };
+      this.connections.push(o2);
+      return o2;
+    }
+    /**
+     * computes the minimum size of a node according to its inputs and output slots
+     * @method computeSize
+     * @param {vec2} minHeight
+     * @return {vec2} the total size
+     */
+    computeSize(out) {
+      const classMeta = this.getPortsWidgetsClassMeta();
+      const host = resolvePortsWidgetsHost(this);
+      if (classMeta.size) {
+        return classMeta.size.concat();
+      }
+      let rows = Math.max(
+        this.inputs ? this.inputs.length : 1,
+        this.outputs ? this.outputs.length : 1
+      );
+      const size = out || new Float32Array([0, 0]);
+      rows = Math.max(rows, 1);
+      const font_size = host.NODE_TEXT_SIZE;
+      const compute_text_size = (text) => {
+        if (!text) {
+          return 0;
+        }
+        return font_size * text.length * 0.6;
+      };
+      const title_width = compute_text_size(this.title);
+      let input_width = 0;
+      let output_width = 0;
+      if (this.inputs) {
+        for (let i2 = 0, l2 = this.inputs.length; i2 < l2; ++i2) {
+          const input = this.inputs[i2];
+          const text = input.label || input.name || "";
+          const text_width = compute_text_size(text);
+          if (input_width < text_width) {
+            input_width = text_width;
+          }
+        }
+      }
+      if (this.outputs) {
+        for (let i2 = 0, l2 = this.outputs.length; i2 < l2; ++i2) {
+          const output = this.outputs[i2];
+          const text = output.label || output.name || "";
+          const text_width = compute_text_size(text);
+          if (output_width < text_width) {
+            output_width = text_width;
+          }
+        }
+      }
+      size[0] = Math.max(input_width + output_width + 10, title_width);
+      size[0] = Math.max(size[0], host.NODE_WIDTH);
+      if (this.widgets && this.widgets.length) {
+        size[0] = Math.max(size[0], host.NODE_WIDTH * 1.5);
+      }
+      size[1] = (classMeta.slot_start_y || 0) + rows * host.NODE_SLOT_HEIGHT;
+      let widgets_height = 0;
+      if (this.widgets && this.widgets.length) {
+        for (let i2 = 0, l2 = this.widgets.length; i2 < l2; ++i2) {
+          const widget = this.widgets[i2];
+          if (!widget) {
+            continue;
+          }
+          if (widget.computeSize) {
+            widgets_height += widget.computeSize(size[0])[1] + 4;
+          } else {
+            widgets_height += host.NODE_WIDGET_HEIGHT + 4;
+          }
+        }
+        widgets_height += 8;
+      }
+      if (this.widgets_up) {
+        size[1] = Math.max(size[1], widgets_height);
+      } else if (this.widgets_start_y != null) {
+        size[1] = Math.max(size[1], widgets_height + this.widgets_start_y);
+      } else {
+        size[1] += widgets_height;
+      }
+      if (classMeta.min_height && size[1] < classMeta.min_height) {
+        size[1] = classMeta.min_height;
+      }
+      size[1] += 6;
+      return size;
+    }
+    /**
+     * returns all the info available about a property of this node.
+     *
+     * @method getPropertyInfo
+     * @param {String} property name of the property
+     * @return {Object} the object with all the available info
+    */
+    getPropertyInfo(property) {
+      let info = null;
+      if (this.properties_info) {
+        for (let i2 = 0; i2 < this.properties_info.length; ++i2) {
+          const item = this.properties_info[i2];
+          if (item && item.name == property) {
+            info = item;
+            break;
+          }
+        }
+      }
+      const classMeta = this.getPortsWidgetsClassMeta();
+      if (classMeta["@" + property]) {
+        info = classMeta["@" + property];
+      }
+      if (classMeta.widgets_info && classMeta.widgets_info[property]) {
+        info = classMeta.widgets_info[property];
+      }
+      if (!info && this.onGetPropertyInfo) {
+        info = this.onGetPropertyInfo(property);
+      }
+      if (!info) {
+        info = {};
+      }
+      if (!info.type) {
+        info.type = typeof this.properties[property];
+      }
+      if (info.widget == "combo") {
+        info.type = "enum";
+      }
+      return info;
+    }
+    /**
+     * Defines a widget inside the node, it will be rendered on top of the node, you can control lots of properties
+     *
+     * @method addWidget
+     * @param {String} type the widget type (could be "number","string","combo"
+     * @param {String} name the text to show on the widget
+     * @param {String} value the default value
+     * @param {Function|String} callback function to call when it changes (optionally, it can be the name of the property to modify)
+     * @param {Object} options the object that contains special properties of this widget
+     * @return {Object} the created widget object
+     */
+    addWidget(type, name, value, callback, options) {
+      if (!this.widgets) {
+        this.widgets = [];
+      }
+      let widgetCallback = callback;
+      let widgetOptions = options;
+      if (!widgetOptions && widgetCallback && widgetCallback.constructor === Object) {
+        widgetOptions = widgetCallback;
+        widgetCallback = null;
+      }
+      if (widgetOptions && widgetOptions.constructor === String) {
+        widgetOptions = {
+          property: widgetOptions
+        };
+      }
+      if (widgetCallback && widgetCallback.constructor === String) {
+        if (!widgetOptions) {
+          widgetOptions = {};
+        }
+        widgetOptions.property = widgetCallback;
+        widgetCallback = null;
+      }
+      if (widgetCallback && widgetCallback.constructor !== Function) {
+        console.warn("addWidget: callback must be a function");
+        widgetCallback = null;
+      }
+      const w2 = {
+        type: type.toLowerCase(),
+        name,
+        value,
+        callback: widgetCallback,
+        options: widgetOptions || {}
+      };
+      if (w2.options.y !== void 0) {
+        w2.y = w2.options.y;
+      }
+      if (!widgetCallback && !w2.options.callback && !w2.options.property) {
+        console.warn(
+          "LiteGraph addWidget(...) without a callback or property assigned"
+        );
+      }
+      if (type == "combo" && !w2.options.values) {
+        throw "LiteGraph addWidget('combo',...) requires to pass values in options: { values:['red','blue'] }";
+      }
+      this.widgets.push(w2);
+      this.setSize(this.computeSize());
+      return w2;
+    }
+    addCustomWidget(custom_widget) {
+      if (!this.widgets) {
+        this.widgets = [];
+      }
+      this.widgets.push(custom_widget);
+      return custom_widget;
+    }
+    // placeholder to keep this module self-contained during incremental migration.
+    setDirtyCanvas(_fg, _bg) {
+    }
+  }
+  function isInsideRectangle(x2, y2, left, top, width2, height) {
+    return left < x2 && left + width2 > x2 && top < y2 && top + height > y2;
+  }
+  const hostDefaults = {
+    NODE_TITLE_HEIGHT: 30,
+    NODE_COLLAPSED_WIDTH: 80,
+    NODE_SLOT_HEIGHT: 20,
+    INPUT: 1,
+    OUTPUT: 2,
+    EVENT: -1,
+    ACTION: -1,
+    ALWAYS: 0,
+    ON_EVENT: 1,
+    NEVER: 2,
+    ON_TRIGGER: 3,
+    do_add_triggers_slots: false,
+    allow_multi_output_for_events: true,
+    use_uuids: false,
+    uuidv4: () => "",
+    debug: false,
+    isValidConnection: () => true,
+    getTime: () => Date.now()
+  };
+  const resolveConnectGeometryHost = createClassHostResolver(hostDefaults, {
+    cacheKey: "LGraphNode.connect-geometry",
+    fallbackOwners: [() => LGraphNodeConnectGeometry]
+  });
+  class LGraphNodeConnectGeometry extends LGraphNodePortsWidgets {
+    constructor() {
+      super(...arguments);
+      this.onAfterExecuteNode = (param, options) => {
+        const triggerSlot = this.findOutputSlot("onExecuted");
+        if (triggerSlot !== -1) {
+          this.triggerSlot(triggerSlot, param, null, options);
+        }
+      };
+    }
+    graphRef() {
+      return this.graph || null;
+    }
+    toNode(node2) {
+      var _a3;
+      if (node2 == null || node2 === false) {
+        return null;
+      }
+      return typeof node2 === "number" ? ((_a3 = this.graphRef()) == null ? void 0 : _a3.getNodeById(node2)) || null : node2;
+    }
+    markSlotOptional(extra) {
+      extra.optional = true;
+      return extra;
+    }
+    /** returns the bounding of the object, used for rendering purposes */
+    getBounding(out, compute_outer) {
+      var _a3;
+      const h2 = resolveConnectGeometryHost(this);
+      const o2 = out || new Float32Array(4);
+      const isCollapsed = !!this.flags.collapsed;
+      const p2 = this.pos;
+      const s2 = this.size;
+      let left = 0;
+      let right = 1;
+      let top = 0;
+      let bottom = 0;
+      if (compute_outer) {
+        left = 4;
+        right = 6 + left;
+        top = 4;
+        bottom = 5 + top;
+      }
+      o2[0] = p2[0] - left;
+      o2[1] = p2[1] - h2.NODE_TITLE_HEIGHT - top;
+      o2[2] = isCollapsed ? (this._collapsed_width || h2.NODE_COLLAPSED_WIDTH) + right : s2[0] + right;
+      o2[3] = isCollapsed ? h2.NODE_TITLE_HEIGHT + bottom : s2[1] + h2.NODE_TITLE_HEIGHT + bottom;
+      (_a3 = this.onBounding) == null ? void 0 : _a3.call(this, o2);
+      return o2;
+    }
+    /** checks if a point is inside the shape of a node */
+    isPointInside(x2, y2, margin, skip_title) {
+      var _a3, _b3, _c2;
+      const h2 = resolveConnectGeometryHost(this);
+      const m2 = margin || 0;
+      let margin_top = ((_b3 = (_a3 = this.graphRef()) == null ? void 0 : _a3.isLive) == null ? void 0 : _b3.call(_a3)) ? 0 : h2.NODE_TITLE_HEIGHT;
+      if (skip_title) {
+        margin_top = 0;
+      }
+      if ((_c2 = this.flags) == null ? void 0 : _c2.collapsed) {
+        return isInsideRectangle(
+          x2,
+          y2,
+          this.pos[0] - m2,
+          this.pos[1] - h2.NODE_TITLE_HEIGHT - m2,
+          (this._collapsed_width || h2.NODE_COLLAPSED_WIDTH) + 2 * m2,
+          h2.NODE_TITLE_HEIGHT + 2 * m2
+        );
+      }
+      return this.pos[0] - 4 - m2 < x2 && this.pos[0] + this.size[0] + 4 + m2 > x2 && this.pos[1] - margin_top - m2 < y2 && this.pos[1] + this.size[1] + m2 > y2;
+    }
+    /** checks if a point is inside a node slot, and returns info about which slot */
+    getSlotInPosition(x2, y2) {
+      const link_pos = new Float32Array(2);
+      if (this.inputs) {
+        for (let i2 = 0; i2 < this.inputs.length; ++i2) {
+          const input = this.inputs[i2];
+          this.getConnectionPos(true, i2, link_pos);
+          if (isInsideRectangle(x2, y2, link_pos[0] - 10, link_pos[1] - 5, 20, 10)) {
+            return { input, slot: i2, link_pos };
+          }
+        }
+      }
+      if (this.outputs) {
+        for (let i2 = 0; i2 < this.outputs.length; ++i2) {
+          const output = this.outputs[i2];
+          this.getConnectionPos(false, i2, link_pos);
+          if (isInsideRectangle(x2, y2, link_pos[0] - 10, link_pos[1] - 5, 20, 10)) {
+            return { output, slot: i2, link_pos };
+          }
+        }
+      }
+      return null;
+    }
+    /** returns the input slot with a given name (used for dynamic slots), -1 if not found */
+    findInputSlot(name, returnObj) {
+      if (!this.inputs) {
+        return -1;
+      }
+      for (let i2 = 0; i2 < this.inputs.length; ++i2) {
+        if (name == this.inputs[i2].name) {
+          return !returnObj ? i2 : this.inputs[i2];
+        }
+      }
+      return -1;
+    }
+    /** returns the output slot with a given name (used for dynamic slots), -1 if not found */
+    findOutputSlot(name, returnObj) {
+      if (!this.outputs) {
+        return -1;
+      }
+      for (let i2 = 0; i2 < this.outputs.length; ++i2) {
+        if (name == this.outputs[i2].name) {
+          return !returnObj ? i2 : this.outputs[i2];
+        }
+      }
+      return -1;
+    }
+    findInputSlotFree(optsIn) {
+      const opts = Object.assign({ returnObj: false, typesNotAccepted: [] }, optsIn || {});
+      if (!this.inputs) {
+        return -1;
+      }
+      for (let i2 = 0; i2 < this.inputs.length; ++i2) {
+        const it2 = this.inputs[i2];
+        if (it2.link && it2.link != null) {
+          continue;
+        }
+        if (opts.typesNotAccepted.includes(it2.type)) {
+          continue;
+        }
+        return !opts.returnObj ? i2 : it2;
+      }
+      return -1;
+    }
+    findOutputSlotFree(optsIn) {
+      const opts = Object.assign({ returnObj: false, typesNotAccepted: [] }, optsIn || {});
+      if (!this.outputs) {
+        return -1;
+      }
+      for (let i2 = 0; i2 < this.outputs.length; ++i2) {
+        const it2 = this.outputs[i2];
+        if (it2.links && it2.links != null) {
+          continue;
+        }
+        if (opts.typesNotAccepted.includes(it2.type)) {
+          continue;
+        }
+        return !opts.returnObj ? i2 : it2;
+      }
+      return -1;
+    }
+    findInputSlotByType(type, returnObj, preferFreeSlot, doNotUseOccupied) {
+      return this.findSlotByType(true, type, returnObj, preferFreeSlot, doNotUseOccupied);
+    }
+    findOutputSlotByType(type, returnObj, preferFreeSlot, doNotUseOccupied) {
+      return this.findSlotByType(false, type, returnObj, preferFreeSlot, doNotUseOccupied);
+    }
+    /** returns the output (or input) slot with a given type, -1 if not found */
+    findSlotByType(input, type, returnObj, preferFreeSlot, doNotUseOccupied) {
+      const h2 = resolveConnectGeometryHost(this);
+      const slots = input ? this.inputs : this.outputs;
+      if (!slots) {
+        return -1;
+      }
+      let src = type;
+      if (src == "" || src == "*") {
+        src = 0;
+      }
+      for (let i2 = 0; i2 < slots.length; ++i2) {
+        const aSource = (src + "").toLowerCase().split(",");
+        let aDest = slots[i2].type || 0;
+        aDest = aDest == "0" || aDest == "*" ? "0" : aDest;
+        const aDestArr = (aDest + "").toLowerCase().split(",");
+        for (let sI = 0; sI < aSource.length; sI++) {
+          for (let dI = 0; dI < aDestArr.length; dI++) {
+            if (aSource[sI] == "_event_") {
+              aSource[sI] = String(h2.EVENT);
+            }
+            if (aDestArr[sI] == "_event_") {
+              aDestArr[sI] = String(h2.EVENT);
+            }
+            if (aSource[sI] == "*") {
+              aSource[sI] = "0";
+            }
+            if (aDestArr[sI] == "*") {
+              aDestArr[sI] = "0";
+            }
+            if (aSource[sI] == aDestArr[dI]) {
+              if (preferFreeSlot && slots[i2].links && slots[i2].links !== null) {
+                continue;
+              }
+              return !returnObj ? i2 : slots[i2];
+            }
+          }
+        }
+      }
+      if (preferFreeSlot && !doNotUseOccupied) {
+        for (let i2 = 0; i2 < slots.length; ++i2) {
+          const aSource = (src + "").toLowerCase().split(",");
+          let aDest = slots[i2].type || 0;
+          aDest = aDest == "0" || aDest == "*" ? "0" : aDest;
+          const aDestArr = (aDest + "").toLowerCase().split(",");
+          for (let sI = 0; sI < aSource.length; sI++) {
+            for (let dI = 0; dI < aDestArr.length; dI++) {
+              if (aSource[sI] == "*") {
+                aSource[sI] = "0";
+              }
+              if (aDestArr[sI] == "*") {
+                aDestArr[sI] = "0";
+              }
+              if (aSource[sI] == aDestArr[dI]) {
+                return !returnObj ? i2 : slots[i2];
+              }
+            }
+          }
+        }
+      }
+      return -1;
+    }
+    addOnTriggerInput() {
+      const h2 = resolveConnectGeometryHost(this);
+      const triggerSlot = this.findInputSlot("onTrigger");
+      if (triggerSlot === -1) {
+        const extra = this.markSlotOptional({
+          nameLocked: true
+        });
+        this.addInput("onTrigger", h2.EVENT, extra);
+        return this.findInputSlot("onTrigger");
+      }
+      return triggerSlot;
+    }
+    addOnExecutedOutput() {
+      const h2 = resolveConnectGeometryHost(this);
+      const triggerSlot = this.findOutputSlot("onExecuted");
+      if (triggerSlot === -1) {
+        const extra = this.markSlotOptional({
+          nameLocked: true
+        });
+        this.addOutput("onExecuted", h2.ACTION, extra);
+        return this.findOutputSlot("onExecuted");
+      }
+      return triggerSlot;
+    }
+    changeMode(modeTo) {
+      const h2 = resolveConnectGeometryHost(this);
+      switch (modeTo) {
+        case h2.ON_EVENT:
+          break;
+        case h2.ON_TRIGGER:
+          this.addOnTriggerInput();
+          this.addOnExecutedOutput();
+          break;
+        case h2.NEVER:
+          break;
+        case h2.ALWAYS:
+          break;
+        default:
+          if (h2.ON_REQUEST == null || modeTo !== h2.ON_REQUEST) {
+            return false;
+          }
+          break;
+      }
+      this.mode = modeTo;
+      return true;
+    }
+    connectByType(slot, target_node, target_slotType, optsIn) {
+      const h2 = resolveConnectGeometryHost(this);
+      const opts = Object.assign(
+        { createEventInCase: true, firstFreeIfOutputGeneralInCase: true, generalTypeInCase: true },
+        optsIn || {}
+      );
+      const target = this.toNode(target_node);
+      if (!target) {
+        return null;
+      }
+      if (typeof target.findInputSlotByType !== "function") {
+        return null;
+      }
+      const typed = target.findInputSlotByType(target_slotType, false, true);
+      if (typeof typed === "number" && typed >= 0) {
+        return this.connect(slot, target, typed);
+      }
+      if (opts.createEventInCase && target_slotType == h2.EVENT) {
+        return this.connect(slot, target, -1);
+      }
+      if (opts.generalTypeInCase) {
+        const generic = target.findInputSlotByType(0, false, true, true);
+        if (typeof generic === "number" && generic >= 0) {
+          return this.connect(slot, target, generic);
+        }
+      }
+      if (opts.firstFreeIfOutputGeneralInCase && (target_slotType == 0 || target_slotType == "*" || target_slotType == "") && typeof target.findInputSlotFree === "function") {
+        const free = target.findInputSlotFree({ typesNotAccepted: [h2.EVENT] });
+        if (typeof free === "number" && free >= 0) {
+          return this.connect(slot, target, free);
+        }
+      }
+      console.debug("no way to connect type: ", target_slotType, " to targetNODE ", target);
+      return null;
+    }
+    connectByTypeOutput(slot, source_node, source_slotType, optsIn) {
+      const h2 = resolveConnectGeometryHost(this);
+      const opts = Object.assign(
+        { createEventInCase: true, firstFreeIfInputGeneralInCase: true, generalTypeInCase: true },
+        optsIn || {}
+      );
+      const source = this.toNode(source_node);
+      if (!source) {
+        return null;
+      }
+      if (typeof source.findOutputSlotByType !== "function" || typeof source.connect !== "function") {
+        return null;
+      }
+      const typed = source.findOutputSlotByType(source_slotType, false, true);
+      if (typeof typed === "number" && typed >= 0) {
+        return source.connect(typed, this, slot);
+      }
+      if (opts.generalTypeInCase) {
+        const generic = source.findOutputSlotByType(0, false, true, true);
+        if (typeof generic === "number" && generic >= 0) {
+          return source.connect(generic, this, slot);
+        }
+      }
+      if (opts.createEventInCase && source_slotType == h2.EVENT && h2.do_add_triggers_slots && source.addOnExecutedOutput) {
+        return source.connect(source.addOnExecutedOutput(), this, slot);
+      }
+      if (opts.firstFreeIfInputGeneralInCase && (source_slotType == 0 || source_slotType == "*" || source_slotType == "") && typeof source.findOutputSlotFree === "function") {
+        const free = source.findOutputSlotFree({ typesNotAccepted: [h2.EVENT] });
+        if (typeof free === "number" && free >= 0) {
+          return source.connect(free, this, slot);
+        }
+      }
+      console.debug("no way to connect byOUT type: ", source_slotType, " to sourceNODE ", source);
+      return null;
+    }
+    /** connect this node output to the input of another node */
+    connect(slot, target_node, target_slot) {
+      var _a3, _b3, _c2, _d2, _e2, _f, _g, _h2, _i2;
+      const h2 = resolveConnectGeometryHost(this);
+      const graph = this.graphRef();
+      if (!graph) {
+        console.log("Connect: Error, node doesn't belong to any graph. Nodes must be added first to a graph before connecting them.");
+        return null;
+      }
+      let outSlot = typeof slot === "string" ? this.findOutputSlot(slot) : slot;
+      if (outSlot === -1 || !this.outputs || outSlot >= this.outputs.length) {
+        if (h2.debug) {
+          console.log(typeof slot === "string" ? "Connect: Error, no slot of name " + slot : "Connect: Error, slot number not found");
+        }
+        return null;
+      }
+      const target = this.toNode(target_node);
+      if (!target) {
+        throw "target node is null";
+      }
+      if (target == this) {
+        return null;
+      }
+      let targetSlot = target_slot || 0;
+      if (typeof targetSlot === "string") {
+        if (typeof target.findInputSlot !== "function") {
+          return null;
+        }
+        targetSlot = target.findInputSlot(targetSlot);
+        if (targetSlot === -1) {
+          if (h2.debug) {
+            console.log("Connect: Error, no slot of name " + target_slot);
+          }
+          return null;
+        }
+      } else if (targetSlot === h2.EVENT) {
+        if (!h2.do_add_triggers_slots) {
+          return null;
+        }
+        if (typeof target.changeMode !== "function" || typeof target.findInputSlot !== "function") {
+          return null;
+        }
+        target.changeMode(h2.ON_TRIGGER);
+        targetSlot = target.findInputSlot("onTrigger");
+      } else if (!target.inputs || targetSlot >= target.inputs.length) {
+        if (h2.debug) {
+          console.log("Connect: Error, slot number not found");
+        }
+        return null;
+      }
+      let changed = false;
+      const output = this.outputs[outSlot];
+      if (!this.outputs[outSlot]) {
+        return null;
+      }
+      const input = target.inputs[targetSlot];
+      let link_info = null;
+      if (target.onBeforeConnectInput) {
+        targetSlot = target.onBeforeConnectInput(targetSlot);
+      }
+      if (targetSlot === false || targetSlot === null || !h2.isValidConnection(output.type, input.type)) {
+        this.setDirtyCanvas(false, true);
+        if (changed) {
+          (_a3 = graph.connectionChange) == null ? void 0 : _a3.call(graph, this, link_info || void 0);
+        }
+        return null;
+      }
+      if (target.onConnectInput && target.onConnectInput(targetSlot, output.type, output, this, outSlot) === false) {
+        return null;
+      }
+      if (this.onConnectOutput && this.onConnectOutput(outSlot, input.type, input, target, targetSlot) === false) {
+        return null;
+      }
+      if (target.inputs && target.inputs[targetSlot] && target.inputs[targetSlot].link != null) {
+        (_b3 = graph.beforeChange) == null ? void 0 : _b3.call(graph);
+        if (typeof target.disconnectInput === "function") {
+          target.disconnectInput(targetSlot, { doProcessChange: false });
+        }
+        changed = true;
+      }
+      if (output.links && output.links.length && output.type === h2.EVENT && !h2.allow_multi_output_for_events) {
+        (_c2 = graph.beforeChange) == null ? void 0 : _c2.call(graph);
+        this.disconnectOutput(outSlot, false, { doProcessChange: false });
+        changed = true;
+      }
+      const nextId = h2.use_uuids ? h2.uuidv4() : ++graph.last_link_id;
+      link_info = new LLink(
+        nextId,
+        input.type || output.type,
+        this.id,
+        outSlot,
+        target.id,
+        targetSlot
+      );
+      graph.links[link_info.id] = link_info;
+      if (!output.links) {
+        output.links = [];
+      }
+      output.links.push(link_info.id);
+      if (target.inputs) {
+        target.inputs[targetSlot].link = link_info.id;
+      }
+      graph._version++;
+      (_d2 = this.onConnectionsChange) == null ? void 0 : _d2.call(this, h2.OUTPUT, outSlot, true, link_info, output);
+      (_e2 = target.onConnectionsChange) == null ? void 0 : _e2.call(target, h2.INPUT, targetSlot, true, link_info, input);
+      (_f = graph.onNodeConnectionChange) == null ? void 0 : _f.call(graph, h2.INPUT, target, targetSlot, this, outSlot);
+      (_g = graph.onNodeConnectionChange) == null ? void 0 : _g.call(graph, h2.OUTPUT, this, outSlot, target, targetSlot);
+      this.setDirtyCanvas(false, true);
+      (_h2 = graph.afterChange) == null ? void 0 : _h2.call(graph);
+      (_i2 = graph.connectionChange) == null ? void 0 : _i2.call(graph, this, link_info);
+      return link_info;
+    }
+    /** disconnect one output to an specific node */
+    disconnectOutput(slot, target_node, _opts) {
+      var _a3, _b3, _c2, _d2, _e2, _f, _g, _h2, _i2, _j, _k;
+      const h2 = resolveConnectGeometryHost(this);
+      const graph = this.graphRef();
+      if (!graph) {
+        return false;
+      }
+      const outSlot = typeof slot === "string" ? this.findOutputSlot(slot) : slot;
+      if (!this.outputs || outSlot === -1 || outSlot >= this.outputs.length) {
+        if (h2.debug) {
+          console.log(typeof slot === "string" ? "Connect: Error, no slot of name " + slot : "Connect: Error, slot number not found");
+        }
+        return false;
+      }
+      const output = this.outputs[outSlot];
+      if (!output || !output.links || output.links.length == 0) {
+        return false;
+      }
+      if (target_node) {
+        const target = this.toNode(target_node);
+        if (!target) {
+          throw "Target Node not found";
+        }
+        for (let i2 = 0; i2 < output.links.length; i2++) {
+          const link_id = output.links[i2];
+          const link = graph.links[link_id];
+          if (link.target_id == target.id) {
+            output.links.splice(i2, 1);
+            const input = target.inputs[link.target_slot];
+            input.link = null;
+            delete graph.links[link_id];
+            graph._version++;
+            (_a3 = target.onConnectionsChange) == null ? void 0 : _a3.call(target, h2.INPUT, link.target_slot, false, link, input);
+            (_b3 = this.onConnectionsChange) == null ? void 0 : _b3.call(this, h2.OUTPUT, outSlot, false, link, output);
+            (_c2 = graph.onNodeConnectionChange) == null ? void 0 : _c2.call(graph, h2.OUTPUT, this, outSlot);
+            (_d2 = graph.onNodeConnectionChange) == null ? void 0 : _d2.call(graph, h2.OUTPUT, this, outSlot);
+            (_e2 = graph.onNodeConnectionChange) == null ? void 0 : _e2.call(graph, h2.INPUT, target, link.target_slot);
+            break;
+          }
+        }
+      } else {
+        for (let i2 = 0; i2 < output.links.length; i2++) {
+          const link_id = output.links[i2];
+          const link = graph.links[link_id];
+          if (!link) {
+            continue;
+          }
+          const target = graph.getNodeById(link.target_id);
+          let input = null;
+          graph._version++;
+          if (target) {
+            input = target.inputs[link.target_slot];
+            input.link = null;
+            (_f = target.onConnectionsChange) == null ? void 0 : _f.call(target, h2.INPUT, link.target_slot, false, link, input);
+            (_g = graph.onNodeConnectionChange) == null ? void 0 : _g.call(graph, h2.INPUT, target, link.target_slot);
+          }
+          delete graph.links[link_id];
+          (_h2 = this.onConnectionsChange) == null ? void 0 : _h2.call(this, h2.OUTPUT, outSlot, false, link, output);
+          (_i2 = graph.onNodeConnectionChange) == null ? void 0 : _i2.call(graph, h2.OUTPUT, this, outSlot);
+          (_j = graph.onNodeConnectionChange) == null ? void 0 : _j.call(graph, h2.INPUT, target, link.target_slot);
+        }
+        output.links = null;
+      }
+      this.setDirtyCanvas(false, true);
+      (_k = graph.connectionChange) == null ? void 0 : _k.call(graph, this);
+      return true;
+    }
+    /** disconnect one input */
+    disconnectInput(slot, _opts) {
+      var _a3, _b3, _c2, _d2, _e2;
+      const h2 = resolveConnectGeometryHost(this);
+      const graph = this.graphRef();
+      if (!graph) {
+        return false;
+      }
+      const inSlot = typeof slot === "string" ? this.findInputSlot(slot) : slot;
+      if (!this.inputs || inSlot === -1 || inSlot >= this.inputs.length) {
+        if (h2.debug) {
+          console.log(typeof slot === "string" ? "Connect: Error, no slot of name " + slot : "Connect: Error, slot number not found");
+        }
+        return false;
+      }
+      const input = this.inputs[inSlot];
+      if (!input) {
+        return false;
+      }
+      const link_id = input.link;
+      if (link_id != null) {
+        input.link = null;
+        const link = graph.links[link_id];
+        if (link) {
+          const originNode = graph.getNodeById(link.origin_id);
+          if (!originNode) {
+            return false;
+          }
+          const output = originNode.outputs[link.origin_slot];
+          if (!output || !output.links || output.links.length === 0) {
+            return false;
+          }
+          let i2 = 0;
+          for (i2 = 0; i2 < output.links.length; i2++) {
+            if (output.links[i2] == link_id) {
+              output.links.splice(i2, 1);
+              break;
+            }
+          }
+          delete graph.links[link_id];
+          graph._version++;
+          (_a3 = this.onConnectionsChange) == null ? void 0 : _a3.call(this, h2.INPUT, inSlot, false, link, input);
+          (_b3 = originNode.onConnectionsChange) == null ? void 0 : _b3.call(originNode, h2.OUTPUT, i2, false, link, output);
+          (_c2 = graph.onNodeConnectionChange) == null ? void 0 : _c2.call(graph, h2.OUTPUT, originNode, i2);
+          (_d2 = graph.onNodeConnectionChange) == null ? void 0 : _d2.call(graph, h2.INPUT, this, inSlot);
+        }
+      }
+      this.setDirtyCanvas(false, true);
+      (_e2 = graph.connectionChange) == null ? void 0 : _e2.call(graph, this);
+      return true;
+    }
+    /** returns the center of a connection point in canvas coords */
+    getConnectionPos(is_input, slot_number, out) {
+      const h2 = resolveConnectGeometryHost(this);
+      const o2 = out || new Float32Array(2);
+      let num_slots = 0;
+      if (is_input && this.inputs) {
+        num_slots = this.inputs.length;
+      }
+      if (!is_input && this.outputs) {
+        num_slots = this.outputs.length;
+      }
+      const offset = h2.NODE_SLOT_HEIGHT * 0.5;
+      if (this.flags.collapsed) {
+        const w2 = this._collapsed_width || h2.NODE_COLLAPSED_WIDTH;
+        if (this.horizontal) {
+          o2[0] = this.pos[0] + w2 * 0.5;
+          o2[1] = is_input ? this.pos[1] - h2.NODE_TITLE_HEIGHT : this.pos[1];
+        } else {
+          o2[0] = is_input ? this.pos[0] : this.pos[0] + w2;
+          o2[1] = this.pos[1] - h2.NODE_TITLE_HEIGHT * 0.5;
+        }
+        return o2;
+      }
+      if (is_input && slot_number == -1) {
+        o2[0] = this.pos[0] + h2.NODE_TITLE_HEIGHT * 0.5;
+        o2[1] = this.pos[1] + h2.NODE_TITLE_HEIGHT * 0.5;
+        return o2;
+      }
+      if (is_input && this.inputs && num_slots > slot_number && this.inputs[slot_number].pos) {
+        const p2 = this.inputs[slot_number].pos;
+        o2[0] = this.pos[0] + p2[0];
+        o2[1] = this.pos[1] + p2[1];
+        return o2;
+      } else if (!is_input && this.outputs && num_slots > slot_number && this.outputs[slot_number].pos) {
+        const p2 = this.outputs[slot_number].pos;
+        o2[0] = this.pos[0] + p2[0];
+        o2[1] = this.pos[1] + p2[1];
+        return o2;
+      }
+      if (this.horizontal) {
+        o2[0] = this.pos[0] + (slot_number + 0.5) * (this.size[0] / num_slots);
+        o2[1] = is_input ? this.pos[1] - h2.NODE_TITLE_HEIGHT : this.pos[1] + this.size[1];
+        return o2;
+      }
+      o2[0] = is_input ? this.pos[0] + offset : this.pos[0] + this.size[0] + 1 - offset;
+      const cls = this.constructor;
+      o2[1] = this.pos[1] + (slot_number + 0.7) * h2.NODE_SLOT_HEIGHT + (cls.slot_start_y || 0);
+      return o2;
+    }
+    // placeholder to keep this module self-contained during incremental migration.
+    setDirtyCanvas(_fg, _bg) {
+    }
+  }
+  const defaultCanvasCollabHost = {
+    CANVAS_GRID_SIZE: 10,
+    node_images_path: ""
+  };
+  const resolveCanvasCollabHost = createClassHostResolver(defaultCanvasCollabHost, {
+    cacheKey: "LGraphNode.canvas-collab",
+    fallbackOwners: [() => LGraphNodeCanvasCollab]
+  });
+  class LGraphNodeCanvasCollab extends LGraphNodeConnectGeometry {
+    canvasGraphRef() {
+      return this.graph || null;
+    }
+    routeDirtySignalToLeaferRuntime(dirty_foreground, dirty_background) {
+      var _a3, _b3;
+      const graph = this.canvasGraphRef();
+      const canvasList = graph == null ? void 0 : graph.list_of_graphcanvas;
+      if (!canvasList || !canvasList.length) {
+        return false;
+      }
+      for (let i2 = 0; i2 < canvasList.length; ++i2) {
+        if (((_a3 = canvasList[i2]) == null ? void 0 : _a3.renderRuntime) !== "leafer") {
+          return false;
+        }
+      }
+      for (let i2 = 0; i2 < canvasList.length; ++i2) {
+        const canvas = canvasList[i2];
+        if (!canvas) {
+          continue;
+        }
+        if (canvas.notifyDirtySignal) {
+          canvas.notifyDirtySignal(dirty_foreground, dirty_background);
+          continue;
+        }
+        (_b3 = canvas.setDirty) == null ? void 0 : _b3.call(canvas, dirty_foreground, dirty_background);
+      }
+      return true;
+    }
+    /* Force align to grid */
+    alignToGrid() {
+      const host = resolveCanvasCollabHost(this);
+      this.pos[0] = host.CANVAS_GRID_SIZE * Math.round(this.pos[0] / host.CANVAS_GRID_SIZE);
+      this.pos[1] = host.CANVAS_GRID_SIZE * Math.round(this.pos[1] / host.CANVAS_GRID_SIZE);
+    }
+    /* Console output */
+    trace(msg) {
+      var _a3;
+      const consoleLines = this.console || (this.console = []);
+      const maxConsoleLines = (_a3 = this.constructor.MAX_CONSOLE) != null ? _a3 : 100;
+      consoleLines.push(msg);
+      if (consoleLines.length > maxConsoleLines) {
+        consoleLines.shift();
+      }
+      const graph = this.graph;
+      if (graph.onNodeTrace) {
+        graph.onNodeTrace(this, msg);
+      }
+    }
+    /* Forces to redraw or the main canvas (LGraphNode) or the bg canvas (links) */
+    setDirtyCanvas(dirty_foreground, dirty_background) {
+      const anyThis = this;
+      const graph = typeof anyThis.canvasGraphRef === "function" && anyThis.canvasGraphRef() || typeof anyThis.graphRef === "function" && anyThis.graphRef() || anyThis.graph || null;
+      if (!graph) {
+        return;
+      }
+      if (this.routeDirtySignalToLeaferRuntime(
+        dirty_foreground,
+        dirty_background
+      )) {
+        return;
+      }
+      graph.sendActionToCanvas("setDirty", [
+        dirty_foreground,
+        dirty_background
+      ]);
+    }
+    loadImage(url) {
+      const host = resolveCanvasCollabHost(this);
+      const img = new Image();
+      img.src = host.node_images_path + url;
+      img.ready = false;
+      img.onload = () => {
+        img.ready = true;
+        this.setDirtyCanvas(true);
+      };
+      return img;
+    }
+    // safe LGraphNode action execution (not sure if safe)
+    // Intentionally kept disabled to mirror source behavior, where this block is commented out.
+    /*
+    executeAction(action: string): boolean {
+        return false;
+    }
+    */
+    /* Allows to get onMouseMove and onMouseUp events even if the mouse is out of focus */
+    captureInput(v2) {
+      const graph = this.canvasGraphRef();
+      if (!graph || !graph.list_of_graphcanvas) {
+        return;
+      }
+      const list = graph.list_of_graphcanvas;
+      for (let i2 = 0; i2 < list.length; ++i2) {
+        const c2 = list[i2];
+        if (!v2 && c2.node_capturing_input != this) {
+          continue;
+        }
+        c2.node_capturing_input = v2 ? this : null;
+      }
+    }
+    /**
+     * Collapse the node to make it smaller on the canvas
+     * @method collapse
+     **/
+    collapse(force) {
+      const graph = this.graph;
+      graph._version++;
+      if (this.constructor.collapsable === false && !force) {
+        return;
+      }
+      this.flags.collapsed = !this.flags.collapsed;
+      this.setDirtyCanvas(true, true);
+    }
+    /**
+     * Forces the node to do not move or realign on Z
+     * @method pin
+     **/
+    pin(v2) {
+      const graph = this.graph;
+      graph._version++;
+      if (v2 === void 0) {
+        this.flags.pinned = !this.flags.pinned;
+      } else {
+        this.flags.pinned = v2;
+      }
+    }
+    localToScreen(x2, y2, graphCanvas) {
+      return [
+        (x2 + this.pos[0]) * graphCanvas.ds.scale + graphCanvas.ds.offset[0],
+        (y2 + this.pos[1]) * graphCanvas.ds.scale + graphCanvas.ds.offset[1]
+      ];
+    }
+  }
+  var _a, _b;
+  function toFiniteNumber$4(value, fallback = 0) {
+    const numericValue = Number(value);
+    return Number.isFinite(numericValue) ? numericValue : fallback;
+  }
+  const _ModernNodeBase = class _ModernNodeBase extends (_b = LGraphNodeCanvasCollab, _a = MODERN_NODE_MARKER_KEY, _b) {
+    constructor(title) {
+      super(title);
+      this.renderRuntime = "modern";
+      this[_a] = true;
+      this.modernPortsHydrated = false;
+      this.modernChangeMask = ModernNodeChangeMask.All;
+      this.renderRuntime = "modern";
+    }
+    defineWidgets() {
+      return [];
+    }
+    patchView(_context) {
+    }
+    onNodeCreated() {
+      this.ensureModernPorts();
+    }
+    buildUI(context) {
+      this.ensureModernPorts();
+      return this.mountView(context);
+    }
+    updateUI(context) {
+      this.ensureModernPorts();
+      this.patchView(context);
+    }
+    ensureModernPorts(force = false) {
+      if (this.modernPortsHydrated && !force) {
+        return;
+      }
+      this.ensurePortRegistrationHost();
+      const schema = this.definePorts() || {};
+      this.syncPorts(schema);
+      this.modernPortsHydrated = true;
+      this.requestModernPatch(
+        ModernNodeChangeMask.Layout | ModernNodeChangeMask.Ports | ModernNodeChangeMask.Data
+      );
+    }
+    refreshModernPorts() {
+      this.ensureModernPorts(true);
+    }
+    requestModernPatch(changeMask = ModernNodeChangeMask.All, dirtyBackground = false) {
+      const normalizedMask = toFiniteNumber$4(changeMask, ModernNodeChangeMask.None) | ModernNodeChangeMask.None;
+      if (normalizedMask) {
+        this.modernChangeMask |= normalizedMask;
+      }
+      this.setDirtyCanvas(true, dirtyBackground);
+    }
+    consumeModernChangeMask() {
+      const mask = this.modernChangeMask;
+      this.modernChangeMask = ModernNodeChangeMask.None;
+      return mask || ModernNodeChangeMask.Data;
+    }
+    setProperty(name, value) {
+      super.setProperty(name, value);
+      this.requestModernPatch(
+        ModernNodeChangeMask.Data | ModernNodeChangeMask.Style
+      );
+    }
+    configure(info) {
+      super.configure(info);
+      this.requestModernPatch(ModernNodeChangeMask.All, true);
+    }
+    collapse(force) {
+      super.collapse(force);
+      this.requestModernPatch(
+        ModernNodeChangeMask.Layout | ModernNodeChangeMask.Ports | ModernNodeChangeMask.Style,
+        true
+      );
+    }
+    syncPorts(schema) {
+      var _a3, _b3;
+      const inputs = Array.isArray(schema.inputs) ? schema.inputs : [];
+      const outputs = Array.isArray(schema.outputs) ? schema.outputs : [];
+      if (Array.isArray(this.inputs) && this.inputs.length) {
+        for (let i2 = this.inputs.length - 1; i2 >= 0; --i2) {
+          this.removeInput(i2);
+        }
+      }
+      if (Array.isArray(this.outputs) && this.outputs.length) {
+        for (let i2 = this.outputs.length - 1; i2 >= 0; --i2) {
+          this.removeOutput(i2);
+        }
+      }
+      for (let i2 = 0; i2 < inputs.length; ++i2) {
+        const input = this.normalizePortDefinition(inputs[i2], i2, "input");
+        this.addInput(input.name, (_a3 = input.type) != null ? _a3 : -1, input.extra || void 0);
+      }
+      for (let i2 = 0; i2 < outputs.length; ++i2) {
+        const output = this.normalizePortDefinition(outputs[i2], i2, "output");
+        this.addOutput(output.name, (_b3 = output.type) != null ? _b3 : -1, output.extra || void 0);
+      }
+    }
+    ensurePortRegistrationHost() {
+      let cursor = this.constructor;
+      while (cursor && cursor !== Function.prototype) {
+        const liteGraphHost = cursor.liteGraph;
+        if (liteGraphHost && liteGraphHost.auto_load_slot_types && typeof liteGraphHost.registerNodeAndSlotType !== "function") {
+          liteGraphHost.registerNodeAndSlotType = () => {
+          };
+        }
+        cursor = Object.getPrototypeOf(cursor);
+      }
+    }
+    normalizePortDefinition(port, index, kind) {
+      var _a3;
+      const safePort = port && typeof port === "object" ? port : { name: "" };
+      const fallbackName = `${kind}_${index}`;
+      const rawName = String((_a3 = safePort.name) != null ? _a3 : "").trim();
+      return {
+        name: rawName || fallbackName,
+        type: safePort.type,
+        extra: safePort.extra && typeof safePort.extra === "object" ? { ...safePort.extra } : void 0
+      };
+    }
+  };
+  _ModernNodeBase.modernContractVersion = 1;
+  let ModernNodeBase = _ModernNodeBase;
+  function resolveType(nodeClass) {
+    var _a3;
+    const type = nodeClass.type || nodeClass.modernType || ((_a3 = nodeClass.prototype) == null ? void 0 : _a3.type);
+    return typeof type === "string" ? type.trim() : "";
+  }
+  function resolveLiteGraphHost(liteGraph) {
+    if (liteGraph && typeof liteGraph.registerNodeType === "function") {
+      return liteGraph;
+    }
+    const globalLiteGraph = globalThis.LiteGraph;
+    if (globalLiteGraph && typeof globalLiteGraph.registerNodeType === "function") {
+      return globalLiteGraph;
+    }
+    throw new Error(
+      "[litegraph modern] LiteGraph host is unavailable. Pass LiteGraph explicitly to registerModernNode()."
+    );
+  }
+  function ensureModernMetadata(nodeClass) {
+    const prototype = nodeClass.prototype;
+    prototype.renderRuntime = "modern";
+    prototype[MODERN_NODE_MARKER_KEY] = true;
+  }
+  const defaultModernWidgetRegistry = /* @__PURE__ */ new Map();
+  function registerModernWidget(type, renderer) {
+    const normalizedType = typeof type === "string" ? type.trim() : "";
+    if (!normalizedType) {
+      throw new Error(
+        "[litegraph modern] registerModernWidget expects a non-empty widget type."
+      );
+    }
+    if (!renderer || typeof renderer.createView !== "function") {
+      throw new Error(
+        "[litegraph modern] Modern widget renderer must define createView()."
+      );
+    }
+    defaultModernWidgetRegistry.set(normalizedType, renderer);
+    return normalizedType;
+  }
+  function registerModernWidgets(renderers) {
+    const registered = [];
+    for (const [type, renderer] of Object.entries(renderers || {})) {
+      registered.push(registerModernWidget(type, renderer));
+    }
+    return registered;
+  }
+  function getModernWidgetRenderer(type) {
+    const normalizedType = typeof type === "string" ? type.trim() : "";
+    return normalizedType ? defaultModernWidgetRegistry.get(normalizedType) : void 0;
+  }
+  function registerModernNode(nodeClass, liteGraph) {
+    if (!nodeClass || typeof nodeClass !== "function" || !nodeClass.prototype) {
+      throw new Error(
+        "[litegraph modern] registerModernNode expects a class constructor."
+      );
+    }
+    const type = resolveType(nodeClass);
+    if (!type) {
+      throw new Error(
+        "[litegraph modern] Modern node class must declare a static type."
+      );
+    }
+    const host = resolveLiteGraphHost(liteGraph);
+    ensureModernMetadata(nodeClass);
+    host.registerNodeType(type, nodeClass);
+    return type;
+  }
+  function registerModernNodes(nodeClasses, liteGraph) {
+    const host = resolveLiteGraphHost(liteGraph);
+    const registered = [];
+    for (let i2 = 0; i2 < nodeClasses.length; ++i2) {
+      registered.push(registerModernNode(nodeClasses[i2], host));
+    }
+    return registered;
+  }
+  function attachModernNodeRegistryApi(liteGraph) {
+    const target = liteGraph;
+    target.registerModernNode = (nodeClass) => registerModernNode(nodeClass, liteGraph);
+    target.registerModernNodes = (nodeClasses) => registerModernNodes(nodeClasses, liteGraph);
+    target.registerModernWidget = (type, renderer) => registerModernWidget(type, renderer);
+    target.registerModernWidgets = (renderers) => registerModernWidgets(renderers);
+    target.getModernWidgetRenderer = (type) => getModernWidgetRenderer(type);
+  }
+  const ModernNodeContracts = {
+    MODERN_NODE_MARKER_KEY,
+    MODERN_NODE_STATE_KEY,
+    ModernNodeChangeMask
+  };
+  const LABEL_WIDTH_MIN = 36;
+  const LABEL_WIDTH_MAX = 74;
+  const INLINE_PADDING = 10;
+  const ACTION_ICON_WIDTH = 24;
+  function toFiniteNumber$3(value, fallback = 0) {
+    const numericValue = Number(value);
+    return Number.isFinite(numericValue) ? numericValue : fallback;
+  }
+  function clamp(value, min, max) {
+    return Math.max(min, Math.min(max, value));
+  }
+  function formatWidgetValue(schema) {
+    if (schema.type === "toggle") {
+      return schema.value ? "ON" : "OFF";
+    }
+    if (schema.value == null) {
+      return "";
+    }
+    if (typeof schema.value === "number") {
+      return Number.isFinite(schema.value) ? String(schema.value) : "";
+    }
+    if (typeof schema.value === "string") {
+      return schema.value;
+    }
+    return String(schema.value);
+  }
+  function resolveLabelWidth(bounds) {
+    return clamp(bounds.width * 0.32, LABEL_WIDTH_MIN, LABEL_WIDTH_MAX);
+  }
+  function createRoot(context, cursor = "pointer") {
+    var _a3;
+    const { Group, Rect } = context.leafer;
+    const root = new Group({
+      x: context.bounds.x,
+      y: context.bounds.y,
+      width: context.bounds.width,
+      height: context.bounds.height,
+      button: true,
+      cursor,
+      state: "",
+      states: {
+        hover: {
+          opacity: 1
+        },
+        press: {
+          scale: 0.985
+        },
+        focus: {
+          opacity: 1
+        }
+      },
+      disabled: Boolean(context.schema.disabled),
+      disabledStyle: {
+        opacity: 0.42
+      }
+    });
+    const background = new Rect({
+      x: 0,
+      y: 0,
+      width: context.bounds.width,
+      height: context.bounds.height,
+      cornerRadius: 8,
+      fill: "#162130",
+      stroke: "#2E455D",
+      strokeWidth: 1,
+      hoverStyle: {
+        fill: "#1B2A3D",
+        stroke: "#4E6D94"
+      },
+      pressStyle: {
+        fill: "#102034",
+        stroke: "#76A8FF"
+      },
+      focusStyle: {
+        stroke: "#76A8FF"
+      },
+      disabledStyle: {
+        opacity: 0.45
+      },
+      hittable: false
+    });
+    (_a3 = root.add) == null ? void 0 : _a3.call(root, [background]);
+    return {
+      root,
+      background,
+      bounds: { ...context.bounds }
+    };
+  }
+  function applyRootLayout(handle, context) {
+    handle.bounds = { ...context.bounds };
+    handle.root.x = context.bounds.x;
+    handle.root.y = context.bounds.y;
+    handle.root.width = context.bounds.width;
+    handle.root.height = context.bounds.height;
+    handle.root.disabled = Boolean(context.schema.disabled);
+    handle.background.width = context.bounds.width;
+    handle.background.height = context.bounds.height;
+  }
+  function createTextNode(context, config) {
+    const { Text } = context.leafer;
+    return new Text({
+      fontSize: 11,
+      fontFamily: "'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif",
+      fill: "#D9E8F7",
+      verticalAlign: "middle",
+      textWrap: "none",
+      textOverflow: "hide",
+      hittable: false,
+      ...config
+    });
+  }
+  function createLabelAndValue(context, handle) {
+    var _a3, _b3;
+    const labelText = createTextNode(context, {
+      x: INLINE_PADDING,
+      y: context.bounds.height / 2,
+      text: context.schema.label || context.schema.name,
+      width: resolveLabelWidth(context.bounds)
+    });
+    const valueText = createTextNode(context, {
+      y: context.bounds.height / 2,
+      textAlign: "right",
+      text: formatWidgetValue(context.schema)
+    });
+    handle.labelText = labelText;
+    handle.valueText = valueText;
+    (_b3 = (_a3 = handle.root).add) == null ? void 0 : _b3.call(_a3, [
+      labelText,
+      valueText
+    ]);
+  }
+  function patchLabelAndValue(handle, context) {
+    const labelWidth = resolveLabelWidth(context.bounds);
+    if (handle.labelText) {
+      handle.labelText.text = context.schema.label || context.schema.name;
+      handle.labelText.x = INLINE_PADDING;
+      handle.labelText.y = context.bounds.height / 2;
+      handle.labelText.width = labelWidth;
+    }
+    if (handle.valueText) {
+      handle.valueText.text = formatWidgetValue(context.schema);
+      handle.valueText.x = INLINE_PADDING + labelWidth + 8;
+      handle.valueText.y = context.bounds.height / 2;
+      handle.valueText.width = context.bounds.width - (INLINE_PADDING * 2 + labelWidth + 8);
+    }
+  }
+  const buttonRenderer = {
+    createView(context) {
+      var _a3, _b3;
+      const handle = createRoot(context);
+      handle.background.fill = "#18324A";
+      handle.background.stroke = "#335372";
+      handle.background.hoverStyle = {
+        fill: "#21415E",
+        stroke: "#4A7297"
+      };
+      handle.background.pressStyle = {
+        fill: "#11273A",
+        stroke: "#76A8FF"
+      };
+      const text = createTextNode(context, {
+        x: INLINE_PADDING,
+        y: context.bounds.height / 2,
+        width: context.bounds.width - INLINE_PADDING * 2,
+        textAlign: "center",
+        text: context.schema.label || context.schema.name
+      });
+      handle.valueText = text;
+      handle.actionZones = {
+        activate: {
+          x: 0,
+          y: 0,
+          width: context.bounds.width,
+          height: context.bounds.height
+        }
+      };
+      (_b3 = (_a3 = handle.root).add) == null ? void 0 : _b3.call(_a3, [text]);
+      return handle;
+    },
+    patchView(context, handle) {
+      const builtinHandle = handle;
+      applyRootLayout(builtinHandle, context);
+      if (builtinHandle.valueText) {
+        builtinHandle.valueText.text = context.schema.label || context.schema.name;
+        builtinHandle.valueText.width = context.bounds.width - INLINE_PADDING * 2;
+        builtinHandle.valueText.y = context.bounds.height / 2;
+      }
+      builtinHandle.actionZones = {
+        activate: {
+          x: 0,
+          y: 0,
+          width: context.bounds.width,
+          height: context.bounds.height
+        }
+      };
+    },
+    performAction(context) {
+      return { consumed: context.action === "activate" };
+    }
+  };
+  const toggleRenderer = {
+    createView(context) {
+      const handle = createRoot(context);
+      createLabelAndValue(context, handle);
+      handle.actionZones = {
+        toggle: {
+          x: 0,
+          y: 0,
+          width: context.bounds.width,
+          height: context.bounds.height
+        }
+      };
+      return handle;
+    },
+    patchView(context, handle) {
+      const builtinHandle = handle;
+      applyRootLayout(builtinHandle, context);
+      patchLabelAndValue(builtinHandle, context);
+      builtinHandle.actionZones = {
+        toggle: {
+          x: 0,
+          y: 0,
+          width: context.bounds.width,
+          height: context.bounds.height
+        }
+      };
+    },
+    performAction(context) {
+      return { consumed: true, nextValue: !Boolean(context.schema.value) };
+    }
+  };
+  function createStepperRenderer(type) {
+    return {
+      createView(context) {
+        var _a3, _b3;
+        const handle = createRoot(context);
+        createLabelAndValue(context, handle);
+        handle.leftText = createTextNode(context, {
+          x: 0,
+          y: context.bounds.height / 2,
+          width: ACTION_ICON_WIDTH,
+          textAlign: "center",
+          text: "-",
+          fill: "#8AA5C1"
+        });
+        handle.rightText = createTextNode(context, {
+          y: context.bounds.height / 2,
+          width: ACTION_ICON_WIDTH,
+          textAlign: "center",
+          text: "+",
+          fill: "#8AA5C1"
+        });
+        (_b3 = (_a3 = handle.root).add) == null ? void 0 : _b3.call(_a3, [
+          handle.leftText,
+          handle.rightText
+        ]);
+        this.patchView(context, handle, 0);
+        return handle;
+      },
+      patchView(context, handle) {
+        const builtinHandle = handle;
+        applyRootLayout(builtinHandle, context);
+        patchLabelAndValue(builtinHandle, context);
+        if (builtinHandle.valueText) {
+          builtinHandle.valueText.x = INLINE_PADDING + resolveLabelWidth(context.bounds) + ACTION_ICON_WIDTH;
+          builtinHandle.valueText.width = context.bounds.width - (INLINE_PADDING * 2 + resolveLabelWidth(context.bounds) + ACTION_ICON_WIDTH * 2);
+        }
+        if (builtinHandle.leftText) {
+          builtinHandle.leftText.x = INLINE_PADDING + resolveLabelWidth(context.bounds);
+          builtinHandle.leftText.y = context.bounds.height / 2;
+        }
+        if (builtinHandle.rightText) {
+          builtinHandle.rightText.x = context.bounds.width - INLINE_PADDING - ACTION_ICON_WIDTH;
+          builtinHandle.rightText.y = context.bounds.height / 2;
+        }
+        builtinHandle.actionZones = {
+          decrement: {
+            x: INLINE_PADDING + resolveLabelWidth(context.bounds),
+            y: 0,
+            width: ACTION_ICON_WIDTH,
+            height: context.bounds.height
+          },
+          edit: {
+            x: INLINE_PADDING + resolveLabelWidth(context.bounds) + ACTION_ICON_WIDTH,
+            y: 0,
+            width: context.bounds.width - (INLINE_PADDING * 2 + resolveLabelWidth(context.bounds) + ACTION_ICON_WIDTH * 2),
+            height: context.bounds.height
+          },
+          increment: {
+            x: context.bounds.width - INLINE_PADDING - ACTION_ICON_WIDTH,
+            y: 0,
+            width: ACTION_ICON_WIDTH,
+            height: context.bounds.height
+          }
+        };
+      },
+      performAction(context) {
+        var _a3, _b3, _c2, _d2;
+        if (context.action === "edit") {
+          return { consumed: true, openEditor: true };
+        }
+        if (type === "number") {
+          const step = toFiniteNumber$3((_a3 = context.schema.options) == null ? void 0 : _a3.step, 1) || 1;
+          const min = (_b3 = context.schema.options) == null ? void 0 : _b3.min;
+          const max = (_c2 = context.schema.options) == null ? void 0 : _c2.max;
+          let nextValue = toFiniteNumber$3(context.schema.value) + (context.action === "decrement" ? -step : step);
+          if (min != null) {
+            nextValue = Math.max(toFiniteNumber$3(min), nextValue);
+          }
+          if (max != null) {
+            nextValue = Math.min(toFiniteNumber$3(max), nextValue);
+          }
+          return { consumed: true, nextValue };
+        }
+        if (type === "combo") {
+          let values = (_d2 = context.schema.options) == null ? void 0 : _d2.values;
+          if (!values) {
+            return { consumed: true, openEditor: true };
+          }
+          const valuesList = Array.isArray(values) ? values : Object.keys(values);
+          if (!valuesList.length) {
+            return { consumed: true };
+          }
+          const currentIndex = Array.isArray(values) ? valuesList.indexOf(context.schema.value) : valuesList.indexOf(String(context.schema.value));
+          const delta2 = context.action === "decrement" ? -1 : 1;
+          const nextIndex = clamp(currentIndex + delta2, 0, valuesList.length - 1);
+          return {
+            consumed: true,
+            nextValue: Array.isArray(values) ? valuesList[nextIndex] : nextIndex
+          };
+        }
+        return { consumed: false };
+      }
+    };
+  }
+  const textRenderer = {
+    createView(context) {
+      const handle = createRoot(context);
+      createLabelAndValue(context, handle);
+      handle.actionZones = {
+        edit: {
+          x: 0,
+          y: 0,
+          width: context.bounds.width,
+          height: context.bounds.height
+        }
+      };
+      return handle;
+    },
+    patchView(context, handle) {
+      const builtinHandle = handle;
+      applyRootLayout(builtinHandle, context);
+      patchLabelAndValue(builtinHandle, context);
+      builtinHandle.actionZones = {
+        edit: {
+          x: 0,
+          y: 0,
+          width: context.bounds.width,
+          height: context.bounds.height
+        }
+      };
+    },
+    performAction() {
+      return { consumed: true, openEditor: true };
+    }
+  };
+  const builtinRenderers = {
+    button: buttonRenderer,
+    toggle: toggleRenderer,
+    text: textRenderer,
+    number: createStepperRenderer("number"),
+    combo: createStepperRenderer("combo")
+  };
+  let builtinsRegistered = false;
+  function ensureDefaultModernWidgetRenderers() {
+    if (builtinsRegistered) {
+      return;
+    }
+    registerModernWidgets(builtinRenderers);
+    builtinsRegistered = true;
+  }
+  function resolveModernWidgetRenderer(type) {
+    ensureDefaultModernWidgetRenderers();
+    return getModernWidgetRenderer(type);
+  }
+  function resolveWidgetBounds(bodyBounds, index, count) {
+    const totalCount = Math.max(count, 1);
+    const verticalPadding = 4;
+    const gap = 4;
+    const usableHeight = bodyBounds.height - verticalPadding * 2 - gap * (totalCount - 1);
+    const rowHeight = Math.max(20, usableHeight / totalCount);
+    return {
+      x: bodyBounds.x + 6,
+      y: bodyBounds.y + verticalPadding + index * (rowHeight + gap),
+      width: Math.max(32, bodyBounds.width - 12),
+      height: rowHeight
+    };
+  }
   function toFiniteNumber$2(value, fallback = 0) {
     const numericValue = Number(value);
     return Number.isFinite(numericValue) ? numericValue : fallback;
@@ -13991,9 +16766,9 @@ var LiteGraphTSMigration = (function(exports) {
     return (left == null ? void 0 : left.kind) === (right == null ? void 0 : right.kind) && (left == null ? void 0 : left.index) === (right == null ? void 0 : right.index) && (left == null ? void 0 : left.action) === (right == null ? void 0 : right.action);
   }
   function createFallbackContent(node2) {
-    var _a3, _b2;
+    var _a3, _b3;
     const width2 = Math.max(toFiniteNumber$2((_a3 = node2.size) == null ? void 0 : _a3[0], 160), 120);
-    const height = Math.max(toFiniteNumber$2((_b2 = node2.size) == null ? void 0 : _b2[1], 80), 60);
+    const height = Math.max(toFiniteNumber$2((_b3 = node2.size) == null ? void 0 : _b3[1], 80), 60);
     const group = new ye$1({
       name: `litegraph-modern-node-fallback:${String(node2.id)}`,
       hittable: false
@@ -14035,6 +16810,13 @@ var LiteGraphTSMigration = (function(exports) {
     constructor(node2) {
       this.runtime = "modern";
       this.content = null;
+      this.widgetRoot = null;
+      this.widgetEntries = [];
+      this.widgetValueSnapshot = /* @__PURE__ */ new Map();
+      this.lastWidgetSignature = "";
+      this.mounted = false;
+      this.portLayoutCache = /* @__PURE__ */ new Map();
+      this.lastSlotSignature = "";
       this.interactionState = {
         hovered: false,
         pressed: false,
@@ -14045,6 +16827,7 @@ var LiteGraphTSMigration = (function(exports) {
       };
       this.resizeAnchor = null;
       this.node = node2;
+      ensureDefaultModernWidgetRenderers();
       this.root = new ye$1({
         name: `litegraph-modern-node:${String(node2.id)}`,
         hittable: true,
@@ -14056,37 +16839,51 @@ var LiteGraphTSMigration = (function(exports) {
       this.repaint();
     }
     repaint() {
-      var _a3, _b2, _c2, _d2;
-      if (!this.content) {
-        const built = ((_b2 = (_a3 = this.node).buildUI) == null ? void 0 : _b2.call(_a3, this.createContext())) || null;
-        this.content = toUI(built, this.node);
+      var _a3, _b3;
+      (_b3 = (_a3 = this.node).ensureModernPorts) == null ? void 0 : _b3.call(_a3);
+      const changeMask = this.consumeChangeMask();
+      if (!this.mounted) {
+        const mountedContent = this.mountContent(changeMask);
+        this.content = toUI(mountedContent, this.node);
         this.root.add(this.content);
+        this.widgetRoot = this.ensureWidgetRoot();
+        this.mounted = true;
+        this.invalidatePortLayoutCache();
+      } else if (changeMask !== ModernNodeChangeMask.None) {
+        this.patchContent(changeMask);
+      }
+      this.syncWidgets(changeMask);
+      if (this.didSlotSignatureChange()) {
+        this.invalidatePortLayoutCache();
+      }
+      if ((changeMask & ModernNodeChangeMask.Layout) !== 0 || (changeMask & ModernNodeChangeMask.Ports) !== 0) {
+        this.invalidatePortLayoutCache();
       }
       this.root.selected = Boolean(this.node.is_selected);
-      (_d2 = (_c2 = this.node).updateUI) == null ? void 0 : _d2.call(_c2, this.createContext());
       this.applyInteractionState();
       this.syncPosition();
     }
     syncPosition() {
-      var _a3, _b2, _c2, _d2, _e2;
+      var _a3, _b3, _c2, _d2, _e2;
       this.root.x = toFiniteNumber$2((_a3 = this.node.pos) == null ? void 0 : _a3[0]);
       const collapsed = Boolean(
-        (_b2 = this.node.flags) == null ? void 0 : _b2.collapsed
+        (_b3 = this.node.flags) == null ? void 0 : _b3.collapsed
       );
       const collapsedOffset = collapsed ? toFiniteNumber$2((_d2 = (_c2 = this.getShellState()) == null ? void 0 : _c2.layout) == null ? void 0 : _d2.height, 30) : 0;
       this.root.y = toFiniteNumber$2((_e2 = this.node.pos) == null ? void 0 : _e2[1]) - collapsedOffset;
     }
     destroy() {
+      this.clearWidgets();
       this.root.destroy();
     }
     getInteractionState() {
       return this.interactionState;
     }
     updateInteractionState(patch) {
-      var _a3, _b2, _c2, _d2, _e2, _f, _g, _h2;
+      var _a3, _b3, _c2, _d2, _e2, _f, _g, _h2;
       const nextHoveredPart = patch.hoveredPart === void 0 ? this.interactionState.hoveredPart : clonePartHit(patch.hoveredPart);
       const nextPressedPart = patch.pressedPart === void 0 ? this.interactionState.pressedPart : clonePartHit(patch.pressedPart);
-      const changed = ((_a3 = patch.hovered) != null ? _a3 : this.interactionState.hovered) !== this.interactionState.hovered || ((_b2 = patch.pressed) != null ? _b2 : this.interactionState.pressed) !== this.interactionState.pressed || ((_c2 = patch.dragging) != null ? _c2 : this.interactionState.dragging) !== this.interactionState.dragging || ((_d2 = patch.resizing) != null ? _d2 : this.interactionState.resizing) !== this.interactionState.resizing || !samePart(nextHoveredPart, this.interactionState.hoveredPart) || !samePart(nextPressedPart, this.interactionState.pressedPart);
+      const changed = ((_a3 = patch.hovered) != null ? _a3 : this.interactionState.hovered) !== this.interactionState.hovered || ((_b3 = patch.pressed) != null ? _b3 : this.interactionState.pressed) !== this.interactionState.pressed || ((_c2 = patch.dragging) != null ? _c2 : this.interactionState.dragging) !== this.interactionState.dragging || ((_d2 = patch.resizing) != null ? _d2 : this.interactionState.resizing) !== this.interactionState.resizing || !samePart(nextHoveredPart, this.interactionState.hoveredPart) || !samePart(nextPressedPart, this.interactionState.pressedPart);
       if (!changed) {
         return;
       }
@@ -14164,12 +16961,12 @@ var LiteGraphTSMigration = (function(exports) {
       return this.hitFallbackPart(localPoint);
     }
     beginResize(worldX, worldY) {
-      var _a3, _b2;
+      var _a3, _b3;
       this.resizeAnchor = {
         startWorldX: worldX,
         startWorldY: worldY,
         startWidth: Math.max(toFiniteNumber$2((_a3 = this.node.size) == null ? void 0 : _a3[0], 160), 80),
-        startHeight: Math.max(toFiniteNumber$2((_b2 = this.node.size) == null ? void 0 : _b2[1], 80), 60)
+        startHeight: Math.max(toFiniteNumber$2((_b3 = this.node.size) == null ? void 0 : _b3[1], 80), 60)
       };
       this.updateInteractionState({
         resizing: true,
@@ -14178,7 +16975,7 @@ var LiteGraphTSMigration = (function(exports) {
       });
     }
     updateResize(worldX, worldY) {
-      var _a3, _b2;
+      var _a3, _b3;
       if (!this.resizeAnchor) {
         return false;
       }
@@ -14194,7 +16991,7 @@ var LiteGraphTSMigration = (function(exports) {
           this.resizeAnchor.startHeight + (worldY - this.resizeAnchor.startWorldY)
         )
       );
-      if (nextWidth === toFiniteNumber$2((_a3 = this.node.size) == null ? void 0 : _a3[0]) && nextHeight === toFiniteNumber$2((_b2 = this.node.size) == null ? void 0 : _b2[1])) {
+      if (nextWidth === toFiniteNumber$2((_a3 = this.node.size) == null ? void 0 : _a3[0]) && nextHeight === toFiniteNumber$2((_b3 = this.node.size) == null ? void 0 : _b3[1])) {
         return false;
       }
       this.node.size[0] = nextWidth;
@@ -14210,6 +17007,177 @@ var LiteGraphTSMigration = (function(exports) {
         pressedPart: null
       });
     }
+    getWidgetEntry(index) {
+      return this.widgetEntries[index] || null;
+    }
+    ensureWidgetRoot() {
+      var _a3;
+      const shellWidgetRoot = (_a3 = this.getShellState()) == null ? void 0 : _a3.widgetRoot;
+      if (shellWidgetRoot) {
+        this.widgetRoot = shellWidgetRoot;
+        return shellWidgetRoot;
+      }
+      if (!this.widgetRoot) {
+        this.widgetRoot = new ye$1({
+          name: `litegraph-modern-node-widgets:${String(this.node.id)}`,
+          hittable: false
+        });
+        this.root.add(this.widgetRoot);
+      }
+      return this.widgetRoot;
+    }
+    clearWidgets() {
+      var _a3;
+      for (let i2 = 0; i2 < this.widgetEntries.length; ++i2) {
+        const entry = this.widgetEntries[i2];
+        if (entry.handle.destroy) {
+          entry.handle.destroy();
+        } else {
+          const root = entry.handle.root;
+          (_a3 = root == null ? void 0 : root.destroy) == null ? void 0 : _a3.call(root);
+        }
+      }
+      this.widgetEntries = [];
+      this.widgetValueSnapshot.clear();
+      this.lastWidgetSignature = "";
+      this.patchShellWidgetLayout([]);
+    }
+    syncWidgets(changeMask) {
+      var _a3, _b3, _c2, _d2, _e2;
+      const collapsed = Boolean(
+        (_a3 = this.node.flags) == null ? void 0 : _a3.collapsed
+      );
+      const schemas = collapsed ? [] : Array.isArray((_c2 = (_b3 = this.node).defineWidgets) == null ? void 0 : _c2.call(_b3)) ? [...((_e2 = (_d2 = this.node).defineWidgets) == null ? void 0 : _e2.call(_d2)) || []] : [];
+      const widgetRoot = this.ensureWidgetRoot();
+      widgetRoot.visible = !collapsed;
+      const nextSignature = schemas.map((schema) => `${schema.id}:${schema.type}`).join("|");
+      const needsRebuild = this.widgetEntries.length !== schemas.length || this.lastWidgetSignature !== nextSignature || (changeMask & ModernNodeChangeMask.Layout) !== 0;
+      if (!schemas.length) {
+        this.clearWidgets();
+        return;
+      }
+      const bodyBounds = this.getWidgetBodyBounds();
+      const nextLayout = [];
+      if (needsRebuild) {
+        this.clearWidgets();
+        for (let index = 0; index < schemas.length; ++index) {
+          const schema = schemas[index];
+          const renderer = resolveModernWidgetRenderer(schema.type);
+          if (!renderer) {
+            continue;
+          }
+          const bounds = resolveWidgetBounds(bodyBounds, index, schemas.length);
+          const context = this.createWidgetContext(schema, bounds);
+          const handle = renderer.createView(context);
+          this.addWidgetHandle(widgetRoot, handle);
+          const layout = this.toWidgetLayout(index, schema, handle);
+          this.widgetEntries.push({
+            schema,
+            renderer,
+            handle,
+            layout
+          });
+          nextLayout.push(layout);
+          this.widgetValueSnapshot.set(schema.id, schema.value);
+        }
+        this.lastWidgetSignature = nextSignature;
+      } else {
+        for (let index = 0; index < this.widgetEntries.length; ++index) {
+          const entry = this.widgetEntries[index];
+          const schema = schemas[index];
+          const bounds = resolveWidgetBounds(bodyBounds, index, schemas.length);
+          entry.schema = schema;
+          const context = this.createWidgetContext(schema, bounds);
+          entry.renderer.patchView(context, entry.handle, changeMask);
+          entry.layout = this.toWidgetLayout(index, schema, entry.handle);
+          nextLayout.push(entry.layout);
+          this.widgetValueSnapshot.set(schema.id, schema.value);
+        }
+      }
+      this.patchShellWidgetLayout(nextLayout);
+      this.applyWidgetInteractionState();
+    }
+    getWidgetBodyBounds() {
+      var _a3, _b3, _c2;
+      const shellLayout = (_a3 = this.getShellState()) == null ? void 0 : _a3.layout;
+      if (shellLayout == null ? void 0 : shellLayout.body) {
+        return {
+          x: shellLayout.body.x,
+          y: shellLayout.body.y,
+          width: shellLayout.body.width,
+          height: shellLayout.body.height
+        };
+      }
+      return {
+        x: 0,
+        y: 0,
+        width: Math.max(toFiniteNumber$2((_b3 = this.node.size) == null ? void 0 : _b3[0], 120), 80),
+        height: Math.max(toFiniteNumber$2((_c2 = this.node.size) == null ? void 0 : _c2[1], 60), 24)
+      };
+    }
+    createWidgetContext(schema, bounds) {
+      return {
+        node: this.node,
+        host: this,
+        schema,
+        bounds,
+        leafer
+      };
+    }
+    addWidgetHandle(root, handle) {
+      if (handle.root instanceof ge$1) {
+        root.add(handle.root);
+        return;
+      }
+      const candidate = handle.root;
+      if (candidate && typeof candidate === "object" && !candidate.parent) {
+        root.add(handle.root);
+      }
+    }
+    toWidgetLayout(index, schema, handle) {
+      return {
+        index,
+        id: schema.id,
+        type: schema.type,
+        x: handle.bounds.x,
+        y: handle.bounds.y,
+        width: handle.bounds.width,
+        height: handle.bounds.height,
+        action: "edit",
+        actionZones: handle.actionZones
+      };
+    }
+    patchShellWidgetLayout(layout) {
+      const shellState = this.getShellState();
+      if (!(shellState == null ? void 0 : shellState.layout)) {
+        return;
+      }
+      shellState.layout.widgets = layout;
+    }
+    applyWidgetInteractionState() {
+      var _a3, _b3;
+      const hoveredIndex = ((_a3 = this.interactionState.hoveredPart) == null ? void 0 : _a3.kind) === "widget" ? this.interactionState.hoveredPart.index : null;
+      const pressedIndex = ((_b3 = this.interactionState.pressedPart) == null ? void 0 : _b3.kind) === "widget" ? this.interactionState.pressedPart.index : null;
+      for (let i2 = 0; i2 < this.widgetEntries.length; ++i2) {
+        const entry = this.widgetEntries[i2];
+        const widgetRoot = entry.handle.root;
+        if (!widgetRoot || typeof widgetRoot !== "object") {
+          continue;
+        }
+        widgetRoot.disabled = Boolean(entry.schema.disabled);
+        if (entry.schema.disabled) {
+          widgetRoot.state = "";
+          continue;
+        }
+        if (pressedIndex === i2) {
+          widgetRoot.state = "press";
+        } else if (hoveredIndex === i2) {
+          widgetRoot.state = "hover";
+        } else {
+          widgetRoot.state = "";
+        }
+      }
+    }
     getLocalPoint(worldX, worldY) {
       const point = this.root.getInnerPoint({
         x: worldX,
@@ -14218,7 +17186,7 @@ var LiteGraphTSMigration = (function(exports) {
       return [toFiniteNumber$2(point.x), toFiniteNumber$2(point.y)];
     }
     getPortAnchor(kind, slotIndex) {
-      var _a3, _b2;
+      var _a3, _b3;
       const layout = this.resolvePortLayout(kind, slotIndex);
       if (layout) {
         if (layout.space === "world") {
@@ -14230,7 +17198,7 @@ var LiteGraphTSMigration = (function(exports) {
         ];
       }
       const fallbackPoint = toPoint(
-        (_b2 = (_a3 = this.node).getConnectionPos) == null ? void 0 : _b2.call(_a3, kind === "input", slotIndex)
+        (_b3 = (_a3 = this.node).getConnectionPos) == null ? void 0 : _b3.call(_a3, kind === "input", slotIndex)
       );
       return fallbackPoint || null;
     }
@@ -14242,7 +17210,7 @@ var LiteGraphTSMigration = (function(exports) {
       return kind === "input" ? PORT_DIRECTION_LEFT : PORT_DIRECTION_RIGHT;
     }
     hitPortAt(worldX, worldY) {
-      var _a3, _b2;
+      var _a3, _b3;
       let bestHit = null;
       const kinds = ["output", "input"];
       for (let kindIndex = 0; kindIndex < kinds.length; ++kindIndex) {
@@ -14253,7 +17221,7 @@ var LiteGraphTSMigration = (function(exports) {
           if (!anchor) {
             continue;
           }
-          const radius = (_b2 = (_a3 = this.resolvePortLayout(kind, slotIndex)) == null ? void 0 : _a3.radius) != null ? _b2 : 12;
+          const radius = (_b3 = (_a3 = this.resolvePortLayout(kind, slotIndex)) == null ? void 0 : _a3.radius) != null ? _b3 : 12;
           const dx = worldX - anchor[0];
           const dy = worldY - anchor[1];
           const dist = Math.sqrt(dx * dx + dy * dy);
@@ -14281,12 +17249,64 @@ var LiteGraphTSMigration = (function(exports) {
         dir: bestHit.dir
       };
     }
+    mountContent(changeMask) {
+      const context = this.createContextWithMask(changeMask);
+      if (typeof this.node.mountView === "function") {
+        return this.node.mountView(context);
+      }
+      if (typeof this.node.buildUI === "function") {
+        return this.node.buildUI(context);
+      }
+      return null;
+    }
+    patchContent(changeMask) {
+      var _a3, _b3;
+      const context = this.createContextWithMask(changeMask);
+      if (typeof this.node.patchView === "function") {
+        this.node.patchView(context);
+        return;
+      }
+      (_b3 = (_a3 = this.node).updateUI) == null ? void 0 : _b3.call(_a3, context);
+    }
+    consumeChangeMask() {
+      var _a3, _b3;
+      const rawMask = (_b3 = (_a3 = this.node).consumeModernChangeMask) == null ? void 0 : _b3.call(_a3);
+      if (rawMask == null) {
+        return ModernNodeChangeMask.All;
+      }
+      const normalizedMask = toFiniteNumber$2(
+        rawMask,
+        ModernNodeChangeMask.None
+      );
+      if (normalizedMask <= ModernNodeChangeMask.None) {
+        return ModernNodeChangeMask.None;
+      }
+      return normalizedMask;
+    }
+    didSlotSignatureChange() {
+      const nextSignature = `${this.getSlotCount("input")}:${this.getSlotCount("output")}`;
+      if (nextSignature === this.lastSlotSignature) {
+        return false;
+      }
+      this.lastSlotSignature = nextSignature;
+      return true;
+    }
+    invalidatePortLayoutCache() {
+      this.portLayoutCache.clear();
+    }
+    createContextWithMask(changeMask) {
+      return {
+        ...this.createContext(),
+        changeMask
+      };
+    }
     createContext() {
       return {
         node: this.node,
         host: this,
         root: this.root,
         content: this.content,
+        changeMask: ModernNodeChangeMask.All,
         interactionState: this.interactionState,
         leafer
       };
@@ -14296,28 +17316,59 @@ var LiteGraphTSMigration = (function(exports) {
       return Array.isArray(list) ? list.length : 0;
     }
     resolvePortLayout(kind, slotIndex) {
-      var _a3, _b2;
-      return ((_b2 = (_a3 = this.node).getPortLayout) == null ? void 0 : _b2.call(_a3, kind, slotIndex, this.createContext())) || null;
+      var _a3, _b3;
+      const cacheKey = `${kind}:${slotIndex}`;
+      if (this.portLayoutCache.has(cacheKey)) {
+        return this.portLayoutCache.get(cacheKey) || null;
+      }
+      const resolvedLayout = ((_b3 = (_a3 = this.node).getPortLayout) == null ? void 0 : _b3.call(
+        _a3,
+        kind,
+        slotIndex,
+        this.createContextWithMask(ModernNodeChangeMask.Ports)
+      )) || null;
+      this.portLayoutCache.set(cacheKey, resolvedLayout);
+      return resolvedLayout;
     }
     getShellState() {
       if (!this.content || typeof this.content !== "object") {
         return null;
       }
-      return this.content[MODERN_STATE_KEY] || null;
+      return this.content[MODERN_NODE_STATE_KEY] || null;
     }
     applyInteractionState() {
-      var _a3, _b2;
+      var _a3, _b3;
       this.root.selected = Boolean(
         this.node.is_selected
       );
-      (_b2 = (_a3 = this.getShellState()) == null ? void 0 : _a3.applyInteractionState) == null ? void 0 : _b2.call(_a3, this.interactionState);
+      (_b3 = (_a3 = this.getShellState()) == null ? void 0 : _a3.applyInteractionState) == null ? void 0 : _b3.call(_a3, this.interactionState);
+      this.applyWidgetInteractionState();
     }
     hitWidgetPart(point, widgets) {
+      var _a3, _b3;
       if (!(widgets == null ? void 0 : widgets.length)) {
         return null;
       }
       for (let i2 = 0; i2 < widgets.length; ++i2) {
         const widget = widgets[i2];
+        const entry = this.widgetEntries[i2];
+        if (entry) {
+          const rendererHit = (_b3 = (_a3 = entry.renderer).hitTest) == null ? void 0 : _b3.call(
+            _a3,
+            this.createWidgetContext(entry.schema, entry.handle.bounds),
+            entry.handle,
+            point
+          );
+          if (rendererHit) {
+            return {
+              kind: "widget",
+              index: widget.index,
+              action: rendererHit.action || widget.action || "activate",
+              cursor: rendererHit.cursor || "pointer",
+              bounds: rendererHit.bounds || widget
+            };
+          }
+        }
         if (widget.actionZones) {
           const zoneEntries = Object.entries(widget.actionZones);
           for (let zoneIndex = 0; zoneIndex < zoneEntries.length; ++zoneIndex) {
@@ -14363,9 +17414,9 @@ var LiteGraphTSMigration = (function(exports) {
       return null;
     }
     hitFallbackPart(point) {
-      var _a3, _b2;
+      var _a3, _b3;
       const width2 = Math.max(toFiniteNumber$2((_a3 = this.node.size) == null ? void 0 : _a3[0], 120), 120);
-      const height = Math.max(toFiniteNumber$2((_b2 = this.node.size) == null ? void 0 : _b2[1], 60), 60);
+      const height = Math.max(toFiniteNumber$2((_b3 = this.node.size) == null ? void 0 : _b3[1], 60), 60);
       if (point[0] < 0 || point[1] < 0 || point[0] > width2 || point[1] > height) {
         return null;
       }
@@ -14383,6 +17434,9 @@ var LiteGraphTSMigration = (function(exports) {
   function discriminateNodeRuntime(node2) {
     if (node2.renderRuntime === "legacy" || node2.renderRuntime === "modern") {
       return node2.renderRuntime;
+    }
+    if (isModernNodeContract(node2)) {
+      return "modern";
     }
     if (typeof node2.buildUI === "function" || typeof node2.updateUI === "function" || typeof node2.renderLeafer === "function" || typeof node2.getPortLayout === "function") {
       return "modern";
@@ -14687,7 +17741,7 @@ var LiteGraphTSMigration = (function(exports) {
       return linkView;
     }
     removeLinkView(linkId, providedLink) {
-      var _a3, _b2;
+      var _a3, _b3;
       const resolvedLink = providedLink || this.linksById.get(linkId);
       const linkView = this.linkViews.get(linkId);
       if (linkView) {
@@ -14700,7 +17754,7 @@ var LiteGraphTSMigration = (function(exports) {
         return;
       }
       (_a3 = this.linksByNodeId.get(resolvedLink.origin_id)) == null ? void 0 : _a3.delete(linkId);
-      (_b2 = this.linksByNodeId.get(resolvedLink.target_id)) == null ? void 0 : _b2.delete(linkId);
+      (_b3 = this.linksByNodeId.get(resolvedLink.target_id)) == null ? void 0 : _b3.delete(linkId);
     }
     handleNodeDirty(nodeId, node2) {
       var _a3;
@@ -14836,9 +17890,9 @@ var LiteGraphTSMigration = (function(exports) {
       return ((_a3 = this.appHost.view.ownerDocument) == null ? void 0 : _a3.defaultView) || window;
     }
     getRuntimeNow() {
-      var _a3, _b2, _c2;
+      var _a3, _b3, _c2;
       const runtimeWindow = this.getRuntimeWindow();
-      return (_c2 = (_b2 = (_a3 = runtimeWindow.performance) == null ? void 0 : _a3.now) == null ? void 0 : _b2.call(_a3)) != null ? _c2 : Date.now();
+      return (_c2 = (_b3 = (_a3 = runtimeWindow.performance) == null ? void 0 : _a3.now) == null ? void 0 : _b3.call(_a3)) != null ? _c2 : Date.now();
     }
     requestSceneRender(bounds) {
       const partialBounds = toRenderBoundsLike(bounds);
@@ -15404,10 +18458,10 @@ var LiteGraphTSMigration = (function(exports) {
       }
       const windowRef = ((_a3 = this.appHost.view.ownerDocument) == null ? void 0 : _a3.defaultView) || window;
       this.queuedScaleRepaintFrame = windowRef.requestAnimationFrame(() => {
-        var _a4, _b2;
+        var _a4, _b3;
         this.queuedScaleRepaintFrame = null;
         (_a4 = this.sceneSyncController) == null ? void 0 : _a4.repaintLegacyNodeHosts();
-        (_b2 = this.sceneSyncController) == null ? void 0 : _b2.repaintAllLinkViews();
+        (_b3 = this.sceneSyncController) == null ? void 0 : _b3.repaintAllLinkViews();
       });
     }
     clampScale(value) {
@@ -16817,7 +19871,7 @@ var LiteGraphTSMigration = (function(exports) {
       }
     }
     requestRuntimeRender(forceNodeRepaint = false) {
-      var _a3, _b2;
+      var _a3, _b3;
       if (this.renderRuntime === "leafer") {
         if (this.sceneSyncController) {
           this.sceneSyncController.requestRuntimeAnimation(forceNodeRepaint);
@@ -16826,7 +19880,7 @@ var LiteGraphTSMigration = (function(exports) {
         if (typeof ((_a3 = this.leaferAppHost) == null ? void 0 : _a3.app.requestRender) === "function") {
           this.leaferAppHost.app.requestRender();
         } else {
-          (_b2 = this.leaferAppHost) == null ? void 0 : _b2.app.forceRender();
+          (_b3 = this.leaferAppHost) == null ? void 0 : _b3.app.forceRender();
         }
         return;
       }
@@ -17788,7 +20842,7 @@ var LiteGraphTSMigration = (function(exports) {
       return false;
     }
     processLeaferLegacyMouseDown(e2) {
-      var _a3, _b2, _c2, _d2, _e2, _f, _g, _h2, _i2, _j, _k, _l, _m;
+      var _a3, _b3, _c2, _d2, _e2, _f, _g, _h2, _i2, _j, _k, _l, _m;
       if (this.set_canvas_dirty_on_mouse_event) {
         this.dirty_canvas = true;
       }
@@ -17812,7 +20866,7 @@ var LiteGraphTSMigration = (function(exports) {
       this.pointer_is_down = true;
       this.last_mouseclick = now;
       this.last_mouse_dragging = true;
-      (_b2 = (_a3 = this.canvas) == null ? void 0 : _a3.focus) == null ? void 0 : _b2.call(_a3);
+      (_b3 = (_a3 = this.canvas) == null ? void 0 : _a3.focus) == null ? void 0 : _b3.call(_a3);
       LiteGraph2.closeAllContextMenus(ref_window2);
       const node2 = graph.getNodeOnPos(e2.canvasX, e2.canvasY, void 0, 5);
       this.updateLeaferNodeHover(node2, e2);
@@ -18008,7 +21062,7 @@ var LiteGraphTSMigration = (function(exports) {
       return false;
     }
     processLeaferLegacyMouseUp(e2) {
-      var _a3, _b2, _c2, _d2, _e2, _f;
+      var _a3, _b3, _c2, _d2, _e2, _f;
       const graph = this.graphRef();
       if (!graph) {
         return;
@@ -18057,7 +21111,7 @@ var LiteGraphTSMigration = (function(exports) {
         this.dirty_bgcanvas = true;
         node_dragged.pos[0] = Math.round(node_dragged.pos[0]);
         node_dragged.pos[1] = Math.round(node_dragged.pos[1]);
-        if (((_b2 = graph.config) == null ? void 0 : _b2.align_to_grid) || this.align_to_grid) {
+        if (((_b3 = graph.config) == null ? void 0 : _b3.align_to_grid) || this.align_to_grid) {
           (_c2 = node_dragged.alignToGrid) == null ? void 0 : _c2.call(node_dragged);
         }
         (_d2 = this.onNodeMoved) == null ? void 0 : _d2.call(this, node_dragged);
@@ -18127,17 +21181,17 @@ var LiteGraphTSMigration = (function(exports) {
       );
     }
     repaintLeaferNodeHost(node2) {
-      var _a3, _b2;
+      var _a3, _b3;
       if (!node2 || this.renderRuntime !== "leafer") {
         return;
       }
-      (_b2 = (_a3 = this.sceneSyncController) == null ? void 0 : _a3.nodeHosts.get(node2.id)) == null ? void 0 : _b2.repaint();
+      (_b3 = (_a3 = this.sceneSyncController) == null ? void 0 : _a3.nodeHosts.get(node2.id)) == null ? void 0 : _b3.repaint();
     }
     updateLeaferNodeHover(nextNode, e2) {
-      var _a3, _b2, _c2;
+      var _a3, _b3, _c2;
       if (this.node_over && this.node_over !== nextNode) {
         this.node_over.mouseOver = false;
-        (_b2 = (_a3 = this.node_over).onMouseLeave) == null ? void 0 : _b2.call(_a3, e2);
+        (_b3 = (_a3 = this.node_over).onMouseLeave) == null ? void 0 : _b3.call(_a3, e2);
         this.repaintLeaferNodeHost(this.node_over);
         this.node_over = null;
         this.dirty_canvas = true;
@@ -18788,12 +21842,12 @@ var LiteGraphTSMigration = (function(exports) {
   const temp_point = new Float32Array(2);
   class LGraphCanvasRender extends LGraphCanvasInput {
     constants() {
-      var _a3, _b2, _c2, _d2, _e2, _f, _g, _h2, _i2, _j, _k, _l, _m, _n2, _o2, _p, _q, _r2, _s2, _t2, _u, _v, _w, _x, _y, _z, _A, _B, _C, _D, _E, _F, _G, _H, _I, _J;
+      var _a3, _b3, _c2, _d2, _e2, _f, _g, _h2, _i2, _j, _k, _l, _m, _n2, _o2, _p, _q, _r2, _s2, _t2, _u, _v, _w, _x, _y, _z, _A, _B, _C, _D, _E, _F, _G, _H, _I, _J;
       const host = this.getLiteGraphHost();
       return {
         ...host,
         RIGHT: (_a3 = host.RIGHT) != null ? _a3 : 2,
-        LEFT: (_b2 = host.LEFT) != null ? _b2 : 4,
+        LEFT: (_b3 = host.LEFT) != null ? _b3 : 4,
         UP: (_c2 = host.UP) != null ? _c2 : 1,
         DOWN: (_d2 = host.DOWN) != null ? _d2 : 3,
         CENTER: (_e2 = host.CENTER) != null ? _e2 : 5,
@@ -18870,7 +21924,7 @@ var LiteGraphTSMigration = (function(exports) {
      * @deprecated Legacy canvas compatibility path only. Leafer runtime uses retained overlay primitives instead.
      **/
     drawFrontCanvas() {
-      var _a3, _b2, _c2;
+      var _a3, _b3, _c2;
       this.dirty_canvas = false;
       if (!this.ctx && this.bgcanvas) {
         this.ctx = this.bgcanvas.getContext("2d");
@@ -18923,7 +21977,7 @@ var LiteGraphTSMigration = (function(exports) {
         if (this.render_execution_order) {
           this.drawExecutionOrder(ctx);
         }
-        if (((_b2 = this.graph.config) == null ? void 0 : _b2.links_ontop) && !this.live_mode) {
+        if (((_b3 = this.graph.config) == null ? void 0 : _b3.links_ontop) && !this.live_mode) {
           this.drawConnections(ctx);
         }
         if (this.connecting_pos != null) {
@@ -19025,7 +22079,7 @@ var LiteGraphTSMigration = (function(exports) {
      * @deprecated Legacy canvas compatibility path only. Leafer runtime uses retained scene graph layers instead.
      **/
     drawBackCanvas() {
-      var _a3, _b2;
+      var _a3, _b3;
       const canvas = this.bgcanvas;
       if (!canvas || !this.canvas) {
         return;
@@ -19125,7 +22179,7 @@ var LiteGraphTSMigration = (function(exports) {
         if (((_a3 = this.graph._groups) == null ? void 0 : _a3.length) && !this.live_mode) {
           this.drawGroups(canvas, ctx);
         }
-        (_b2 = this.onDrawBackground) == null ? void 0 : _b2.call(this, ctx, this.visible_area);
+        (_b3 = this.onDrawBackground) == null ? void 0 : _b3.call(this, ctx, this.visible_area);
         if (this.render_canvas_border) {
           ctx.strokeStyle = "#235";
           ctx.strokeRect(0, 0, canvas.width, canvas.height);
@@ -20283,7 +23337,7 @@ var LiteGraphTSMigration = (function(exports) {
             }
             break;
           case "slider": {
-            const nvalue = clamp$1((x - 15) / (widget_width - 30), 0, 1);
+            const nvalue = clamp$2((x - 15) / (widget_width - 30), 0, 1);
             if (w.options.read_only) break;
             w.value = w.options.min + (w.options.max - w.options.min) * nvalue;
             if (old_value != w.value) {
@@ -20676,7 +23730,7 @@ var LiteGraphTSMigration = (function(exports) {
       }
     }
     drawButton(x2, y2, w2, h2, text, bgcolor, hovercolor, textcolor) {
-      var _a3, _b2;
+      var _a3, _b3;
       const LiteGraph2 = this.constants();
       const ctx = this.ctx;
       if (!ctx || !this.canvas) {
@@ -20684,7 +23738,7 @@ var LiteGraphTSMigration = (function(exports) {
       }
       const resolvedBgColor = (_a3 = bgcolor != null ? bgcolor : LiteGraph2.NODE_DEFAULT_COLOR) != null ? _a3 : "#333";
       const resolvedHoverColor = hovercolor != null ? hovercolor : "#555";
-      const resolvedTextColor = (_b2 = textcolor != null ? textcolor : LiteGraph2.NODE_TEXT_COLOR) != null ? _b2 : "#AAA";
+      const resolvedTextColor = (_b3 = textcolor != null ? textcolor : LiteGraph2.NODE_TEXT_COLOR) != null ? _b3 : "#AAA";
       const hoverPos = this.ds.convertOffsetToCanvas(this.graph_mouse);
       const hover = LiteGraph2.isInsideRectangle(hoverPos[0], hoverPos[1], x2, y2, w2, h2);
       let clickPos = this.last_click_position ? [this.last_click_position[0], this.last_click_position[1]] : void 0;
@@ -20846,17 +23900,17 @@ var LiteGraphTSMigration = (function(exports) {
       );
     }
     closePanels() {
-      var _a3, _b2;
+      var _a3, _b3;
       const nodePanel = document.querySelector("#node-panel");
       (_a3 = nodePanel == null ? void 0 : nodePanel.close) == null ? void 0 : _a3.call(nodePanel);
       const optionPanel = document.querySelector("#option-panel");
-      (_b2 = optionPanel == null ? void 0 : optionPanel.close) == null ? void 0 : _b2.call(optionPanel);
+      (_b3 = optionPanel == null ? void 0 : optionPanel.close) == null ? void 0 : _b3.call(optionPanel);
     }
     showShowGraphOptionsPanel(_refOpts, obEv) {
-      var _a3, _b2, _c2;
+      var _a3, _b3, _c2;
       let graphcanvas;
       if (((_a3 = this.constructor) == null ? void 0 : _a3.name) === "HTMLDivElement") {
-        if (!((_c2 = (_b2 = obEv == null ? void 0 : obEv.event) == null ? void 0 : _b2.target) == null ? void 0 : _c2.lgraphcanvas)) {
+        if (!((_c2 = (_b3 = obEv == null ? void 0 : obEv.event) == null ? void 0 : _b3.target) == null ? void 0 : _c2.lgraphcanvas)) {
           return;
         }
         graphcanvas = obEv.event.target.lgraphcanvas;
@@ -21845,37 +24899,6 @@ var LiteGraphTSMigration = (function(exports) {
       version: source.version
     };
   }
-  class LLink {
-    constructor(id, type, origin_id, origin_slot, target_id, target_slot) {
-      this.id = id;
-      this.type = type;
-      this.origin_id = origin_id;
-      this.origin_slot = origin_slot;
-      this.target_id = target_id;
-      this.target_slot = target_slot;
-      this._data = null;
-      this._pos = new Float32Array(2);
-    }
-    configure(o2) {
-      const parsed = parseSerializedLLinkInput(o2);
-      this.id = parsed.id;
-      this.type = parsed.type;
-      this.origin_id = parsed.origin_id;
-      this.origin_slot = parsed.origin_slot;
-      this.target_id = parsed.target_id;
-      this.target_slot = parsed.target_slot;
-    }
-    serialize() {
-      return [
-        this.id,
-        this.origin_id,
-        this.origin_slot,
-        this.target_id,
-        this.target_slot,
-        this.type
-      ];
-    }
-  }
   const defaultLiteGraphLifecycleHost = {
     debug: false,
     getTime: () => Date.now()
@@ -21884,10 +24907,10 @@ var LiteGraphTSMigration = (function(exports) {
     cacheKey: "LGraph.lifecycle",
     fallbackOwners: [() => LGraph$1]
   });
-  let LGraph$1 = (_b = class {
+  let LGraph$1 = (_c = class {
     constructor(o2) {
       this.list_of_graphcanvas = null;
-      this.status = _b.STATUS_STOPPED;
+      this.status = _c.STATUS_STOPPED;
       this.last_node_id = 0;
       this.last_link_id = 0;
       this._version = -1;
@@ -21925,7 +24948,7 @@ var LiteGraphTSMigration = (function(exports) {
       }
     }
     getSupportedTypes() {
-      return this.supported_types || _b.supported_types;
+      return this.supported_types || _c.supported_types;
     }
     /**
      * Removes all nodes from this graph
@@ -21933,7 +24956,7 @@ var LiteGraphTSMigration = (function(exports) {
      */
     clear() {
       this.stop();
-      this.status = _b.STATUS_STOPPED;
+      this.status = _c.STATUS_STOPPED;
       this.last_node_id = 0;
       this.last_link_id = 0;
       this._version = -1;
@@ -22011,10 +25034,10 @@ var LiteGraphTSMigration = (function(exports) {
      * @param {number} interval amount of milliseconds between executions, if 0 then it renders to the monitor refresh rate
      */
     start(interval) {
-      if (this.status == _b.STATUS_RUNNING) {
+      if (this.status == _c.STATUS_RUNNING) {
         return;
       }
-      this.status = _b.STATUS_RUNNING;
+      this.status = _c.STATUS_RUNNING;
       if (this.onPlayEvent) {
         this.onPlayEvent();
       }
@@ -22056,10 +25079,10 @@ var LiteGraphTSMigration = (function(exports) {
      * @method stop execution
      */
     stop() {
-      if (this.status == _b.STATUS_STOPPED) {
+      if (this.status == _c.STATUS_STOPPED) {
         return;
       }
-      this.status = _b.STATUS_STOPPED;
+      this.status = _c.STATUS_STOPPED;
       if (this.onStopEvent) {
         this.onStopEvent();
       }
@@ -22108,8 +25131,8 @@ var LiteGraphTSMigration = (function(exports) {
     }
     sendEventToAllNodes(_eventname, _params, _mode) {
     }
-  }, _b.supported_types = ["number", "string", "boolean"], _b.STATUS_STOPPED = 1, _b.STATUS_RUNNING = 2, _b.liteGraph = defaultLiteGraphLifecycleHost, _b);
-  const defaultExecutionHost$1 = {
+  }, _c.supported_types = ["number", "string", "boolean"], _c.STATUS_STOPPED = 1, _c.STATUS_RUNNING = 2, _c.liteGraph = defaultLiteGraphLifecycleHost, _c);
+  const defaultExecutionHost = {
     debug: false,
     getTime: () => Date.now(),
     use_deferred_actions: true,
@@ -22118,7 +25141,7 @@ var LiteGraphTSMigration = (function(exports) {
     NODE_TITLE_HEIGHT: 30,
     VERTICAL_LAYOUT: "vertical"
   };
-  const resolveExecutionHost = createClassHostResolver(defaultExecutionHost$1, {
+  const resolveExecutionHost = createClassHostResolver(defaultExecutionHost, {
     cacheKey: "LGraph.execution",
     fallbackOwners: [() => LGraphExecution, () => LGraph$1]
   });
@@ -23410,2140 +26433,6 @@ var LiteGraphTSMigration = (function(exports) {
     onNodeTrace(_node, _msg, _color) {
     }
   }
-  const defaultLiteGraphNodeHost = {
-    use_uuids: false,
-    uuidv4: () => "",
-    NODE_WIDTH: 140,
-    INPUT: 1,
-    OUTPUT: 2,
-    cloneObject: (obj, target) => {
-      if (obj == null) {
-        return null;
-      }
-      const cloned = JSON.parse(JSON.stringify(obj));
-      if (!target) {
-        return cloned;
-      }
-      for (const key in cloned) {
-        target[key] = cloned[key];
-      }
-      return target;
-    }
-  };
-  const resolveNodeStateHost = createClassHostResolver(defaultLiteGraphNodeHost, {
-    cacheKey: "LGraphNode.state",
-    fallbackOwners: [() => LGraphNode$1]
-  });
-  let LGraphNode$1 = (_c = class {
-    constructor(title) {
-      this.graph_version = 0;
-      this.is_selected = false;
-      this.mouseOver = false;
-      this._pos = new Float32Array(10);
-      this.title = "Unnamed";
-      this.type = null;
-      this.size = [140, 60];
-      this.graph = null;
-      this.id = -1;
-      this.inputs = [];
-      this.outputs = [];
-      this.connections = [];
-      this.properties = {};
-      this.properties_info = [];
-      this.flags = {};
-      this._ctor(title);
-    }
-    get pos() {
-      if (!this._pos) {
-        this._pos = new Float32Array(10);
-      }
-      return this._pos;
-    }
-    set pos(v2) {
-      if (!v2 || v2.length < 2) {
-        return;
-      }
-      if (!this._pos) {
-        this._pos = new Float32Array(10);
-      }
-      this._pos[0] = v2[0];
-      this._pos[1] = v2[1];
-    }
-    getClassMeta() {
-      return this.constructor;
-    }
-    _ctor(title) {
-      const host = resolveNodeStateHost(this);
-      this.title = title || "Unnamed";
-      this.size = [host.NODE_WIDTH, 60];
-      this.graph = null;
-      this._pos = new Float32Array(10);
-      Object.defineProperty(this, "pos", {
-        set: (v2) => {
-          if (!v2 || v2.length < 2) {
-            return;
-          }
-          this._pos[0] = v2[0];
-          this._pos[1] = v2[1];
-        },
-        get: () => this._pos,
-        enumerable: true
-      });
-      if (host.use_uuids) {
-        this.id = host.uuidv4();
-      } else {
-        this.id = -1;
-      }
-      this.type = null;
-      this.inputs = [];
-      this.outputs = [];
-      this.connections = [];
-      this.properties = {};
-      this.properties_info = [];
-      this.flags = {};
-    }
-    /**
-     * configure a node from an object containing the serialized info
-     * @method configure
-     */
-    configure(info) {
-      var _a3;
-      if (this.graph) {
-        this.graph._version++;
-      }
-      const self = this;
-      const infoRecord = info;
-      for (const j2 in infoRecord) {
-        if (j2 == "properties") {
-          const properties = info.properties;
-          for (const k2 in properties) {
-            this.properties[k2] = properties[k2];
-            if (this.onPropertyChanged) {
-              this.onPropertyChanged(k2, properties[k2]);
-            }
-          }
-          continue;
-        }
-        const fieldValue = infoRecord[j2];
-        if (fieldValue == null) {
-          continue;
-        } else if (typeof fieldValue == "object") {
-          const selfField = self[j2];
-          const configuredField = selfField;
-          if (configuredField && configuredField.configure) {
-            configuredField.configure(fieldValue);
-          } else {
-            self[j2] = resolveNodeStateHost(this).cloneObject(
-              fieldValue,
-              selfField
-            );
-          }
-        } else {
-          self[j2] = fieldValue;
-        }
-      }
-      if (!info.title) {
-        this.title = this.getClassMeta().title;
-      }
-      if (this.inputs) {
-        for (let i2 = 0; i2 < this.inputs.length; ++i2) {
-          const input = this.inputs[i2];
-          const link_info = this.graph && input ? this.graph.links[input.link] : null;
-          if (this.onConnectionsChange) {
-            this.onConnectionsChange(
-              resolveNodeStateHost(this).INPUT,
-              i2,
-              true,
-              link_info,
-              input
-            );
-          }
-          if (this.onInputAdded) {
-            this.onInputAdded(input);
-          }
-        }
-      }
-      if (this.outputs) {
-        for (let i2 = 0; i2 < this.outputs.length; ++i2) {
-          const output = this.outputs[i2];
-          if (!output.links) {
-            continue;
-          }
-          for (let j2 = 0; j2 < output.links.length; ++j2) {
-            const link_info = this.graph ? this.graph.links[output.links[j2]] : null;
-            if (this.onConnectionsChange) {
-              this.onConnectionsChange(
-                resolveNodeStateHost(this).OUTPUT,
-                i2,
-                true,
-                link_info,
-                output
-              );
-            }
-          }
-          if (this.onOutputAdded) {
-            this.onOutputAdded(output);
-          }
-        }
-      }
-      if (this.widgets) {
-        for (let i2 = 0; i2 < this.widgets.length; ++i2) {
-          const widget = this.widgets[i2] || null;
-          if (!widget) {
-            continue;
-          }
-          const propertyName = (_a3 = widget.options) == null ? void 0 : _a3.property;
-          if (propertyName && this.properties[propertyName] != void 0) {
-            widget.value = JSON.parse(
-              JSON.stringify(this.properties[propertyName])
-            );
-          }
-        }
-        if (info.widgets_values) {
-          for (let i2 = 0; i2 < info.widgets_values.length; ++i2) {
-            if (this.widgets[i2]) {
-              this.widgets[i2].value = info.widgets_values[i2];
-            }
-          }
-        }
-      }
-      if (this.onConfigure) {
-        this.onConfigure(info);
-      }
-    }
-    /**
-     * serialize the content
-     * @method serialize
-     */
-    serialize() {
-      const host = resolveNodeStateHost(this);
-      const o2 = {
-        id: this.id,
-        type: this.type,
-        pos: this.pos,
-        size: this.size,
-        flags: host.cloneObject(this.flags),
-        order: this.order,
-        mode: this.mode
-      };
-      if (this.constructor === _c && this.last_serialization) {
-        return this.last_serialization;
-      }
-      if (this.inputs) {
-        o2.inputs = this.inputs;
-      }
-      if (this.outputs) {
-        for (let i2 = 0; i2 < this.outputs.length; i2++) {
-          delete this.outputs[i2]._data;
-        }
-        o2.outputs = this.outputs;
-      }
-      if (this.title && this.title != this.getClassMeta().title) {
-        o2.title = this.title;
-      }
-      if (this.properties) {
-        o2.properties = host.cloneObject(this.properties);
-      }
-      if (this.widgets && this.serialize_widgets) {
-        o2.widgets_values = [];
-        for (let i2 = 0; i2 < this.widgets.length; ++i2) {
-          if (this.widgets[i2]) {
-            o2.widgets_values[i2] = this.widgets[i2].value;
-          } else {
-            o2.widgets_values[i2] = null;
-          }
-        }
-      }
-      if (!o2.type) {
-        o2.type = this.getClassMeta().type;
-      }
-      if (this.color) {
-        o2.color = this.color;
-      }
-      if (this.bgcolor) {
-        o2.bgcolor = this.bgcolor;
-      }
-      if (this.boxcolor) {
-        o2.boxcolor = this.boxcolor;
-      }
-      if (this.shape) {
-        o2.shape = this.shape;
-      }
-      if (this.onSerialize) {
-        if (this.onSerialize(o2)) {
-          console.warn(
-            "node onSerialize shouldnt return anything, data should be stored in the object pass in the first parameter"
-          );
-        }
-      }
-      return o2;
-    }
-    /* Creates a clone of this node */
-    clone() {
-      const createNode = resolveNodeStateHost(this).createNode;
-      const node2 = createNode(this.type);
-      if (!node2) {
-        return null;
-      }
-      const data = resolveNodeStateHost(this).cloneObject(
-        this.serialize()
-      );
-      if (data.inputs) {
-        for (let i2 = 0; i2 < data.inputs.length; ++i2) {
-          data.inputs[i2].link = null;
-        }
-      }
-      if (data.outputs) {
-        for (let i2 = 0; i2 < data.outputs.length; ++i2) {
-          const outputSlot = data.outputs[i2];
-          if (!outputSlot) {
-            continue;
-          }
-          if (outputSlot.links) {
-            outputSlot.links.length = 0;
-          }
-        }
-      }
-      delete data.id;
-      const host = resolveNodeStateHost(this);
-      if (host.use_uuids) {
-        data.id = host.uuidv4();
-      }
-      node2.configure(data);
-      return node2;
-    }
-    /**
-     * serialize and stringify
-     * @method toString
-     */
-    toString() {
-      return JSON.stringify(this.serialize());
-    }
-    /**
-     * get the title string
-     * @method getTitle
-     */
-    getTitle() {
-      return this.title || this.getClassMeta().title;
-    }
-    /**
-     * sets the value of a property
-     * @method setProperty
-     * @param {String} name
-     * @param {*} value
-     */
-    setProperty(name, value) {
-      var _a3;
-      if (!this.properties) {
-        this.properties = {};
-      }
-      if (value === this.properties[name]) {
-        return;
-      }
-      const prev_value = this.properties[name];
-      this.properties[name] = value;
-      if (this.onPropertyChanged) {
-        if (this.onPropertyChanged(name, value, prev_value) === false) {
-          this.properties[name] = prev_value;
-        }
-      }
-      if (this.widgets) {
-        for (let i2 = 0; i2 < this.widgets.length; ++i2) {
-          const widget = this.widgets[i2];
-          if (!widget) {
-            continue;
-          }
-          const propertyName = (_a3 = widget.options) == null ? void 0 : _a3.property;
-          if (propertyName == name) {
-            widget.value = value;
-            break;
-          }
-        }
-      }
-    }
-  }, _c.liteGraph = defaultLiteGraphNodeHost, _c);
-  const defaultExecutionHost = {
-    EVENT: -1,
-    ACTION: -1,
-    ON_TRIGGER: 3,
-    use_deferred_actions: true,
-    getTime: () => Date.now()
-  };
-  const resolveNodeExecutionHost = createClassHostResolver(defaultExecutionHost, {
-    cacheKey: "LGraphNode.execution",
-    fallbackOwners: [() => LGraphNode$1]
-  });
-  class LGraphNodeExecution extends LGraphNode$1 {
-    getExecutionGraph() {
-      return this.graph || null;
-    }
-    /**
-     * sets the output data
-     * @method setOutputData
-     * @param {number} slot
-     * @param {*} data
-     */
-    setOutputData(slot, data) {
-      if (!this.outputs) {
-        return;
-      }
-      if (slot == -1 || slot >= this.outputs.length) {
-        return;
-      }
-      const output_info = this.outputs[slot];
-      if (!output_info) {
-        return;
-      }
-      output_info._data = data;
-      const graph = this.getExecutionGraph();
-      if (output_info.links) {
-        for (let i2 = 0; i2 < output_info.links.length; i2++) {
-          const link_id = output_info.links[i2];
-          const link = graph.links[String(link_id)];
-          if (link) {
-            link.data = data;
-          }
-        }
-      }
-    }
-    /**
-     * sets the output data type, useful when you want to be able to overwrite the data type
-     * @method setOutputDataType
-     * @param {number} slot
-     * @param {String} datatype
-     */
-    setOutputDataType(slot, type) {
-      if (!this.outputs) {
-        return;
-      }
-      if (slot == -1 || slot >= this.outputs.length) {
-        return;
-      }
-      const output_info = this.outputs[slot];
-      if (!output_info) {
-        return;
-      }
-      output_info.type = type;
-      const graph = this.getExecutionGraph();
-      if (output_info.links) {
-        for (let i2 = 0; i2 < output_info.links.length; i2++) {
-          const link_id = output_info.links[i2];
-          graph.links[String(link_id)].type = type;
-        }
-      }
-    }
-    /**
-     * Retrieves the input data (data traveling through the connection) from one slot
-     * @method getInputData
-     * @param {number} slot
-     * @param {boolean} force_update if set to true it will force the connected node of this slot to output data into this link
-     * @return {*} data or if it is not connected returns undefined
-     */
-    getInputData(slot, force_update) {
-      if (!this.inputs) {
-        return void 0;
-      }
-      const input = this.inputs[slot];
-      if (!input || slot >= this.inputs.length || input.link == null) {
-        return void 0;
-      }
-      const graph = this.getExecutionGraph();
-      const link_id = input.link;
-      const link = graph.links[String(link_id)];
-      if (!link) {
-        return null;
-      }
-      if (!force_update) {
-        return link.data;
-      }
-      const node2 = graph.getNodeById(link.origin_id);
-      if (!node2) {
-        return link.data;
-      }
-      if (node2.updateOutputData) {
-        node2.updateOutputData(link.origin_slot);
-      } else if (node2.onExecute) {
-        node2.onExecute();
-      }
-      return link.data;
-    }
-    /**
-     * Retrieves the input data type (in case this supports multiple input types)
-     * @method getInputDataType
-     * @param {number} slot
-     * @return {String} datatype in string format
-     */
-    getInputDataType(slot) {
-      if (!this.inputs) {
-        return null;
-      }
-      const input = this.inputs[slot];
-      if (!input || slot >= this.inputs.length || input.link == null) {
-        return null;
-      }
-      const graph = this.getExecutionGraph();
-      const link_id = input.link;
-      const link = graph.links[String(link_id)];
-      if (!link) {
-        return null;
-      }
-      const node2 = graph.getNodeById(link.origin_id);
-      if (!node2) {
-        return link.type || null;
-      }
-      const outputs = node2.outputs;
-      const output_info = outputs ? outputs[link.origin_slot] : null;
-      if (output_info) {
-        return output_info.type || null;
-      }
-      return null;
-    }
-    /**
-     * Retrieves the input data from one slot using its name instead of slot number
-     * @method getInputDataByName
-     * @param {String} slot_name
-     * @param {boolean} force_update if set to true it will force the connected node of this slot to output data into this link
-     * @return {*} data or if it is not connected returns null
-     */
-    getInputDataByName(slot_name, force_update) {
-      const withFindInputSlot = this;
-      const slot = withFindInputSlot.findInputSlot(slot_name);
-      if (slot == -1) {
-        return null;
-      }
-      return this.getInputData(slot, force_update);
-    }
-    /**
-     * tells you if there is a connection in one input slot
-     * @method isInputConnected
-     * @param {number} slot
-     * @return {boolean}
-     */
-    isInputConnected(slot) {
-      if (!this.inputs) {
-        return false;
-      }
-      return slot < this.inputs.length && this.inputs[slot].link != null;
-    }
-    /**
-     * tells you info about an input connection (which node, type, etc)
-     * @method getInputInfo
-     * @param {number} slot
-     * @return {Object} object or null { link: id, name: string, type: string or 0 }
-     */
-    getInputInfo(slot) {
-      if (!this.inputs) {
-        return null;
-      }
-      if (slot < this.inputs.length) {
-        return this.inputs[slot];
-      }
-      return null;
-    }
-    /**
-     * Returns the link info in the connection of an input slot
-     * @method getInputLink
-     * @param {number} slot
-     * @return {LLink} object or null
-     */
-    getInputLink(slot) {
-      if (!this.inputs) {
-        return null;
-      }
-      if (slot < this.inputs.length) {
-        const slot_info = this.inputs[slot];
-        const graph = this.getExecutionGraph();
-        return graph.links[String(slot_info.link)] || null;
-      }
-      return null;
-    }
-    /**
-     * returns the node connected in the input slot
-     * @method getInputNode
-     * @param {number} slot
-     * @return {LGraphNode} node or null
-     */
-    getInputNode(slot) {
-      if (!this.inputs) {
-        return null;
-      }
-      if (slot >= this.inputs.length) {
-        return null;
-      }
-      const input = this.inputs[slot];
-      if (!input || input.link === null) {
-        return null;
-      }
-      const graph = this.getExecutionGraph();
-      const link_info = graph.links[String(input.link)];
-      if (!link_info) {
-        return null;
-      }
-      return graph.getNodeById(link_info.origin_id);
-    }
-    /**
-     * returns the value of an input with this name, otherwise checks if there is a property with that name
-     * @method getInputOrProperty
-     * @param {string} name
-     * @return {*} value
-     */
-    getInputOrProperty(name) {
-      const properties = this.properties;
-      if (!this.inputs || !this.inputs.length) {
-        return properties ? properties[name] : null;
-      }
-      const graph = this.getExecutionGraph();
-      for (let i2 = 0, l2 = this.inputs.length; i2 < l2; ++i2) {
-        const input_info = this.inputs[i2];
-        if (name == input_info.name && input_info.link != null) {
-          const link = graph.links[String(input_info.link)];
-          if (link) {
-            return link.data;
-          }
-        }
-      }
-      return properties ? properties[name] : void 0;
-    }
-    /**
-     * tells you the last output data that went in that slot
-     * @method getOutputData
-     * @param {number} slot
-     * @return {Object}  object or null
-     */
-    getOutputData(slot) {
-      var _a3;
-      if (!this.outputs) {
-        return null;
-      }
-      if (slot >= this.outputs.length) {
-        return null;
-      }
-      const info = this.outputs[slot];
-      return (_a3 = info._data) != null ? _a3 : null;
-    }
-    /**
-     * tells you info about an output connection (which node, type, etc)
-     * @method getOutputInfo
-     * @param {number} slot
-     * @return {Object}  object or null { name: string, type: string, links: [ ids of links in number ] }
-     */
-    getOutputInfo(slot) {
-      if (!this.outputs) {
-        return null;
-      }
-      if (slot < this.outputs.length) {
-        return this.outputs[slot];
-      }
-      return null;
-    }
-    /**
-     * tells you if there is a connection in one output slot
-     * @method isOutputConnected
-     * @param {number} slot
-     * @return {boolean}
-     */
-    isOutputConnected(slot) {
-      if (!this.outputs) {
-        return false;
-      }
-      return Boolean(
-        slot < this.outputs.length && this.outputs[slot].links && this.outputs[slot].links.length
-      );
-    }
-    /**
-     * tells you if there is any connection in the output slots
-     * @method isAnyOutputConnected
-     * @return {boolean}
-     */
-    isAnyOutputConnected() {
-      var _a3;
-      if (!this.outputs) {
-        return false;
-      }
-      for (let i2 = 0; i2 < this.outputs.length; ++i2) {
-        const links = (_a3 = this.outputs[i2]) == null ? void 0 : _a3.links;
-        if (links && links.length) {
-          return true;
-        }
-      }
-      return false;
-    }
-    /**
-     * retrieves all the nodes connected to this output slot
-     * @method getOutputNodes
-     * @param {number} slot
-     * @return {array}
-     */
-    getOutputNodes(slot) {
-      if (!this.outputs || this.outputs.length == 0) {
-        return null;
-      }
-      if (slot >= this.outputs.length) {
-        return null;
-      }
-      const output = this.outputs[slot];
-      if (!output.links || output.links.length == 0) {
-        return null;
-      }
-      const graph = this.getExecutionGraph();
-      const result = [];
-      for (let i2 = 0; i2 < output.links.length; i2++) {
-        const link_id = output.links[i2];
-        const link = graph.links[String(link_id)];
-        if (link) {
-          const target_node = graph.getNodeById(link.target_id);
-          if (target_node) {
-            result.push(target_node);
-          }
-        }
-      }
-      return result;
-    }
-    /**
-     * Triggers the execution of actions that were deferred when the action was triggered
-     * @method executePendingActions
-     */
-    executePendingActions() {
-      if (!this._waiting_actions || !this._waiting_actions.length) {
-        return;
-      }
-      for (let i2 = 0; i2 < this._waiting_actions.length; ++i2) {
-        const p2 = this._waiting_actions[i2];
-        this.onAction(
-          p2[0],
-          p2[1],
-          p2[2],
-          p2[3],
-          p2[4]
-        );
-      }
-      this._waiting_actions.length = 0;
-    }
-    /**
-     * Triggers the node code execution, place a boolean/counter to mark the node as being executed
-     * @method doExecute
-     * @param {*} param
-     * @param {*} options
-     */
-    doExecute(param, options) {
-      const runtimeOptions = options || {};
-      const graph = this.getExecutionGraph();
-      if (this.onExecute) {
-        if (!runtimeOptions.action_call) {
-          runtimeOptions.action_call = this.id + "_exec_" + Math.floor(Math.random() * 9999);
-        }
-        graph.nodes_executing[String(this.id)] = true;
-        this.onExecute(param, runtimeOptions);
-        graph.nodes_executing[String(this.id)] = false;
-        this.exec_version = graph.iteration;
-        if (runtimeOptions.action_call) {
-          this.action_call = runtimeOptions.action_call;
-          graph.nodes_executedAction[String(this.id)] = runtimeOptions.action_call;
-        }
-      }
-      this.execute_triggered = 2;
-      if (this.onAfterExecuteNode) {
-        this.onAfterExecuteNode(param, runtimeOptions);
-      }
-    }
-    /**
-     * Triggers an action, wrapped by logics to control execution flow
-     * @method actionDo
-     * @param {String} action name
-     * @param {*} param
-     */
-    actionDo(action, param, options, action_slot) {
-      const runtimeOptions = options || {};
-      const graph = this.getExecutionGraph();
-      if (this.onAction) {
-        if (!runtimeOptions.action_call) {
-          runtimeOptions.action_call = this.id + "_" + (action ? action : "action") + "_" + Math.floor(Math.random() * 9999);
-        }
-        graph.nodes_actioning[String(this.id)] = action ? action : "actioning";
-        this.onAction(action, param, runtimeOptions, action_slot);
-        graph.nodes_actioning[String(this.id)] = false;
-        if (runtimeOptions.action_call) {
-          this.action_call = runtimeOptions.action_call;
-          graph.nodes_executedAction[String(this.id)] = runtimeOptions.action_call;
-        }
-      }
-      this.action_triggered = 2;
-      if (this.onAfterExecuteNode) {
-        this.onAfterExecuteNode(param, runtimeOptions);
-      }
-    }
-    /**
-     * Triggers an event in this node, this will trigger any output with the same name
-     * @method trigger
-     * @param {String} event name ( "on_play", ... ) if action is equivalent to false then the event is send to all
-     * @param {*} param
-     */
-    trigger(action, param, options) {
-      if (!this.outputs || !this.outputs.length) {
-        return;
-      }
-      const host = resolveNodeExecutionHost(this);
-      const graph = this.getExecutionGraph();
-      if (graph) {
-        graph._last_trigger_time = host.getTime();
-      }
-      for (let i2 = 0; i2 < this.outputs.length; ++i2) {
-        const output = this.outputs[i2];
-        if (!output || output.type !== host.EVENT || action && output.name != action) {
-          continue;
-        }
-        this.triggerSlot(i2, param, null, options);
-      }
-    }
-    /**
-     * Triggers a slot event in this node: cycle output slots and launch execute/action on connected nodes
-     * @method triggerSlot
-     * @param {Number} slot the index of the output slot
-     * @param {*} param
-     * @param {Number} link_id [optional] in case you want to trigger and specific output link in a slot
-     */
-    triggerSlot(slot, param, link_id, options) {
-      const runtimeOptions = options || {};
-      if (!this.outputs) {
-        return;
-      }
-      if (slot == null) {
-        console.error("slot must be a number");
-        return;
-      }
-      if (slot.constructor !== Number) {
-        console.warn(
-          "slot must be a number, use node.trigger('name') if you want to use a string"
-        );
-      }
-      const output = this.outputs[slot];
-      if (!output) {
-        return;
-      }
-      const links = output.links;
-      if (!links || !links.length) {
-        return;
-      }
-      const host = resolveNodeExecutionHost(this);
-      const graph = this.getExecutionGraph();
-      if (!graph) {
-        return;
-      }
-      graph._last_trigger_time = host.getTime();
-      for (let k2 = 0; k2 < links.length; ++k2) {
-        const id = links[k2];
-        if (link_id != null && link_id != id) {
-          continue;
-        }
-        const link_info = graph.links[String(links[k2])];
-        if (!link_info) {
-          continue;
-        }
-        link_info._last_time = host.getTime();
-        const node2 = graph.getNodeById(link_info.target_id);
-        if (!node2) {
-          continue;
-        }
-        if (node2.mode === host.ON_TRIGGER) {
-          if (!runtimeOptions.action_call) {
-            runtimeOptions.action_call = this.id + "_trigg_" + Math.floor(Math.random() * 9999);
-          }
-          if (node2.onExecute) {
-            node2.doExecute(
-              param,
-              runtimeOptions
-            );
-          }
-        } else if (node2.onAction) {
-          if (!runtimeOptions.action_call) {
-            runtimeOptions.action_call = this.id + "_act_" + Math.floor(Math.random() * 9999);
-          }
-          const target_connection = node2.inputs[link_info.target_slot];
-          if (host.use_deferred_actions && node2.onExecute) {
-            if (!node2._waiting_actions) {
-              node2._waiting_actions = [];
-            }
-            node2._waiting_actions.push([
-              target_connection.name,
-              param,
-              runtimeOptions,
-              link_info.target_slot
-            ]);
-          } else {
-            node2.actionDo(
-              target_connection.name,
-              param,
-              runtimeOptions,
-              link_info.target_slot
-            );
-          }
-        }
-      }
-    }
-    /**
-     * clears the trigger slot animation
-     * @method clearTriggeredSlot
-     * @param {Number} slot the index of the output slot
-     * @param {Number} link_id [optional] in case you want to trigger and specific output link in a slot
-     */
-    clearTriggeredSlot(slot, link_id) {
-      if (!this.outputs) {
-        return;
-      }
-      const output = this.outputs[slot];
-      if (!output) {
-        return;
-      }
-      const links = output.links;
-      if (!links || !links.length) {
-        return;
-      }
-      const graph = this.getExecutionGraph();
-      for (let k2 = 0; k2 < links.length; ++k2) {
-        const id = links[k2];
-        if (link_id != null && link_id != id) {
-          continue;
-        }
-        const link_info = graph.links[String(links[k2])];
-        if (!link_info) {
-          continue;
-        }
-        link_info._last_time = 0;
-      }
-    }
-  }
-  const defaultPortsWidgetsHost = {
-    NODE_TEXT_SIZE: 14,
-    NODE_WIDTH: 140,
-    NODE_SLOT_HEIGHT: 20,
-    NODE_WIDGET_HEIGHT: 20,
-    auto_load_slot_types: false
-  };
-  const resolvePortsWidgetsHost = createClassHostResolver(defaultPortsWidgetsHost, {
-    cacheKey: "LGraphNode.ports-widgets",
-    fallbackOwners: [() => LGraphNodePortsWidgets]
-  });
-  class LGraphNodePortsWidgets extends LGraphNodeExecution {
-    getPortsWidgetsClassMeta() {
-      return this.constructor;
-    }
-    getGraphLinksMap() {
-      const graphLike = this.graph;
-      return graphLike.links || {};
-    }
-    /**
-     * changes node size and triggers callback
-     * @method setSize
-     * @param {vec2} size
-     */
-    setSize(size) {
-      this.size = size;
-      if (this.onResize) {
-        this.onResize(this.size);
-      }
-    }
-    /**
-     * add a new property to this node
-     * @method addProperty
-     * @param {string} name
-     * @param {*} default_value
-     * @param {string} type string defining the output type ("vec3","number",...)
-     * @param {Object} extra_info this can be used to have special properties of the property (like values, etc)
-     */
-    addProperty(name, default_value, type, extra_info) {
-      const o2 = { name, type, default_value };
-      if (extra_info) {
-        for (const i2 in extra_info) {
-          o2[i2] = extra_info[i2];
-        }
-      }
-      if (!this.properties_info) {
-        this.properties_info = [];
-      }
-      this.properties_info.push(o2);
-      if (!this.properties) {
-        this.properties = {};
-      }
-      this.properties[name] = default_value;
-      return o2;
-    }
-    /**
-     * add a new output slot to use in this node
-     * @method addOutput
-     * @param {string} name
-     * @param {string} type string defining the output type ("vec3","number",...)
-     * @param {Object} extra_info this can be used to have special properties of an output (label, special color, position, etc)
-     */
-    addOutput(name, type, extra_info) {
-      const output = {
-        name,
-        type,
-        links: null
-      };
-      if (extra_info) {
-        for (const i2 in extra_info) {
-          output[i2] = extra_info[i2];
-        }
-      }
-      if (!this.outputs) {
-        this.outputs = [];
-      }
-      this.outputs.push(output);
-      if (this.onOutputAdded) {
-        this.onOutputAdded(output);
-      }
-      const host = resolvePortsWidgetsHost(this);
-      if (host.auto_load_slot_types) {
-        host.registerNodeAndSlotType(this, type, true);
-      }
-      this.setSize(this.computeSize());
-      this.setDirtyCanvas(true, true);
-      return output;
-    }
-    /**
-     * add a new output slot to use in this node
-     * @method addOutputs
-     * @param {Array} array of triplets like [[name,type,extra_info],[...]]
-     */
-    addOutputs(array) {
-      const host = resolvePortsWidgetsHost(this);
-      for (let i2 = 0; i2 < array.length; ++i2) {
-        const info = array[i2];
-        const o2 = {
-          name: info[0],
-          type: info[1],
-          link: null
-        };
-        if (array[2]) {
-          for (const j2 in info[2]) {
-            o2[j2] = info[2][j2];
-          }
-        }
-        if (!this.outputs) {
-          this.outputs = [];
-        }
-        this.outputs.push(o2);
-        if (this.onOutputAdded) {
-          this.onOutputAdded(o2);
-        }
-        if (host.auto_load_slot_types) {
-          host.registerNodeAndSlotType(this, info[1], true);
-        }
-      }
-      this.setSize(this.computeSize());
-      this.setDirtyCanvas(true, true);
-    }
-    /**
-     * remove an existing output slot
-     * @method removeOutput
-     * @param {number} slot
-     */
-    removeOutput(slot) {
-      this.disconnectOutput(
-        slot
-      );
-      this.outputs.splice(slot, 1);
-      for (let i2 = slot; i2 < this.outputs.length; ++i2) {
-        if (!this.outputs[i2] || !this.outputs[i2].links) {
-          continue;
-        }
-        const links = this.outputs[i2].links;
-        for (let j2 = 0; j2 < links.length; ++j2) {
-          const link = this.getGraphLinksMap()[String(links[j2])];
-          if (!link) {
-            continue;
-          }
-          link.origin_slot = link.origin_slot - 1;
-        }
-      }
-      this.setSize(this.computeSize());
-      if (this.onOutputRemoved) {
-        this.onOutputRemoved(slot);
-      }
-      this.setDirtyCanvas(true, true);
-    }
-    /**
-     * add a new input slot to use in this node
-     * @method addInput
-     * @param {string} name
-     * @param {string} type string defining the input type ("vec3","number",...), it its a generic one use 0
-     * @param {Object} extra_info this can be used to have special properties of an input (label, color, position, etc)
-     */
-    addInput(name, type, extra_info) {
-      const normalizedType = type || 0;
-      const input = {
-        name,
-        type: normalizedType,
-        link: null
-      };
-      if (extra_info) {
-        for (const i2 in extra_info) {
-          input[i2] = extra_info[i2];
-        }
-      }
-      if (!this.inputs) {
-        this.inputs = [];
-      }
-      this.inputs.push(input);
-      this.setSize(this.computeSize());
-      if (this.onInputAdded) {
-        this.onInputAdded(input);
-      }
-      const host = resolvePortsWidgetsHost(this);
-      host.registerNodeAndSlotType(this, normalizedType);
-      this.setDirtyCanvas(true, true);
-      return input;
-    }
-    /**
-     * add several new input slots in this node
-     * @method addInputs
-     * @param {Array} array of triplets like [[name,type,extra_info],[...]]
-     */
-    addInputs(array) {
-      const host = resolvePortsWidgetsHost(this);
-      for (let i2 = 0; i2 < array.length; ++i2) {
-        const info = array[i2];
-        const o2 = { name: info[0], type: info[1], link: null };
-        if (array[2]) {
-          for (const j2 in info[2]) {
-            o2[j2] = info[2][j2];
-          }
-        }
-        if (!this.inputs) {
-          this.inputs = [];
-        }
-        this.inputs.push(o2);
-        if (this.onInputAdded) {
-          this.onInputAdded(o2);
-        }
-        host.registerNodeAndSlotType(this, info[1]);
-      }
-      this.setSize(this.computeSize());
-      this.setDirtyCanvas(true, true);
-    }
-    /**
-     * remove an existing input slot
-     * @method removeInput
-     * @param {number} slot
-     */
-    removeInput(slot) {
-      this.disconnectInput(
-        slot
-      );
-      const slot_info = this.inputs.splice(slot, 1);
-      for (let i2 = slot; i2 < this.inputs.length; ++i2) {
-        if (!this.inputs[i2]) {
-          continue;
-        }
-        const link = this.getGraphLinksMap()[String(this.inputs[i2].link)];
-        if (!link) {
-          continue;
-        }
-        link.target_slot = link.target_slot - 1;
-      }
-      this.setSize(this.computeSize());
-      if (this.onInputRemoved) {
-        this.onInputRemoved(slot, slot_info[0]);
-      }
-      this.setDirtyCanvas(true, true);
-    }
-    /**
-     * add an special connection to this node (used for special kinds of graphs)
-     * @method addConnection
-     * @param {string} name
-     * @param {string} type string defining the input type ("vec3","number",...)
-     * @param {[x,y]} pos position of the connection inside the node
-     * @param {string} direction if is input or output
-     */
-    addConnection(name, type, pos2, direction) {
-      const o2 = {
-        name,
-        type,
-        pos: pos2,
-        direction,
-        links: null
-      };
-      this.connections.push(o2);
-      return o2;
-    }
-    /**
-     * computes the minimum size of a node according to its inputs and output slots
-     * @method computeSize
-     * @param {vec2} minHeight
-     * @return {vec2} the total size
-     */
-    computeSize(out) {
-      const classMeta = this.getPortsWidgetsClassMeta();
-      const host = resolvePortsWidgetsHost(this);
-      if (classMeta.size) {
-        return classMeta.size.concat();
-      }
-      let rows = Math.max(
-        this.inputs ? this.inputs.length : 1,
-        this.outputs ? this.outputs.length : 1
-      );
-      const size = out || new Float32Array([0, 0]);
-      rows = Math.max(rows, 1);
-      const font_size = host.NODE_TEXT_SIZE;
-      const compute_text_size = (text) => {
-        if (!text) {
-          return 0;
-        }
-        return font_size * text.length * 0.6;
-      };
-      const title_width = compute_text_size(this.title);
-      let input_width = 0;
-      let output_width = 0;
-      if (this.inputs) {
-        for (let i2 = 0, l2 = this.inputs.length; i2 < l2; ++i2) {
-          const input = this.inputs[i2];
-          const text = input.label || input.name || "";
-          const text_width = compute_text_size(text);
-          if (input_width < text_width) {
-            input_width = text_width;
-          }
-        }
-      }
-      if (this.outputs) {
-        for (let i2 = 0, l2 = this.outputs.length; i2 < l2; ++i2) {
-          const output = this.outputs[i2];
-          const text = output.label || output.name || "";
-          const text_width = compute_text_size(text);
-          if (output_width < text_width) {
-            output_width = text_width;
-          }
-        }
-      }
-      size[0] = Math.max(input_width + output_width + 10, title_width);
-      size[0] = Math.max(size[0], host.NODE_WIDTH);
-      if (this.widgets && this.widgets.length) {
-        size[0] = Math.max(size[0], host.NODE_WIDTH * 1.5);
-      }
-      size[1] = (classMeta.slot_start_y || 0) + rows * host.NODE_SLOT_HEIGHT;
-      let widgets_height = 0;
-      if (this.widgets && this.widgets.length) {
-        for (let i2 = 0, l2 = this.widgets.length; i2 < l2; ++i2) {
-          const widget = this.widgets[i2];
-          if (!widget) {
-            continue;
-          }
-          if (widget.computeSize) {
-            widgets_height += widget.computeSize(size[0])[1] + 4;
-          } else {
-            widgets_height += host.NODE_WIDGET_HEIGHT + 4;
-          }
-        }
-        widgets_height += 8;
-      }
-      if (this.widgets_up) {
-        size[1] = Math.max(size[1], widgets_height);
-      } else if (this.widgets_start_y != null) {
-        size[1] = Math.max(size[1], widgets_height + this.widgets_start_y);
-      } else {
-        size[1] += widgets_height;
-      }
-      if (classMeta.min_height && size[1] < classMeta.min_height) {
-        size[1] = classMeta.min_height;
-      }
-      size[1] += 6;
-      return size;
-    }
-    /**
-     * returns all the info available about a property of this node.
-     *
-     * @method getPropertyInfo
-     * @param {String} property name of the property
-     * @return {Object} the object with all the available info
-    */
-    getPropertyInfo(property) {
-      let info = null;
-      if (this.properties_info) {
-        for (let i2 = 0; i2 < this.properties_info.length; ++i2) {
-          const item = this.properties_info[i2];
-          if (item && item.name == property) {
-            info = item;
-            break;
-          }
-        }
-      }
-      const classMeta = this.getPortsWidgetsClassMeta();
-      if (classMeta["@" + property]) {
-        info = classMeta["@" + property];
-      }
-      if (classMeta.widgets_info && classMeta.widgets_info[property]) {
-        info = classMeta.widgets_info[property];
-      }
-      if (!info && this.onGetPropertyInfo) {
-        info = this.onGetPropertyInfo(property);
-      }
-      if (!info) {
-        info = {};
-      }
-      if (!info.type) {
-        info.type = typeof this.properties[property];
-      }
-      if (info.widget == "combo") {
-        info.type = "enum";
-      }
-      return info;
-    }
-    /**
-     * Defines a widget inside the node, it will be rendered on top of the node, you can control lots of properties
-     *
-     * @method addWidget
-     * @param {String} type the widget type (could be "number","string","combo"
-     * @param {String} name the text to show on the widget
-     * @param {String} value the default value
-     * @param {Function|String} callback function to call when it changes (optionally, it can be the name of the property to modify)
-     * @param {Object} options the object that contains special properties of this widget
-     * @return {Object} the created widget object
-     */
-    addWidget(type, name, value, callback, options) {
-      if (!this.widgets) {
-        this.widgets = [];
-      }
-      let widgetCallback = callback;
-      let widgetOptions = options;
-      if (!widgetOptions && widgetCallback && widgetCallback.constructor === Object) {
-        widgetOptions = widgetCallback;
-        widgetCallback = null;
-      }
-      if (widgetOptions && widgetOptions.constructor === String) {
-        widgetOptions = {
-          property: widgetOptions
-        };
-      }
-      if (widgetCallback && widgetCallback.constructor === String) {
-        if (!widgetOptions) {
-          widgetOptions = {};
-        }
-        widgetOptions.property = widgetCallback;
-        widgetCallback = null;
-      }
-      if (widgetCallback && widgetCallback.constructor !== Function) {
-        console.warn("addWidget: callback must be a function");
-        widgetCallback = null;
-      }
-      const w2 = {
-        type: type.toLowerCase(),
-        name,
-        value,
-        callback: widgetCallback,
-        options: widgetOptions || {}
-      };
-      if (w2.options.y !== void 0) {
-        w2.y = w2.options.y;
-      }
-      if (!widgetCallback && !w2.options.callback && !w2.options.property) {
-        console.warn(
-          "LiteGraph addWidget(...) without a callback or property assigned"
-        );
-      }
-      if (type == "combo" && !w2.options.values) {
-        throw "LiteGraph addWidget('combo',...) requires to pass values in options: { values:['red','blue'] }";
-      }
-      this.widgets.push(w2);
-      this.setSize(this.computeSize());
-      return w2;
-    }
-    addCustomWidget(custom_widget) {
-      if (!this.widgets) {
-        this.widgets = [];
-      }
-      this.widgets.push(custom_widget);
-      return custom_widget;
-    }
-    // placeholder to keep this module self-contained during incremental migration.
-    setDirtyCanvas(_fg, _bg) {
-    }
-  }
-  function isInsideRectangle(x2, y2, left, top, width2, height) {
-    return left < x2 && left + width2 > x2 && top < y2 && top + height > y2;
-  }
-  const hostDefaults = {
-    NODE_TITLE_HEIGHT: 30,
-    NODE_COLLAPSED_WIDTH: 80,
-    NODE_SLOT_HEIGHT: 20,
-    INPUT: 1,
-    OUTPUT: 2,
-    EVENT: -1,
-    ACTION: -1,
-    ALWAYS: 0,
-    ON_EVENT: 1,
-    NEVER: 2,
-    ON_TRIGGER: 3,
-    do_add_triggers_slots: false,
-    allow_multi_output_for_events: true,
-    use_uuids: false,
-    uuidv4: () => "",
-    debug: false,
-    isValidConnection: () => true,
-    getTime: () => Date.now()
-  };
-  const resolveConnectGeometryHost = createClassHostResolver(hostDefaults, {
-    cacheKey: "LGraphNode.connect-geometry",
-    fallbackOwners: [() => LGraphNodeConnectGeometry]
-  });
-  class LGraphNodeConnectGeometry extends LGraphNodePortsWidgets {
-    constructor() {
-      super(...arguments);
-      this.onAfterExecuteNode = (param, options) => {
-        const triggerSlot = this.findOutputSlot("onExecuted");
-        if (triggerSlot !== -1) {
-          this.triggerSlot(triggerSlot, param, null, options);
-        }
-      };
-    }
-    graphRef() {
-      return this.graph || null;
-    }
-    toNode(node2) {
-      var _a3;
-      if (node2 == null || node2 === false) {
-        return null;
-      }
-      return typeof node2 === "number" ? ((_a3 = this.graphRef()) == null ? void 0 : _a3.getNodeById(node2)) || null : node2;
-    }
-    markSlotOptional(extra) {
-      extra.optional = true;
-      return extra;
-    }
-    /** returns the bounding of the object, used for rendering purposes */
-    getBounding(out, compute_outer) {
-      var _a3;
-      const h2 = resolveConnectGeometryHost(this);
-      const o2 = out || new Float32Array(4);
-      const isCollapsed = !!this.flags.collapsed;
-      const p2 = this.pos;
-      const s2 = this.size;
-      let left = 0;
-      let right = 1;
-      let top = 0;
-      let bottom = 0;
-      if (compute_outer) {
-        left = 4;
-        right = 6 + left;
-        top = 4;
-        bottom = 5 + top;
-      }
-      o2[0] = p2[0] - left;
-      o2[1] = p2[1] - h2.NODE_TITLE_HEIGHT - top;
-      o2[2] = isCollapsed ? (this._collapsed_width || h2.NODE_COLLAPSED_WIDTH) + right : s2[0] + right;
-      o2[3] = isCollapsed ? h2.NODE_TITLE_HEIGHT + bottom : s2[1] + h2.NODE_TITLE_HEIGHT + bottom;
-      (_a3 = this.onBounding) == null ? void 0 : _a3.call(this, o2);
-      return o2;
-    }
-    /** checks if a point is inside the shape of a node */
-    isPointInside(x2, y2, margin, skip_title) {
-      var _a3, _b2, _c2;
-      const h2 = resolveConnectGeometryHost(this);
-      const m2 = margin || 0;
-      let margin_top = ((_b2 = (_a3 = this.graphRef()) == null ? void 0 : _a3.isLive) == null ? void 0 : _b2.call(_a3)) ? 0 : h2.NODE_TITLE_HEIGHT;
-      if (skip_title) {
-        margin_top = 0;
-      }
-      if ((_c2 = this.flags) == null ? void 0 : _c2.collapsed) {
-        return isInsideRectangle(
-          x2,
-          y2,
-          this.pos[0] - m2,
-          this.pos[1] - h2.NODE_TITLE_HEIGHT - m2,
-          (this._collapsed_width || h2.NODE_COLLAPSED_WIDTH) + 2 * m2,
-          h2.NODE_TITLE_HEIGHT + 2 * m2
-        );
-      }
-      return this.pos[0] - 4 - m2 < x2 && this.pos[0] + this.size[0] + 4 + m2 > x2 && this.pos[1] - margin_top - m2 < y2 && this.pos[1] + this.size[1] + m2 > y2;
-    }
-    /** checks if a point is inside a node slot, and returns info about which slot */
-    getSlotInPosition(x2, y2) {
-      const link_pos = new Float32Array(2);
-      if (this.inputs) {
-        for (let i2 = 0; i2 < this.inputs.length; ++i2) {
-          const input = this.inputs[i2];
-          this.getConnectionPos(true, i2, link_pos);
-          if (isInsideRectangle(x2, y2, link_pos[0] - 10, link_pos[1] - 5, 20, 10)) {
-            return { input, slot: i2, link_pos };
-          }
-        }
-      }
-      if (this.outputs) {
-        for (let i2 = 0; i2 < this.outputs.length; ++i2) {
-          const output = this.outputs[i2];
-          this.getConnectionPos(false, i2, link_pos);
-          if (isInsideRectangle(x2, y2, link_pos[0] - 10, link_pos[1] - 5, 20, 10)) {
-            return { output, slot: i2, link_pos };
-          }
-        }
-      }
-      return null;
-    }
-    /** returns the input slot with a given name (used for dynamic slots), -1 if not found */
-    findInputSlot(name, returnObj) {
-      if (!this.inputs) {
-        return -1;
-      }
-      for (let i2 = 0; i2 < this.inputs.length; ++i2) {
-        if (name == this.inputs[i2].name) {
-          return !returnObj ? i2 : this.inputs[i2];
-        }
-      }
-      return -1;
-    }
-    /** returns the output slot with a given name (used for dynamic slots), -1 if not found */
-    findOutputSlot(name, returnObj) {
-      if (!this.outputs) {
-        return -1;
-      }
-      for (let i2 = 0; i2 < this.outputs.length; ++i2) {
-        if (name == this.outputs[i2].name) {
-          return !returnObj ? i2 : this.outputs[i2];
-        }
-      }
-      return -1;
-    }
-    findInputSlotFree(optsIn) {
-      const opts = Object.assign({ returnObj: false, typesNotAccepted: [] }, optsIn || {});
-      if (!this.inputs) {
-        return -1;
-      }
-      for (let i2 = 0; i2 < this.inputs.length; ++i2) {
-        const it2 = this.inputs[i2];
-        if (it2.link && it2.link != null) {
-          continue;
-        }
-        if (opts.typesNotAccepted.includes(it2.type)) {
-          continue;
-        }
-        return !opts.returnObj ? i2 : it2;
-      }
-      return -1;
-    }
-    findOutputSlotFree(optsIn) {
-      const opts = Object.assign({ returnObj: false, typesNotAccepted: [] }, optsIn || {});
-      if (!this.outputs) {
-        return -1;
-      }
-      for (let i2 = 0; i2 < this.outputs.length; ++i2) {
-        const it2 = this.outputs[i2];
-        if (it2.links && it2.links != null) {
-          continue;
-        }
-        if (opts.typesNotAccepted.includes(it2.type)) {
-          continue;
-        }
-        return !opts.returnObj ? i2 : it2;
-      }
-      return -1;
-    }
-    findInputSlotByType(type, returnObj, preferFreeSlot, doNotUseOccupied) {
-      return this.findSlotByType(true, type, returnObj, preferFreeSlot, doNotUseOccupied);
-    }
-    findOutputSlotByType(type, returnObj, preferFreeSlot, doNotUseOccupied) {
-      return this.findSlotByType(false, type, returnObj, preferFreeSlot, doNotUseOccupied);
-    }
-    /** returns the output (or input) slot with a given type, -1 if not found */
-    findSlotByType(input, type, returnObj, preferFreeSlot, doNotUseOccupied) {
-      const h2 = resolveConnectGeometryHost(this);
-      const slots = input ? this.inputs : this.outputs;
-      if (!slots) {
-        return -1;
-      }
-      let src = type;
-      if (src == "" || src == "*") {
-        src = 0;
-      }
-      for (let i2 = 0; i2 < slots.length; ++i2) {
-        const aSource = (src + "").toLowerCase().split(",");
-        let aDest = slots[i2].type || 0;
-        aDest = aDest == "0" || aDest == "*" ? "0" : aDest;
-        const aDestArr = (aDest + "").toLowerCase().split(",");
-        for (let sI = 0; sI < aSource.length; sI++) {
-          for (let dI = 0; dI < aDestArr.length; dI++) {
-            if (aSource[sI] == "_event_") {
-              aSource[sI] = String(h2.EVENT);
-            }
-            if (aDestArr[sI] == "_event_") {
-              aDestArr[sI] = String(h2.EVENT);
-            }
-            if (aSource[sI] == "*") {
-              aSource[sI] = "0";
-            }
-            if (aDestArr[sI] == "*") {
-              aDestArr[sI] = "0";
-            }
-            if (aSource[sI] == aDestArr[dI]) {
-              if (preferFreeSlot && slots[i2].links && slots[i2].links !== null) {
-                continue;
-              }
-              return !returnObj ? i2 : slots[i2];
-            }
-          }
-        }
-      }
-      if (preferFreeSlot && !doNotUseOccupied) {
-        for (let i2 = 0; i2 < slots.length; ++i2) {
-          const aSource = (src + "").toLowerCase().split(",");
-          let aDest = slots[i2].type || 0;
-          aDest = aDest == "0" || aDest == "*" ? "0" : aDest;
-          const aDestArr = (aDest + "").toLowerCase().split(",");
-          for (let sI = 0; sI < aSource.length; sI++) {
-            for (let dI = 0; dI < aDestArr.length; dI++) {
-              if (aSource[sI] == "*") {
-                aSource[sI] = "0";
-              }
-              if (aDestArr[sI] == "*") {
-                aDestArr[sI] = "0";
-              }
-              if (aSource[sI] == aDestArr[dI]) {
-                return !returnObj ? i2 : slots[i2];
-              }
-            }
-          }
-        }
-      }
-      return -1;
-    }
-    addOnTriggerInput() {
-      const h2 = resolveConnectGeometryHost(this);
-      const triggerSlot = this.findInputSlot("onTrigger");
-      if (triggerSlot === -1) {
-        const extra = this.markSlotOptional({
-          nameLocked: true
-        });
-        this.addInput("onTrigger", h2.EVENT, extra);
-        return this.findInputSlot("onTrigger");
-      }
-      return triggerSlot;
-    }
-    addOnExecutedOutput() {
-      const h2 = resolveConnectGeometryHost(this);
-      const triggerSlot = this.findOutputSlot("onExecuted");
-      if (triggerSlot === -1) {
-        const extra = this.markSlotOptional({
-          nameLocked: true
-        });
-        this.addOutput("onExecuted", h2.ACTION, extra);
-        return this.findOutputSlot("onExecuted");
-      }
-      return triggerSlot;
-    }
-    changeMode(modeTo) {
-      const h2 = resolveConnectGeometryHost(this);
-      switch (modeTo) {
-        case h2.ON_EVENT:
-          break;
-        case h2.ON_TRIGGER:
-          this.addOnTriggerInput();
-          this.addOnExecutedOutput();
-          break;
-        case h2.NEVER:
-          break;
-        case h2.ALWAYS:
-          break;
-        default:
-          if (h2.ON_REQUEST == null || modeTo !== h2.ON_REQUEST) {
-            return false;
-          }
-          break;
-      }
-      this.mode = modeTo;
-      return true;
-    }
-    connectByType(slot, target_node, target_slotType, optsIn) {
-      const h2 = resolveConnectGeometryHost(this);
-      const opts = Object.assign(
-        { createEventInCase: true, firstFreeIfOutputGeneralInCase: true, generalTypeInCase: true },
-        optsIn || {}
-      );
-      const target = this.toNode(target_node);
-      if (!target) {
-        return null;
-      }
-      if (typeof target.findInputSlotByType !== "function") {
-        return null;
-      }
-      const typed = target.findInputSlotByType(target_slotType, false, true);
-      if (typeof typed === "number" && typed >= 0) {
-        return this.connect(slot, target, typed);
-      }
-      if (opts.createEventInCase && target_slotType == h2.EVENT) {
-        return this.connect(slot, target, -1);
-      }
-      if (opts.generalTypeInCase) {
-        const generic = target.findInputSlotByType(0, false, true, true);
-        if (typeof generic === "number" && generic >= 0) {
-          return this.connect(slot, target, generic);
-        }
-      }
-      if (opts.firstFreeIfOutputGeneralInCase && (target_slotType == 0 || target_slotType == "*" || target_slotType == "") && typeof target.findInputSlotFree === "function") {
-        const free = target.findInputSlotFree({ typesNotAccepted: [h2.EVENT] });
-        if (typeof free === "number" && free >= 0) {
-          return this.connect(slot, target, free);
-        }
-      }
-      console.debug("no way to connect type: ", target_slotType, " to targetNODE ", target);
-      return null;
-    }
-    connectByTypeOutput(slot, source_node, source_slotType, optsIn) {
-      const h2 = resolveConnectGeometryHost(this);
-      const opts = Object.assign(
-        { createEventInCase: true, firstFreeIfInputGeneralInCase: true, generalTypeInCase: true },
-        optsIn || {}
-      );
-      const source = this.toNode(source_node);
-      if (!source) {
-        return null;
-      }
-      if (typeof source.findOutputSlotByType !== "function" || typeof source.connect !== "function") {
-        return null;
-      }
-      const typed = source.findOutputSlotByType(source_slotType, false, true);
-      if (typeof typed === "number" && typed >= 0) {
-        return source.connect(typed, this, slot);
-      }
-      if (opts.generalTypeInCase) {
-        const generic = source.findOutputSlotByType(0, false, true, true);
-        if (typeof generic === "number" && generic >= 0) {
-          return source.connect(generic, this, slot);
-        }
-      }
-      if (opts.createEventInCase && source_slotType == h2.EVENT && h2.do_add_triggers_slots && source.addOnExecutedOutput) {
-        return source.connect(source.addOnExecutedOutput(), this, slot);
-      }
-      if (opts.firstFreeIfInputGeneralInCase && (source_slotType == 0 || source_slotType == "*" || source_slotType == "") && typeof source.findOutputSlotFree === "function") {
-        const free = source.findOutputSlotFree({ typesNotAccepted: [h2.EVENT] });
-        if (typeof free === "number" && free >= 0) {
-          return source.connect(free, this, slot);
-        }
-      }
-      console.debug("no way to connect byOUT type: ", source_slotType, " to sourceNODE ", source);
-      return null;
-    }
-    /** connect this node output to the input of another node */
-    connect(slot, target_node, target_slot) {
-      var _a3, _b2, _c2, _d2, _e2, _f, _g, _h2, _i2;
-      const h2 = resolveConnectGeometryHost(this);
-      const graph = this.graphRef();
-      if (!graph) {
-        console.log("Connect: Error, node doesn't belong to any graph. Nodes must be added first to a graph before connecting them.");
-        return null;
-      }
-      let outSlot = typeof slot === "string" ? this.findOutputSlot(slot) : slot;
-      if (outSlot === -1 || !this.outputs || outSlot >= this.outputs.length) {
-        if (h2.debug) {
-          console.log(typeof slot === "string" ? "Connect: Error, no slot of name " + slot : "Connect: Error, slot number not found");
-        }
-        return null;
-      }
-      const target = this.toNode(target_node);
-      if (!target) {
-        throw "target node is null";
-      }
-      if (target == this) {
-        return null;
-      }
-      let targetSlot = target_slot || 0;
-      if (typeof targetSlot === "string") {
-        if (typeof target.findInputSlot !== "function") {
-          return null;
-        }
-        targetSlot = target.findInputSlot(targetSlot);
-        if (targetSlot === -1) {
-          if (h2.debug) {
-            console.log("Connect: Error, no slot of name " + target_slot);
-          }
-          return null;
-        }
-      } else if (targetSlot === h2.EVENT) {
-        if (!h2.do_add_triggers_slots) {
-          return null;
-        }
-        if (typeof target.changeMode !== "function" || typeof target.findInputSlot !== "function") {
-          return null;
-        }
-        target.changeMode(h2.ON_TRIGGER);
-        targetSlot = target.findInputSlot("onTrigger");
-      } else if (!target.inputs || targetSlot >= target.inputs.length) {
-        if (h2.debug) {
-          console.log("Connect: Error, slot number not found");
-        }
-        return null;
-      }
-      let changed = false;
-      const output = this.outputs[outSlot];
-      if (!this.outputs[outSlot]) {
-        return null;
-      }
-      const input = target.inputs[targetSlot];
-      let link_info = null;
-      if (target.onBeforeConnectInput) {
-        targetSlot = target.onBeforeConnectInput(targetSlot);
-      }
-      if (targetSlot === false || targetSlot === null || !h2.isValidConnection(output.type, input.type)) {
-        this.setDirtyCanvas(false, true);
-        if (changed) {
-          (_a3 = graph.connectionChange) == null ? void 0 : _a3.call(graph, this, link_info || void 0);
-        }
-        return null;
-      }
-      if (target.onConnectInput && target.onConnectInput(targetSlot, output.type, output, this, outSlot) === false) {
-        return null;
-      }
-      if (this.onConnectOutput && this.onConnectOutput(outSlot, input.type, input, target, targetSlot) === false) {
-        return null;
-      }
-      if (target.inputs && target.inputs[targetSlot] && target.inputs[targetSlot].link != null) {
-        (_b2 = graph.beforeChange) == null ? void 0 : _b2.call(graph);
-        if (typeof target.disconnectInput === "function") {
-          target.disconnectInput(targetSlot, { doProcessChange: false });
-        }
-        changed = true;
-      }
-      if (output.links && output.links.length && output.type === h2.EVENT && !h2.allow_multi_output_for_events) {
-        (_c2 = graph.beforeChange) == null ? void 0 : _c2.call(graph);
-        this.disconnectOutput(outSlot, false, { doProcessChange: false });
-        changed = true;
-      }
-      const nextId = h2.use_uuids ? h2.uuidv4() : ++graph.last_link_id;
-      link_info = new LLink(
-        nextId,
-        input.type || output.type,
-        this.id,
-        outSlot,
-        target.id,
-        targetSlot
-      );
-      graph.links[link_info.id] = link_info;
-      if (!output.links) {
-        output.links = [];
-      }
-      output.links.push(link_info.id);
-      if (target.inputs) {
-        target.inputs[targetSlot].link = link_info.id;
-      }
-      graph._version++;
-      (_d2 = this.onConnectionsChange) == null ? void 0 : _d2.call(this, h2.OUTPUT, outSlot, true, link_info, output);
-      (_e2 = target.onConnectionsChange) == null ? void 0 : _e2.call(target, h2.INPUT, targetSlot, true, link_info, input);
-      (_f = graph.onNodeConnectionChange) == null ? void 0 : _f.call(graph, h2.INPUT, target, targetSlot, this, outSlot);
-      (_g = graph.onNodeConnectionChange) == null ? void 0 : _g.call(graph, h2.OUTPUT, this, outSlot, target, targetSlot);
-      this.setDirtyCanvas(false, true);
-      (_h2 = graph.afterChange) == null ? void 0 : _h2.call(graph);
-      (_i2 = graph.connectionChange) == null ? void 0 : _i2.call(graph, this, link_info);
-      return link_info;
-    }
-    /** disconnect one output to an specific node */
-    disconnectOutput(slot, target_node, _opts) {
-      var _a3, _b2, _c2, _d2, _e2, _f, _g, _h2, _i2, _j, _k;
-      const h2 = resolveConnectGeometryHost(this);
-      const graph = this.graphRef();
-      if (!graph) {
-        return false;
-      }
-      const outSlot = typeof slot === "string" ? this.findOutputSlot(slot) : slot;
-      if (!this.outputs || outSlot === -1 || outSlot >= this.outputs.length) {
-        if (h2.debug) {
-          console.log(typeof slot === "string" ? "Connect: Error, no slot of name " + slot : "Connect: Error, slot number not found");
-        }
-        return false;
-      }
-      const output = this.outputs[outSlot];
-      if (!output || !output.links || output.links.length == 0) {
-        return false;
-      }
-      if (target_node) {
-        const target = this.toNode(target_node);
-        if (!target) {
-          throw "Target Node not found";
-        }
-        for (let i2 = 0; i2 < output.links.length; i2++) {
-          const link_id = output.links[i2];
-          const link = graph.links[link_id];
-          if (link.target_id == target.id) {
-            output.links.splice(i2, 1);
-            const input = target.inputs[link.target_slot];
-            input.link = null;
-            delete graph.links[link_id];
-            graph._version++;
-            (_a3 = target.onConnectionsChange) == null ? void 0 : _a3.call(target, h2.INPUT, link.target_slot, false, link, input);
-            (_b2 = this.onConnectionsChange) == null ? void 0 : _b2.call(this, h2.OUTPUT, outSlot, false, link, output);
-            (_c2 = graph.onNodeConnectionChange) == null ? void 0 : _c2.call(graph, h2.OUTPUT, this, outSlot);
-            (_d2 = graph.onNodeConnectionChange) == null ? void 0 : _d2.call(graph, h2.OUTPUT, this, outSlot);
-            (_e2 = graph.onNodeConnectionChange) == null ? void 0 : _e2.call(graph, h2.INPUT, target, link.target_slot);
-            break;
-          }
-        }
-      } else {
-        for (let i2 = 0; i2 < output.links.length; i2++) {
-          const link_id = output.links[i2];
-          const link = graph.links[link_id];
-          if (!link) {
-            continue;
-          }
-          const target = graph.getNodeById(link.target_id);
-          let input = null;
-          graph._version++;
-          if (target) {
-            input = target.inputs[link.target_slot];
-            input.link = null;
-            (_f = target.onConnectionsChange) == null ? void 0 : _f.call(target, h2.INPUT, link.target_slot, false, link, input);
-            (_g = graph.onNodeConnectionChange) == null ? void 0 : _g.call(graph, h2.INPUT, target, link.target_slot);
-          }
-          delete graph.links[link_id];
-          (_h2 = this.onConnectionsChange) == null ? void 0 : _h2.call(this, h2.OUTPUT, outSlot, false, link, output);
-          (_i2 = graph.onNodeConnectionChange) == null ? void 0 : _i2.call(graph, h2.OUTPUT, this, outSlot);
-          (_j = graph.onNodeConnectionChange) == null ? void 0 : _j.call(graph, h2.INPUT, target, link.target_slot);
-        }
-        output.links = null;
-      }
-      this.setDirtyCanvas(false, true);
-      (_k = graph.connectionChange) == null ? void 0 : _k.call(graph, this);
-      return true;
-    }
-    /** disconnect one input */
-    disconnectInput(slot, _opts) {
-      var _a3, _b2, _c2, _d2, _e2;
-      const h2 = resolveConnectGeometryHost(this);
-      const graph = this.graphRef();
-      if (!graph) {
-        return false;
-      }
-      const inSlot = typeof slot === "string" ? this.findInputSlot(slot) : slot;
-      if (!this.inputs || inSlot === -1 || inSlot >= this.inputs.length) {
-        if (h2.debug) {
-          console.log(typeof slot === "string" ? "Connect: Error, no slot of name " + slot : "Connect: Error, slot number not found");
-        }
-        return false;
-      }
-      const input = this.inputs[inSlot];
-      if (!input) {
-        return false;
-      }
-      const link_id = input.link;
-      if (link_id != null) {
-        input.link = null;
-        const link = graph.links[link_id];
-        if (link) {
-          const originNode = graph.getNodeById(link.origin_id);
-          if (!originNode) {
-            return false;
-          }
-          const output = originNode.outputs[link.origin_slot];
-          if (!output || !output.links || output.links.length === 0) {
-            return false;
-          }
-          let i2 = 0;
-          for (i2 = 0; i2 < output.links.length; i2++) {
-            if (output.links[i2] == link_id) {
-              output.links.splice(i2, 1);
-              break;
-            }
-          }
-          delete graph.links[link_id];
-          graph._version++;
-          (_a3 = this.onConnectionsChange) == null ? void 0 : _a3.call(this, h2.INPUT, inSlot, false, link, input);
-          (_b2 = originNode.onConnectionsChange) == null ? void 0 : _b2.call(originNode, h2.OUTPUT, i2, false, link, output);
-          (_c2 = graph.onNodeConnectionChange) == null ? void 0 : _c2.call(graph, h2.OUTPUT, originNode, i2);
-          (_d2 = graph.onNodeConnectionChange) == null ? void 0 : _d2.call(graph, h2.INPUT, this, inSlot);
-        }
-      }
-      this.setDirtyCanvas(false, true);
-      (_e2 = graph.connectionChange) == null ? void 0 : _e2.call(graph, this);
-      return true;
-    }
-    /** returns the center of a connection point in canvas coords */
-    getConnectionPos(is_input, slot_number, out) {
-      const h2 = resolveConnectGeometryHost(this);
-      const o2 = out || new Float32Array(2);
-      let num_slots = 0;
-      if (is_input && this.inputs) {
-        num_slots = this.inputs.length;
-      }
-      if (!is_input && this.outputs) {
-        num_slots = this.outputs.length;
-      }
-      const offset = h2.NODE_SLOT_HEIGHT * 0.5;
-      if (this.flags.collapsed) {
-        const w2 = this._collapsed_width || h2.NODE_COLLAPSED_WIDTH;
-        if (this.horizontal) {
-          o2[0] = this.pos[0] + w2 * 0.5;
-          o2[1] = is_input ? this.pos[1] - h2.NODE_TITLE_HEIGHT : this.pos[1];
-        } else {
-          o2[0] = is_input ? this.pos[0] : this.pos[0] + w2;
-          o2[1] = this.pos[1] - h2.NODE_TITLE_HEIGHT * 0.5;
-        }
-        return o2;
-      }
-      if (is_input && slot_number == -1) {
-        o2[0] = this.pos[0] + h2.NODE_TITLE_HEIGHT * 0.5;
-        o2[1] = this.pos[1] + h2.NODE_TITLE_HEIGHT * 0.5;
-        return o2;
-      }
-      if (is_input && this.inputs && num_slots > slot_number && this.inputs[slot_number].pos) {
-        const p2 = this.inputs[slot_number].pos;
-        o2[0] = this.pos[0] + p2[0];
-        o2[1] = this.pos[1] + p2[1];
-        return o2;
-      } else if (!is_input && this.outputs && num_slots > slot_number && this.outputs[slot_number].pos) {
-        const p2 = this.outputs[slot_number].pos;
-        o2[0] = this.pos[0] + p2[0];
-        o2[1] = this.pos[1] + p2[1];
-        return o2;
-      }
-      if (this.horizontal) {
-        o2[0] = this.pos[0] + (slot_number + 0.5) * (this.size[0] / num_slots);
-        o2[1] = is_input ? this.pos[1] - h2.NODE_TITLE_HEIGHT : this.pos[1] + this.size[1];
-        return o2;
-      }
-      o2[0] = is_input ? this.pos[0] + offset : this.pos[0] + this.size[0] + 1 - offset;
-      const cls = this.constructor;
-      o2[1] = this.pos[1] + (slot_number + 0.7) * h2.NODE_SLOT_HEIGHT + (cls.slot_start_y || 0);
-      return o2;
-    }
-    // placeholder to keep this module self-contained during incremental migration.
-    setDirtyCanvas(_fg, _bg) {
-    }
-  }
-  const defaultCanvasCollabHost = {
-    CANVAS_GRID_SIZE: 10,
-    node_images_path: ""
-  };
-  const resolveCanvasCollabHost = createClassHostResolver(defaultCanvasCollabHost, {
-    cacheKey: "LGraphNode.canvas-collab",
-    fallbackOwners: [() => LGraphNodeCanvasCollab]
-  });
-  class LGraphNodeCanvasCollab extends LGraphNodeConnectGeometry {
-    canvasGraphRef() {
-      return this.graph || null;
-    }
-    routeDirtySignalToLeaferRuntime(dirty_foreground, dirty_background) {
-      var _a3, _b2;
-      const graph = this.canvasGraphRef();
-      const canvasList = graph == null ? void 0 : graph.list_of_graphcanvas;
-      if (!canvasList || !canvasList.length) {
-        return false;
-      }
-      for (let i2 = 0; i2 < canvasList.length; ++i2) {
-        if (((_a3 = canvasList[i2]) == null ? void 0 : _a3.renderRuntime) !== "leafer") {
-          return false;
-        }
-      }
-      for (let i2 = 0; i2 < canvasList.length; ++i2) {
-        const canvas = canvasList[i2];
-        if (!canvas) {
-          continue;
-        }
-        if (canvas.notifyDirtySignal) {
-          canvas.notifyDirtySignal(dirty_foreground, dirty_background);
-          continue;
-        }
-        (_b2 = canvas.setDirty) == null ? void 0 : _b2.call(canvas, dirty_foreground, dirty_background);
-      }
-      return true;
-    }
-    /* Force align to grid */
-    alignToGrid() {
-      const host = resolveCanvasCollabHost(this);
-      this.pos[0] = host.CANVAS_GRID_SIZE * Math.round(this.pos[0] / host.CANVAS_GRID_SIZE);
-      this.pos[1] = host.CANVAS_GRID_SIZE * Math.round(this.pos[1] / host.CANVAS_GRID_SIZE);
-    }
-    /* Console output */
-    trace(msg) {
-      var _a3;
-      const consoleLines = this.console || (this.console = []);
-      const maxConsoleLines = (_a3 = this.constructor.MAX_CONSOLE) != null ? _a3 : 100;
-      consoleLines.push(msg);
-      if (consoleLines.length > maxConsoleLines) {
-        consoleLines.shift();
-      }
-      const graph = this.graph;
-      if (graph.onNodeTrace) {
-        graph.onNodeTrace(this, msg);
-      }
-    }
-    /* Forces to redraw or the main canvas (LGraphNode) or the bg canvas (links) */
-    setDirtyCanvas(dirty_foreground, dirty_background) {
-      const anyThis = this;
-      const graph = typeof anyThis.canvasGraphRef === "function" && anyThis.canvasGraphRef() || typeof anyThis.graphRef === "function" && anyThis.graphRef() || anyThis.graph || null;
-      if (!graph) {
-        return;
-      }
-      if (this.routeDirtySignalToLeaferRuntime(
-        dirty_foreground,
-        dirty_background
-      )) {
-        return;
-      }
-      graph.sendActionToCanvas("setDirty", [
-        dirty_foreground,
-        dirty_background
-      ]);
-    }
-    loadImage(url) {
-      const host = resolveCanvasCollabHost(this);
-      const img = new Image();
-      img.src = host.node_images_path + url;
-      img.ready = false;
-      img.onload = () => {
-        img.ready = true;
-        this.setDirtyCanvas(true);
-      };
-      return img;
-    }
-    // safe LGraphNode action execution (not sure if safe)
-    // Intentionally kept disabled to mirror source behavior, where this block is commented out.
-    /*
-    executeAction(action: string): boolean {
-        return false;
-    }
-    */
-    /* Allows to get onMouseMove and onMouseUp events even if the mouse is out of focus */
-    captureInput(v2) {
-      const graph = this.canvasGraphRef();
-      if (!graph || !graph.list_of_graphcanvas) {
-        return;
-      }
-      const list = graph.list_of_graphcanvas;
-      for (let i2 = 0; i2 < list.length; ++i2) {
-        const c2 = list[i2];
-        if (!v2 && c2.node_capturing_input != this) {
-          continue;
-        }
-        c2.node_capturing_input = v2 ? this : null;
-      }
-    }
-    /**
-     * Collapse the node to make it smaller on the canvas
-     * @method collapse
-     **/
-    collapse(force) {
-      const graph = this.graph;
-      graph._version++;
-      if (this.constructor.collapsable === false && !force) {
-        return;
-      }
-      this.flags.collapsed = !this.flags.collapsed;
-      this.setDirtyCanvas(true, true);
-    }
-    /**
-     * Forces the node to do not move or realign on Z
-     * @method pin
-     **/
-    pin(v2) {
-      const graph = this.graph;
-      graph._version++;
-      if (v2 === void 0) {
-        this.flags.pinned = !this.flags.pinned;
-      } else {
-        this.flags.pinned = v2;
-      }
-    }
-    localToScreen(x2, y2, graphCanvas) {
-      return [
-        (x2 + this.pos[0]) * graphCanvas.ds.scale + graphCanvas.ds.offset[0],
-        (y2 + this.pos[1]) * graphCanvas.ds.scale + graphCanvas.ds.offset[1]
-      ];
-    }
-  }
   const defaultCanvasColors = {
     node_colors: {
       pale_blue: {
@@ -25567,11 +26456,11 @@ var LiteGraphTSMigration = (function(exports) {
       this._ctor(title);
     }
     _ctor(title) {
-      var _a3, _b2;
+      var _a3, _b3;
       this.title = title || "Group";
       this.font_size = 24;
       const colors = this.constructor.liteGraphCanvas || defaultCanvasColors;
-      this.color = ((_b2 = (_a3 = colors.node_colors) == null ? void 0 : _a3.pale_blue) == null ? void 0 : _b2.groupcolor) || "#AAA";
+      this.color = ((_b3 = (_a3 = colors.node_colors) == null ? void 0 : _a3.pale_blue) == null ? void 0 : _b3.groupcolor) || "#AAA";
       this._bounding = new Float32Array([10, 10, 140, 80]);
       this._pos = this._bounding.subarray(0, 2);
       this._size = this._bounding.subarray(2, 4);
@@ -25682,12 +26571,12 @@ var LiteGraphTSMigration = (function(exports) {
      * @param options some options: `title/callback/ignore_item_callbacks/event`
      */
     constructor(values, options, ref_window2) {
-      var _a3, _b2, _c2;
+      var _a3, _b3, _c2;
       this.lock = false;
       this.options = options || {};
       const host = ContextMenu2.host();
       const floating = createFloatingUiService({
-        ownerDocument: ((_b2 = (_a3 = this.options.event) == null ? void 0 : _a3.target) == null ? void 0 : _b2.ownerDocument) || (ref_window2 == null ? void 0 : ref_window2.document) || null,
+        ownerDocument: ((_b3 = (_a3 = this.options.event) == null ? void 0 : _a3.target) == null ? void 0 : _b3.ownerDocument) || (ref_window2 == null ? void 0 : ref_window2.document) || null,
         ownerWindow: ref_window2 || null,
         event: this.options.event || null,
         preferFullscreen: true
@@ -26174,11 +27063,11 @@ var LiteGraphTSMigration = (function(exports) {
           return;
         }
         if (!is_edge_point) {
-          point[0] = clamp$1(x2, 0, 1);
+          point[0] = clamp$2(x2, 0, 1);
         } else {
           point[0] = s2 == 0 ? 0 : 1;
         }
-        point[1] = 1 - clamp$1(y2, 0, 1);
+        point[1] = 1 - clamp$2(y2, 0, 1);
         points.sort((a2, b2) => a2[0] - b2[0]);
         this.selected = points.indexOf(point);
         this.must_update = true;
@@ -26262,7 +27151,7 @@ var LiteGraphTSMigration = (function(exports) {
   const LGraphCanvas = LGraphCanvasMenuPanel;
   const ContextMenu = ContextMenu$1;
   function extendClass(target, origin) {
-    var _a3, _b2, _c2, _d2;
+    var _a3, _b3, _c2, _d2;
     for (const i2 in origin) {
       if (Object.prototype.hasOwnProperty.call(target, i2)) {
         continue;
@@ -26283,7 +27172,7 @@ var LiteGraphTSMigration = (function(exports) {
       }
       const getter = (_a3 = originPrototype.__lookupGetter__) == null ? void 0 : _a3.call(originPrototype, i2);
       if (getter) {
-        (_b2 = targetPrototype.__defineGetter__) == null ? void 0 : _b2.call(targetPrototype, i2, getter);
+        (_b3 = targetPrototype.__defineGetter__) == null ? void 0 : _b3.call(targetPrototype, i2, getter);
       } else {
         targetPrototype[i2] = originPrototype[i2];
       }
@@ -26369,6 +27258,17 @@ var LiteGraphTSMigration = (function(exports) {
     bindRuntimeIntoClasses(liteGraph);
     return { liteGraph, registry: registry2, runtime: runtime2 };
   }
+  function installModernNodeApi(liteGraph) {
+    attachModernNodeRegistryApi(liteGraph);
+    liteGraph.ModernNodeBase = ModernNodeBase;
+    liteGraph.ModernNodeContracts = ModernNodeContracts;
+    liteGraph.ModernNodeChangeMask = ModernNodeChangeMask;
+    liteGraph.registerModernNode = (nodeClass) => registerModernNode(nodeClass, liteGraph);
+    liteGraph.registerModernNodes = (nodeClasses) => registerModernNodes(nodeClasses, liteGraph);
+    liteGraph.registerModernWidget = (type, renderer) => registerModernWidget(type, renderer);
+    liteGraph.registerModernWidgets = (renderers) => registerModernWidgets(renderers);
+    liteGraph.getModernWidgetRenderer = (type) => getModernWidgetRenderer(type);
+  }
   function createAssemblyBundle(liteGraph, registry2, runtime2) {
     return {
       LiteGraph: liteGraph,
@@ -26380,12 +27280,21 @@ var LiteGraphTSMigration = (function(exports) {
       LGraphCanvas,
       ContextMenu,
       CurveEditor,
+      ModernNodeBase,
+      ModernNodeContracts,
+      ModernNodeChangeMask,
+      registerModernNode: liteGraph.registerModernNode,
+      registerModernNodes: liteGraph.registerModernNodes,
+      registerModernWidget: liteGraph.registerModernWidget,
+      registerModernWidgets: liteGraph.registerModernWidgets,
+      getModernWidgetRenderer: liteGraph.getModernWidgetRenderer,
       registry: registry2,
       runtime: runtime2
     };
   }
   function assembleLiteGraph(options = {}) {
     const { liteGraph, registry: registry2, runtime: runtime2 } = createLiteGraphNamespace();
+    installModernNodeApi(liteGraph);
     const bundle = createAssemblyBundle(
       liteGraph,
       registry2,
@@ -26427,6 +27336,9 @@ var LiteGraphTSMigration = (function(exports) {
   exports.LiteGraphConstants = LiteGraphConstants;
   exports.LiteGraphRegistry = LiteGraphRegistry;
   exports.LiteGraphRuntime = LiteGraphRuntime;
+  exports.ModernNodeBase = ModernNodeBase;
+  exports.ModernNodeChangeMask = ModernNodeChangeMask;
+  exports.ModernNodeContracts = ModernNodeContracts;
   exports.applyContextMenuCloseAllCompatUi = applyContextMenuCloseAllCompat$1;
   exports.applyGridSquareShapeAlias = applyGridSquareShapeAlias;
   exports.applyLGraphCanvasStaticCompatAliasesLayer = applyLGraphCanvasStaticCompatAliases;
@@ -26442,6 +27354,7 @@ var LiteGraphTSMigration = (function(exports) {
   exports.denormalizeSerializedLGraphGroupCompatShape = denormalizeSerializedLGraphGroup;
   exports.denormalizeSerializedLLinkCompatTuple = denormalizeSerializedLLinkTuple;
   exports.distance = distance$1;
+  exports.getModernWidgetRenderer = getModernWidgetRenderer;
   exports.getParameterNames = getParameterNames;
   exports.growBounding = growBounding;
   exports.hasGraphOnNodeAddedCompatHook = hasGraphOnNodeAddedCompatHook;
@@ -26459,6 +27372,10 @@ var LiteGraphTSMigration = (function(exports) {
   exports.num2hex = num2hex;
   exports.parseSerializedLGraphGroupInput = parseSerializedLGraphGroupInput;
   exports.parseSerializedLLinkInput = parseSerializedLLinkInput;
+  exports.registerModernNode = registerModernNode;
+  exports.registerModernNodes = registerModernNodes;
+  exports.registerModernWidget = registerModernWidget;
+  exports.registerModernWidgets = registerModernWidgets;
   exports.registry = registry;
   exports.resolveGridSquareShapeValue = resolveGridSquareShapeValue;
   exports.runtime = runtime;

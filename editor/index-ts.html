@@ -38,8 +38,14 @@
         throw new Error("LiteGraph TS migration bundle is unavailable");
       }
     </script>
-    <!-- Node set aligned with scripts/bundle-manifest.mjs (extended order) -->
-    <script type="text/javascript" src="../src/nodes/base.js"></script>
+    <!-- TS demo uses modernized base nodes only -->
+    <script type="text/javascript" src="../src/nodes_leafer/base/shared/runtime.js"></script>
+    <script type="text/javascript" src="../src/nodes_leafer/base/graph.js"></script>
+    <script type="text/javascript" src="../src/nodes_leafer/base/basic-value.js"></script>
+    <script type="text/javascript" src="../src/nodes_leafer/base/basic-data.js"></script>
+    <script type="text/javascript" src="../src/nodes_leafer/base/basic-io.js"></script>
+    <script type="text/javascript" src="../src/nodes_leafer/base/basic-script.js"></script>
+    <script type="text/javascript" src="../src/nodes_leafer/base/basic-compare.js"></script>
     <script type="text/javascript" src="../src/nodes_leafer/base.js"></script>
     <script type="text/javascript" src="../src/nodes/events.js"></script>
     <script type="text/javascript" src="../src/nodes/interface.js"></script>

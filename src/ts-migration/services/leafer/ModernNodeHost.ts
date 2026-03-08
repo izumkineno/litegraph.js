@@ -1,18 +1,34 @@
 import * as leafer from "leafer-ui";
 import { Group, Rect, Text, UI } from "leafer-ui";
 
+import {
+    MODERN_NODE_STATE_KEY,
+    ModernNodeChangeMask,
+    type ModernNodeChangeMaskValue,
+    type ModernNodeLifecycleContext,
+    type ModernNodePortLayout,
+} from "../../modern/ModernNodeContracts";
+import type {
+    ModernWidgetRenderContext,
+    ModernWidgetRenderer,
+    ModernWidgetSchema,
+    ModernWidgetViewHandle,
+} from "../../modern";
 import type { GraphMutationNodeLike } from "./GraphMutationBus";
 import {
     PORT_DIRECTION_LEFT,
     PORT_DIRECTION_RIGHT,
 } from "./NodePortAdapter";
+import {
+    ensureDefaultModernWidgetRenderers,
+    resolveModernWidgetRenderer,
+    resolveWidgetBounds,
+} from "./ModernWidgetRegistry";
 import type {
     NodeViewHost,
     NodeViewPortHit,
     NodeViewPortKind,
 } from "./NodeViewHost";
-
-const MODERN_STATE_KEY = "__litegraphModernState";
 
 export type ModernNodePartKind =
     | "body"
@@ -32,6 +48,8 @@ export interface ModernNodeRectLike {
 
 export interface ModernNodeWidgetLayout extends ModernNodeRectLike {
     index: number;
+    id?: string;
+    type?: string;
     action?: "activate" | "toggle" | "edit";
     actionZones?: Record<string, ModernNodeRectLike>;
 }
@@ -73,15 +91,15 @@ export interface ModernNodeInteractionState {
 
 interface ModernNodeShellState {
     layout?: ModernNodeShellLayout;
+    widgetRoot?: Group | null;
     applyInteractionState?: (state: ModernNodeInteractionState) => void;
 }
 
-export interface ModernNodePortLayout {
-    x: number;
-    y: number;
-    dir?: number;
-    radius?: number;
-    space?: "local" | "world";
+interface ModernWidgetEntry {
+    schema: ModernWidgetSchema;
+    renderer: ModernWidgetRenderer;
+    handle: ModernWidgetViewHandle;
+    layout: ModernNodeWidgetLayout;
 }
 
 export interface ModernNodeBuildContext {
@@ -89,6 +107,7 @@ export interface ModernNodeBuildContext {
     readonly host: ModernNodeHost;
     readonly root: Group;
     readonly content: UI | Group | null;
+    readonly changeMask: ModernNodeChangeMaskValue;
     readonly interactionState: ModernNodeInteractionState;
     readonly leafer: typeof leafer;
 }
@@ -100,6 +119,15 @@ export interface ModernNodeLike extends GraphMutationNodeLike {
     inputs?: Array<unknown> | null;
     outputs?: Array<unknown> | null;
     is_selected?: boolean;
+    ensureModernPorts?: () => void;
+    defineWidgets?: () => ReadonlyArray<ModernWidgetSchema>;
+    consumeModernChangeMask?: () => ModernNodeChangeMaskValue;
+    mountView?: (
+        context: ModernNodeLifecycleContext<ModernNodeLike, ModernNodeHost>
+    ) => unknown;
+    patchView?: (
+        context: ModernNodeLifecycleContext<ModernNodeLike, ModernNodeHost>
+    ) => void;
     buildUI?: (context: ModernNodeBuildContext) => unknown;
     updateUI?: (context: ModernNodeBuildContext) => void;
     getPortLayout?: (
@@ -236,6 +264,13 @@ export class ModernNodeHost implements NodeViewHost {
     readonly root: Group;
 
     private content: UI | Group | null = null;
+    private widgetRoot: Group | null = null;
+    private widgetEntries: ModernWidgetEntry[] = [];
+    private widgetValueSnapshot = new Map<string, unknown>();
+    private lastWidgetSignature = "";
+    private mounted = false;
+    private portLayoutCache = new Map<string, ModernNodePortLayout | null>();
+    private lastSlotSignature = "";
     private readonly interactionState: ModernNodeInteractionState = {
         hovered: false,
         pressed: false,
@@ -253,6 +288,7 @@ export class ModernNodeHost implements NodeViewHost {
 
     constructor(node: ModernNodeLike) {
         this.node = node;
+        ensureDefaultModernWidgetRenderers();
         this.root = new Group({
             name: `litegraph-modern-node:${String(node.id)}`,
             hittable: true,
@@ -266,14 +302,34 @@ export class ModernNodeHost implements NodeViewHost {
     }
 
     repaint(): void {
-        if (!this.content) {
-            const built = this.node.buildUI?.(this.createContext()) || null;
-            this.content = toUI(built, this.node);
+        this.node.ensureModernPorts?.();
+        const changeMask = this.consumeChangeMask();
+
+        if (!this.mounted) {
+            const mountedContent = this.mountContent(changeMask);
+            this.content = toUI(mountedContent, this.node);
             this.root.add(this.content);
+            this.widgetRoot = this.ensureWidgetRoot();
+            this.mounted = true;
+            this.invalidatePortLayoutCache();
+        } else if (changeMask !== ModernNodeChangeMask.None) {
+            this.patchContent(changeMask);
+        }
+
+        this.syncWidgets(changeMask);
+
+        if (this.didSlotSignatureChange()) {
+            this.invalidatePortLayoutCache();
+        }
+
+        if (
+            (changeMask & ModernNodeChangeMask.Layout) !== 0 ||
+            (changeMask & ModernNodeChangeMask.Ports) !== 0
+        ) {
+            this.invalidatePortLayoutCache();
         }
 
         this.root.selected = Boolean((this.node as { is_selected?: boolean }).is_selected);
-        this.node.updateUI?.(this.createContext());
         this.applyInteractionState();
         this.syncPosition();
     }
@@ -290,6 +346,7 @@ export class ModernNodeHost implements NodeViewHost {
     }
 
     destroy(): void {
+        this.clearWidgets();
         this.root.destroy();
     }
 
@@ -471,6 +528,221 @@ export class ModernNodeHost implements NodeViewHost {
         });
     }
 
+    getWidgetEntry(index: number): ModernWidgetEntry | null {
+        return this.widgetEntries[index] || null;
+    }
+
+    private ensureWidgetRoot(): Group {
+        const shellWidgetRoot = this.getShellState()?.widgetRoot;
+        if (shellWidgetRoot) {
+            this.widgetRoot = shellWidgetRoot;
+            return shellWidgetRoot;
+        }
+
+        if (!this.widgetRoot) {
+            this.widgetRoot = new Group({
+                name: `litegraph-modern-node-widgets:${String(this.node.id)}`,
+                hittable: false,
+            });
+            this.root.add(this.widgetRoot);
+        }
+
+        return this.widgetRoot;
+    }
+
+    private clearWidgets(): void {
+        for (let i = 0; i < this.widgetEntries.length; ++i) {
+            const entry = this.widgetEntries[i];
+            if (entry.handle.destroy) {
+                entry.handle.destroy();
+            } else {
+                const root = entry.handle.root as { destroy?: () => void } | undefined;
+                root?.destroy?.();
+            }
+        }
+
+        this.widgetEntries = [];
+        this.widgetValueSnapshot.clear();
+        this.lastWidgetSignature = "";
+        this.patchShellWidgetLayout([]);
+    }
+
+    private syncWidgets(changeMask: ModernNodeChangeMaskValue): void {
+        const collapsed = Boolean(
+            (this.node as { flags?: { collapsed?: boolean } }).flags?.collapsed
+        );
+        const schemas = collapsed
+            ? []
+            : Array.isArray(this.node.defineWidgets?.())
+              ? [...(this.node.defineWidgets?.() || [])]
+              : [];
+        const widgetRoot = this.ensureWidgetRoot();
+        widgetRoot.visible = !collapsed;
+
+        const nextSignature = schemas
+            .map((schema) => `${schema.id}:${schema.type}`)
+            .join("|");
+        const needsRebuild =
+            this.widgetEntries.length !== schemas.length ||
+            this.lastWidgetSignature !== nextSignature ||
+            (changeMask & ModernNodeChangeMask.Layout) !== 0;
+
+        if (!schemas.length) {
+            this.clearWidgets();
+            return;
+        }
+
+        const bodyBounds = this.getWidgetBodyBounds();
+        const nextLayout: ModernNodeWidgetLayout[] = [];
+
+        if (needsRebuild) {
+            this.clearWidgets();
+            for (let index = 0; index < schemas.length; ++index) {
+                const schema = schemas[index];
+                const renderer = resolveModernWidgetRenderer(schema.type);
+                if (!renderer) {
+                    continue;
+                }
+
+                const bounds = resolveWidgetBounds(bodyBounds, index, schemas.length);
+                const context = this.createWidgetContext(schema, bounds);
+                const handle = renderer.createView(context);
+                this.addWidgetHandle(widgetRoot, handle);
+
+                const layout = this.toWidgetLayout(index, schema, handle);
+                this.widgetEntries.push({
+                    schema,
+                    renderer,
+                    handle,
+                    layout,
+                });
+                nextLayout.push(layout);
+                this.widgetValueSnapshot.set(schema.id, schema.value);
+            }
+            this.lastWidgetSignature = nextSignature;
+        } else {
+            for (let index = 0; index < this.widgetEntries.length; ++index) {
+                const entry = this.widgetEntries[index];
+                const schema = schemas[index];
+                const bounds = resolveWidgetBounds(bodyBounds, index, schemas.length);
+                entry.schema = schema;
+                const context = this.createWidgetContext(schema, bounds);
+                entry.renderer.patchView(context, entry.handle, changeMask);
+                entry.layout = this.toWidgetLayout(index, schema, entry.handle);
+                nextLayout.push(entry.layout);
+                this.widgetValueSnapshot.set(schema.id, schema.value);
+            }
+        }
+
+        this.patchShellWidgetLayout(nextLayout);
+        this.applyWidgetInteractionState();
+    }
+
+    private getWidgetBodyBounds(): ModernNodeRectLike {
+        const shellLayout = this.getShellState()?.layout;
+        if (shellLayout?.body) {
+            return {
+                x: shellLayout.body.x,
+                y: shellLayout.body.y,
+                width: shellLayout.body.width,
+                height: shellLayout.body.height,
+            };
+        }
+
+        return {
+            x: 0,
+            y: 0,
+            width: Math.max(toFiniteNumber(this.node.size?.[0], 120), 80),
+            height: Math.max(toFiniteNumber(this.node.size?.[1], 60), 24),
+        };
+    }
+
+    private createWidgetContext(
+        schema: ModernWidgetSchema,
+        bounds: ModernNodeRectLike
+    ): ModernWidgetRenderContext<ModernNodeLike, ModernNodeHost> {
+        return {
+            node: this.node,
+            host: this,
+            schema,
+            bounds,
+            leafer,
+        };
+    }
+
+    private addWidgetHandle(root: Group, handle: ModernWidgetViewHandle): void {
+        if (handle.root instanceof UI) {
+            root.add(handle.root);
+            return;
+        }
+
+        const candidate = handle.root as { parent?: unknown } | undefined;
+        if (candidate && typeof candidate === "object" && !candidate.parent) {
+            root.add(handle.root as Group);
+        }
+    }
+
+    private toWidgetLayout(
+        index: number,
+        schema: ModernWidgetSchema,
+        handle: ModernWidgetViewHandle
+    ): ModernNodeWidgetLayout {
+        return {
+            index,
+            id: schema.id,
+            type: schema.type,
+            x: handle.bounds.x,
+            y: handle.bounds.y,
+            width: handle.bounds.width,
+            height: handle.bounds.height,
+            action: "edit",
+            actionZones: handle.actionZones as
+                | Record<string, ModernNodeRectLike>
+                | undefined,
+        };
+    }
+
+    private patchShellWidgetLayout(layout: ModernNodeWidgetLayout[]): void {
+        const shellState = this.getShellState();
+        if (!shellState?.layout) {
+            return;
+        }
+        shellState.layout.widgets = layout;
+    }
+
+    private applyWidgetInteractionState(): void {
+        const hoveredIndex =
+            this.interactionState.hoveredPart?.kind === "widget"
+                ? this.interactionState.hoveredPart.index
+                : null;
+        const pressedIndex =
+            this.interactionState.pressedPart?.kind === "widget"
+                ? this.interactionState.pressedPart.index
+                : null;
+
+        for (let i = 0; i < this.widgetEntries.length; ++i) {
+            const entry = this.widgetEntries[i];
+            const widgetRoot = entry.handle.root as Record<string, unknown>;
+            if (!widgetRoot || typeof widgetRoot !== "object") {
+                continue;
+            }
+
+            widgetRoot.disabled = Boolean(entry.schema.disabled);
+            if (entry.schema.disabled) {
+                widgetRoot.state = "";
+                continue;
+            }
+
+            if (pressedIndex === i) {
+                widgetRoot.state = "press";
+            } else if (hoveredIndex === i) {
+                widgetRoot.state = "hover";
+            } else {
+                widgetRoot.state = "";
+            }
+        }
+    }
+
     getLocalPoint(worldX: number, worldY: number): readonly [number, number] {
         const point = this.root.getInnerPoint({
             x: worldX,
@@ -559,12 +831,78 @@ export class ModernNodeHost implements NodeViewHost {
         };
     }
 
+    private mountContent(changeMask: ModernNodeChangeMaskValue): unknown {
+        const context = this.createContextWithMask(changeMask);
+
+        if (typeof this.node.mountView === "function") {
+            return this.node.mountView(context);
+        }
+
+        if (typeof this.node.buildUI === "function") {
+            return this.node.buildUI(context);
+        }
+
+        return null;
+    }
+
+    private patchContent(changeMask: ModernNodeChangeMaskValue): void {
+        const context = this.createContextWithMask(changeMask);
+
+        if (typeof this.node.patchView === "function") {
+            this.node.patchView(context);
+            return;
+        }
+
+        this.node.updateUI?.(context);
+    }
+
+    private consumeChangeMask(): ModernNodeChangeMaskValue {
+        const rawMask = this.node.consumeModernChangeMask?.();
+        if (rawMask == null) {
+            return ModernNodeChangeMask.All;
+        }
+
+        const normalizedMask = toFiniteNumber(
+            rawMask,
+            ModernNodeChangeMask.None
+        );
+        if (normalizedMask <= ModernNodeChangeMask.None) {
+            return ModernNodeChangeMask.None;
+        }
+
+        return normalizedMask;
+    }
+
+    private didSlotSignatureChange(): boolean {
+        const nextSignature = `${this.getSlotCount("input")}:${this.getSlotCount("output")}`;
+        if (nextSignature === this.lastSlotSignature) {
+            return false;
+        }
+
+        this.lastSlotSignature = nextSignature;
+        return true;
+    }
+
+    private invalidatePortLayoutCache(): void {
+        this.portLayoutCache.clear();
+    }
+
+    private createContextWithMask(
+        changeMask: ModernNodeChangeMaskValue
+    ): ModernNodeBuildContext {
+        return {
+            ...this.createContext(),
+            changeMask,
+        };
+    }
+
     private createContext(): ModernNodeBuildContext {
         return {
             node: this.node,
             host: this,
             root: this.root,
             content: this.content,
+            changeMask: ModernNodeChangeMask.All,
             interactionState: this.interactionState,
             leafer,
         };
@@ -579,10 +917,20 @@ export class ModernNodeHost implements NodeViewHost {
         kind: NodeViewPortKind,
         slotIndex: number
     ): ModernNodePortLayout | null {
-        return (
-            this.node.getPortLayout?.(kind, slotIndex, this.createContext()) ||
-            null
-        );
+        const cacheKey = `${kind}:${slotIndex}`;
+        if (this.portLayoutCache.has(cacheKey)) {
+            return this.portLayoutCache.get(cacheKey) || null;
+        }
+
+        const resolvedLayout =
+            this.node.getPortLayout?.(
+                kind,
+                slotIndex,
+                this.createContextWithMask(ModernNodeChangeMask.Ports)
+            ) || null;
+        this.portLayoutCache.set(cacheKey, resolvedLayout);
+
+        return resolvedLayout;
     }
 
     private getShellState(): ModernNodeShellState | null {
@@ -592,7 +940,7 @@ export class ModernNodeHost implements NodeViewHost {
 
         return (
             (this.content as unknown as Record<string, unknown>)[
-                MODERN_STATE_KEY
+                MODERN_NODE_STATE_KEY
             ] as ModernNodeShellState | undefined
         ) || null;
     }
@@ -602,6 +950,7 @@ export class ModernNodeHost implements NodeViewHost {
             (this.node as { is_selected?: boolean }).is_selected
         );
         this.getShellState()?.applyInteractionState?.(this.interactionState);
+        this.applyWidgetInteractionState();
     }
 
     private hitWidgetPart(
@@ -614,6 +963,25 @@ export class ModernNodeHost implements NodeViewHost {
 
         for (let i = 0; i < widgets.length; ++i) {
             const widget = widgets[i];
+            const entry = this.widgetEntries[i];
+            if (entry) {
+                const rendererHit = entry.renderer.hitTest?.(
+                    this.createWidgetContext(entry.schema, entry.handle.bounds),
+                    entry.handle,
+                    point
+                );
+                if (rendererHit) {
+                    return {
+                        kind: "widget",
+                        index: widget.index,
+                        action: rendererHit.action || widget.action || "activate",
+                        cursor: rendererHit.cursor || "pointer",
+                        bounds:
+                            (rendererHit.bounds as ModernNodeRectLike | null | undefined) ||
+                            widget,
+                    };
+                }
+            }
             if (widget.actionZones) {
                 const zoneEntries = Object.entries(widget.actionZones);
                 for (let zoneIndex = 0; zoneIndex < zoneEntries.length; ++zoneIndex) {

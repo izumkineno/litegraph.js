@@ -1,3 +1,5 @@
+import * as leafer from "leafer-ui";
+
 import type {
     GraphMutationBus,
     GraphMutationGraphLike,
@@ -74,6 +76,7 @@ interface InteractionGraphLike extends GraphMutationGraphLike {
 
 interface DraggableNodeLike extends GraphMutationNodeLike {
     pos: [number, number] | Float32Array;
+    size: [number, number] | Float32Array;
     alignToGrid?: () => void;
 }
 
@@ -190,7 +193,6 @@ export class InteractionController {
     private session: PointerSession | null = null;
     private dragTransactionNode: GraphMutationNodeLike | null = null;
     private hoveredModernHost: ModernNodeHost | null = null;
-    private hoveredModernPart: ModernNodePartHit | null = null;
     private lastTapNodeId: GraphMutationNodeId | null = null;
     private lastTapPart: ModernNodePartHit | null = null;
     private lastTapAt = 0;
@@ -259,7 +261,6 @@ export class InteractionController {
         this.dragTransactionNode = null;
         this.hoveredModernHost?.clearPointerState();
         this.hoveredModernHost = null;
-        this.hoveredModernPart = null;
         this.lastTapNodeId = null;
         this.lastTapPart = null;
         this.lastTapAt = 0;
@@ -714,6 +715,7 @@ export class InteractionController {
                     normalizedPagePoint
                 ) >= 4
             ) {
+                const pressedSession = this.session;
                 const dragNodes = this.collectDragNodes(this.session.node);
                 this.dragTransactionNode = this.session.node;
                 this.graphRef.beforeChange?.(this.session.node);
@@ -728,7 +730,7 @@ export class InteractionController {
                     pressed: false,
                     dragging: true,
                     pressedPart: null,
-                    hoveredPart: this.session.part,
+                    hoveredPart: pressedSession.part,
                 });
             } else {
                 this.lastPagePoint = normalizedPagePoint;
@@ -1034,13 +1036,14 @@ export class InteractionController {
         part: ModernNodePartHit,
         event: PointerEvent
     ): void {
-        const widgets = (node as { widgets?: Array<any> }).widgets;
-        if (!Array.isArray(widgets) || part.index == null) {
+        if (part.index == null) {
             return;
         }
-
-        const widget = widgets[part.index];
-        if (!widget || widget.disabled) {
+        const entry = host.getWidgetEntry(part.index);
+        if (!entry || entry.schema.disabled) {
+            return;
+        }
+        if (entry.schema.readonly && entry.schema.type !== "button") {
             return;
         }
 
@@ -1052,23 +1055,20 @@ export class InteractionController {
             toFiniteNumber(pagePoint.x),
             toFiniteNumber(pagePoint.y)
         );
-        const propertyName = widget.options?.property as string | undefined;
+        const propertyName = entry.schema.property;
+        const widgetMeta = {
+            ...entry.schema,
+            bounds: entry.layout,
+            actionZones: entry.handle.actionZones,
+            handle: entry.handle,
+        };
         const applyValue = (nextValue: unknown): void => {
-            const previousValue = widget.value;
-            widget.value = nextValue;
-            if (
-                propertyName &&
-                (node as { properties?: Record<string, unknown> }).properties?.[
-                    propertyName
-                ] !== undefined
-            ) {
+            const previousValue = entry.schema.value;
+            if (propertyName) {
                 (node as { setProperty?: (name: string, value: unknown) => void }).setProperty?.(
                     propertyName,
                     nextValue
                 );
-            }
-            if (typeof widget.callback === "function") {
-                widget.callback(nextValue, this.canvas, node, localPos, event);
             }
             (
                 node as {
@@ -1080,7 +1080,12 @@ export class InteractionController {
                     ) => void;
                     graph?: { _version?: number };
                 }
-            ).onWidgetChanged?.(widget.name, nextValue, previousValue, widget);
+            ).onWidgetChanged?.(
+                entry.schema.name,
+                nextValue,
+                previousValue,
+                widgetMeta
+            );
             if ((node as { graph?: { _version?: number } }).graph) {
                 (node as { graph?: { _version?: number } }).graph!._version =
                     toFiniteNumber(
@@ -1101,102 +1106,80 @@ export class InteractionController {
             if (!propertyName) {
                 return;
             }
+            const previousValue =
+                (node as { properties?: Record<string, unknown> }).properties?.[
+                    propertyName
+                ];
             this.canvas.showEditPropertyValue?.(node, propertyName, {
                 position: [event.clientX, event.clientY],
                 onclose: () => {
+                    const nextValue =
+                        (node as { properties?: Record<string, unknown> }).properties?.[
+                            propertyName
+                        ];
+                    if (nextValue !== previousValue) {
+                        (
+                            node as {
+                                onWidgetChanged?: (
+                                    name: string,
+                                    value: unknown,
+                                    previousValue: unknown,
+                                    widgetData: unknown
+                                ) => void;
+                            }
+                        ).onWidgetChanged?.(
+                            entry.schema.name,
+                            nextValue,
+                            previousValue,
+                            widgetMeta
+                        );
+                    }
                     this.canvas.sceneSyncController?.repaintNodeHost(node.id);
                 },
             });
         };
 
-        switch (widget.type) {
-            case "button":
-                if (typeof widget.callback === "function") {
-                    setTimeout(() => {
-                        widget.callback(widget, this.canvas, node, localPos, event);
-                    }, 10);
-                }
-                widget.clicked = true;
-                (
-                    node as {
-                        setDirtyCanvas?: (
-                            dirtyForeground: boolean,
-                            dirtyBackground?: boolean
-                        ) => void;
-                    }
-                ).setDirtyCanvas?.(true, true);
-                return;
-            case "toggle":
-                applyValue(!widget.value);
-                return;
-            case "number": {
-                const step = toFiniteNumber(widget.options?.step, 1) || 1;
-                const min = widget.options?.min;
-                const max = widget.options?.max;
-                if (part.action === "decrement") {
-                    let nextValue = toFiniteNumber(widget.value) - step;
-                    if (min != null) {
-                        nextValue = Math.max(toFiniteNumber(min), nextValue);
-                    }
-                    applyValue(nextValue);
-                    return;
-                }
-                if (part.action === "increment") {
-                    let nextValue = toFiniteNumber(widget.value) + step;
-                    if (max != null) {
-                        nextValue = Math.min(toFiniteNumber(max), nextValue);
-                    }
-                    applyValue(nextValue);
-                    return;
-                }
-                openPropertyEditor();
-                return;
+        const actionResult = entry.renderer.performAction?.(
+            {
+                node: node as GraphMutationNodeLike & { id: number | string },
+                host,
+                schema: entry.schema,
+                bounds: entry.handle.bounds,
+                handle: entry.handle,
+                action: part.action || "activate",
+                event,
+                leafer,
+            },
+            entry.handle
+        );
+
+        if (actionResult?.nextValue !== undefined) {
+            applyValue(actionResult.nextValue);
+            return;
+        }
+        if (actionResult?.openEditor) {
+            openPropertyEditor();
+            return;
+        }
+        if (entry.schema.type === "button") {
+            const callback = entry.schema.options?.callback;
+            if (typeof callback === "function") {
+                setTimeout(() => {
+                    callback(widgetMeta, this.canvas, node, localPos, event);
+                }, 10);
             }
-            case "combo": {
-                let values = widget.options?.values;
-                if (typeof values === "function") {
-                    values = values(widget, node);
+            (
+                node as {
+                    setDirtyCanvas?: (
+                        dirtyForeground: boolean,
+                        dirtyBackground?: boolean
+                    ) => void;
                 }
-                if (!values) {
-                    openPropertyEditor();
-                    return;
-                }
-                const valuesList = Array.isArray(values)
-                    ? values
-                    : Object.keys(values);
-                if (!valuesList.length) {
-                    return;
-                }
-                if (
-                    part.action === "increment" ||
-                    part.action === "decrement"
-                ) {
-                    const currentIndex = Array.isArray(values)
-                        ? valuesList.indexOf(widget.value)
-                        : valuesList.indexOf(String(widget.value));
-                    const delta = part.action === "increment" ? 1 : -1;
-                    const nextIndex = Math.max(
-                        0,
-                        Math.min(valuesList.length - 1, currentIndex + delta)
-                    );
-                    applyValue(
-                        Array.isArray(values)
-                            ? valuesList[nextIndex]
-                            : nextIndex
-                    );
-                    return;
-                }
-                openPropertyEditor();
-                return;
-            }
-            case "text":
-            case "string":
-                openPropertyEditor();
-                return;
-            default:
-                if (propertyName) {
-                    openPropertyEditor();
-                }
+            ).setDirtyCanvas?.(true, true);
+            return;
+        }
+        if (propertyName) {
+            openPropertyEditor();
         }
     }
 
@@ -1217,7 +1200,6 @@ export class InteractionController {
 
         if (!host) {
             this.hoveredModernHost = null;
-            this.hoveredModernPart = null;
             return;
         }
 
@@ -1229,7 +1211,6 @@ export class InteractionController {
                 this.session?.kind === "node-press",
         });
         this.hoveredModernHost = host;
-        this.hoveredModernPart = part;
     }
 
     private resolveCursorForModernPart(
