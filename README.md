@@ -36,6 +36,7 @@
 bun install
 bun run build
 bun run build:ts-migration
+npm run dev:editor
 bunx tsc -p tsconfig.typecheck.json
 bunx jest
 npx playwright test
@@ -45,9 +46,15 @@ npx playwright test
 
 - `bun run build`：构建 dist 分发产物
 - `bun run build:ts-migration`：单独构建 TS 迁移层
+- `npm run dev:editor`：启动 Vite 源码开发页，支持 `editor/**` 和 `src/**` 全页热重载
 - `bunx tsc -p tsconfig.typecheck.json`：类型检查
 - `bunx jest`：单元测试
 - `npx playwright test`：端到端测试
+
+编辑器开发入口：
+
+- Vite 源码页：`http://127.0.0.1:4175/editor/index-ts-vite.html`
+- 稳定 dist 页：`http://127.0.0.1:4175/editor/index-ts.html`
 
 ## 代码阅读建议
 

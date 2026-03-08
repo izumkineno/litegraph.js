@@ -18,6 +18,7 @@
     "private": false,
     "packageManager": "bun@1.2.21",
     "scripts": {
+        "dev:editor": "vite",
         "build": "bun run build:dist",
         "build:dist": "node scripts/build-dist.mjs",
         "build:ts-migration": "node scripts/build-ts-migration.mjs",
