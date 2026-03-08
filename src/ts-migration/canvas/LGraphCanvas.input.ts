@@ -7,7 +7,7 @@ import {
     getLegacyLocalPos,
     isLegacyPointerEvent,
     type LegacyPointerEventLike,
-} from "../services/leafer/LegacyPointerEventAdapter";
+} from "../leafer/LegacyPointerEventAdapter";
 import { distance, isInsideRectangle, overlapBounding } from "../utils/math-geometry";
 import { LGraphCanvasLifecycle } from "./LGraphCanvas.lifecycle";
 

@@ -16326,6 +16326,18 @@ var LiteGraphTSMigration = (function(exports) {
     target.registerModernWidgets = (renderers) => registerModernWidgets(renderers);
     target.getModernWidgetRenderer = (type) => getModernWidgetRenderer(type);
   }
+  function discriminateNodeRuntime(node2) {
+    if (node2.renderRuntime === "legacy" || node2.renderRuntime === "modern") {
+      return node2.renderRuntime;
+    }
+    if (isModernNodeContract(node2)) {
+      return "modern";
+    }
+    if (typeof node2.buildUI === "function" || typeof node2.updateUI === "function" || typeof node2.renderLeafer === "function" || typeof node2.getPortLayout === "function") {
+      return "modern";
+    }
+    return "legacy";
+  }
   const ModernNodeContracts = {
     MODERN_NODE_MARKER_KEY,
     MODERN_NODE_STATE_KEY,
@@ -17430,18 +17442,6 @@ var LiteGraphTSMigration = (function(exports) {
         }
       };
     }
-  }
-  function discriminateNodeRuntime(node2) {
-    if (node2.renderRuntime === "legacy" || node2.renderRuntime === "modern") {
-      return node2.renderRuntime;
-    }
-    if (isModernNodeContract(node2)) {
-      return "modern";
-    }
-    if (typeof node2.buildUI === "function" || typeof node2.updateUI === "function" || typeof node2.renderLeafer === "function" || typeof node2.getPortLayout === "function") {
-      return "modern";
-    }
-    return "legacy";
   }
   function toMutationKey(id) {
     return String(id);

@@ -57,12 +57,12 @@
    - `graph-deserializer`
    - `LGraph.persistence` façade
 5. 节点渲染现在是双轨制：
-   - legacy node -> `services/leafer/LegacyNodeHost.ts`
-   - modern node -> `services/leafer/ModernNodeHost.ts`
+   - legacy node -> `leafer/LegacyNodeHost.ts`
+   - modern node -> `leafer/ModernNodeHost.ts`
 6. 新旧节点共用同一条连线与端口适配链：
-   - `services/leafer/NodePortAdapter.ts`
-   - `services/leafer/LinkViewHost.ts`
-   - `services/leafer/SceneSyncController.ts`
+   - `leafer/NodePortAdapter.ts`
+   - `leafer/LinkViewHost.ts`
+   - `leafer/SceneSyncController.ts`
 
 ## 目录分层
 
@@ -209,7 +209,7 @@
 | `services/searchbox-controller.ts` | 搜索框控制器 | 负责节点搜索、过滤、自动补全、type filter 和搜索框浮层生命周期。 |
 | `services/subgraph-io-panel-presenter.ts` | 子图 IO 面板 presenter | 负责子图 inputs/outputs 面板的渲染和增删 slot 流程。 |
 
-`services/leafer/` 当前是 retained-mode 主运行时的核心目录，重点文件包括：
+`leafer/` 当前是 retained-mode 主运行时的核心目录，重点文件包括：
 
 - `LeaferAppHost.ts`：创建 `App` 与 `ground/tree/sky` 根层
 - `ViewportController.ts`：接管平移缩放

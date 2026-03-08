@@ -5,7 +5,7 @@ import {
     type PointerEventsHost,
     type TouchNormalizedEvent,
 } from "../compat/pointer-events";
-import type { DragAndScaleViewportPort } from "../services/leafer/ViewportController";
+import type { DragAndScaleViewportPort } from "../leafer/ViewportController";
 
 type DragAndScaleCallback = (instance: DragAndScale) => void;
 

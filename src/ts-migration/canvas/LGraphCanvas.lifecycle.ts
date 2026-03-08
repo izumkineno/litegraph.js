@@ -5,11 +5,11 @@ import {
     GraphMutationBus,
     type GraphMutationGraphLike,
     type GraphMutationNodeLike,
-} from "../services/leafer/GraphMutationBus";
-import { InteractionController } from "../services/leafer/InteractionController";
-import { LeaferAppHost } from "../services/leafer/LeaferAppHost";
-import { SceneSyncController } from "../services/leafer/SceneSyncController";
-import { ViewportController } from "../services/leafer/ViewportController";
+} from "../leafer/GraphMutationBus";
+import { InteractionController } from "../leafer/InteractionController";
+import { LeaferAppHost } from "../leafer/LeaferAppHost";
+import { SceneSyncController } from "../leafer/SceneSyncController";
+import { ViewportController } from "../leafer/ViewportController";
 import { DragAndScale } from "./DragAndScale";
 import { LGraphCanvas as LGraphCanvasStatic } from "./LGraphCanvas.static";
 

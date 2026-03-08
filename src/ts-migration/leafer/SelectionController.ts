@@ -1,4 +1,4 @@
-import { overlapBounding } from "../../utils/math-geometry";
+import { overlapBounding } from "../utils/math-geometry";
 import type {
     GraphMutationGraphLike,
     GraphMutationNodeLike,

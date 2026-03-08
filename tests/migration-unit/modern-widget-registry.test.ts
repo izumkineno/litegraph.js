@@ -7,7 +7,7 @@ import {
 import {
     ensureDefaultModernWidgetRenderers,
     resolveModernWidgetRenderer,
-} from "../../src/ts-migration/services/leafer/ModernWidgetRegistry";
+} from "../../src/ts-migration/leafer/ModernWidgetRegistry";
 
 class WidgetTestNode extends ModernNodeBase {
     static type = "modern/widget_test";

@@ -2,7 +2,7 @@ import "@leafer-in/view";
 import "@leafer-in/viewport";
 import { addViewport } from "@leafer-in/viewport";
 
-import type { Vector2 } from "../../types/core-types";
+import type { Vector2 } from "../types/core-types";
 import type { LeaferAppHost } from "./LeaferAppHost";
 import type { SceneSyncController } from "./SceneSyncController";
 

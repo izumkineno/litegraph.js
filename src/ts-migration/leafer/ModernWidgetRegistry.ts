@@ -7,7 +7,7 @@ import {
     type ModernWidgetRenderer,
     type ModernWidgetSchema,
     type ModernWidgetViewHandle,
-} from "../../modern";
+} from "./index";
 
 interface BuiltinWidgetHandle extends ModernWidgetViewHandle {
     root: Record<string, unknown>;
