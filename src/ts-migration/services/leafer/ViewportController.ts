@@ -1,3 +1,4 @@
+import "@leafer-in/view";
 import "@leafer-in/viewport";
 import { addViewport } from "@leafer-in/viewport";
 
@@ -31,7 +32,7 @@ export class ViewportController implements DragAndScaleViewportPort {
     private scaleListenerId: unknown = null;
     private sceneSyncController: Pick<
         SceneSyncController,
-        "repaintLegacyNodeHosts"
+        "repaintLegacyNodeHosts" | "repaintAllLinkViews"
     > | null = null;
     private queuedScaleRepaintFrame: number | null = null;
     private lastScale = 1;
@@ -88,7 +89,10 @@ export class ViewportController implements DragAndScaleViewportPort {
     }
 
     setSceneSyncController(
-        sceneSyncController: Pick<SceneSyncController, "repaintLegacyNodeHosts"> | null
+        sceneSyncController: Pick<
+            SceneSyncController,
+            "repaintLegacyNodeHosts" | "repaintAllLinkViews"
+        > | null
     ): void {
         this.sceneSyncController = sceneSyncController;
     }
@@ -117,6 +121,21 @@ export class ViewportController implements DragAndScaleViewportPort {
         const nextScale = this.clampScale(value);
         const currentScale = this.getScale();
         if (Math.abs(nextScale - currentScale) < 0.0001) {
+            return;
+        }
+
+        const zoomableTree = this.appHost.tree as typeof this.appHost.tree & {
+            zoom?: (
+                zoomType: number,
+                padding?: unknown,
+                scroll?: unknown,
+                transition?: unknown
+            ) => unknown;
+        };
+        if (!zoomingCenter && typeof zoomableTree.zoom === "function") {
+            zoomableTree.zoom(nextScale, 0, null, false);
+            this.lastScale = this.getScale();
+            this.queueLegacyScaleRepaint();
             return;
         }
 
@@ -168,6 +187,7 @@ export class ViewportController implements DragAndScaleViewportPort {
         this.queuedScaleRepaintFrame = windowRef.requestAnimationFrame(() => {
             this.queuedScaleRepaintFrame = null;
             this.sceneSyncController?.repaintLegacyNodeHosts();
+            this.sceneSyncController?.repaintAllLinkViews();
         });
     }
 

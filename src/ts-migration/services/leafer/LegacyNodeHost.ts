@@ -7,6 +7,12 @@ import {
     type LegacyNodeRenderHost,
 } from "./LegacyNodePainter";
 import type { NodeViewHost } from "./NodeViewHost";
+import { resolveRasterRenderScale } from "./RasterRenderScale";
+
+interface LegacyNodeHostOptions {
+    readonly view?: HTMLElement | null;
+    readonly getViewportScale?: () => number;
+}
 
 export class LegacyNodeHost implements NodeViewHost {
     readonly runtime = "legacy" as const;
@@ -21,13 +27,18 @@ export class LegacyNodeHost implements NodeViewHost {
     private lastBounds: LegacyNodePaintBounds | null = null;
     private positionOffsetX = 0;
     private positionOffsetY = 0;
+    private readonly view: HTMLElement | null;
+    private readonly getViewportScale: () => number;
 
     constructor(
         node: LegacyNodePainterNodeLike,
-        renderHost: LegacyNodeRenderHost
+        renderHost: LegacyNodeRenderHost,
+        options: LegacyNodeHostOptions = {}
     ) {
         this.node = node;
         this.renderHost = renderHost;
+        this.view = options.view || null;
+        this.getViewportScale = options.getViewportScale || (() => 1);
         this.root = new Group({
             name: `litegraph-legacy-node:${String(node.id)}`,
             hittable: true,
@@ -45,6 +56,7 @@ export class LegacyNodeHost implements NodeViewHost {
             width: 1,
             height: 1,
             pixelRatio: 1,
+            smooth: false,
             hittable: true,
             data: {
                 litegraphNodeId: String(node.id),
@@ -71,13 +83,17 @@ export class LegacyNodeHost implements NodeViewHost {
             this.renderHost,
             this.offscreenContext
         );
+        const renderScale = this.resolveRenderScale();
+        const pixelWidth = Math.max(1, Math.ceil(bounds.width * renderScale));
+        const pixelHeight = Math.max(1, Math.ceil(bounds.height * renderScale));
 
-        this.ensureCanvasSize(bounds.width, bounds.height);
+        this.ensureCanvasSize(bounds.width, bounds.height, renderScale);
         LegacyNodePainter.paint(
             this.node,
             this.renderHost,
             this.offscreenContext,
-            bounds
+            bounds,
+            renderScale
         );
 
         this.positionOffsetX = bounds.x - Number(this.node.pos?.[0] || 0);
@@ -89,11 +105,22 @@ export class LegacyNodeHost implements NodeViewHost {
         this.surface.height = bounds.height;
         this.eventRoot.x = bounds.contentOffsetX;
         this.eventRoot.y = bounds.contentOffsetY;
+        this.surface.pixelRatio = renderScale;
 
         const surfaceContext = this.surface.context as unknown as CanvasRenderingContext2D;
         surfaceContext.setTransform(1, 0, 0, 1, 0, 0);
-        surfaceContext.clearRect(0, 0, bounds.width, bounds.height);
-        surfaceContext.drawImage(this.offscreenCanvas, 0, 0, bounds.width, bounds.height);
+        surfaceContext.clearRect(0, 0, pixelWidth, pixelHeight);
+        surfaceContext.drawImage(
+            this.offscreenCanvas,
+            0,
+            0,
+            this.offscreenCanvas.width,
+            this.offscreenCanvas.height,
+            0,
+            0,
+            pixelWidth,
+            pixelHeight
+        );
         this.surface.paint();
 
         this.lastBounds = bounds;
@@ -112,13 +139,15 @@ export class LegacyNodeHost implements NodeViewHost {
         this.root.y = Number(this.node.pos?.[1] || 0) + this.positionOffsetY;
     }
 
-    private ensureCanvasSize(width: number, height: number): void {
+    private ensureCanvasSize(width: number, height: number, renderScale: number): void {
+        const pixelWidth = Math.max(1, Math.ceil(width * renderScale));
+        const pixelHeight = Math.max(1, Math.ceil(height * renderScale));
         if (
-            this.offscreenCanvas.width !== width ||
-            this.offscreenCanvas.height !== height
+            this.offscreenCanvas.width !== pixelWidth ||
+            this.offscreenCanvas.height !== pixelHeight
         ) {
-            this.offscreenCanvas.width = width;
-            this.offscreenCanvas.height = height;
+            this.offscreenCanvas.width = pixelWidth;
+            this.offscreenCanvas.height = pixelHeight;
         }
 
         if (this.surface.width !== width) {
@@ -127,5 +156,12 @@ export class LegacyNodeHost implements NodeViewHost {
         if (this.surface.height !== height) {
             this.surface.height = height;
         }
+    }
+
+    private resolveRenderScale(): number {
+        return resolveRasterRenderScale({
+            zoomScale: this.getViewportScale(),
+            view: this.view,
+        });
     }
 }

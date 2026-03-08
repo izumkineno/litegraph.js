@@ -138,97 +138,32 @@
         });
     }
 
-    function ensureBenchmarkNodesRegistered() {
-        if (LiteGraph.__editorBenchmarkNodesRegistered) {
+    function ensureBenchmarkBaseNodesAvailable() {
+        if (LiteGraph.__editorBenchmarkBaseNodesValidated) {
             return;
         }
 
-        function register(type, ctor) {
-            if (LiteGraph.registered_node_types && LiteGraph.registered_node_types[type]) {
-                return;
+        var requiredTypes = [
+            "basic/const",
+            "basic/time",
+            "basic/cast",
+            "basic/watch",
+            "basic/string",
+            "basic/jsonparse"
+        ];
+        var missing = [];
+        for (var i = 0; i < requiredTypes.length; i += 1) {
+            var type = requiredTypes[i];
+            if (!LiteGraph.registered_node_types || !LiteGraph.registered_node_types[type]) {
+                missing.push(type);
             }
-            LiteGraph.registerNodeType(type, ctor);
         }
 
-        function BenchmarkEmpty() {
-            this.addInput("in", "number");
-            this.addOutput("out", "number");
-            this.size = [110, 36];
+        if (missing.length) {
+            throw new Error("Benchmark requires base nodes to be registered: " + missing.join(", "));
         }
-        BenchmarkEmpty.title = "基准空节点";
-        BenchmarkEmpty.desc = "性能基准使用的最小节点壳";
 
-        function BenchmarkDataSource() {
-            this.addOutput("value", "number");
-            this.size = [120, 40];
-            this._tick = 0;
-        }
-        BenchmarkDataSource.title = "基准数据源";
-        BenchmarkDataSource.prototype.onExecute = function() {
-            this._tick += 1;
-            this.setOutputData(0, this._tick);
-        };
-
-        function BenchmarkDataPipe() {
-            this.addInput("in", "number");
-            this.addOutput("out", "number");
-            this.size = [100, 36];
-        }
-        BenchmarkDataPipe.title = "基准数据中继";
-        BenchmarkDataPipe.prototype.onExecute = function() {
-            this.setOutputData(0, this.getInputData(0));
-        };
-
-        function BenchmarkDataSink() {
-            this.addInput("in", "number");
-            this.size = [100, 36];
-            this.lastValue = 0;
-        }
-        BenchmarkDataSink.title = "基准数据终点";
-        BenchmarkDataSink.prototype.onExecute = function() {
-            this.lastValue = this.getInputData(0);
-        };
-
-        function BenchmarkEventPulse() {
-            this.addOutput("event", LiteGraph.EVENT);
-            this.size = [120, 40];
-            this._tick = 0;
-        }
-        BenchmarkEventPulse.title = "基准事件脉冲";
-        BenchmarkEventPulse.prototype.onExecute = function() {
-            this._tick += 1;
-            this.triggerSlot(0, this._tick);
-        };
-
-        function BenchmarkEventPipe() {
-            this.addInput("event", LiteGraph.ACTION);
-            this.addOutput("event", LiteGraph.EVENT);
-            this.size = [100, 36];
-        }
-        BenchmarkEventPipe.title = "基准事件中继";
-        BenchmarkEventPipe.prototype.onAction = function(action, param, options) {
-            this.triggerSlot(0, param, null, options);
-        };
-
-        function BenchmarkEventSink() {
-            this.addInput("event", LiteGraph.ACTION);
-            this.size = [100, 36];
-            this.eventCount = 0;
-        }
-        BenchmarkEventSink.title = "基准事件终点";
-        BenchmarkEventSink.prototype.onAction = function() {
-            this.eventCount += 1;
-        };
-
-        register("benchmark/empty", BenchmarkEmpty);
-        register("benchmark/data_source", BenchmarkDataSource);
-        register("benchmark/data_pipe", BenchmarkDataPipe);
-        register("benchmark/data_sink", BenchmarkDataSink);
-        register("benchmark/event_pulse", BenchmarkEventPulse);
-        register("benchmark/event_pipe", BenchmarkEventPipe);
-        register("benchmark/event_sink", BenchmarkEventSink);
-
-        LiteGraph.__editorBenchmarkNodesRegistered = true;
+        LiteGraph.__editorBenchmarkBaseNodesValidated = true;
     }
 
     function EditorBenchmark(editor) {
@@ -263,7 +198,7 @@
     };
 
     EditorBenchmark.prototype.openBenchmarkPanel = function() {
-        ensureBenchmarkNodesRegistered();
+        ensureBenchmarkBaseNodesAvailable();
         var panel = this.ensurePanel();
         this.renderResults();
         this.syncUi();
@@ -626,7 +561,7 @@
     };
 
     EditorBenchmark.prototype.runBenchmarkSuite = async function(presetId) {
-        ensureBenchmarkNodesRegistered();
+        ensureBenchmarkBaseNodesAvailable();
         this.openBenchmarkPanel();
 
         if (this.isBusy()) {
@@ -742,7 +677,7 @@
         this.graph.clear();
         await nextFrame();
         var startedAt = now();
-        this.createNodes("benchmark/empty", preset.nodes);
+        this.createNodes("basic/const", preset.nodes);
         var createTotalMs = now() - startedAt;
         await nextFrame();
         return {
@@ -765,7 +700,7 @@
     EditorBenchmark.prototype.measureNodeDelete = async function(preset) {
         this.graph.stop();
         this.graph.clear();
-        this.createNodes("benchmark/empty", preset.nodes);
+        this.createNodes("basic/const", preset.nodes);
         await nextFrame();
         var nodes = this.graph._nodes.slice();
         var removeStart = now();
@@ -778,7 +713,7 @@
         this.graphcanvas.draw(true, true);
 
         this.graph.clear();
-        this.createNodes("benchmark/empty", preset.nodes);
+        this.createNodes("basic/const", preset.nodes);
         await nextFrame();
         var clearStart = now();
         this.graph.clear();
@@ -804,29 +739,64 @@
     };
 
     EditorBenchmark.prototype.createRuntimeGraph = function(preset, mode) {
-        var sourceType = mode === "event-runtime" ? "benchmark/event_pulse" : "benchmark/data_source";
-        var pipeType = mode === "event-runtime" ? "benchmark/event_pipe" : "benchmark/data_pipe";
-        var sinkType = mode === "event-runtime" ? "benchmark/event_sink" : "benchmark/data_sink";
         var graph = this.graph;
         var totalNodes = preset.nodes;
+        var tick = null;
+        var links = 0;
 
-        var source = LiteGraph.createNode(sourceType);
-        source.pos = [80, 200];
-        graph.add(source);
+        if (mode === "event-runtime") {
+            var stringSource = LiteGraph.createNode("basic/string");
+            stringSource.pos = [80, 200];
+            stringSource.properties.value = "{\"value\":1}";
+            graph.add(stringSource);
 
-        var previous = source;
-        for (var i = 1; i < totalNodes - 1; i += 1) {
-            var pipe = LiteGraph.createNode(pipeType);
-            pipe.pos = [80 + i * 140, 200];
-            graph.add(pipe);
-            previous.connect(0, pipe, 0);
-            previous = pipe;
+            var parsers = [];
+            for (var i = 1; i < totalNodes; i += 1) {
+                var parser = LiteGraph.createNode("basic/jsonparse");
+                parser.pos = [80 + i * 160, 200];
+                graph.add(parser);
+                stringSource.connect(0, parser, 1);
+                links += 1;
+
+                if (parsers.length) {
+                    parsers[parsers.length - 1].connect(0, parser, 0);
+                    links += 1;
+                }
+
+                parsers.push(parser);
+            }
+
+            tick = function() {
+                if (!parsers.length) {
+                    return;
+                }
+                stringSource.onExecute();
+                for (var parserIndex = 0; parserIndex < parsers.length; parserIndex += 1) {
+                    parsers[parserIndex].onExecute();
+                }
+                parsers[0].parse();
+            };
+        } else {
+            var source = LiteGraph.createNode("basic/time");
+            source.pos = [80, 200];
+            graph.add(source);
+
+            var previous = source;
+            for (var j = 1; j < totalNodes - 1; j += 1) {
+                var pipe = LiteGraph.createNode("basic/cast");
+                pipe.pos = [80 + j * 140, 200];
+                graph.add(pipe);
+                previous.connect(0, pipe, 0);
+                previous = pipe;
+                links += 1;
+            }
+
+            var sink = LiteGraph.createNode("basic/watch");
+            sink.pos = [80 + (totalNodes - 1) * 140, 200];
+            graph.add(sink);
+            previous.connect(0, sink, 0);
+            links += 1;
         }
-
-        var sink = LiteGraph.createNode(sinkType);
-        sink.pos = [80 + (totalNodes - 1) * 140, 200];
-        graph.add(sink);
-        previous.connect(0, sink, 0);
 
         if (typeof graph.updateExecutionOrder === "function") {
             graph.updateExecutionOrder();
@@ -836,22 +806,26 @@
 
         return {
             nodes: totalNodes,
-            links: Math.max(totalNodes - 1, 0)
+            links: links,
+            tick: tick
         };
     };
 
-    EditorBenchmark.prototype.measureStepSamples = function(sampleFrames) {
+    EditorBenchmark.prototype.measureStepSamples = function(sampleFrames, beforeStep) {
         var samples = [];
         for (var i = 0; i < sampleFrames; i += 1) {
             this.throwIfAborted();
             var startedAt = now();
+            if (typeof beforeStep === "function") {
+                beforeStep();
+            }
             this.graph.runStep(1);
             samples.push(now() - startedAt);
         }
         return samples;
     };
 
-    EditorBenchmark.prototype.collectRuntimeSamples = function(sampleFrames) {
+    EditorBenchmark.prototype.collectRuntimeSamples = function(sampleFrames, beforeStep) {
         var that = this;
         return new Promise(function(resolve, reject) {
             var executionMs = [];
@@ -860,6 +834,7 @@
             var firstFrameMs = null;
             var frameCount = 0;
             var startAt = now();
+            var originalBeforeStep = that.graph.onBeforeStep;
             var originalAfterStep = that.graph.onAfterStep;
             var resolved = false;
 
@@ -869,6 +844,7 @@
                 }
                 resolved = true;
                 that.activeRuntimeCanceler = null;
+                that.graph.onBeforeStep = originalBeforeStep;
                 that.graph.onAfterStep = originalAfterStep;
                 if (that.graph.status === LGraph.STATUS_RUNNING) {
                     that.graph.stop();
@@ -883,6 +859,15 @@
                     renderMs: renderMs,
                     fps: fps
                 });
+            };
+
+            that.graph.onBeforeStep = function() {
+                if (typeof originalBeforeStep === "function") {
+                    originalBeforeStep.apply(that.graph, arguments);
+                }
+                if (typeof beforeStep === "function") {
+                    beforeStep();
+                }
             };
 
             that.graph.onAfterStep = function() {
@@ -913,6 +898,7 @@
             try {
                 that.graph.start(0);
             } catch (error) {
+                that.graph.onBeforeStep = originalBeforeStep;
                 that.graph.onAfterStep = originalAfterStep;
                 that.activeRuntimeCanceler = null;
                 reject(error);
@@ -932,12 +918,15 @@
 
         for (var i = 0; i < preset.warmupSteps; i += 1) {
             this.throwIfAborted();
+            if (typeof graphInfo.tick === "function") {
+                graphInfo.tick();
+            }
             this.graph.runStep(1);
         }
 
-        var stepSamples = this.measureStepSamples(preset.sampleFrames);
+        var stepSamples = this.measureStepSamples(preset.sampleFrames, graphInfo.tick);
         await delay(10);
-        var runtimeSamples = await this.collectRuntimeSamples(preset.sampleFrames);
+        var runtimeSamples = await this.collectRuntimeSamples(preset.sampleFrames, graphInfo.tick);
 
         return {
             id: mode,

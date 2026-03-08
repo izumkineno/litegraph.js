@@ -189,12 +189,13 @@ export class LegacyNodePainter {
         node: LegacyNodePainterNodeLike,
         renderHost: LegacyNodeRenderHost,
         context: CanvasRenderingContext2D,
-        bounds?: LegacyNodePaintBounds
+        bounds?: LegacyNodePaintBounds,
+        renderScale = 1
     ): LegacyNodePaintBounds {
         const resolvedBounds = bounds || this.measure(node, renderHost, context);
 
         context.save();
-        context.setTransform(1, 0, 0, 1, 0, 0);
+        context.setTransform(renderScale, 0, 0, renderScale, 0, 0);
         context.clearRect(0, 0, resolvedBounds.width, resolvedBounds.height);
         context.translate(
             resolvedBounds.contentOffsetX,
