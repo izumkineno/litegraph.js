@@ -5,9 +5,9 @@
         return;
     }
 
-    ns.registerBaseNodes = ns.registerBaseNodes || function(host) {
-        return ns.registerNodeSet("base", host || LiteGraph);
+    ns.registerLogicNodes = ns.registerLogicNodes || function(host) {
+        return ns.registerNodeSet("logic", host || LiteGraph);
     };
 
-    ns.registerBaseNodes(LiteGraph);
+    ns.registerLogicNodes(LiteGraph);
 })(typeof window !== "undefined" ? window : globalThis);

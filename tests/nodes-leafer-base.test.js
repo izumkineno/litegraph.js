@@ -34,6 +34,9 @@ describe("nodes_leafer base modern nodes", () => {
 
     function loadModernBaseNodes() {
         jest.resetModules();
+        delete global.__litegraphNodesLeaferModuleSupport;
+        delete global.__litegraphNodesLeaferModules;
+        delete global.__LITEGRAPH_PENDING_MODERN_NODE_MODULES__;
 
         const runtime = require("../src/litegraph");
         const LiteGraph = runtime.LiteGraph;
@@ -150,6 +153,9 @@ describe("nodes_leafer base modern nodes", () => {
         delete global.alert;
         delete global.fetch;
         delete global.FileReader;
+        delete global.__litegraphNodesLeaferModuleSupport;
+        delete global.__litegraphNodesLeaferModules;
+        delete global.__LITEGRAPH_PENDING_MODERN_NODE_MODULES__;
     });
 
     test("registers all base node types once", () => {
