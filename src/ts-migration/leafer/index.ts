@@ -1,8 +1,10 @@
 export { ModernNodeBase } from "./ModernNodeBase";
+export { DefaultModernNodeBase } from "./DefaultModernNodeBase";
 export {
     MODERN_NODE_MARKER_KEY,
     MODERN_NODE_STATE_KEY,
     ModernNodeChangeMask,
+    ModernNodeContracts,
     isModernNodeContract,
     type ModernActionPartCallbackContext,
     type ModernActionPartSchema,
@@ -16,6 +18,7 @@ export {
     type ModernPortShape,
     type ModernShellState,
 } from "./ModernNodeContracts";
+export { ModernNodeAuthoringUtils } from "./ModernNodeAuthoringUtils";
 export {
     attachModernNodeRegistryApi,
     registerModernNode,
@@ -26,6 +29,17 @@ export {
     type ModernNodeConstructorLike,
     type ModernNodeRegistryLiteGraphLike,
 } from "./ModernNodeRegistry";
+export {
+    PENDING_MODERN_NODE_MODULES_KEY,
+    autoInstallModernNodeModule,
+    flushPendingModernNodeModules,
+    installModernNodeModule,
+    installModernNodeModules,
+    queueModernNodeModule,
+    type LiteGraphModernInstallHost,
+    type ModernNodeAuthoringApi,
+    type ModernNodeModuleDefinition,
+} from "./ModernNodeModule";
 export type {
     ModernWidgetActionContext,
     ModernWidgetActionResult,
@@ -37,15 +51,3 @@ export type {
     ModernWidgetViewHandle,
 } from "./ModernWidgetContracts";
 export { discriminateNodeRuntime } from "./NodeRuntimeDiscriminator";
-
-import {
-    MODERN_NODE_MARKER_KEY,
-    MODERN_NODE_STATE_KEY,
-    ModernNodeChangeMask,
-} from "./ModernNodeContracts";
-
-export const ModernNodeContracts = {
-    MODERN_NODE_MARKER_KEY,
-    MODERN_NODE_STATE_KEY,
-    ModernNodeChangeMask,
-} as const;

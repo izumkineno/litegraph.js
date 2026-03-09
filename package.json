@@ -9,6 +9,10 @@
         "./core": "./dist/litegraph.core.js",
         "./basic": "./dist/litegraph.basic.js",
         "./extended": "./dist/litegraph.extended.js",
+        "./modern-types": {
+            "types": "./dist/types/modern-types.d.ts",
+            "default": "./dist/modern-types.js"
+        },
         "./css": "./dist/css/litegraph.css",
         "./package.json": "./package.json"
     },
@@ -22,7 +26,8 @@
         "build": "bun run build:dist",
         "build:dist": "node scripts/build-dist.mjs",
         "build:ts-migration": "node scripts/build-ts-migration.mjs",
-        "build:all": "bun run build:dist && bun run build:ts-migration",
+        "build:modern-types": "node scripts/build-modern-types.mjs",
+        "build:all": "bun run build:dist && bun run build:ts-migration && bun run build:modern-types",
         "typecheck": "bunx tsc -p tsconfig.typecheck.json",
         "test": "bunx jest",
         "test:e2e": "npx playwright test",

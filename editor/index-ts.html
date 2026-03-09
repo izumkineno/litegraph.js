@@ -39,8 +39,17 @@
       }
     </script>
     <!-- TS demo uses modernized base nodes only -->
-    <script type="text/javascript" src="../src/nodes_leafer/base/shared/runtime.js"></script>
-    <script type="text/javascript" src="../src/nodes_leafer/base/graph.js"></script>
+    <script type="text/javascript" src="../src/nodes_leafer/base/shared/module.js"></script>
+    <script type="text/javascript">
+      if (
+        window.LiteGraphTSMigration &&
+        typeof window.LiteGraphTSMigration.registerLeaferGraphBaseModule === "function"
+      ) {
+        window.LiteGraphTSMigration.registerLeaferGraphBaseModule(window);
+      } else {
+        throw new Error("Leafer graph base module registrar is unavailable");
+      }
+    </script>
     <script type="text/javascript" src="../src/nodes_leafer/base/basic-value.js"></script>
     <script type="text/javascript" src="../src/nodes_leafer/base/basic-data.js"></script>
     <script type="text/javascript" src="../src/nodes_leafer/base/basic-io.js"></script>

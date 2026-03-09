@@ -9,14 +9,16 @@ declare global {
     }
 }
 
-const CLASSIC_SCRIPT_PATHS = [
+const CLASSIC_BOOTSTRAP_SCRIPT_PATHS = [
     "./js/libs/jquery-1.6.2.min.js",
     "./js/libs/gl-matrix-min.js",
     "./js/libs/litegl.js",
     "./js/libs/audiosynth.js",
     "./js/libs/midi-parser.js",
-    "../src/nodes_leafer/base/shared/runtime.js",
-    "../src/nodes_leafer/base/graph.js",
+    "../src/nodes_leafer/base/shared/module.js",
+];
+
+const CLASSIC_SCRIPT_PATHS = [
     "../src/nodes_leafer/base/basic-value.js",
     "../src/nodes_leafer/base/basic-data.js",
     "../src/nodes_leafer/base/basic-io.js",
@@ -66,7 +68,13 @@ function loadClassicScript(relativePath: string): Promise<void> {
     });
 }
 
-async function loadClassicScriptsSequentially(): Promise<void> {
+async function loadClassicScriptsWithTsGraphModule(): Promise<void> {
+    for (const relativePath of CLASSIC_BOOTSTRAP_SCRIPT_PATHS) {
+        await loadClassicScript(relativePath);
+    }
+
+    LiteGraphTSMigration.registerLeaferGraphBaseModule(window);
+
     for (const relativePath of CLASSIC_SCRIPT_PATHS) {
         await loadClassicScript(relativePath);
     }
@@ -107,7 +115,7 @@ async function bootEditor(): Promise<void> {
         attachCommonJsExports: true,
     });
 
-    await loadClassicScriptsSequentially();
+    await loadClassicScriptsWithTsGraphModule();
 }
 
 if (!bootPromise) {

@@ -17,11 +17,17 @@ export const ModernNodeChangeMask = {
     All: (1 << 5) - 1,
 } as const;
 
+export const ModernNodeContracts = {
+    MODERN_NODE_MARKER_KEY,
+    MODERN_NODE_STATE_KEY,
+    ModernNodeChangeMask,
+} as const;
+
 export type ModernNodeChangeMaskValue = number;
 
 export interface ModernNodePortDefinition {
     name: string;
-    type?: string | -1;
+    type?: string | number;
     extra?: Record<string, unknown>;
 }
 

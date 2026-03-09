@@ -9056,7 +9056,7 @@ var LiteGraphTSMigration = (function(exports) {
   function toMutationKey$1(nodeId) {
     return String(nodeId);
   }
-  function toFiniteNumber$b(value, fallback = 0) {
+  function toFiniteNumber$c(value, fallback = 0) {
     const numericValue = Number(value);
     return Number.isFinite(numericValue) ? numericValue : fallback;
   }
@@ -9070,7 +9070,7 @@ var LiteGraphTSMigration = (function(exports) {
     return "mouseup";
   }
   function resolveButtons(event2) {
-    return toFiniteNumber$b(event2.buttons);
+    return toFiniteNumber$c(event2.buttons);
   }
   function resolveButton(event2) {
     const pointerEvent = event2;
@@ -9101,21 +9101,21 @@ var LiteGraphTSMigration = (function(exports) {
   function buildLocalPosMap(event2, targets) {
     const localPosByNodeId = /* @__PURE__ */ new Map();
     const pagePoint = event2.getPagePoint();
-    const pageX = toFiniteNumber$b(pagePoint.x);
-    const pageY = toFiniteNumber$b(pagePoint.y);
+    const pageX = toFiniteNumber$c(pagePoint.x);
+    const pageY = toFiniteNumber$c(pagePoint.y);
     for (let i2 = 0; i2 < targets.length; ++i2) {
       const target = targets[i2];
       if (target.nodePosition) {
         localPosByNodeId.set(toMutationKey$1(target.nodeId), [
-          pageX - toFiniteNumber$b(target.nodePosition[0]),
-          pageY - toFiniteNumber$b(target.nodePosition[1])
+          pageX - toFiniteNumber$c(target.nodePosition[0]),
+          pageY - toFiniteNumber$c(target.nodePosition[1])
         ]);
         continue;
       }
       const localPoint = event2.getInnerPoint(target.nodeRoot);
       localPosByNodeId.set(toMutationKey$1(target.nodeId), [
-        toFiniteNumber$b(localPoint.x),
-        toFiniteNumber$b(localPoint.y)
+        toFiniteNumber$c(localPoint.x),
+        toFiniteNumber$c(localPoint.y)
       ]);
     }
     return localPosByNodeId;
@@ -9123,11 +9123,11 @@ var LiteGraphTSMigration = (function(exports) {
   function createLegacyPointerEvent(options) {
     const { event: event2, hostElement } = options;
     const pagePoint = event2.getPagePoint();
-    const canvasX = toFiniteNumber$b(pagePoint.x);
-    const canvasY = toFiniteNumber$b(pagePoint.y);
+    const canvasX = toFiniteNumber$c(pagePoint.x);
+    const canvasY = toFiniteNumber$c(pagePoint.y);
     const hostRect = hostElement.getBoundingClientRect();
-    const clientX = toFiniteNumber$b(event2.clientX, hostRect.left + canvasX);
-    const clientY = toFiniteNumber$b(event2.clientY, hostRect.top + canvasY);
+    const clientX = toFiniteNumber$c(event2.clientX, hostRect.left + canvasX);
+    const clientY = toFiniteNumber$c(event2.clientY, hostRect.top + canvasY);
     const button = resolveButton(event2);
     const buttons = resolveButtons(event2);
     const localPosByNodeId = buildLocalPosMap(event2, options.targets || []);
@@ -9147,22 +9147,22 @@ var LiteGraphTSMigration = (function(exports) {
       type: resolveMouseType(options.type),
       canvasX,
       canvasY,
-      pageX: toFiniteNumber$b(event2.pageX, clientX),
-      pageY: toFiniteNumber$b(event2.pageY, clientY),
+      pageX: toFiniteNumber$c(event2.pageX, clientX),
+      pageY: toFiniteNumber$c(event2.pageY, clientY),
       clientX,
       clientY,
-      screenX: toFiniteNumber$b(event2.screenX, clientX),
-      screenY: toFiniteNumber$b(event2.screenY, clientY),
+      screenX: toFiniteNumber$c(event2.screenX, clientX),
+      screenY: toFiniteNumber$c(event2.screenY, clientY),
       offsetX: canvasX,
       offsetY: canvasY,
-      deltaX: toFiniteNumber$b(options.deltaX),
-      deltaY: toFiniteNumber$b(options.deltaY),
-      deltax: toFiniteNumber$b(options.deltaX),
-      deltay: toFiniteNumber$b(options.deltaY),
+      deltaX: toFiniteNumber$c(options.deltaX),
+      deltaY: toFiniteNumber$c(options.deltaY),
+      deltax: toFiniteNumber$c(options.deltaX),
+      deltay: toFiniteNumber$c(options.deltaY),
       which: resolveWhich(button),
       button,
       buttons,
-      click_time: Math.max(0, toFiniteNumber$b(options.clickTime)),
+      click_time: Math.max(0, toFiniteNumber$c(options.clickTime)),
       dragging: Boolean(options.dragging),
       shiftKey: Boolean(event2.shiftKey),
       ctrlKey: Boolean(event2.ctrlKey),
@@ -12030,17 +12030,17 @@ var LiteGraphTSMigration = (function(exports) {
   const PORT_DIRECTION_RIGHT = 2;
   const PORT_DIRECTION_DOWN = 3;
   const PORT_DIRECTION_LEFT = 4;
-  function toFiniteNumber$a(value, fallback = 0) {
+  function toFiniteNumber$b(value, fallback = 0) {
     const numericValue = Number(value);
     return Number.isFinite(numericValue) ? numericValue : fallback;
   }
   function toPoint$1(value) {
     if (Array.isArray(value) || ArrayBuffer.isView(value) || typeof value === "object" && value !== null && "0" in value && "1" in value) {
       const indexedValue = value;
-      return [toFiniteNumber$a(indexedValue[0]), toFiniteNumber$a(indexedValue[1])];
+      return [toFiniteNumber$b(indexedValue[0]), toFiniteNumber$b(indexedValue[1])];
     }
     const point = value;
-    return [toFiniteNumber$a(point.x), toFiniteNumber$a(point.y)];
+    return [toFiniteNumber$b(point.x), toFiniteNumber$b(point.y)];
   }
   function distance(a2, b2) {
     const dx = b2[0] - a2[0];
@@ -12089,10 +12089,10 @@ var LiteGraphTSMigration = (function(exports) {
         if (!bounds) {
           continue;
         }
-        const left = toFiniteNumber$a(bounds[0]);
-        const top = toFiniteNumber$a(bounds[1]);
-        const width2 = toFiniteNumber$a(bounds[2]);
-        const height = toFiniteNumber$a(bounds[3]);
+        const left = toFiniteNumber$b(bounds[0]);
+        const top = toFiniteNumber$b(bounds[1]);
+        const width2 = toFiniteNumber$b(bounds[2]);
+        const height = toFiniteNumber$b(bounds[3]);
         if (x2 >= left && x2 <= left + width2 && y2 >= top && y2 <= top + height) {
           return node2;
         }
@@ -12152,7 +12152,7 @@ var LiteGraphTSMigration = (function(exports) {
         slotIndex
       );
       if (hostAnchor) {
-        return [toFiniteNumber$a(hostAnchor[0]), toFiniteNumber$a(hostAnchor[1])];
+        return [toFiniteNumber$b(hostAnchor[0]), toFiniteNumber$b(hostAnchor[1])];
       }
       const node2 = this.getNodeById(nodeId);
       if (!node2 || typeof node2.getConnectionPos !== "function") {
@@ -12165,8 +12165,8 @@ var LiteGraphTSMigration = (function(exports) {
       if (typeof rawPoint === "object" && rawPoint !== null && "0" in rawPoint) {
         const indexedPoint = rawPoint;
         return [
-          toFiniteNumber$a(indexedPoint[0]),
-          toFiniteNumber$a(indexedPoint[1])
+          toFiniteNumber$b(indexedPoint[0]),
+          toFiniteNumber$b(indexedPoint[1])
         ];
       }
       return toPoint$1(rawPoint);
@@ -12179,14 +12179,14 @@ var LiteGraphTSMigration = (function(exports) {
         slotIndex
       );
       if (hostDirection != null) {
-        const normalizedDirection = toFiniteNumber$a(hostDirection, 0);
+        const normalizedDirection = toFiniteNumber$b(hostDirection, 0);
         if (normalizedDirection) {
           return normalizedDirection;
         }
       }
       const slotList = kind === "input" ? node2.inputs : node2.outputs;
       const resolvedSlot = slot || (slotList == null ? void 0 : slotList[slotIndex]) || null;
-      const explicitDir = toFiniteNumber$a(resolvedSlot == null ? void 0 : resolvedSlot.dir, 0);
+      const explicitDir = toFiniteNumber$b(resolvedSlot == null ? void 0 : resolvedSlot.dir, 0);
       if (explicitDir) {
         return explicitDir;
       }
@@ -12269,7 +12269,7 @@ var LiteGraphTSMigration = (function(exports) {
       return this.buildLinkCurve(start, end, startDir, endDir).path;
     }
     getPointOnLinkCurve(curve, t2) {
-      const clampedT = Math.max(0, Math.min(1, toFiniteNumber$a(t2, 0)));
+      const clampedT = Math.max(0, Math.min(1, toFiniteNumber$b(t2, 0)));
       const oneMinusT = 1 - clampedT;
       const c1 = oneMinusT * oneMinusT * oneMinusT;
       const c2 = 3 * oneMinusT * oneMinusT * clampedT;
@@ -12411,7 +12411,7 @@ var LiteGraphTSMigration = (function(exports) {
       return this.sceneSyncController.nodeHosts.get(node2.id) || null;
     }
   }
-  function toFiniteNumber$9(value, fallback = 0) {
+  function toFiniteNumber$a(value, fallback = 0) {
     const numericValue = Number(value);
     return Number.isFinite(numericValue) ? numericValue : fallback;
   }
@@ -12502,10 +12502,10 @@ var LiteGraphTSMigration = (function(exports) {
     }
     syncWorldTransform() {
       const zoomLayer = this.appHost.treeZoomLayer;
-      this.appHost.overlayWorld.x = toFiniteNumber$9(zoomLayer.x);
-      this.appHost.overlayWorld.y = toFiniteNumber$9(zoomLayer.y);
-      this.appHost.overlayWorld.scaleX = toFiniteNumber$9(zoomLayer.scaleX, 1);
-      this.appHost.overlayWorld.scaleY = toFiniteNumber$9(zoomLayer.scaleY, 1);
+      this.appHost.overlayWorld.x = toFiniteNumber$a(zoomLayer.x);
+      this.appHost.overlayWorld.y = toFiniteNumber$a(zoomLayer.y);
+      this.appHost.overlayWorld.scaleX = toFiniteNumber$a(zoomLayer.scaleX, 1);
+      this.appHost.overlayWorld.scaleY = toFiniteNumber$a(zoomLayer.scaleY, 1);
     }
     measureCurveBounds(curve, strokeWidth) {
       const padding = Math.ceil(strokeWidth + 8);
@@ -12662,7 +12662,7 @@ var LiteGraphTSMigration = (function(exports) {
       return Boolean(this.activeSelection);
     }
   }
-  function toFiniteNumber$8(value) {
+  function toFiniteNumber$9(value) {
     const numericValue = Number(value);
     return Number.isFinite(numericValue) ? numericValue : 0;
   }
@@ -12728,16 +12728,16 @@ var LiteGraphTSMigration = (function(exports) {
         const worldPoint = source.getWorldPoint();
         const graphPoint = source.getInnerPoint();
         const normalizedPagePoint = {
-          x: toFiniteNumber$8(pagePoint.x),
-          y: toFiniteNumber$8(pagePoint.y)
+          x: toFiniteNumber$9(pagePoint.x),
+          y: toFiniteNumber$9(pagePoint.y)
         };
         const normalizedWorldPoint = {
-          x: toFiniteNumber$8(worldPoint.x),
-          y: toFiniteNumber$8(worldPoint.y)
+          x: toFiniteNumber$9(worldPoint.x),
+          y: toFiniteNumber$9(worldPoint.y)
         };
         const normalizedGraphPoint = {
-          x: toFiniteNumber$8(graphPoint.x),
-          y: toFiniteNumber$8(graphPoint.y)
+          x: toFiniteNumber$9(graphPoint.x),
+          y: toFiniteNumber$9(graphPoint.y)
         };
         this.pointerIsDown = true;
         this.pointerDownAt = Date.now();
@@ -12916,16 +12916,16 @@ var LiteGraphTSMigration = (function(exports) {
         const worldPoint = source.getWorldPoint();
         const graphPoint = source.getInnerPoint();
         const normalizedPagePoint = {
-          x: toFiniteNumber$8(pagePoint.x),
-          y: toFiniteNumber$8(pagePoint.y)
+          x: toFiniteNumber$9(pagePoint.x),
+          y: toFiniteNumber$9(pagePoint.y)
         };
         const normalizedWorldPoint = {
-          x: toFiniteNumber$8(worldPoint.x),
-          y: toFiniteNumber$8(worldPoint.y)
+          x: toFiniteNumber$9(worldPoint.x),
+          y: toFiniteNumber$9(worldPoint.y)
         };
         const normalizedGraphPoint = {
-          x: toFiniteNumber$8(graphPoint.x),
-          y: toFiniteNumber$8(graphPoint.y)
+          x: toFiniteNumber$9(graphPoint.x),
+          y: toFiniteNumber$9(graphPoint.y)
         };
         if (((_a3 = this.session) == null ? void 0 : _a3.kind) === "connection") {
           this.connectionController.finish(
@@ -13064,8 +13064,8 @@ var LiteGraphTSMigration = (function(exports) {
       const targets = this.collectTargets(this.toLegacyHost((hit == null ? void 0 : hit.host) || null));
       const shouldDispatch = targets.length > 0 || Boolean(this.canvas.node_widget) || Boolean(this.canvas.node_over) || Boolean(this.canvas.node_capturing_input) || Boolean(this.canvas.node_dragged) || Boolean(this.canvas.resizing_node) || Boolean(this.canvas.connecting_node);
       const normalizedPagePoint = {
-        x: toFiniteNumber$8(pagePoint.x),
-        y: toFiniteNumber$8(pagePoint.y)
+        x: toFiniteNumber$9(pagePoint.x),
+        y: toFiniteNumber$9(pagePoint.y)
       };
       const deltaX2 = this.lastPagePoint ? normalizedPagePoint.x - this.lastPagePoint.x : 0;
       const deltaY = this.lastPagePoint ? normalizedPagePoint.y - this.lastPagePoint.y : 0;
@@ -13096,16 +13096,16 @@ var LiteGraphTSMigration = (function(exports) {
       const worldPoint = source.getWorldPoint();
       const graphPoint = source.getInnerPoint();
       const normalizedPagePoint = {
-        x: toFiniteNumber$8(pagePoint.x),
-        y: toFiniteNumber$8(pagePoint.y)
+        x: toFiniteNumber$9(pagePoint.x),
+        y: toFiniteNumber$9(pagePoint.y)
       };
       const normalizedWorldPoint = {
-        x: toFiniteNumber$8(worldPoint.x),
-        y: toFiniteNumber$8(worldPoint.y)
+        x: toFiniteNumber$9(worldPoint.x),
+        y: toFiniteNumber$9(worldPoint.y)
       };
       const normalizedGraphPoint = {
-        x: toFiniteNumber$8(graphPoint.x),
-        y: toFiniteNumber$8(graphPoint.y)
+        x: toFiniteNumber$9(graphPoint.x),
+        y: toFiniteNumber$9(graphPoint.y)
       };
       if (this.session.kind === "connection") {
         this.connectionController.update(
@@ -13543,8 +13543,8 @@ var LiteGraphTSMigration = (function(exports) {
         clientY: event2.clientY
       });
       const localPos = host.getLocalPoint(
-        toFiniteNumber$8(worldPoint.x),
-        toFiniteNumber$8(worldPoint.y)
+        toFiniteNumber$9(worldPoint.x),
+        toFiniteNumber$9(worldPoint.y)
       );
       const propertyName = entry.schema.property;
       const widgetMeta = {
@@ -13571,7 +13571,7 @@ var LiteGraphTSMigration = (function(exports) {
           widgetMeta
         );
         if (node2.graph) {
-          node2.graph._version = toFiniteNumber$8(
+          node2.graph._version = toFiniteNumber$9(
             node2.graph._version
           ) + 1;
         }
@@ -13707,8 +13707,8 @@ var LiteGraphTSMigration = (function(exports) {
     }
     isPointerNearGroupResizeHandle(group, graphPoint) {
       const resizeCorner = {
-        x: toFiniteNumber$8(group.pos[0]) + toFiniteNumber$8(group.size[0]),
-        y: toFiniteNumber$8(group.pos[1]) + toFiniteNumber$8(group.size[1])
+        x: toFiniteNumber$9(group.pos[0]) + toFiniteNumber$9(group.size[0]),
+        y: toFiniteNumber$9(group.pos[1]) + toFiniteNumber$9(group.size[1])
       };
       return getPointerDistance(graphPoint, resizeCorner) * this.getViewportScale() < 10;
     }
@@ -13716,7 +13716,7 @@ var LiteGraphTSMigration = (function(exports) {
       return Math.max(
         1e-4,
         Math.abs(
-          toFiniteNumber$8(
+          toFiniteNumber$9(
             this.appHost.treeZoomLayer.scaleX || 1
           )
         )
@@ -13858,7 +13858,7 @@ var LiteGraphTSMigration = (function(exports) {
         return void 0;
       }
       const pos2 = rawPos;
-      return [toFiniteNumber$8(pos2[0]), toFiniteNumber$8(pos2[1])];
+      return [toFiniteNumber$9(pos2[0]), toFiniteNumber$9(pos2[1])];
     }
     dispatchContextMenu(event2) {
       var _a3, _b3, _c2;
@@ -14445,7 +14445,7 @@ var LiteGraphTSMigration = (function(exports) {
     }
     return hex;
   }
-  function toFiniteNumber$7(value, fallback = 0) {
+  function toFiniteNumber$8(value, fallback = 0) {
     const numericValue = Number(value);
     return Number.isFinite(numericValue) ? numericValue : fallback;
   }
@@ -14498,7 +14498,7 @@ var LiteGraphTSMigration = (function(exports) {
         x: 4,
         y: 4,
         text: typeof group.title === "string" ? group.title : "Group",
-        fontSize: Math.max(12, toFiniteNumber$7(group.font_size, 24)),
+        fontSize: Math.max(12, toFiniteNumber$8(group.font_size, 24)),
         fill: typeof group.color === "string" ? group.color : "#88A",
         hittable: false
       });
@@ -14507,7 +14507,7 @@ var LiteGraphTSMigration = (function(exports) {
     repaint() {
       const position = this.resolvePosition();
       const size = this.resolveSize();
-      const fontSize = Math.max(12, toFiniteNumber$7(this.group.font_size, 24));
+      const fontSize = Math.max(12, toFiniteNumber$8(this.group.font_size, 24));
       const color = typeof this.group.color === "string" && this.group.color ? this.group.color : "#88A";
       this.root.x = position[0];
       this.root.y = position[1];
@@ -14528,15 +14528,15 @@ var LiteGraphTSMigration = (function(exports) {
       const worldBounds = this.root.worldRenderBounds || null;
       if ((worldBounds == null ? void 0 : worldBounds.width) && (worldBounds == null ? void 0 : worldBounds.height)) {
         return {
-          x: toFiniteNumber$7(worldBounds.x),
-          y: toFiniteNumber$7(worldBounds.y),
-          width: Math.max(0, toFiniteNumber$7(worldBounds.width)),
-          height: Math.max(0, toFiniteNumber$7(worldBounds.height))
+          x: toFiniteNumber$8(worldBounds.x),
+          y: toFiniteNumber$8(worldBounds.y),
+          width: Math.max(0, toFiniteNumber$8(worldBounds.width)),
+          height: Math.max(0, toFiniteNumber$8(worldBounds.height))
         };
       }
       const [x2, y2] = this.resolvePosition();
       const [width2, height] = this.resolveSize();
-      const fontSize = Math.max(12, toFiniteNumber$7(this.group.font_size, 24));
+      const fontSize = Math.max(12, toFiniteNumber$8(this.group.font_size, 24));
       return {
         x: x2,
         y: y2,
@@ -14547,15 +14547,15 @@ var LiteGraphTSMigration = (function(exports) {
     resolvePosition() {
       const pos2 = this.group.pos || this.group._pos;
       return [
-        toFiniteNumber$7(pos2 == null ? void 0 : pos2[0]),
-        toFiniteNumber$7(pos2 == null ? void 0 : pos2[1])
+        toFiniteNumber$8(pos2 == null ? void 0 : pos2[0]),
+        toFiniteNumber$8(pos2 == null ? void 0 : pos2[1])
       ];
     }
     resolveSize() {
       const size = this.group.size || this.group._size;
       return [
-        Math.max(140, toFiniteNumber$7(size == null ? void 0 : size[0], 140)),
-        Math.max(80, toFiniteNumber$7(size == null ? void 0 : size[1], 80))
+        Math.max(140, toFiniteNumber$8(size == null ? void 0 : size[0], 140)),
+        Math.max(80, toFiniteNumber$8(size == null ? void 0 : size[1], 80))
       ];
     }
   }
@@ -14673,7 +14673,7 @@ var LiteGraphTSMigration = (function(exports) {
       return resolvedBounds;
     }
   }
-  function toFiniteNumber$6(value, fallback = 0) {
+  function toFiniteNumber$7(value, fallback = 0) {
     const numericValue = Number(value);
     return Number.isFinite(numericValue) ? numericValue : fallback;
   }
@@ -14683,14 +14683,14 @@ var LiteGraphTSMigration = (function(exports) {
   function resolveDevicePixelRatio(view) {
     var _a3;
     const windowRef = ((_a3 = view == null ? void 0 : view.ownerDocument) == null ? void 0 : _a3.defaultView) || window;
-    return Math.max(1, toFiniteNumber$6(windowRef.devicePixelRatio, 1));
+    return Math.max(1, toFiniteNumber$7(windowRef.devicePixelRatio, 1));
   }
   function resolveRasterRenderScale(options) {
     const devicePixelRatio2 = resolveDevicePixelRatio(options.view);
-    const zoomScale = Math.max(1, toFiniteNumber$6(options.zoomScale, 1));
+    const zoomScale = Math.max(1, toFiniteNumber$7(options.zoomScale, 1));
     const maxPixelRatio = Math.max(
       devicePixelRatio2,
-      toFiniteNumber$6(options.maxPixelRatio, 4)
+      toFiniteNumber$7(options.maxPixelRatio, 4)
     );
     const scaledRatio = devicePixelRatio2 * zoomScale;
     return clamp$1(Math.ceil(scaledRatio * 2) / 2, devicePixelRatio2, maxPixelRatio);
@@ -14820,12 +14820,12 @@ var LiteGraphTSMigration = (function(exports) {
   const LINK_BORDER_COLOR = "transparent";
   const LINK_BORDER_EXTRA_WIDTH = 0;
   const LINK_FLOW_DOT_COUNT = 5;
-  function toFiniteNumber$5(value, fallback = 0) {
+  function toFiniteNumber$6(value, fallback = 0) {
     const numericValue = Number(value);
     return Number.isFinite(numericValue) ? numericValue : fallback;
   }
   function toOpacity(value, fallback = 1) {
-    return Math.max(0, Math.min(1, toFiniteNumber$5(value, fallback)));
+    return Math.max(0, Math.min(1, toFiniteNumber$6(value, fallback)));
   }
   class LinkViewHost {
     constructor(name, options = {}) {
@@ -14879,7 +14879,7 @@ var LiteGraphTSMigration = (function(exports) {
       }
       const strokeWidth = Math.max(
         1,
-        toFiniteNumber$5(presentation.strokeWidth, 3)
+        toFiniteNumber$6(presentation.strokeWidth, 3)
       );
       this.getViewportScale();
       const stroke = presentation.stroke || "#9A9";
@@ -14915,7 +14915,7 @@ var LiteGraphTSMigration = (function(exports) {
       }
       const flowColor = flow.color || "#FFF";
       const flowOpacity = toOpacity(flow.opacity, 1);
-      const dotRadius = Math.max(1, toFiniteNumber$5(flow.dotRadius, 5));
+      const dotRadius = Math.max(1, toFiniteNumber$6(flow.dotRadius, 5));
       const dots = flow.dots || [];
       this.flowPath.visible = true;
       this.flowPath.path = path;
@@ -14959,6 +14959,11 @@ var LiteGraphTSMigration = (function(exports) {
     Ports: 1 << 3,
     Interaction: 1 << 4,
     All: (1 << 5) - 1
+  };
+  const ModernNodeContracts = {
+    MODERN_NODE_MARKER_KEY,
+    MODERN_NODE_STATE_KEY,
+    ModernNodeChangeMask
   };
   function isModernNodeContract(node2) {
     if (!node2 || typeof node2 !== "object") {
@@ -16097,7 +16102,11 @@ var LiteGraphTSMigration = (function(exports) {
       const host = resolvePortsWidgetsHost(this);
       for (let i2 = 0; i2 < array.length; ++i2) {
         const info = array[i2];
-        const o2 = { name: info[0], type: info[1], link: null };
+        const o2 = {
+          name: info[0],
+          type: info[1],
+          link: null
+        };
         if (array[2]) {
           for (const j2 in info[2]) {
             o2[j2] = info[2][j2];
@@ -17139,7 +17148,7 @@ var LiteGraphTSMigration = (function(exports) {
     }
   }
   var _a, _b;
-  function toFiniteNumber$4(value, fallback = 0) {
+  function toFiniteNumber$5(value, fallback = 0) {
     const numericValue = Number(value);
     return Number.isFinite(numericValue) ? numericValue : fallback;
   }
@@ -17199,7 +17208,7 @@ var LiteGraphTSMigration = (function(exports) {
       this.ensureModernPorts(true);
     }
     requestModernPatch(changeMask = ModernNodeChangeMask.All, dirtyBackground = false) {
-      const normalizedMask = toFiniteNumber$4(changeMask, ModernNodeChangeMask.None) | ModernNodeChangeMask.None;
+      const normalizedMask = toFiniteNumber$5(changeMask, ModernNodeChangeMask.None) | ModernNodeChangeMask.None;
       if (normalizedMask) {
         this.modernChangeMask |= normalizedMask;
       }
@@ -17279,12 +17288,305 @@ var LiteGraphTSMigration = (function(exports) {
   };
   _ModernNodeBase.modernContractVersion = 1;
   let ModernNodeBase = _ModernNodeBase;
+  function toFiniteNumber$4(value, fallback = 0) {
+    const numericValue = Number(value);
+    return Number.isFinite(numericValue) ? numericValue : fallback;
+  }
+  function toStringValue(value, fallback = "") {
+    return value == null ? fallback : String(value);
+  }
+  function resolveLiteGraphAuthoringHost(value) {
+    if (value && typeof value === "object") {
+      return value;
+    }
+    const globalLike = globalThis;
+    return globalLike.LiteGraph || {};
+  }
+  function resolveLiteGraphAuthoringHostForNode(node2) {
+    if (!node2 || typeof node2 !== "object") {
+      return resolveLiteGraphAuthoringHost();
+    }
+    const ctor = node2.constructor;
+    if ((ctor == null ? void 0 : ctor.liteGraph) && typeof ctor.liteGraph === "object") {
+      return resolveLiteGraphAuthoringHost(ctor.liteGraph);
+    }
+    return resolveLiteGraphAuthoringHost();
+  }
+  function buildSlotSchemaFromNode(node2) {
+    const runtimeNode = node2 || {};
+    const inputs = Array.isArray(runtimeNode.inputs) ? runtimeNode.inputs.map((slot) => ({
+      name: toStringValue(slot == null ? void 0 : slot.name),
+      type: slot && Object.prototype.hasOwnProperty.call(slot, "type") ? slot.type : void 0
+    })) : [];
+    const outputs = Array.isArray(runtimeNode.outputs) ? runtimeNode.outputs.map((slot) => ({
+      name: toStringValue(slot == null ? void 0 : slot.name),
+      type: slot && Object.prototype.hasOwnProperty.call(slot, "type") ? slot.type : void 0
+    })) : [];
+    return { inputs, outputs };
+  }
+  function truncateText(value, maxLength = 24) {
+    const text = String(value == null ? "" : value).replace(/\s+/g, " ").trim();
+    if (!text) {
+      return "";
+    }
+    const safeMaxLength = Math.max(toFiniteNumber$4(maxLength, 24), 4);
+    if (text.length <= safeMaxLength) {
+      return text;
+    }
+    return `${text.slice(0, safeMaxLength - 3)}...`;
+  }
+  function formatNodeValue(value, maxLength = 22) {
+    if (value == null) {
+      return "null";
+    }
+    if (value.constructor === Number) {
+      return Number.isInteger(value) ? String(value) : Number(value).toFixed(3).replace(/0+$/, "").replace(/\.$/, "");
+    }
+    if (value.constructor === Boolean) {
+      return value ? "true" : "false";
+    }
+    if (value.constructor === String) {
+      return truncateText(value, maxLength);
+    }
+    if (Array.isArray(value)) {
+      return `Array(${value.length})`;
+    }
+    if (typeof value === "function") {
+      return "fn()";
+    }
+    if (typeof value === "object") {
+      const keys = Object.keys(value);
+      return keys.length ? `{${truncateText(keys.join(", "), 18)}}` : "{}";
+    }
+    return truncateText(String(value), maxLength);
+  }
+  function describePortType(type, hostInput) {
+    const host = resolveLiteGraphAuthoringHost(hostInput);
+    if (type === host.EVENT || type === host.ACTION || type === "event" || type === "action") {
+      return "EVENT";
+    }
+    if (type == null || type === "" || type === -1 || type === 0) {
+      return "ANY";
+    }
+    const label = String(type).replace(/_/g, " ").replace(/\s+/g, " ").trim();
+    if (!label) {
+      return "ANY";
+    }
+    switch (label) {
+      case "number":
+        return "NUMBER";
+      case "boolean":
+        return "BOOLEAN";
+      case "string":
+        return "STRING";
+      case "object":
+        return "OBJECT";
+      case "array":
+        return "ARRAY";
+      case "json":
+        return "JSON";
+      default:
+        return label.toUpperCase();
+    }
+  }
+  function getNodeTitle(node2) {
+    const runtimeNode = node2 || {};
+    if (typeof runtimeNode.getTitle === "function") {
+      return toStringValue(
+        runtimeNode.getTitle() || runtimeNode.title || runtimeNode.type || "Node"
+      );
+    }
+    return toStringValue(runtimeNode.title || runtimeNode.type || "Node");
+  }
+  function getNodeSummary(node2) {
+    const runtimeNode = node2 || {};
+    if (typeof runtimeNode.getSummaryText === "function") {
+      return toStringValue(runtimeNode.getSummaryText());
+    }
+    if (Array.isArray(runtimeNode.widgets) && runtimeNode.widgets.length) {
+      return "";
+    }
+    const inputCount = Array.isArray(runtimeNode.inputs) ? runtimeNode.inputs.length : 0;
+    const outputCount = Array.isArray(runtimeNode.outputs) ? runtimeNode.outputs.length : 0;
+    if (!inputCount && !outputCount) {
+      return "";
+    }
+    return `${inputCount} in / ${outputCount} out`;
+  }
+  function resolveModeBoxColor(node2, host) {
+    if (node2.action_triggered) {
+      return "#FFFFFF";
+    }
+    if (node2.execute_triggered) {
+      return "#AAAAAA";
+    }
+    const modeColors = Array.isArray(host.NODE_MODES_COLORS) ? host.NODE_MODES_COLORS : null;
+    const mode = toFiniteNumber$4(node2.mode, -1);
+    if (modeColors && mode >= 0 && modeColors[mode]) {
+      return modeColors[mode];
+    }
+    return null;
+  }
+  function resolveShellState(node2, hostInput) {
+    const runtimeNode = node2 || {};
+    const constructorRef = runtimeNode.constructor || {};
+    const host = resolveLiteGraphAuthoringHost(hostInput);
+    return {
+      title: getNodeTitle(runtimeNode),
+      titleMode: "default",
+      titleColor: toStringValue(
+        runtimeNode.color || constructorRef.title_color || constructorRef.color || host.NODE_DEFAULT_COLOR || "#333333",
+        "#333333"
+      ),
+      titleTextColor: toStringValue(
+        runtimeNode.title_text_color || constructorRef.title_text_color || "#F5F7FA",
+        "#F5F7FA"
+      ),
+      boxColor: toStringValue(
+        runtimeNode.boxcolor || resolveModeBoxColor(runtimeNode, host) || host.NODE_DEFAULT_BOXCOLOR || "#666666",
+        "#666666"
+      ),
+      bodyColor: toStringValue(
+        runtimeNode.bgcolor || constructorRef.bgcolor || host.NODE_DEFAULT_BGCOLOR || "#353535",
+        "#353535"
+      ),
+      borderColor: toStringValue(
+        runtimeNode.outlinecolor || constructorRef.outlinecolor || "#1F2D3D",
+        "#1F2D3D"
+      ),
+      showSignalLamp: true,
+      collapsible: constructorRef.collapsable !== false,
+      resizable: runtimeNode.resizable !== false,
+      showCollapsedSlots: true,
+      allowNodeHover: false,
+      summaryText: getNodeSummary(runtimeNode)
+    };
+  }
+  function measureTitleWidth(text) {
+    if (typeof document !== "undefined" && document.createElement) {
+      const canvas = document.createElement("canvas");
+      const context = canvas.getContext("2d");
+      if (context) {
+        context.font = "14px Arial";
+        return context.measureText(text).width;
+      }
+    }
+    return text.length * 7.2;
+  }
+  function resolveCollapsedWidth(node2, hostInput) {
+    var _a3;
+    const runtimeNode = node2 || {};
+    const host = resolveLiteGraphAuthoringHost(hostInput);
+    const titleHeight = toFiniteNumber$4(host.NODE_TITLE_HEIGHT, 30);
+    const nodeWidth = Math.max(
+      toFiniteNumber$4((_a3 = runtimeNode.size) == null ? void 0 : _a3[0], 140),
+      80
+    );
+    return Math.min(
+      nodeWidth,
+      measureTitleWidth(getNodeTitle(runtimeNode)) + titleHeight * 2
+    );
+  }
+  function resolvePortShape(slot, host) {
+    if (!slot) {
+      return "circle";
+    }
+    if (slot.shape === host.BOX_SHAPE || slot.type === host.EVENT || slot.type === host.ACTION) {
+      return "box";
+    }
+    if (slot.shape === host.ARROW_SHAPE) {
+      return "arrow";
+    }
+    if (slot.shape === host.GRID_SHAPE) {
+      return "grid";
+    }
+    return "circle";
+  }
+  function resolvePortColor(slot, host) {
+    if (!slot) {
+      return {
+        colorOn: toStringValue(host.LINK_COLOR, "#9A9"),
+        colorOff: "#6E7681"
+      };
+    }
+    let activeColor = slot.type === host.EVENT || slot.type === host.ACTION ? toStringValue(host.EVENT_LINK_COLOR, "#A86") : toStringValue(host.LINK_COLOR, "#9A9");
+    if (typeof slot.color_on === "string") {
+      activeColor = slot.color_on;
+    } else if (typeof slot.color === "string") {
+      activeColor = slot.color;
+    }
+    return {
+      colorOn: activeColor,
+      colorOff: typeof slot.color_off === "string" ? slot.color_off : "#6E7681"
+    };
+  }
+  function resolvePortPresentation(node2, kind, slotIndex, hostInput) {
+    const runtimeNode = node2 || {};
+    const host = resolveLiteGraphAuthoringHost(hostInput);
+    const slotList = kind === "input" ? runtimeNode.inputs : runtimeNode.outputs;
+    const slot = Array.isArray(slotList) ? slotList[slotIndex] : void 0;
+    if (!slot) {
+      return null;
+    }
+    const colors = resolvePortColor(slot, host);
+    return {
+      label: toStringValue(slot.label || slot.name),
+      shape: resolvePortShape(slot, host),
+      dir: typeof slot.dir === "number" ? slot.dir : void 0,
+      colorOn: colors.colorOn,
+      colorOff: colors.colorOff,
+      hideLabelWhenCollapsed: true,
+      radius: 10
+    };
+  }
+  const ModernNodeAuthoringUtils = {
+    buildSlotSchemaFromNode,
+    truncateText,
+    formatNodeValue,
+    describePortType,
+    getNodeSummary,
+    resolveShellState,
+    resolveCollapsedWidth,
+    resolvePortPresentation,
+    resolveLiteGraphAuthoringHost,
+    resolveLiteGraphAuthoringHostForNode
+  };
+  class DefaultModernNodeBase extends ModernNodeBase {
+    definePorts() {
+      return buildSlotSchemaFromNode(this);
+    }
+    defineActionParts(_context) {
+      return [];
+    }
+    getShellState(_context) {
+      var _a3;
+      const host = resolveLiteGraphAuthoringHostForNode(this);
+      const shellState = resolveShellState(this, host);
+      if ((_a3 = this.flags) == null ? void 0 : _a3.collapsed) {
+        shellState.summaryText = "";
+      }
+      shellState.collapsedWidth = resolveCollapsedWidth(this, host);
+      return shellState;
+    }
+    getPortPresentation(kind, slotIndex, _context) {
+      const host = resolveLiteGraphAuthoringHostForNode(this);
+      return resolvePortPresentation(this, kind, slotIndex, host);
+    }
+    mountContent() {
+      return null;
+    }
+    patchContent() {
+    }
+    syncModernPorts() {
+      this.refreshModernPorts();
+    }
+  }
   function resolveType(nodeClass) {
     var _a3;
     const type = nodeClass.type || nodeClass.modernType || ((_a3 = nodeClass.prototype) == null ? void 0 : _a3.type);
     return typeof type === "string" ? type.trim() : "";
   }
-  function resolveLiteGraphHost(liteGraph) {
+  function resolveLiteGraphHost$1(liteGraph) {
     if (liteGraph && typeof liteGraph.registerNodeType === "function") {
       return liteGraph;
     }
@@ -17296,10 +17598,11 @@ var LiteGraphTSMigration = (function(exports) {
       "[litegraph modern] LiteGraph host is unavailable. Pass LiteGraph explicitly to registerModernNode()."
     );
   }
-  function ensureModernMetadata(nodeClass) {
+  function ensureModernMetadata(nodeClass, liteGraph) {
     const prototype = nodeClass.prototype;
     prototype.renderRuntime = "modern";
     prototype[MODERN_NODE_MARKER_KEY] = true;
+    nodeClass.liteGraph = liteGraph;
   }
   const defaultModernWidgetRegistry = /* @__PURE__ */ new Map();
   function registerModernWidget(type, renderer) {
@@ -17340,13 +17643,13 @@ var LiteGraphTSMigration = (function(exports) {
         "[litegraph modern] Modern node class must declare a static type."
       );
     }
-    const host = resolveLiteGraphHost(liteGraph);
-    ensureModernMetadata(nodeClass);
+    const host = resolveLiteGraphHost$1(liteGraph);
+    ensureModernMetadata(nodeClass, host);
     host.registerNodeType(type, nodeClass);
     return type;
   }
   function registerModernNodes(nodeClasses, liteGraph) {
-    const host = resolveLiteGraphHost(liteGraph);
+    const host = resolveLiteGraphHost$1(liteGraph);
     const registered = [];
     for (let i2 = 0; i2 < nodeClasses.length; ++i2) {
       registered.push(registerModernNode(nodeClasses[i2], host));
@@ -17361,6 +17664,85 @@ var LiteGraphTSMigration = (function(exports) {
     target.registerModernWidgets = (renderers) => registerModernWidgets(renderers);
     target.getModernWidgetRenderer = (type) => getModernWidgetRenderer(type);
   }
+  const PENDING_MODERN_NODE_MODULES_KEY = "__LITEGRAPH_PENDING_MODERN_NODE_MODULES__";
+  const INSTALLED_MODERN_NODE_MODULE_IDS_KEY = "__litegraphInstalledModernNodeModuleIds";
+  function normalizeModuleId(value) {
+    return typeof value === "string" ? value.trim() : "";
+  }
+  function resolveLiteGraphHost(liteGraph) {
+    if (liteGraph && typeof liteGraph.registerNodeType === "function") {
+      return liteGraph;
+    }
+    const globalLike = globalThis;
+    if (globalLike.LiteGraph && typeof globalLike.LiteGraph.registerNodeType === "function") {
+      return globalLike.LiteGraph;
+    }
+    throw new Error(
+      "[litegraph modern] LiteGraph host is unavailable. Pass LiteGraph explicitly to installModernNodeModule()."
+    );
+  }
+  function getInstalledModuleIds(host) {
+    if (!(host[INSTALLED_MODERN_NODE_MODULE_IDS_KEY] instanceof Set)) {
+      host[INSTALLED_MODERN_NODE_MODULE_IDS_KEY] = /* @__PURE__ */ new Set();
+    }
+    return host[INSTALLED_MODERN_NODE_MODULE_IDS_KEY];
+  }
+  function createAuthoringApi(liteGraph) {
+    return {
+      liteGraph,
+      ModernNodeBase,
+      DefaultModernNodeBase,
+      ModernNodeChangeMask,
+      ModernNodeContracts,
+      getModernWidgetRenderer,
+      utils: ModernNodeAuthoringUtils
+    };
+  }
+  function installModernNodeModule(moduleDefinition, liteGraph) {
+    if (!moduleDefinition || typeof moduleDefinition !== "object" || typeof moduleDefinition.define !== "function") {
+      throw new Error(
+        "[litegraph modern] installModernNodeModule expects a module definition with define()."
+      );
+    }
+    const moduleId = normalizeModuleId(moduleDefinition.id);
+    if (!moduleId) {
+      throw new Error(
+        "[litegraph modern] Modern node module must declare a non-empty id."
+      );
+    }
+    const host = resolveLiteGraphHost(liteGraph);
+    const installedModuleIds = getInstalledModuleIds(host);
+    if (installedModuleIds.has(moduleId)) {
+      return [];
+    }
+    const nodeClasses = moduleDefinition.define(createAuthoringApi(host));
+    const registeredTypes = registerModernNodes(
+      Array.isArray(nodeClasses) ? nodeClasses : [],
+      host
+    );
+    installedModuleIds.add(moduleId);
+    moduleDefinition.__registeredTypes = registeredTypes.slice();
+    return registeredTypes;
+  }
+  function installModernNodeModules(moduleDefinitions, liteGraph) {
+    const host = resolveLiteGraphHost(liteGraph);
+    const installedTypes = [];
+    for (let i2 = 0; i2 < moduleDefinitions.length; ++i2) {
+      installedTypes.push(
+        ...installModernNodeModule(moduleDefinitions[i2], host)
+      );
+    }
+    return installedTypes;
+  }
+  function flushPendingModernNodeModules(scope = globalThis, liteGraph) {
+    const queue = Array.isArray(scope[PENDING_MODERN_NODE_MODULES_KEY]) ? scope[PENDING_MODERN_NODE_MODULES_KEY] : [];
+    if (!queue.length) {
+      return [];
+    }
+    const host = resolveLiteGraphHost(liteGraph || scope.LiteGraph);
+    scope[PENDING_MODERN_NODE_MODULES_KEY] = [];
+    return installModernNodeModules(queue, host);
+  }
   function discriminateNodeRuntime(node2) {
     if (node2.renderRuntime === "legacy" || node2.renderRuntime === "modern") {
       return node2.renderRuntime;
@@ -17373,11 +17755,6 @@ var LiteGraphTSMigration = (function(exports) {
     }
     return "legacy";
   }
-  const ModernNodeContracts = {
-    MODERN_NODE_MARKER_KEY,
-    MODERN_NODE_STATE_KEY,
-    ModernNodeChangeMask
-  };
   const LABEL_WIDTH_MIN = 48;
   const LABEL_WIDTH_MAX = 92;
   const INLINE_PADDING = 10;
@@ -29755,9 +30132,639 @@ var LiteGraphTSMigration = (function(exports) {
     bindRuntimeIntoClasses(liteGraph);
     return { liteGraph, registry: registry2, runtime: runtime2 };
   }
+  function getGraphInputValueWidget(node2) {
+    var _a3;
+    const type = (node2 == null ? void 0 : node2.properties) ? node2.properties.type : "";
+    if (type === "number") {
+      return {
+        type: "number",
+        value: Number(node2.properties.value) || 0,
+        options: { step: 1 }
+      };
+    }
+    if (type === "boolean") {
+      return {
+        type: "toggle",
+        value: Boolean(node2.properties.value)
+      };
+    }
+    return {
+      type: "text",
+      value: ((_a3 = node2 == null ? void 0 : node2.properties) == null ? void 0 : _a3.value) != null ? String(node2.properties.value) : ""
+    };
+  }
+  function getGraphInputDefaultValue(type) {
+    if (type === "number") {
+      return 0;
+    }
+    if (type === "boolean") {
+      return true;
+    }
+    return "";
+  }
+  const graphBaseModuleDefinition = {
+    id: "base/graph",
+    define(api) {
+      const liteGraph = api.liteGraph;
+      const BaseNode = api.DefaultModernNodeBase;
+      const ModernNodeChangeMask2 = api.ModernNodeChangeMask;
+      const describePortType2 = api.utils.describePortType;
+      const baseNodePrototype = BaseNode.prototype;
+      const _Subgraph = class _Subgraph extends BaseNode {
+        constructor(title) {
+          super(title);
+          this.size = [140, 80];
+          this.properties = { enabled: true };
+          this.enabled = true;
+          this.subgraph = new liteGraph.LGraph();
+          this.subgraph._subgraph_node = this;
+          this.subgraph._is_subgraph = true;
+          this.subgraph.onTrigger = this.onSubgraphTrigger.bind(this);
+          this.subgraph.onInputAdded = this.onSubgraphNewInput.bind(this);
+          this.subgraph.onInputRenamed = this.onSubgraphRenamedInput.bind(this);
+          this.subgraph.onInputTypeChanged = this.onSubgraphTypeChangeInput.bind(this);
+          this.subgraph.onInputRemoved = this.onSubgraphRemovedInput.bind(this);
+          this.subgraph.onOutputAdded = this.onSubgraphNewOutput.bind(this);
+          this.subgraph.onOutputRenamed = this.onSubgraphRenamedOutput.bind(this);
+          this.subgraph.onOutputTypeChanged = this.onSubgraphTypeChangeOutput.bind(this);
+          this.subgraph.onOutputRemoved = this.onSubgraphRemovedOutput.bind(this);
+        }
+        onGetInputs() {
+          return [["enabled", "boolean"]];
+        }
+        onDblClick(_event, _pos, graphcanvas) {
+          const { subgraph } = this;
+          setTimeout(() => {
+            graphcanvas.openSubgraph(subgraph);
+          }, 10);
+        }
+        requestSubgraphPortPatch() {
+          this.requestModernPatch(
+            ModernNodeChangeMask2.Layout | ModernNodeChangeMask2.Ports | ModernNodeChangeMask2.Data
+          );
+        }
+        defineActionParts() {
+          var _a3, _b3, _c2;
+          if ((_a3 = this.flags) == null ? void 0 : _a3.collapsed) {
+            return [];
+          }
+          const width2 = Math.max(0, Math.round(((_b3 = this.size) == null ? void 0 : _b3[0]) || 0));
+          const bodyHeight = Math.max(0, Math.round(((_c2 = this.size) == null ? void 0 : _c2[1]) || 0));
+          const sideInset = 12;
+          const buttonHeight = 20;
+          const bottomInset = 18;
+          const gap = 12;
+          const usableWidth = Math.max(96, width2 - sideInset * 2);
+          const buttonWidth = Math.max(
+            44,
+            Math.min(56, Math.floor((usableWidth - gap) / 2))
+          );
+          const pairWidth = buttonWidth * 2 + gap;
+          const footerY = Math.max(
+            0,
+            Math.round(bodyHeight - bottomInset - buttonHeight)
+          );
+          const leftX = Math.max(sideInset, Math.round((width2 - pairWidth) / 2));
+          const rightX = leftX + buttonWidth + gap;
+          return [
+            {
+              id: "subgraph-left",
+              action: "subgraph-left",
+              label: "+",
+              placement: "footer-left",
+              bounds: {
+                x: leftX,
+                y: footerY,
+                width: buttonWidth,
+                height: buttonHeight
+              },
+              onTrigger(context) {
+                var _a4, _b4;
+                (_b4 = (_a4 = context.graphcanvas) == null ? void 0 : _a4.showSubgraphPropertiesDialog) == null ? void 0 : _b4.call(
+                  _a4,
+                  context.node
+                );
+              }
+            },
+            {
+              id: "subgraph-right",
+              action: "subgraph-right",
+              label: "+",
+              placement: "footer-right",
+              bounds: {
+                x: rightX,
+                y: footerY,
+                width: buttonWidth,
+                height: buttonHeight
+              },
+              onTrigger(context) {
+                var _a4, _b4;
+                (_b4 = (_a4 = context.graphcanvas) == null ? void 0 : _a4.showSubgraphPropertiesDialogRight) == null ? void 0 : _b4.call(
+                  _a4,
+                  context.node
+                );
+              }
+            }
+          ];
+        }
+        getShellState(context) {
+          var _a3;
+          const shellState = {
+            ...((_a3 = baseNodePrototype.getShellState) == null ? void 0 : _a3.call(this, context)) || {}
+          };
+          delete shellState.headerMetaText;
+          delete shellState.summaryText;
+          delete shellState.minimumWidth;
+          delete shellState.minimumHeight;
+          if (!this.enabled) {
+            shellState.bodyColor = "#171A1F";
+            shellState.borderColor = "#404754";
+            shellState.boxColor = "#8A93A4";
+          }
+          return shellState;
+        }
+        onAction(action, param) {
+          this.subgraph.onAction(action, param);
+        }
+        onExecute() {
+          const wasEnabled = this.enabled;
+          this.enabled = this.getInputOrProperty("enabled");
+          if (wasEnabled !== this.enabled) {
+            this.requestModernPatch(
+              ModernNodeChangeMask2.Data | ModernNodeChangeMask2.Style
+            );
+          }
+          if (!this.enabled) {
+            return;
+          }
+          if (this.inputs) {
+            for (let index = 0; index < this.inputs.length; ++index) {
+              const input = this.inputs[index];
+              this.subgraph.setInputData(
+                input.name,
+                this.getInputData(index)
+              );
+            }
+          }
+          this.subgraph.runStep();
+          if (this.outputs) {
+            for (let index = 0; index < this.outputs.length; ++index) {
+              const output = this.outputs[index];
+              this.setOutputData(
+                index,
+                this.subgraph.getOutputData(output.name)
+              );
+            }
+          }
+        }
+        sendEventToAllNodes(eventname, param, mode) {
+          if (this.enabled) {
+            this.subgraph.sendEventToAllNodes(eventname, param, mode);
+          }
+        }
+        computeSize() {
+          const inputCount = this.inputs ? this.inputs.length : 0;
+          const outputCount = this.outputs ? this.outputs.length : 0;
+          return [
+            200,
+            Math.max(inputCount, outputCount) * liteGraph.NODE_SLOT_HEIGHT + liteGraph.NODE_TITLE_HEIGHT
+          ];
+        }
+        onSubgraphTrigger(event2, _param) {
+          const slot = this.findOutputSlot(event2);
+          if (slot !== -1) {
+            this.triggerSlot(slot);
+          }
+        }
+        onSubgraphNewInput(name, type) {
+          const slot = this.findInputSlot(name);
+          if (slot === -1) {
+            this.addInput(name, type);
+            this.requestSubgraphPortPatch();
+          }
+        }
+        onSubgraphRenamedInput(oldname, name) {
+          const slot = this.findInputSlot(oldname);
+          if (slot === -1) {
+            return;
+          }
+          this.getInputInfo(slot).name = name;
+          this.requestSubgraphPortPatch();
+        }
+        onSubgraphTypeChangeInput(name, type) {
+          const slot = this.findInputSlot(name);
+          if (slot === -1) {
+            return;
+          }
+          this.getInputInfo(slot).type = type;
+          this.requestSubgraphPortPatch();
+        }
+        onSubgraphRemovedInput(name) {
+          const slot = this.findInputSlot(name);
+          if (slot === -1) {
+            return;
+          }
+          this.removeInput(slot);
+          this.requestSubgraphPortPatch();
+        }
+        onSubgraphNewOutput(name, type) {
+          const slot = this.findOutputSlot(name);
+          if (slot === -1) {
+            this.addOutput(name, type);
+            this.requestSubgraphPortPatch();
+          }
+        }
+        onSubgraphRenamedOutput(oldname, name) {
+          const slot = this.findOutputSlot(oldname);
+          if (slot === -1) {
+            return;
+          }
+          this.getOutputInfo(slot).name = name;
+          this.requestSubgraphPortPatch();
+        }
+        onSubgraphTypeChangeOutput(name, type) {
+          const slot = this.findOutputSlot(name);
+          if (slot === -1) {
+            return;
+          }
+          this.getOutputInfo(slot).type = type;
+          this.requestSubgraphPortPatch();
+        }
+        onSubgraphRemovedOutput(name) {
+          const slot = this.findOutputSlot(name);
+          if (slot === -1) {
+            return;
+          }
+          this.removeOutput(slot);
+          this.requestSubgraphPortPatch();
+        }
+        getExtraMenuOptions(graphcanvas) {
+          return [
+            {
+              content: "Open",
+              callback: () => {
+                graphcanvas.openSubgraph(this.subgraph);
+              }
+            }
+          ];
+        }
+        onResize(size) {
+          size[1] += 20;
+        }
+        serialize() {
+          var _a3;
+          const data = {
+            ...((_a3 = baseNodePrototype.serialize) == null ? void 0 : _a3.call(this)) || {}
+          };
+          data.subgraph = this.subgraph.serialize();
+          return data;
+        }
+        reassignSubgraphUUIDs(graph) {
+          const idMap = { nodeIDs: {}, linkIDs: {} };
+          for (let index = 0; index < graph.nodes.length; ++index) {
+            const node2 = graph.nodes[index];
+            const oldId = node2.id;
+            const newId = liteGraph.uuidv4();
+            node2.id = newId;
+            idMap.nodeIDs[oldId] = newId;
+            idMap.nodeIDs[newId] = oldId;
+          }
+          for (let index = 0; index < graph.links.length; ++index) {
+            const link = graph.links[index];
+            const oldLinkId = link[0];
+            const newLinkId = liteGraph.uuidv4();
+            link[0] = newLinkId;
+            idMap.linkIDs[oldLinkId] = newLinkId;
+            idMap.linkIDs[newLinkId] = oldLinkId;
+            link[1] = idMap.nodeIDs[link[1]];
+            link[3] = idMap.nodeIDs[link[3]];
+          }
+          for (let index = 0; index < graph.nodes.length; ++index) {
+            const innerNode = graph.nodes[index];
+            if (innerNode.inputs) {
+              for (let inputIndex = 0; inputIndex < innerNode.inputs.length; ++inputIndex) {
+                if (innerNode.inputs[inputIndex].link) {
+                  innerNode.inputs[inputIndex].link = idMap.linkIDs[innerNode.inputs[inputIndex].link];
+                }
+              }
+            }
+            if (innerNode.outputs) {
+              for (let outputIndex = 0; outputIndex < innerNode.outputs.length; ++outputIndex) {
+                if (innerNode.outputs[outputIndex].links) {
+                  innerNode.outputs[outputIndex].links = innerNode.outputs[outputIndex].links.map(
+                    (linkId) => idMap.linkIDs[linkId]
+                  );
+                }
+              }
+            }
+          }
+        }
+        clone() {
+          const node2 = liteGraph.createNode(this.type);
+          const data = this.serialize();
+          if (liteGraph.use_uuids) {
+            const subgraph = liteGraph.cloneObject(
+              data.subgraph
+            );
+            this.reassignSubgraphUUIDs(subgraph);
+            data.subgraph = subgraph;
+          }
+          delete data.id;
+          delete data.inputs;
+          delete data.outputs;
+          node2 == null ? void 0 : node2.configure(data);
+          return node2;
+        }
+      };
+      _Subgraph.type = "graph/subgraph";
+      _Subgraph.title = "Subgraph";
+      _Subgraph.desc = "Graph inside a node";
+      _Subgraph.title_color = "#334";
+      let Subgraph = _Subgraph;
+      const _GraphInput = class _GraphInput extends BaseNode {
+        constructor(title) {
+          super(title);
+          this.addOutput("", "number");
+          this.name_in_graph = "";
+          this.properties = { name: "", type: "number", value: 0 };
+          this.widgets_up = true;
+          this.size = [180, 90];
+        }
+        defineWidgets() {
+          const valueWidget = getGraphInputValueWidget(this);
+          return [
+            {
+              id: "name",
+              type: "text",
+              name: "name",
+              label: "Name",
+              value: this.properties.name,
+              property: "name"
+            },
+            {
+              id: "type",
+              type: "text",
+              name: "type",
+              label: "Type",
+              value: this.properties.type,
+              property: "type"
+            },
+            {
+              id: "value",
+              type: valueWidget.type,
+              name: "value",
+              label: "Value",
+              value: valueWidget.value,
+              property: "value",
+              options: valueWidget.options
+            }
+          ];
+        }
+        onConfigure() {
+          this.updateType();
+        }
+        updateType() {
+          const type = this.properties.type;
+          if (this.outputs[0].type !== type) {
+            if (!liteGraph.isValidConnection(this.outputs[0].type, type)) {
+              this.disconnectOutput(0);
+            }
+            this.outputs[0].type = type;
+          }
+          this.properties.value = getGraphInputDefaultValue(type);
+          if (this.graph && this.name_in_graph) {
+            this.graph.changeInputType(this.name_in_graph, type);
+          }
+          this.requestModernPatch(
+            ModernNodeChangeMask2.Layout | ModernNodeChangeMask2.Data | ModernNodeChangeMask2.Ports
+          );
+        }
+        onPropertyChanged(name, value) {
+          if (name === "name") {
+            if (value === "" || value === this.name_in_graph || value === "enabled") {
+              return false;
+            }
+            if (this.graph) {
+              if (this.name_in_graph) {
+                this.graph.renameInput(this.name_in_graph, value);
+              } else {
+                this.graph.addInput(value, this.properties.type);
+              }
+            }
+            this.name_in_graph = String(value);
+            this.requestModernPatch(
+              ModernNodeChangeMask2.Layout | ModernNodeChangeMask2.Data
+            );
+          } else if (name === "type") {
+            this.updateType();
+          }
+        }
+        getTitle() {
+          var _a3;
+          if ((_a3 = this.flags) == null ? void 0 : _a3.collapsed) {
+            return this.properties.name;
+          }
+          return this.title;
+        }
+        getShellState(context) {
+          var _a3;
+          const shellState = {
+            ...((_a3 = baseNodePrototype.getShellState) == null ? void 0 : _a3.call(this, context)) || {}
+          };
+          shellState.title = this.properties.name || this.title;
+          shellState.headerMetaText = describePortType2(this.properties.type);
+          shellState.minimumWidth = 220;
+          return shellState;
+        }
+        getPortPresentation(kind, slotIndex, context) {
+          var _a3;
+          const portPresentation = (_a3 = baseNodePrototype.getPortPresentation) == null ? void 0 : _a3.call(
+            this,
+            kind,
+            slotIndex,
+            context
+          );
+          if (kind === "output" && slotIndex === 0 && portPresentation) {
+            portPresentation.label = this.properties.name || "";
+          }
+          return portPresentation || null;
+        }
+        onAction(_action, param) {
+          if (this.properties.type === liteGraph.EVENT) {
+            this.triggerSlot(0, param);
+          }
+        }
+        onExecute() {
+          const name = this.properties.name;
+          const data = this.graph.inputs[name];
+          if (!data) {
+            this.setOutputData(0, this.properties.value);
+            return;
+          }
+          this.setOutputData(
+            0,
+            data.value !== void 0 ? data.value : this.properties.value
+          );
+        }
+        onRemoved() {
+          if (this.name_in_graph) {
+            this.graph.removeInput(this.name_in_graph);
+          }
+        }
+      };
+      _GraphInput.type = "graph/input";
+      _GraphInput.title = "Input";
+      _GraphInput.desc = "Input of the graph";
+      let GraphInput = _GraphInput;
+      const _GraphOutput = class _GraphOutput extends BaseNode {
+        constructor(title) {
+          super(title);
+          this.addInput("", "");
+          this.name_in_graph = "";
+          this.properties = { name: "", type: "" };
+          this.widgets_up = true;
+          this.size = [180, 60];
+        }
+        defineWidgets() {
+          return [
+            {
+              id: "name",
+              type: "text",
+              name: "name",
+              label: "Name",
+              value: this.properties.name,
+              property: "name"
+            },
+            {
+              id: "type",
+              type: "text",
+              name: "type",
+              label: "Type",
+              value: this.properties.type,
+              property: "type"
+            }
+          ];
+        }
+        onPropertyChanged(name, value) {
+          if (name === "name") {
+            if (value === "" || value === this.name_in_graph || value === "enabled") {
+              return false;
+            }
+            if (this.graph) {
+              if (this.name_in_graph) {
+                this.graph.renameOutput(this.name_in_graph, value);
+              } else {
+                this.graph.addOutput(value, this.properties.type);
+              }
+            }
+            this.name_in_graph = String(value);
+            this.requestModernPatch(
+              ModernNodeChangeMask2.Layout | ModernNodeChangeMask2.Data
+            );
+          } else if (name === "type") {
+            this.updateType();
+          }
+        }
+        onConfigure() {
+          this.updateType();
+        }
+        updateType() {
+          let type = this.properties.type;
+          if (this.inputs[0].type !== type) {
+            if (type === "action" || type === "event") {
+              type = liteGraph.EVENT;
+            }
+            if (!liteGraph.isValidConnection(this.inputs[0].type, type)) {
+              this.disconnectInput(0);
+            }
+            this.inputs[0].type = type;
+          }
+          if (this.graph && this.name_in_graph) {
+            this.graph.changeOutputType(this.name_in_graph, type);
+          }
+          this.requestModernPatch(
+            ModernNodeChangeMask2.Data | ModernNodeChangeMask2.Ports
+          );
+        }
+        onExecute() {
+          this._value = this.getInputData(0);
+          this.graph.setOutputData(this.properties.name, this._value);
+        }
+        onAction(_action, param) {
+          if (this.properties.type === liteGraph.ACTION) {
+            this.graph.trigger(this.properties.name, param);
+          }
+        }
+        onRemoved() {
+          if (this.name_in_graph) {
+            this.graph.removeOutput(this.name_in_graph);
+          }
+        }
+        getTitle() {
+          var _a3;
+          if ((_a3 = this.flags) == null ? void 0 : _a3.collapsed) {
+            return this.properties.name;
+          }
+          return this.title;
+        }
+        getShellState(context) {
+          var _a3;
+          const shellState = {
+            ...((_a3 = baseNodePrototype.getShellState) == null ? void 0 : _a3.call(this, context)) || {}
+          };
+          shellState.title = this.properties.name || this.title;
+          shellState.headerMetaText = describePortType2(this.properties.type);
+          shellState.minimumWidth = 214;
+          return shellState;
+        }
+        getPortPresentation(kind, slotIndex, context) {
+          var _a3;
+          const portPresentation = (_a3 = baseNodePrototype.getPortPresentation) == null ? void 0 : _a3.call(
+            this,
+            kind,
+            slotIndex,
+            context
+          );
+          if (kind === "input" && slotIndex === 0 && portPresentation) {
+            portPresentation.label = this.properties.name || "";
+          }
+          return portPresentation || null;
+        }
+      };
+      _GraphOutput.type = "graph/output";
+      _GraphOutput.title = "Output";
+      _GraphOutput.desc = "Output of the graph";
+      let GraphOutput = _GraphOutput;
+      liteGraph.Subgraph = Subgraph;
+      liteGraph.GraphInput = GraphInput;
+      liteGraph.GraphOutput = GraphOutput;
+      return [Subgraph, GraphInput, GraphOutput];
+    }
+  };
+  function registerLeaferGraphBaseModule(target = globalThis) {
+    const globalLike = target;
+    const liteGraph = globalLike == null ? void 0 : globalLike.LiteGraph;
+    if (!liteGraph || typeof liteGraph.installModernNodeModule !== "function") {
+      return false;
+    }
+    const ns2 = liteGraph.nodes_leafer || (liteGraph.nodes_leafer = {});
+    ns2.baseModules = ns2.baseModules || [];
+    ns2.baseModuleMap = ns2.baseModuleMap || {};
+    if (!ns2.baseModuleMap[graphBaseModuleDefinition.id]) {
+      ns2.baseModuleMap[graphBaseModuleDefinition.id] = graphBaseModuleDefinition;
+      ns2.baseModules.push(graphBaseModuleDefinition);
+    }
+    const registeredTypes = liteGraph.installModernNodeModule(
+      graphBaseModuleDefinition
+    );
+    graphBaseModuleDefinition.__registeredTypes = registeredTypes.slice();
+    return true;
+  }
+  void registerLeaferGraphBaseModule(globalThis);
   function installModernNodeApi(liteGraph) {
     attachModernNodeRegistryApi(liteGraph);
     liteGraph.ModernNodeBase = ModernNodeBase;
+    liteGraph.DefaultModernNodeBase = DefaultModernNodeBase;
     liteGraph.ModernNodeContracts = ModernNodeContracts;
     liteGraph.ModernNodeChangeMask = ModernNodeChangeMask;
     liteGraph.registerModernNode = (nodeClass) => registerModernNode(nodeClass, liteGraph);
@@ -29765,6 +30772,14 @@ var LiteGraphTSMigration = (function(exports) {
     liteGraph.registerModernWidget = (type, renderer) => registerModernWidget(type, renderer);
     liteGraph.registerModernWidgets = (renderers) => registerModernWidgets(renderers);
     liteGraph.getModernWidgetRenderer = (type) => getModernWidgetRenderer(type);
+    liteGraph.installModernNodeModule = (moduleDefinition) => installModernNodeModule(
+      moduleDefinition,
+      liteGraph
+    );
+    liteGraph.installModernNodeModules = (moduleDefinitions) => installModernNodeModules(
+      moduleDefinitions,
+      liteGraph
+    );
   }
   function createAssemblyBundle(liteGraph, registry2, runtime2) {
     return {
@@ -29778,6 +30793,7 @@ var LiteGraphTSMigration = (function(exports) {
       ContextMenu,
       CurveEditor,
       ModernNodeBase,
+      DefaultModernNodeBase,
       ModernNodeContracts,
       ModernNodeChangeMask,
       registerModernNode: liteGraph.registerModernNode,
@@ -29785,6 +30801,8 @@ var LiteGraphTSMigration = (function(exports) {
       registerModernWidget: liteGraph.registerModernWidget,
       registerModernWidgets: liteGraph.registerModernWidgets,
       getModernWidgetRenderer: liteGraph.getModernWidgetRenderer,
+      installModernNodeModule: liteGraph.installModernNodeModule,
+      installModernNodeModules: liteGraph.installModernNodeModules,
       registry: registry2,
       runtime: runtime2
     };
@@ -29798,7 +30816,13 @@ var LiteGraphTSMigration = (function(exports) {
       runtime2
     );
     applyLiteGraphAssemblyCompat(bundle);
-    attachLiteGraphAssemblyBridges(bundle, options);
+    const globalScope = attachLiteGraphAssemblyBridges(bundle, options);
+    if (options.attachToGlobal) {
+      flushPendingModernNodeModules(
+        globalScope,
+        liteGraph
+      );
+    }
     return bundle;
   }
   const defaultAssembly = assembleLiteGraph();
@@ -29815,6 +30839,7 @@ var LiteGraphTSMigration = (function(exports) {
   exports.CONTEXT_MENU_CLOSE_ALL_DIFF_ID = CONTEXT_MENU_CLOSE_ALL_DIFF_ID;
   exports.ContextMenu = ContextMenu;
   exports.CurveEditor = CurveEditor;
+  exports.DefaultModernNodeBase = DefaultModernNodeBase;
   exports.DragAndScale = DragAndScale;
   exports.GRID_SQUARE_SHAPE_DEFAULT = GRID_SQUARE_SHAPE_DEFAULT;
   exports.GRID_SQUARE_SHAPE_DIFF_ID = GRID_SQUARE_SHAPE_DIFF_ID;
@@ -29853,10 +30878,13 @@ var LiteGraphTSMigration = (function(exports) {
   exports.distance = distance$1;
   exports.getModernWidgetRenderer = getModernWidgetRenderer;
   exports.getParameterNames = getParameterNames;
+  exports.graphBaseModuleDefinition = graphBaseModuleDefinition;
   exports.growBounding = growBounding;
   exports.hasGraphOnNodeAddedCompatHook = hasGraphOnNodeAddedCompatHook;
   exports.hasRequiredLGraphCanvasStaticApis = hasRequiredLGraphCanvasStaticApis;
   exports.hex2num = hex2num;
+  exports.installModernNodeModule = installModernNodeModule;
+  exports.installModernNodeModules = installModernNodeModules;
   exports.invokeGraphOnNodeAddedCompatHookModel = invokeGraphOnNodeAddedCompatHook;
   exports.isContextMenuCloseAllCompatSynced = isContextMenuCloseAllCompatSynced;
   exports.isGridSquareShapeAliasSynced = isGridSquareShapeAliasSynced;
@@ -29869,6 +30897,7 @@ var LiteGraphTSMigration = (function(exports) {
   exports.num2hex = num2hex;
   exports.parseSerializedLGraphGroupInput = parseSerializedLGraphGroupInput;
   exports.parseSerializedLLinkInput = parseSerializedLLinkInput;
+  exports.registerLeaferGraphBaseModule = registerLeaferGraphBaseModule;
   exports.registerModernNode = registerModernNode;
   exports.registerModernNodes = registerModernNodes;
   exports.registerModernWidget = registerModernWidget;

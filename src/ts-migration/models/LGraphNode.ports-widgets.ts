@@ -149,12 +149,12 @@ export class LGraphNodePortsWidgets extends LGraphNodeExecution {
      */
     addOutput(
         name: string,
-        type: string | -1,
+        type: string | number,
         extra_info?: Partial<INodeOutputSlot>
     ): INodeOutputSlot {
         const output: OutputSlot = {
             name,
-            type,
+            type: type as string | -1,
             links: null,
         };
         if (extra_info) {
@@ -193,14 +193,14 @@ export class LGraphNodePortsWidgets extends LGraphNodeExecution {
      * @param {Array} array of triplets like [[name,type,extra_info],[...]]
      */
     addOutputs(
-        array: [string, string | -1, Partial<INodeOutputSlot> | undefined][]
+        array: [string, string | number, Partial<INodeOutputSlot> | undefined][]
     ): void {
         const host = resolvePortsWidgetsHost(this);
         for (let i = 0; i < array.length; ++i) {
             const info = array[i];
             const o = {
                 name: info[0],
-                type: info[1],
+                type: info[1] as string | -1,
                 link: null,
             } as unknown as OutputSlot;
             if (array[2]) {
@@ -272,7 +272,7 @@ export class LGraphNodePortsWidgets extends LGraphNodeExecution {
      */
     addInput(
         name: string,
-        type: string | -1,
+        type: string | number,
         extra_info?: Partial<INodeInputSlot>
     ): INodeInputSlot {
         const normalizedType = (
@@ -281,7 +281,6 @@ export class LGraphNodePortsWidgets extends LGraphNodeExecution {
                 : (type as unknown)
         ) as
             | string
-            | -1
             | number;
         const input: InputSlot = {
             name,
@@ -324,12 +323,16 @@ export class LGraphNodePortsWidgets extends LGraphNodeExecution {
      * @param {Array} array of triplets like [[name,type,extra_info],[...]]
      */
     addInputs(
-        array: [string, string | -1, Partial<INodeInputSlot> | undefined][]
+        array: [string, string | number, Partial<INodeInputSlot> | undefined][]
     ): void {
         const host = resolvePortsWidgetsHost(this);
         for (let i = 0; i < array.length; ++i) {
             const info = array[i];
-            const o: InputSlot = { name: info[0], type: info[1], link: null };
+            const o: InputSlot = {
+                name: info[0],
+                type: info[1] as string | -1,
+                link: null,
+            };
             if (array[2]) {
                 for (const j in info[2]) {
                     (o as unknown as Record<string, unknown>)[j] = (

@@ -58,7 +58,7 @@ interface GraphLinkEventLike {
 
 interface GraphGlobalIOSlotLike {
     name: string;
-    type: string;
+    type: string | number;
     value: unknown;
 }
 
@@ -69,15 +69,15 @@ interface GraphGlobalIOSlotLike {
 export class LGraphIOEvents extends LGraphStructure {
     onTrigger?: (action: string, param: unknown) => void;
 
-    onInputAdded?: (name: string, type: string) => void;
+    onInputAdded?: (name: string, type: string | number) => void;
     onInputRemoved?: (name: string) => void;
     onInputRenamed?: (old_name: string, name: string) => void;
-    onInputTypeChanged?: (name: string, type: string) => void;
+    onInputTypeChanged?: (name: string, type: string | number) => void;
 
-    onOutputAdded?: (name: string, type: string) => void;
+    onOutputAdded?: (name: string, type: string | number) => void;
     onOutputRemoved?: (name: string) => void;
     onOutputRenamed?: (old_name: string, name: string) => void;
-    onOutputTypeChanged?: (name: string, type: string) => void;
+    onOutputTypeChanged?: (name: string, type: string | number) => void;
 
     onInputsOutputsChange?: () => void;
 
@@ -221,7 +221,7 @@ export class LGraphIOEvents extends LGraphStructure {
      * @param {String} type
      * @param {*} value [optional]
      */
-    addInput(name: string, type: string, value?: unknown): void {
+    addInput(name: string, type: string | number, value?: unknown): void {
         const input = this.getInputSlots()[name];
         if (input) {
             // already exist
@@ -312,7 +312,7 @@ export class LGraphIOEvents extends LGraphStructure {
      * @param {String} name
      * @param {String} type
      */
-    changeInputType(name: string, type: string): false | undefined {
+    changeInputType(name: string, type: string | number): false | undefined {
         const inputs = this.getInputSlots();
         if (!inputs[name]) {
             return false;
@@ -365,7 +365,7 @@ export class LGraphIOEvents extends LGraphStructure {
      * @param {String} type
      * @param {*} value
      */
-    addOutput(name: string, type: string, value: unknown): void {
+    addOutput(name: string, type: string | number, value: unknown): void {
         this.getOutputSlots()[name] = { name, type, value };
         this._version++;
 
@@ -444,7 +444,7 @@ export class LGraphIOEvents extends LGraphStructure {
      * @param {String} name
      * @param {String} type
      */
-    changeOutputType(name: string, type: string): false | undefined {
+    changeOutputType(name: string, type: string | number): false | undefined {
         const outputs = this.getOutputSlots();
         if (!outputs[name]) {
             return false;

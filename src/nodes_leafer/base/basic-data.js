@@ -1,9 +1,14 @@
-(function(global) {
-    var LiteGraph = global && global.LiteGraph;
-    var ns = LiteGraph && LiteGraph.nodes_leafer;
-    if (!LiteGraph || !ns || typeof ns.registerBaseModule !== "function") {
-        return;
+(function(global, factory) {
+    var moduleDefinition = factory();
+    if (typeof module !== "undefined" && module.exports) {
+        module.exports = moduleDefinition;
     }
+
+    var support = global && global.__litegraphNodesLeaferModuleSupport;
+    if (support && typeof support.installBaseNodeModule === "function") {
+        support.installBaseNodeModule(moduleDefinition);
+    }
+})(typeof window !== "undefined" ? window : globalThis, function() {
 
     function setValue(v) {
         this.setProperty("value", v);
@@ -37,8 +42,15 @@
         return null;
     }
 
-    ns.registerBaseModule("base/basic-data", function() {
-        class ConstantFile extends ns.BaseNode {
+    return {
+        id: "base/basic-data",
+        define: function(api) {
+            var LiteGraph = api.liteGraph;
+            var BaseNode = api.DefaultModernNodeBase;
+            var ModernNodeChangeMask = api.ModernNodeChangeMask;
+            var describePortType = api.utils.describePortType;
+
+        class ConstantFile extends BaseNode {
             constructor(title) {
                 super(title);
                 this.addInput("url", "string");
@@ -70,9 +82,9 @@
                     }
                 } else if (name == "type") {
                     this.requestModernPatch(
-                        ns.ModernNodeChangeMask.Layout |
-                            ns.ModernNodeChangeMask.Data |
-                            ns.ModernNodeChangeMask.Style
+                        ModernNodeChangeMask.Layout |
+                            ModernNodeChangeMask.Data |
+                            ModernNodeChangeMask.Style
                     );
                 }
             }
@@ -90,11 +102,11 @@
             }
 
             getShellState(context) {
-                var shellState = ns.BaseNode.prototype.getShellState.call(
+                var shellState = BaseNode.prototype.getShellState.call(
                     this,
                     context
                 );
-                shellState.headerMetaText = ns.describePortType(this.properties.type);
+                shellState.headerMetaText = describePortType(this.properties.type);
                 shellState.minimumWidth = 220;
                 var tone = getJsonTone(getJsonStatus(this));
                 if (tone) {
@@ -111,8 +123,8 @@
                     that._data = null;
                     that.boxcolor = null;
                     that.requestModernPatch(
-                        ns.ModernNodeChangeMask.Data |
-                            ns.ModernNodeChangeMask.Style
+                        ModernNodeChangeMask.Data |
+                            ModernNodeChangeMask.Style
                     );
                     return;
                 }
@@ -146,16 +158,16 @@
                         that._data = data;
                         that.boxcolor = "#AEA";
                         that.requestModernPatch(
-                            ns.ModernNodeChangeMask.Data |
-                                ns.ModernNodeChangeMask.Style
+                            ModernNodeChangeMask.Data |
+                                ModernNodeChangeMask.Style
                         );
                     })
                     .catch(function() {
                         that._data = null;
                         that.boxcolor = "red";
                         that.requestModernPatch(
-                            ns.ModernNodeChangeMask.Data |
-                                ns.ModernNodeChangeMask.Style
+                            ModernNodeChangeMask.Data |
+                                ModernNodeChangeMask.Style
                         );
                         console.error("error fetching file:", url);
                     });
@@ -176,8 +188,8 @@
                     }
                     that._data = value;
                     that.requestModernPatch(
-                        ns.ModernNodeChangeMask.Data |
-                            ns.ModernNodeChangeMask.Style
+                        ModernNodeChangeMask.Data |
+                            ModernNodeChangeMask.Style
                     );
                 };
 
@@ -202,7 +214,7 @@
             values: ["text", "arraybuffer", "blob", "json"],
         };
 
-        class JSONParse extends ns.BaseNode {
+        class JSONParse extends BaseNode {
             constructor(title) {
                 super(title);
                 this.addInput("parse", LiteGraph.ACTION);
@@ -233,8 +245,8 @@
                 if (!this._str) {
                     this.boxcolor = null;
                     this.requestModernPatch(
-                        ns.ModernNodeChangeMask.Data |
-                            ns.ModernNodeChangeMask.Style
+                        ModernNodeChangeMask.Data |
+                            ModernNodeChangeMask.Style
                     );
                     return;
                 }
@@ -243,15 +255,15 @@
                     this._obj = JSON.parse(this._str);
                     this.boxcolor = "#AEA";
                     this.requestModernPatch(
-                        ns.ModernNodeChangeMask.Data |
-                            ns.ModernNodeChangeMask.Style
+                        ModernNodeChangeMask.Data |
+                            ModernNodeChangeMask.Style
                     );
                     this.triggerSlot(0);
                 } catch (err) {
                     this.boxcolor = "red";
                     this.requestModernPatch(
-                        ns.ModernNodeChangeMask.Data |
-                            ns.ModernNodeChangeMask.Style
+                        ModernNodeChangeMask.Data |
+                            ModernNodeChangeMask.Style
                     );
                 }
             }
@@ -268,7 +280,7 @@
             }
 
             getShellState(context) {
-                var shellState = ns.BaseNode.prototype.getShellState.call(
+                var shellState = BaseNode.prototype.getShellState.call(
                     this,
                     context
                 );
@@ -290,7 +302,7 @@
         JSONParse.title = "JSON Parse";
         JSONParse.desc = "Parses JSON String into object";
 
-        class ConstantData extends ns.BaseNode {
+        class ConstantData extends BaseNode {
             constructor(title) {
                 super(title);
                 this.addOutput("data", "object");
@@ -334,7 +346,7 @@
             }
 
             getShellState(context) {
-                var shellState = ns.BaseNode.prototype.getShellState.call(
+                var shellState = BaseNode.prototype.getShellState.call(
                     this,
                     context
                 );
@@ -355,7 +367,7 @@
         ConstantData.title = "Const Data";
         ConstantData.desc = "Constant Data";
 
-        class ConstantArray extends ns.BaseNode {
+        class ConstantArray extends BaseNode {
             constructor(title) {
                 super(title);
                 this._value = [];
@@ -419,7 +431,7 @@
             }
 
             getShellState(context) {
-                var shellState = ns.BaseNode.prototype.getShellState.call(
+                var shellState = BaseNode.prototype.getShellState.call(
                     this,
                     context
                 );
@@ -433,7 +445,7 @@
         ConstantArray.title = "Const Array";
         ConstantArray.desc = "Constant Array";
 
-        class SetArray extends ns.BaseNode {
+        class SetArray extends BaseNode {
             constructor(title) {
                 super(title);
                 this.addInput("arr", "array");
@@ -480,7 +492,7 @@
         SetArray.title = "Set Array";
         SetArray.desc = "Sets index of array";
 
-        class ArrayElement extends ns.BaseNode {
+        class ArrayElement extends BaseNode {
             constructor(title) {
                 super(title);
                 this.addInput("array", "array,table,string");
@@ -506,7 +518,7 @@
         ArrayElement.title = "Array[i]";
         ArrayElement.desc = "Returns an element from an array";
 
-        class TableElement extends ns.BaseNode {
+        class TableElement extends BaseNode {
             constructor(title) {
                 super(title);
                 this.addInput("table", "table");
@@ -543,7 +555,7 @@
         TableElement.title = "Table[row][col]";
         TableElement.desc = "Returns an element from a table";
 
-        class ObjectProperty extends ns.BaseNode {
+        class ObjectProperty extends BaseNode {
             constructor(title) {
                 super(title);
                 this.addInput("obj", "object");
@@ -593,7 +605,7 @@
         ObjectProperty.title = "Object property";
         ObjectProperty.desc = "Outputs the property of an object";
 
-        class ObjectKeys extends ns.BaseNode {
+        class ObjectKeys extends BaseNode {
             constructor(title) {
                 super(title);
                 this.addInput("obj", "");
@@ -613,7 +625,7 @@
         ObjectKeys.title = "Object keys";
         ObjectKeys.desc = "Outputs an array with the keys of an object";
 
-        class SetObject extends ns.BaseNode {
+        class SetObject extends BaseNode {
             constructor(title) {
                 super(title);
                 this.addInput("obj", "");
@@ -655,7 +667,7 @@
         SetObject.title = "Set Object";
         SetObject.desc = "Adds propertiesrty to object";
 
-        class MergeObjects extends ns.BaseNode {
+        class MergeObjects extends BaseNode {
             constructor(title) {
                 super(title);
                 this.addInput("A", "object");
@@ -706,7 +718,7 @@
         MergeObjects.title = "Merge Objects";
         MergeObjects.desc = "Creates an object copying properties from others";
 
-        class Variable extends ns.BaseNode {
+        class Variable extends BaseNode {
             constructor(title) {
                 super(title);
                 this.size = [60, 30];
@@ -779,5 +791,6 @@
             MergeObjects,
             Variable,
         ];
-    });
-})(typeof window !== "undefined" ? window : globalThis);
+        },
+    };
+});

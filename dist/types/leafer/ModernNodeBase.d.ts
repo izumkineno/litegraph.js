@@ -1,0 +1,36 @@
+import type { SerializedLGraphNodeState } from "../models/LGraphNode.state";
+import { LGraphNodeCanvasCollab } from "../models/LGraphNode.canvas-collab";
+import type { NodeViewPortKind } from "./NodeViewHost";
+import { MODERN_NODE_MARKER_KEY, type ModernActionPartSchema, type ModernNodeChangeMaskValue, type ModernNodeLifecycleContext, type ModernNodePortLayout, type ModernPortPresentation, type ModernNodePortSchema, type ModernShellState } from "./ModernNodeContracts";
+import type { ModernWidgetSchema } from "./ModernWidgetContracts";
+export declare abstract class ModernNodeBase extends LGraphNodeCanvasCollab {
+    static readonly modernContractVersion = 1;
+    renderRuntime: "modern";
+    [MODERN_NODE_MARKER_KEY]: boolean;
+    private modernPortsHydrated;
+    private modernChangeMask;
+    constructor(title?: string);
+    protected abstract definePorts(): ModernNodePortSchema;
+    defineWidgets(): ReadonlyArray<ModernWidgetSchema>;
+    defineActionParts(_context: ModernNodeLifecycleContext<this>): ReadonlyArray<ModernActionPartSchema<this>>;
+    getShellState(_context: ModernNodeLifecycleContext<this>): ModernShellState | null;
+    getPortPresentation(_kind: NodeViewPortKind, _slotIndex: number, _context: ModernNodeLifecycleContext<this>): ModernPortPresentation | null;
+    protected abstract mountContent(context: ModernNodeLifecycleContext<this>): unknown;
+    protected patchContent(_context: ModernNodeLifecycleContext<this>): void;
+    protected mountView(context: ModernNodeLifecycleContext<this>): unknown;
+    protected patchView(context: ModernNodeLifecycleContext<this>): void;
+    getPortLayout?(_kind: NodeViewPortKind, _slotIndex: number, _context: ModernNodeLifecycleContext<this>): ModernNodePortLayout | null;
+    onNodeCreated(): void;
+    buildUI(context: ModernNodeLifecycleContext<this>): unknown;
+    updateUI(context: ModernNodeLifecycleContext<this>): void;
+    ensureModernPorts(force?: boolean): void;
+    refreshModernPorts(): void;
+    requestModernPatch(changeMask?: ModernNodeChangeMaskValue, dirtyBackground?: boolean): void;
+    consumeModernChangeMask(): ModernNodeChangeMaskValue;
+    setProperty(name: string, value: unknown): void;
+    configure(info: SerializedLGraphNodeState): void;
+    collapse(force: boolean): void;
+    private syncPorts;
+    private ensurePortRegistrationHost;
+    private normalizePortDefinition;
+}

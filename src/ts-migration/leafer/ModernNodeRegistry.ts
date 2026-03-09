@@ -62,10 +62,15 @@ function resolveLiteGraphHost(
     );
 }
 
-function ensureModernMetadata(nodeClass: ModernNodeConstructorLike): void {
+function ensureModernMetadata(
+    nodeClass: ModernNodeConstructorLike,
+    liteGraph: ModernNodeRegistryLiteGraphLike
+): void {
     const prototype = nodeClass.prototype as Record<string, unknown>;
     prototype.renderRuntime = "modern";
     prototype[MODERN_NODE_MARKER_KEY] = true;
+    (nodeClass as unknown as { liteGraph?: ModernNodeRegistryLiteGraphLike }).liteGraph =
+        liteGraph;
 }
 
 const defaultModernWidgetRegistry = new Map<string, ModernWidgetRenderer>();
@@ -127,7 +132,7 @@ export function registerModernNode(
     }
 
     const host = resolveLiteGraphHost(liteGraph);
-    ensureModernMetadata(nodeClass);
+    ensureModernMetadata(nodeClass, host);
     host.registerNodeType(type, nodeClass as unknown as LGraphNodeConstructorLike);
 
     return type;

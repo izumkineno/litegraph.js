@@ -52,9 +52,18 @@ describe("nodes_leafer base modern nodes", () => {
             consumeModernChangeMask() {
                 return 0;
             }
+
+            getShellState() {
+                return {};
+            }
+
+            getPortPresentation() {
+                return {};
+            }
         }
 
         LiteGraph.ModernNodeBase = TestModernNodeBase;
+        LiteGraph.DefaultModernNodeBase = TestModernNodeBase;
         LiteGraph.ModernNodeContracts = {
             MODERN_NODE_STATE_KEY: "__litegraphModernState",
         };
@@ -65,6 +74,48 @@ describe("nodes_leafer base modern nodes", () => {
         };
         LiteGraph.registerModernNodes = function(nodeClasses) {
             return nodeClasses.map((NodeClass) => this.registerModernNode(NodeClass));
+        };
+        LiteGraph.__installedModernNodeModuleIds = new Set();
+        LiteGraph.installModernNodeModule = function(moduleDefinition) {
+            if (this.__installedModernNodeModuleIds.has(moduleDefinition.id)) {
+                return [];
+            }
+            const nodeClasses = moduleDefinition.define({
+                liteGraph: this,
+                ModernNodeBase: this.ModernNodeBase,
+                DefaultModernNodeBase: this.DefaultModernNodeBase,
+                ModernNodeChangeMask: this.ModernNodeChangeMask,
+                ModernNodeContracts: this.ModernNodeContracts,
+                getModernWidgetRenderer: function() {
+                    return undefined;
+                },
+                utils: {
+                    truncateText(value, maxLength) {
+                        const text = String(value == null ? "" : value);
+                        return text.length > maxLength
+                            ? text.slice(0, maxLength - 3) + "..."
+                            : text;
+                    },
+                    describePortType(type) {
+                        if (type === LiteGraph.EVENT || type === LiteGraph.ACTION) {
+                            return "EVENT";
+                        }
+                        if (type == null || type === "" || type === -1 || type === 0) {
+                            return "ANY";
+                        }
+                        return String(type).toUpperCase();
+                    },
+                },
+            });
+            const types = this.registerModernNodes(nodeClasses);
+            this.__installedModernNodeModuleIds.add(moduleDefinition.id);
+            moduleDefinition.__registeredTypes = types.slice();
+            return types;
+        };
+        LiteGraph.installModernNodeModules = function(moduleDefinitions) {
+            return moduleDefinitions.flatMap((moduleDefinition) =>
+                this.installModernNodeModule(moduleDefinition)
+            );
         };
 
         global.LiteGraph = LiteGraph;
@@ -81,8 +132,8 @@ describe("nodes_leafer base modern nodes", () => {
         global.URL.createObjectURL = jest.fn(() => "blob:mock");
         global.URL.revokeObjectURL = jest.fn();
 
-        require("../src/nodes_leafer/base/shared/runtime.js");
-        require("../src/nodes_leafer/base/graph.js");
+        require("../src/nodes_leafer/base/shared/module.js");
+        require("../src/nodes_leafer/base/graph.ts");
         require("../src/nodes_leafer/base/basic-value.js");
         require("../src/nodes_leafer/base/basic-data.js");
         require("../src/nodes_leafer/base/basic-io.js");

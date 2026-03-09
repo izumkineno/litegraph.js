@@ -1,0 +1,40 @@
+import type { NodeViewPortKind } from "./NodeViewHost";
+import type { ModernNodePortSchema, ModernPortPresentation, ModernShellState } from "./ModernNodeContracts";
+interface LiteGraphAuthoringHostLike {
+    EVENT?: number;
+    ACTION?: number;
+    BOX_SHAPE?: number;
+    ARROW_SHAPE?: number;
+    GRID_SHAPE?: number;
+    LINK_COLOR?: string;
+    EVENT_LINK_COLOR?: string;
+    NODE_DEFAULT_COLOR?: string;
+    NODE_DEFAULT_BGCOLOR?: string;
+    NODE_DEFAULT_BOXCOLOR?: string;
+    NODE_TITLE_HEIGHT?: number;
+    NODE_MODES_COLORS?: unknown;
+}
+export declare function resolveLiteGraphAuthoringHost(value?: unknown): LiteGraphAuthoringHostLike;
+export declare function resolveLiteGraphAuthoringHostForNode(node: unknown): LiteGraphAuthoringHostLike;
+export declare function buildSlotSchemaFromNode(node: unknown): ModernNodePortSchema;
+export declare function truncateText(value: unknown, maxLength?: number): string;
+export declare function formatNodeValue(value: unknown, maxLength?: number): string;
+export declare function describePortType(type: unknown, hostInput?: unknown): string;
+export declare function getNodeTitle(node: unknown): string;
+export declare function getNodeSummary(node: unknown): string;
+export declare function resolveShellState(node: unknown, hostInput?: unknown): ModernShellState;
+export declare function resolveCollapsedWidth(node: unknown, hostInput?: unknown): number;
+export declare function resolvePortPresentation(node: unknown, kind: NodeViewPortKind, slotIndex: number, hostInput?: unknown): ModernPortPresentation | null;
+export declare const ModernNodeAuthoringUtils: {
+    readonly buildSlotSchemaFromNode: typeof buildSlotSchemaFromNode;
+    readonly truncateText: typeof truncateText;
+    readonly formatNodeValue: typeof formatNodeValue;
+    readonly describePortType: typeof describePortType;
+    readonly getNodeSummary: typeof getNodeSummary;
+    readonly resolveShellState: typeof resolveShellState;
+    readonly resolveCollapsedWidth: typeof resolveCollapsedWidth;
+    readonly resolvePortPresentation: typeof resolvePortPresentation;
+    readonly resolveLiteGraphAuthoringHost: typeof resolveLiteGraphAuthoringHost;
+    readonly resolveLiteGraphAuthoringHostForNode: typeof resolveLiteGraphAuthoringHostForNode;
+};
+export {};
