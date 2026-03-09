@@ -40,7 +40,10 @@ interface GraphLinkLike {
 
 interface GraphCanvasExecutionLike {
     renderRuntime?: "legacy-canvas" | "leafer";
-    requestRuntimeRender?: (forceNodeRepaint?: boolean) => void;
+    requestRuntimeRender?: (
+        forceNodeRepaint?: boolean,
+        nodeIds?: readonly (number | string)[]
+    ) => void;
 }
 
 type GraphNodeExecutionBase = Pick<
@@ -84,6 +87,8 @@ export class LGraphExecution extends LGraph {
             return;
         }
 
+        const nodeIds = this.collectRuntimeDirtyNodeIds();
+
         for (let i = 0; i < canvasList.length; ++i) {
             const canvas = canvasList[i];
             if (
@@ -93,8 +98,48 @@ export class LGraphExecution extends LGraph {
                 continue;
             }
 
-            canvas.requestRuntimeRender(true);
+            canvas.requestRuntimeRender(nodeIds.length > 0, nodeIds);
         }
+    }
+
+    private collectRuntimeDirtyNodeIds(): (number | string)[] {
+        const collected = new Set<number | string>();
+        const sources = [
+            this.nodes_executing as unknown as
+                | Record<string, unknown>
+                | null
+                | undefined,
+            this.nodes_actioning as unknown as
+                | Record<string, unknown>
+                | null
+                | undefined,
+            this.nodes_executedAction as unknown as
+                | Record<string, unknown>
+                | null
+                | undefined,
+        ];
+
+        for (let sourceIndex = 0; sourceIndex < sources.length; ++sourceIndex) {
+            const source = sources[sourceIndex];
+            if (!source) {
+                continue;
+            }
+
+            for (const [key, value] of Object.entries(source)) {
+                if (!value) {
+                    continue;
+                }
+
+                const node = this.getNodeByIdExecution(key);
+                if (!node) {
+                    continue;
+                }
+
+                collected.add(node.id);
+            }
+        }
+
+        return Array.from(collected);
     }
 
     /**

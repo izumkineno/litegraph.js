@@ -296,14 +296,20 @@ export class SceneSyncController {
         this.clearScene();
     }
 
-    requestRuntimeAnimation(forceNodeRepaint = false): void {
+    requestRuntimeAnimation(
+        forceNodeRepaint = false,
+        nodeIds?: readonly GraphMutationNodeId[]
+    ): void {
         let dirtyBounds: RenderBoundsLike | null = null;
         let hasPendingNodeFrames =
             this.pendingSettledNodeRepaints.size > 0 ||
             this.hasAnyTransientNodeAnimation();
         if (forceNodeRepaint) {
             const activeNodeIds = this.captureActiveTransientNodeIds();
-            dirtyBounds = this.repaintAllNodeHostsWithBounds();
+            const repaintNodeIds = this.resolveRuntimeRepaintNodeIds(nodeIds);
+            dirtyBounds = repaintNodeIds
+                ? this.repaintNodeHostsWithBounds(repaintNodeIds)
+                : this.repaintAllNodeHostsWithBounds();
             hasPendingNodeFrames =
                 this.syncPendingSettledNodeRepaints(activeNodeIds) ||
                 this.pendingSettledNodeRepaints.size > 0;
@@ -346,6 +352,19 @@ export class SceneSyncController {
             dirtyBounds = mergeRenderBounds(
                 dirtyBounds,
                 this.repaintNodeHostWithBounds(nodeId)
+            );
+        }
+        return dirtyBounds;
+    }
+
+    private repaintNodeHostsWithBounds(
+        nodeIds: readonly GraphMutationNodeId[]
+    ): RenderBoundsLike | null {
+        let dirtyBounds: RenderBoundsLike | null = null;
+        for (let i = 0; i < nodeIds.length; ++i) {
+            dirtyBounds = mergeRenderBounds(
+                dirtyBounds,
+                this.repaintNodeHostWithBounds(nodeIds[i])
             );
         }
         return dirtyBounds;
@@ -815,6 +834,29 @@ export class SceneSyncController {
         this.repaintNodeHost(nodeId);
         const nextBounds = this.captureNodeClusterBounds(nodeId);
         return mergeRenderBounds(previousBounds, nextBounds);
+    }
+
+    private resolveRuntimeRepaintNodeIds(
+        nodeIds?: readonly GraphMutationNodeId[]
+    ): GraphMutationNodeId[] | null {
+        if (!nodeIds) {
+            return null;
+        }
+
+        const resolved: GraphMutationNodeId[] = [];
+        const seen = new Set<string>();
+        for (let i = 0; i < nodeIds.length; ++i) {
+            const nodeId = nodeIds[i];
+            const key = toMutationKey(nodeId);
+            if (seen.has(key) || !this.nodeHosts.has(nodeId)) {
+                continue;
+            }
+
+            seen.add(key);
+            resolved.push(nodeId);
+        }
+
+        return resolved;
     }
 
     private captureNodeClusterBounds(

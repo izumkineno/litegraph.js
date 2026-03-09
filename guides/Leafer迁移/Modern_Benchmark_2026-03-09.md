@@ -30,6 +30,11 @@
   - `data_step_avg_ms ~= 1.70`
   - `event_step_avg_ms ~= 43.13`
   - `event exec_avg_ms ~= 10.82`
+- After narrowing `runStep()` repaint to executed nodes only:
+  - `create_total_ms ~= 181.6`
+  - `data_step_avg_ms ~= 0.33`
+  - `event_step_avg_ms ~= 20.19`
+  - `event exec_avg_ms ~= 9.86`
 
 ## What Improved
 - Active link presentation results are no longer dropped on every `lastTime` change.
@@ -39,7 +44,7 @@
 
 ## What Did Not Reach Target
 - The planned target for this pass was `event_step_avg_ms <= 45`.
-- That target is now met by the latest non-profiler run: `~43.13ms`.
+- That target is now comfortably met by the latest non-profiler run: `~20.19ms`.
 - `create_total_ms` is still far above legacy and remains outside the original aspirational range.
 
 ## Root Cause
@@ -95,12 +100,15 @@
 - Reduce `LinkViewHost.update()` attr churn for active links whose path is unchanged.
 - Avoid repeated text normalization / measurement work on high-frequency runtime paths.
 - Reduce `create_total_ms`, which is now the clearest remaining gap versus legacy.
+- Consider shrinking full graph hydrate / initial host construction cost, because runtime step cost is no longer the primary Leafer regression.
 
 ## Files Touched In This Pass
 - `src/ts-migration/leafer/LeaferTaskWorker.ts`
 - `src/ts-migration/leafer/SceneSyncController.ts`
 - `src/ts-migration/leafer/ModernNodeHost.ts`
 - `src/ts-migration/leafer/ModernNodeBase.ts`
+- `src/ts-migration/models/LGraph.execution.ts`
+- `src/ts-migration/canvas/LGraphCanvas.lifecycle.ts`
 
 ## Validation
 - `bunx tsc -p tsconfig.typecheck.json --pretty false`

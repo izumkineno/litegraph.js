@@ -21333,12 +21333,13 @@ ${safeText}`;
       this.appHost.taskWorker.onActiveLinkPresentation(null);
       this.clearScene();
     }
-    requestRuntimeAnimation(forceNodeRepaint = false) {
+    requestRuntimeAnimation(forceNodeRepaint = false, nodeIds) {
       let dirtyBounds = null;
       let hasPendingNodeFrames = this.pendingSettledNodeRepaints.size > 0 || this.hasAnyTransientNodeAnimation();
       if (forceNodeRepaint) {
         const activeNodeIds = this.captureActiveTransientNodeIds();
-        dirtyBounds = this.repaintAllNodeHostsWithBounds();
+        const repaintNodeIds = this.resolveRuntimeRepaintNodeIds(nodeIds);
+        dirtyBounds = repaintNodeIds ? this.repaintNodeHostsWithBounds(repaintNodeIds) : this.repaintAllNodeHostsWithBounds();
         hasPendingNodeFrames = this.syncPendingSettledNodeRepaints(activeNodeIds) || this.pendingSettledNodeRepaints.size > 0;
       }
       this.collectActiveLinks();
@@ -21375,6 +21376,16 @@ ${safeText}`;
         dirtyBounds = mergeRenderBounds(
           dirtyBounds,
           this.repaintNodeHostWithBounds(nodeId)
+        );
+      }
+      return dirtyBounds;
+    }
+    repaintNodeHostsWithBounds(nodeIds) {
+      let dirtyBounds = null;
+      for (let i2 = 0; i2 < nodeIds.length; ++i2) {
+        dirtyBounds = mergeRenderBounds(
+          dirtyBounds,
+          this.repaintNodeHostWithBounds(nodeIds[i2])
         );
       }
       return dirtyBounds;
@@ -21743,6 +21754,23 @@ ${safeText}`;
       this.repaintNodeHost(nodeId);
       const nextBounds = this.captureNodeClusterBounds(nodeId);
       return mergeRenderBounds(previousBounds, nextBounds);
+    }
+    resolveRuntimeRepaintNodeIds(nodeIds) {
+      if (!nodeIds) {
+        return null;
+      }
+      const resolved = [];
+      const seen = /* @__PURE__ */ new Set();
+      for (let i2 = 0; i2 < nodeIds.length; ++i2) {
+        const nodeId = nodeIds[i2];
+        const key = toMutationKey(nodeId);
+        if (seen.has(key) || !this.nodeHosts.has(nodeId)) {
+          continue;
+        }
+        seen.add(key);
+        resolved.push(nodeId);
+      }
+      return resolved;
     }
     captureNodeClusterBounds(nodeId) {
       const nodeHost = this.nodeHosts.get(nodeId);
@@ -24048,11 +24076,14 @@ ${safeText}`;
         this.dirty_bgcanvas = true;
       }
     }
-    requestRuntimeRender(forceNodeRepaint = false) {
+    requestRuntimeRender(forceNodeRepaint = false, nodeIds) {
       var _a3, _b3;
       if (this.renderRuntime === "leafer") {
         if (this.sceneSyncController) {
-          this.sceneSyncController.requestRuntimeAnimation(forceNodeRepaint);
+          this.sceneSyncController.requestRuntimeAnimation(
+            forceNodeRepaint,
+            nodeIds
+          );
           return;
         }
         if (typeof ((_a3 = this.leaferAppHost) == null ? void 0 : _a3.app.requestRender) === "function") {
@@ -29366,13 +29397,39 @@ ${safeText}`;
       if (!(canvasList == null ? void 0 : canvasList.length)) {
         return;
       }
+      const nodeIds = this.collectRuntimeDirtyNodeIds();
       for (let i2 = 0; i2 < canvasList.length; ++i2) {
         const canvas = canvasList[i2];
         if ((canvas == null ? void 0 : canvas.renderRuntime) !== "leafer" || typeof canvas.requestRuntimeRender !== "function") {
           continue;
         }
-        canvas.requestRuntimeRender(true);
+        canvas.requestRuntimeRender(nodeIds.length > 0, nodeIds);
       }
+    }
+    collectRuntimeDirtyNodeIds() {
+      const collected = /* @__PURE__ */ new Set();
+      const sources = [
+        this.nodes_executing,
+        this.nodes_actioning,
+        this.nodes_executedAction
+      ];
+      for (let sourceIndex = 0; sourceIndex < sources.length; ++sourceIndex) {
+        const source = sources[sourceIndex];
+        if (!source) {
+          continue;
+        }
+        for (const [key, value] of Object.entries(source)) {
+          if (!value) {
+            continue;
+          }
+          const node2 = this.getNodeByIdExecution(key);
+          if (!node2) {
+            continue;
+          }
+          collected.add(node2.id);
+        }
+      }
+      return Array.from(collected);
     }
     /**
      * Run N steps (cycles) of the graph
