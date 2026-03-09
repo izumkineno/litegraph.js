@@ -16,6 +16,9 @@ const INSTALLED_MODERN_NODE_MODULE_IDS_KEY =
 
 export interface LiteGraphModernInstallHost
     extends ModernNodeRegistryLiteGraphLike {
+    ACTION?: number;
+    EVENT?: number;
+    ON_TRIGGER?: number;
     ModernNodeBase?: typeof ModernNodeBase;
     DefaultModernNodeBase?: typeof DefaultModernNodeBase;
     ModernNodeContracts?: typeof ModernNodeContracts;

@@ -15950,7 +15950,10 @@ var LiteGraphTSMigration = (function(exports) {
      * @param {Object} extra_info this can be used to have special properties of the property (like values, etc)
      */
     addProperty(name, default_value, type, extra_info) {
-      const o2 = { name, type, default_value };
+      const o2 = { name, default_value };
+      if (type !== void 0) {
+        o2.type = type;
+      }
       if (extra_info) {
         for (const i2 in extra_info) {
           o2[i2] = extra_info[i2];

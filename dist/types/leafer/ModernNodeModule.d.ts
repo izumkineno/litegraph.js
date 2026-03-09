@@ -5,6 +5,9 @@ import { getModernWidgetRenderer, type ModernNodeConstructorLike, type ModernNod
 import { ModernNodeChangeMask, ModernNodeContracts } from "./ModernNodeContracts";
 declare const PENDING_MODERN_NODE_MODULES_KEY = "__LITEGRAPH_PENDING_MODERN_NODE_MODULES__";
 export interface LiteGraphModernInstallHost extends ModernNodeRegistryLiteGraphLike {
+    ACTION?: number;
+    EVENT?: number;
+    ON_TRIGGER?: number;
     ModernNodeBase?: typeof ModernNodeBase;
     DefaultModernNodeBase?: typeof DefaultModernNodeBase;
     ModernNodeContracts?: typeof ModernNodeContracts;

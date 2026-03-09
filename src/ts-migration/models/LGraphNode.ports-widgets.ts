@@ -118,10 +118,13 @@ export class LGraphNodePortsWidgets extends LGraphNodeExecution {
     addProperty<T = unknown>(
         name: string,
         default_value: unknown,
-        type: string,
+        type?: string,
         extra_info?: object
     ): T {
-        const o: PropertyInfo = { name, type, default_value };
+        const o: PropertyInfo = { name, default_value };
+        if (type !== undefined) {
+            o.type = type;
+        }
         if (extra_info) {
             for (const i in extra_info as Record<string, unknown>) {
                 (o as Record<string, unknown>)[i] = (

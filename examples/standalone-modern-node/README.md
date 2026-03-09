@@ -16,6 +16,7 @@ This example shows the standalone Modern node package contract introduced by the
 ## Build
 
 ```bash
+npx tsc -p examples/standalone-modern-node/tsconfig.json
 npx vite build --config examples/standalone-modern-node/vite.config.mjs
 ```
 

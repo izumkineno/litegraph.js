@@ -1,8 +1,10 @@
-import type { ModernNodeModuleDefinition } from "litegraph.js/modern-types";
+import type {
+    LiteGraphModernInstallHost,
+    ModernNodeLifecycleContext,
+    ModernNodeModuleDefinition,
+} from "litegraph.js/modern-types";
 
-type InstallHost = {
-    installModernNodeModule?: (moduleDefinition: ModernNodeModuleDefinition) => string[];
-};
+type InstallHost = Pick<LiteGraphModernInstallHost, "installModernNodeModule">;
 
 const PENDING_KEY = "__LITEGRAPH_PENDING_MODERN_NODE_MODULES__";
 
@@ -37,11 +39,13 @@ export const moduleDef = {
             static type = "examples/standalone_counter";
             static title = "Standalone Counter";
 
+            declare _value: number;
+
             constructor(title?: string) {
                 super(title);
-                this.addInput("tick", api.liteGraph.ACTION);
+                this.addInput("tick", api.liteGraph.ACTION ?? -1);
                 this.addOutput("value", "number");
-                this.addProperty("step", 1);
+                this.addProperty("step", 1, "number");
                 this._value = 0;
                 this.size = [180, 60];
             }
@@ -60,16 +64,18 @@ export const moduleDef = {
                 ];
             }
 
-            onAction() {
+            onAction = () => {
                 this._value += Number(this.properties.step) || 1;
                 this.requestModernPatch(api.ModernNodeChangeMask.Data);
-            }
+            };
 
-            onExecute() {
+            onExecute = () => {
                 this.setOutputData(0, this._value);
-            }
+            };
 
-            getShellState(context: unknown) {
+            getShellState(
+                context: ModernNodeLifecycleContext<this>
+            ) {
                 const shellState = super.getShellState(context);
                 shellState.headerMetaText = String(this._value);
                 shellState.minimumWidth = 180;

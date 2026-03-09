@@ -40,7 +40,7 @@ export declare class LGraphNodePortsWidgets extends LGraphNodeExecution {
      * @param {string} type string defining the output type ("vec3","number",...)
      * @param {Object} extra_info this can be used to have special properties of the property (like values, etc)
      */
-    addProperty<T = unknown>(name: string, default_value: unknown, type: string, extra_info?: object): T;
+    addProperty<T = unknown>(name: string, default_value: unknown, type?: string, extra_info?: object): T;
     /**
      * add a new output slot to use in this node
      * @method addOutput
