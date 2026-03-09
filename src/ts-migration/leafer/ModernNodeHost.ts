@@ -142,6 +142,39 @@ interface ModernPortEntry {
     label: Text;
 }
 
+interface ModernPortPresentationCacheEntry {
+    version: number;
+    presentation: ModernPortPresentation;
+}
+
+interface ModernPortGeometryCacheEntry {
+    version: number;
+    anchor: [number, number] | null;
+    radius: number;
+    labelWidth: number;
+    gutter: number;
+}
+
+interface ModernPortGutterCacheEntry {
+    version: number;
+    left: number;
+    right: number;
+}
+
+interface ModernShellTextMetricsCacheEntry {
+    key: string;
+    titleText: string;
+    titleWidth: number;
+    headerMeta: string;
+    headerMetaWidth: number;
+    summaryText: string;
+}
+
+interface ModernContentAreaCacheEntry {
+    key: string;
+    area: ModernNodeRectLike | null;
+}
+
 interface ShellParts {
     shell: Group;
     selectionOutline: Rect;
@@ -252,6 +285,8 @@ const RESIZE_HANDLE_SIZE = 14;
 const HEADER_META_GAP = 10;
 const HEADER_META_MIN_WIDTH = 44;
 const HEADER_SIGNAL_SIZE = 10;
+const HEADER_META_MEASURE_FONT =
+    '500 10px "Aptos", "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif';
 const PORT_LABEL_MAX_WIDTH = 84;
 const PORT_LABEL_PADDING = 10;
 const PORT_GUTTER_MIN = 14;
@@ -505,6 +540,37 @@ function signatureOfActionParts<
         .join("|");
 }
 
+function signatureOfActionPartLayouts<
+    TNode extends { id: number | string },
+    THost,
+>(
+    schemas: readonly ModernActionPartSchema<TNode, THost>[]
+): string {
+    return schemas
+        .map((schema) => {
+            const bounds = schema.bounds
+                ? `${schema.bounds.x},${schema.bounds.y},${schema.bounds.width},${schema.bounds.height}`
+                : "";
+            return `${schema.id}:${schema.placement || ""}:${bounds}`;
+        })
+        .join("|");
+}
+
+function signatureOfShellGeometry(shellState: ModernShellState): string {
+    return [
+        shellState.title || "",
+        shellState.titleMode || "default",
+        shellState.collapsedWidth ?? "",
+        shellState.headerMetaText || "",
+        shellState.minimumWidth ?? "",
+        shellState.minimumHeight ?? "",
+        shellState.summaryText || "",
+        shellState.collapsible !== false ? 1 : 0,
+        shellState.resizable !== false ? 1 : 0,
+        shellState.showCollapsedSlots !== false ? 1 : 0,
+    ].join("|");
+}
+
 function createPortMarker(shape: string, color: string): UI | Group {
     const marker = (() => {
         switch (shape) {
@@ -591,18 +657,55 @@ function createPortMarker(shape: string, color: string): UI | Group {
 function setShapeColor(shape: UI | Group, color: string): void {
     const shapeData = shape as unknown as Record<string, unknown>;
     if ("fill" in shapeData) {
-        shapeData.fill = color;
+        if (shapeData.fill !== color) {
+            shapeData.fill = color;
+        }
     }
     if ((shape as Group).children) {
         const children = (((shape as Group).children || []) as unknown) as Array<
             Record<string, unknown>
         >;
         for (let i = 0; i < children.length; ++i) {
-            if ("fill" in children[i]) {
+            if ("fill" in children[i] && children[i].fill !== color) {
                 children[i].fill = color;
             }
         }
     }
+}
+
+function isSameAttrValue(current: unknown, next: unknown): boolean {
+    if (Array.isArray(current) && Array.isArray(next)) {
+        if (current.length !== next.length) {
+            return false;
+        }
+        for (let i = 0; i < current.length; ++i) {
+            if (current[i] !== next[i]) {
+                return false;
+            }
+        }
+        return true;
+    }
+    return current === next;
+}
+
+function setAttrIfChanged(
+    target: Record<string, unknown>,
+    key: string,
+    value: unknown
+): void {
+    if (!isSameAttrValue(target[key], value)) {
+        target[key] = value;
+    }
+}
+
+function setRectIfChanged(
+    target: Record<string, unknown>,
+    rect: ModernNodeRectLike
+): void {
+    setAttrIfChanged(target, "x", rect.x);
+    setAttrIfChanged(target, "y", rect.y);
+    setAttrIfChanged(target, "width", rect.width);
+    setAttrIfChanged(target, "height", rect.height);
 }
 
 export class ModernNodeHost implements NodeViewHost {
@@ -628,6 +731,14 @@ export class ModernNodeHost implements NodeViewHost {
     private widgetEntries: ModernWidgetEntry[] = [];
     private actionPartEntries: ModernActionPartEntry[] = [];
     private portEntries = new Map<string, ModernPortEntry>();
+    private portPresentationCache = new Map<
+        string,
+        ModernPortPresentationCacheEntry
+    >();
+    private portGeometryCache = new Map<string, ModernPortGeometryCacheEntry>();
+    private portGutterCache: ModernPortGutterCacheEntry | null = null;
+    private shellTextMetricsCache: ModernShellTextMetricsCacheEntry | null = null;
+    private contentAreaCache: ModernContentAreaCacheEntry | null = null;
     private widgetValueSnapshot = new Map<string, unknown>();
     private currentWidgetSchemas: ReadonlyArray<ModernWidgetSchema> = [];
     private currentActionPartSchemas: ReadonlyArray<
@@ -635,6 +746,13 @@ export class ModernNodeHost implements NodeViewHost {
     > = [];
     private lastWidgetSignature = "";
     private lastActionPartSignature = "";
+    private lastActionPartLayoutSignature = "";
+    private portPresentationCacheVersion = 1;
+    private portGeometryCacheVersion = 1;
+    private portLifecycleContext:
+        | ModernNodeLifecycleContext<ModernNodeLike, ModernNodeHost>
+        | null = null;
+    private portBuildContext: ModernNodeBuildContext | null = null;
     private mounted = false;
     private resizeAnchor: {
         startWorldX: number;
@@ -662,11 +780,33 @@ export class ModernNodeHost implements NodeViewHost {
     repaint(): void {
         this.node.ensureModernPorts?.();
         const changeMask = this.consumeChangeMask();
+        const previousShellState = this.shellState;
         this.shellState = this.resolveShellState(changeMask);
         this.currentWidgetSchemas = this.collectWidgetSchemas();
         this.currentActionPartSchemas = this.collectActionPartSchemas(changeMask);
-        this.ensureMinimumNodeSize(this.shellState);
-        this.shellLayout = this.computeShellLayout(this.shellState);
+        const nextWidgetSignature = signatureOfWidgets(this.currentWidgetSchemas);
+        const nextActionPartSignature = signatureOfActionParts(
+            this.currentActionPartSchemas
+        );
+        const nextActionPartLayoutSignature = signatureOfActionPartLayouts(
+            this.currentActionPartSchemas
+        );
+        const shellGeometryChanged =
+            signatureOfShellGeometry(previousShellState) !==
+            signatureOfShellGeometry(this.shellState);
+        const needsGeometryPass =
+            !this.mounted ||
+            (changeMask &
+                (ModernNodeChangeMask.Layout | ModernNodeChangeMask.Ports)) !==
+                0 ||
+            shellGeometryChanged ||
+            this.lastWidgetSignature !== nextWidgetSignature ||
+            this.lastActionPartLayoutSignature !== nextActionPartLayoutSignature;
+        this.refreshPortCacheVersions(changeMask, needsGeometryPass);
+        if (needsGeometryPass) {
+            this.ensureMinimumNodeSize(this.shellState);
+            this.shellLayout = this.computeShellLayout(this.shellState);
+        }
 
         if (!this.mounted) {
             this.content = toUI(this.mountContent(changeMask));
@@ -679,11 +819,27 @@ export class ModernNodeHost implements NodeViewHost {
             this.patchContent(changeMask);
         }
 
-        this.syncWidgets(changeMask);
-        this.syncActionParts(changeMask);
-        this.syncPorts();
+        this.syncWidgets(changeMask, nextWidgetSignature, needsGeometryPass);
+        this.syncActionParts(
+            changeMask,
+            nextActionPartSignature,
+            nextActionPartLayoutSignature,
+            needsGeometryPass
+        );
+        const needsPortSync =
+            needsGeometryPass ||
+            (changeMask &
+                (ModernNodeChangeMask.Ports |
+                    ModernNodeChangeMask.Data |
+                    ModernNodeChangeMask.Style)) !==
+                0;
+        if (needsPortSync) {
+            this.syncPorts();
+        }
         this.applyShellLayout();
-        this.syncContentLayout();
+        if (needsGeometryPass) {
+            this.syncContentLayout();
+        }
         this.applyInteractionState();
         this.syncPosition();
         this.storeInspectableState();
@@ -737,8 +893,9 @@ export class ModernNodeHost implements NodeViewHost {
     }
 
     syncPosition(): void {
-        this.root.x = toFiniteNumber(this.node.pos?.[0]);
-        this.root.y = toFiniteNumber(this.node.pos?.[1]);
+        const rootRecord = this.root as unknown as Record<string, unknown>;
+        setAttrIfChanged(rootRecord, "x", toFiniteNumber(this.node.pos?.[0]));
+        setAttrIfChanged(rootRecord, "y", toFiniteNumber(this.node.pos?.[1]));
     }
 
     destroy(): void {
@@ -1210,6 +1367,7 @@ export class ModernNodeHost implements NodeViewHost {
     ): ModernNodeShellLayout {
         const constants = getLiteGraphConstants();
         const titleHeight = Math.max(constants.NODE_TITLE_HEIGHT, TITLE_HEIGHT);
+        const textMetrics = this.resolveShellTextMetrics(shellState);
         const bodyHeight = Math.max(
             toFiniteNumber(this.node.size?.[1], BODY_MIN_HEIGHT),
             toFiniteNumber(shellState.minimumHeight, BODY_MIN_HEIGHT),
@@ -1230,11 +1388,7 @@ export class ModernNodeHost implements NodeViewHost {
                   )
                 : Math.min(
                       expandedWidth,
-                      Math.max(
-                          56,
-                          measureTextWidth(String(shellState.title || "")) +
-                              titleHeight * 1.8
-                      )
+                      Math.max(56, textMetrics.titleWidth + titleHeight * 1.8)
                   );
         const width = isCollapsed ? collapsedWidth : expandedWidth;
         const header: ModernNodeRectLike = {
@@ -1286,6 +1440,32 @@ export class ModernNodeHost implements NodeViewHost {
     private applyShellLayout(): void {
         const layout = this.shellLayout;
         const shellState = this.shellState;
+        const textMetrics = this.resolveShellTextMetrics(shellState);
+        const headerRect = this.shell.header as unknown as Record<string, unknown>;
+        const bodyRect = this.shell.body as unknown as Record<string, unknown>;
+        const headerContent = this.shell.headerContent as unknown as Record<
+            string,
+            unknown
+        >;
+        const titleText = this.shell.title as unknown as Record<string, unknown>;
+        const headerMetaText = this.shell.headerMeta as unknown as Record<
+            string,
+            unknown
+        >;
+        const summaryText = this.shell.summary as unknown as Record<string, unknown>;
+        const signalLamp = this.shell.signalLamp as unknown as Record<string, unknown>;
+        const collapseOverlay = this.shell.collapseOverlay as unknown as Record<
+            string,
+            unknown
+        >;
+        const resizeHandle = this.shell.resizeHandle as unknown as Record<
+            string,
+            unknown
+        >;
+        const selectionOutline = this.shell.selectionOutline as unknown as Record<
+            string,
+            unknown
+        >;
         const header = layout.header || {
             x: 0,
             y: -TITLE_HEIGHT,
@@ -1294,36 +1474,27 @@ export class ModernNodeHost implements NodeViewHost {
         };
         const body = layout.body;
         const totalHeight = header.height + (body?.height || 0);
+        const contentArea = this.getContentArea();
 
-        this.shell.header.x = header.x;
-        this.shell.header.y = header.y;
-        this.shell.header.width = header.width;
-        this.shell.header.height = header.height;
-        this.shell.header.fill = shellState.titleColor || "#283444";
-        this.shell.header.stroke = shellState.borderColor || "#314254";
-        this.shell.header.cornerRadius = body ? [12, 12, 0, 0] : [12, 12, 12, 12];
+        setRectIfChanged(headerRect, header);
+        setAttrIfChanged(headerRect, "fill", shellState.titleColor || "#283444");
+        setAttrIfChanged(headerRect, "stroke", shellState.borderColor || "#314254");
+        setAttrIfChanged(
+            headerRect,
+            "cornerRadius",
+            body ? [12, 12, 0, 0] : [12, 12, 12, 12]
+        );
 
-        this.shell.body.visible = Boolean(body);
+        setAttrIfChanged(bodyRect, "visible", Boolean(body));
         if (body) {
-            this.shell.body.x = body.x;
-            this.shell.body.y = body.y;
-            this.shell.body.width = body.width;
-            this.shell.body.height = body.height;
-            this.shell.body.fill = shellState.bodyColor || "#101720";
-            this.shell.body.stroke = shellState.borderColor || "#314254";
-            this.shell.body.cornerRadius = [0, 0, 12, 12];
+            setRectIfChanged(bodyRect, body);
+            setAttrIfChanged(bodyRect, "fill", shellState.bodyColor || "#101720");
+            setAttrIfChanged(bodyRect, "stroke", shellState.borderColor || "#314254");
+            setAttrIfChanged(bodyRect, "cornerRadius", [0, 0, 12, 12]);
         }
 
-        const headerMeta = this.resolveHeaderMetaText(shellState);
-        const headerMetaWidth = headerMeta
-            ? Math.max(
-                  HEADER_META_MIN_WIDTH,
-                  measureTextWidth(
-                      headerMeta,
-                      '500 10px "Aptos", "Segoe UI", sans-serif'
-                  ) + 8
-              )
-            : 0;
+        const headerMeta = textMetrics.headerMeta;
+        const headerMetaWidth = textMetrics.headerMetaWidth;
         const titleStartX = this.resolveTitleStartX(Boolean(layout.collapse), header.height);
         const showHeaderMeta =
             Boolean(headerMeta) &&
@@ -1334,66 +1505,99 @@ export class ModernNodeHost implements NodeViewHost {
             : 14;
         const titleWidth = Math.max(24, header.width - titleStartX - titleEndPadding);
 
-        this.shell.headerContent.x = titleStartX;
-        this.shell.headerContent.y = header.y;
-        this.shell.headerContent.width = Math.max(24, header.width - titleStartX - 12);
-        this.shell.headerContent.height = header.height;
-        this.shell.headerContent.visible =
-            shellState.titleMode !== "hidden" || showHeaderMeta;
-
-        this.shell.title.text = String(shellState.title || "");
-        this.shell.title.fill = shellState.titleTextColor || "#F5F7FA";
-        this.shell.title.height = header.height;
-        this.shell.title.width = titleWidth;
-        this.shell.title.visible = shellState.titleMode !== "hidden";
-
-        this.shell.headerMeta.text = headerMeta;
-        this.shell.headerMeta.visible = showHeaderMeta;
-        this.shell.headerMeta.width = Math.max(HEADER_META_MIN_WIDTH, headerMetaWidth);
-        this.shell.headerMeta.height = header.height;
-
-        this.shell.summary.text = String(shellState.summaryText || "");
-        this.shell.summary.visible = Boolean(
-            body &&
-                !this.widgetEntries.length &&
-                !this.content &&
-                shellState.summaryText
+        setAttrIfChanged(headerContent, "x", titleStartX);
+        setAttrIfChanged(headerContent, "y", header.y);
+        setAttrIfChanged(
+            headerContent,
+            "width",
+            Math.max(24, header.width - titleStartX - 12)
         );
-        const contentArea = this.getContentArea();
-        this.shell.summary.x = contentArea?.x || BODY_PADDING_X;
-        this.shell.summary.y =
+        setAttrIfChanged(headerContent, "height", header.height);
+        setAttrIfChanged(
+            headerContent,
+            "visible",
+            shellState.titleMode !== "hidden" || showHeaderMeta
+        );
+
+        setAttrIfChanged(titleText, "text", textMetrics.titleText);
+        setAttrIfChanged(titleText, "fill", shellState.titleTextColor || "#F5F7FA");
+        setAttrIfChanged(titleText, "height", header.height);
+        setAttrIfChanged(titleText, "width", titleWidth);
+        setAttrIfChanged(
+            titleText,
+            "visible",
+            shellState.titleMode !== "hidden"
+        );
+
+        setAttrIfChanged(headerMetaText, "text", headerMeta);
+        setAttrIfChanged(headerMetaText, "visible", showHeaderMeta);
+        setAttrIfChanged(
+            headerMetaText,
+            "width",
+            Math.max(HEADER_META_MIN_WIDTH, headerMetaWidth)
+        );
+        setAttrIfChanged(headerMetaText, "height", header.height);
+
+        setAttrIfChanged(summaryText, "text", textMetrics.summaryText);
+        setAttrIfChanged(
+            summaryText,
+            "visible",
+            Boolean(
+                body &&
+                    !this.widgetEntries.length &&
+                    !this.content &&
+                    shellState.summaryText
+            )
+        );
+        setAttrIfChanged(summaryText, "x", contentArea?.x || BODY_PADDING_X);
+        setAttrIfChanged(
+            summaryText,
+            "y",
             (contentArea?.y || BODY_PADDING_Y) +
-            Math.min(20, Math.max(14, (contentArea?.height || 24) * 0.45));
-        this.shell.summary.width = Math.max(
-            20,
-            (contentArea?.width || layout.width - BODY_PADDING_X * 2)
+                Math.min(20, Math.max(14, (contentArea?.height || 24) * 0.45))
+        );
+        setAttrIfChanged(
+            summaryText,
+            "width",
+            Math.max(20, contentArea?.width || layout.width - BODY_PADDING_X * 2)
         );
 
-        this.shell.signalLamp.visible = shellState.showSignalLamp !== false;
-        this.shell.signalLamp.x = 10;
-        this.shell.signalLamp.y =
-            header.y + (header.height - HEADER_SIGNAL_SIZE) / 2;
-        this.shell.signalLamp.fill = shellState.boxColor || "#666666";
+        setAttrIfChanged(
+            signalLamp,
+            "visible",
+            shellState.showSignalLamp !== false
+        );
+        setAttrIfChanged(signalLamp, "x", 10);
+        setAttrIfChanged(
+            signalLamp,
+            "y",
+            header.y + (header.height - HEADER_SIGNAL_SIZE) / 2
+        );
+        setAttrIfChanged(signalLamp, "fill", shellState.boxColor || "#666666");
 
-        this.shell.collapseOverlay.visible = Boolean(layout.collapse);
+        setAttrIfChanged(collapseOverlay, "visible", Boolean(layout.collapse));
         if (layout.collapse) {
-            this.shell.collapseOverlay.x = layout.collapse.x;
-            this.shell.collapseOverlay.y = layout.collapse.y;
-            this.shell.collapseOverlay.width = layout.collapse.width;
-            this.shell.collapseOverlay.height = layout.collapse.height;
+            setRectIfChanged(collapseOverlay, layout.collapse);
         }
 
-        this.shell.resizeHandle.visible = Boolean(layout.resize);
+        setAttrIfChanged(resizeHandle, "visible", Boolean(layout.resize));
         if (layout.resize) {
-            this.shell.resizeHandle.x = layout.resize.x;
-            this.shell.resizeHandle.y = layout.resize.y;
+            setAttrIfChanged(resizeHandle, "x", layout.resize.x);
+            setAttrIfChanged(resizeHandle, "y", layout.resize.y);
         }
 
-        this.shell.selectionOutline.x = -OUTLINE_PADDING;
-        this.shell.selectionOutline.y = header.y - OUTLINE_PADDING;
-        this.shell.selectionOutline.width = layout.width + OUTLINE_PADDING * 2;
-        this.shell.selectionOutline.height = totalHeight + OUTLINE_PADDING * 2;
-        this.shell.selectionOutline.visible = Boolean(this.node.is_selected);
+        setAttrIfChanged(selectionOutline, "x", -OUTLINE_PADDING);
+        setAttrIfChanged(selectionOutline, "y", header.y - OUTLINE_PADDING);
+        setAttrIfChanged(
+            selectionOutline,
+            "width",
+            layout.width + OUTLINE_PADDING * 2
+        );
+        setAttrIfChanged(
+            selectionOutline,
+            "height",
+            totalHeight + OUTLINE_PADDING * 2
+        );
     }
 
     private resolveMinimumBodyHeight(shellState?: ModernShellState): number {
@@ -1426,20 +1630,7 @@ export class ModernNodeHost implements NodeViewHost {
         headerHeight = TITLE_HEIGHT
     ): number {
         const gutters = this.resolvePortGutters();
-        const headerMeta = this.resolveHeaderMetaText(shellState);
-        const headerMetaWidth = headerMeta
-            ? Math.max(
-                  HEADER_META_MIN_WIDTH,
-                  measureTextWidth(
-                      headerMeta,
-                      '500 10px "Aptos", "Segoe UI", sans-serif'
-                  ) + 8
-              )
-            : 0;
-        const titleWidth = measureTextWidth(
-            String(shellState.title || ""),
-            '600 13px "Aptos", "Segoe UI", sans-serif'
-        );
+        const textMetrics = this.resolveShellTextMetrics(shellState);
         const contentWidth = this.resolveMinimumContentWidth();
 
         return Math.max(
@@ -1447,11 +1638,40 @@ export class ModernNodeHost implements NodeViewHost {
             toFiniteNumber(shellState.minimumWidth, BODY_MIN_WIDTH),
             BODY_PADDING_X * 2 + gutters.left + gutters.right + contentWidth,
             this.resolveTitleStartX(Boolean(shellState.collapsible), headerHeight) +
-                titleWidth +
-                (headerMetaWidth
-                    ? HEADER_META_GAP + headerMetaWidth + 12
+                textMetrics.titleWidth +
+                (textMetrics.headerMetaWidth
+                    ? HEADER_META_GAP + textMetrics.headerMetaWidth + 12
                     : 14)
         );
+    }
+
+    private resolveShellTextMetrics(
+        shellState: ModernShellState
+    ): ModernShellTextMetricsCacheEntry {
+        const titleText = String(shellState.title || "");
+        const headerMeta = this.resolveHeaderMetaText(shellState);
+        const summaryText = String(shellState.summaryText || "");
+        const cacheKey = `${titleText}\u0000${headerMeta}\u0000${summaryText}`;
+        const cached = this.shellTextMetricsCache;
+        if (cached?.key === cacheKey) {
+            return cached;
+        }
+
+        const resolved: ModernShellTextMetricsCacheEntry = {
+            key: cacheKey,
+            titleText,
+            titleWidth: measureTextWidth(titleText, MODERN_NODE_TITLE_MEASURE_FONT),
+            headerMeta,
+            headerMetaWidth: headerMeta
+                ? Math.max(
+                      HEADER_META_MIN_WIDTH,
+                      measureTextWidth(headerMeta, HEADER_META_MEASURE_FONT) + 8
+                  )
+                : 0,
+            summaryText,
+        };
+        this.shellTextMetricsCache = resolved;
+        return resolved;
     }
 
     private resolveMinimumContentWidth(): number {
@@ -1495,9 +1715,24 @@ export class ModernNodeHost implements NodeViewHost {
     }
 
     private resolvePortGutters(): { left: number; right: number } {
-        return {
+        if (this.portGutterCache?.version === this.portGeometryCacheVersion) {
+            return {
+                left: this.portGutterCache.left,
+                right: this.portGutterCache.right,
+            };
+        }
+
+        const gutters = {
             left: this.measurePortGutter("input"),
             right: this.measurePortGutter("output"),
+        };
+        this.portGutterCache = {
+            version: this.portGeometryCacheVersion,
+            ...gutters,
+        };
+        return {
+            left: gutters.left,
+            right: gutters.right,
         };
     }
 
@@ -1510,59 +1745,57 @@ export class ModernNodeHost implements NodeViewHost {
         let maxWidth = 0;
         for (let i = 0; i < slots.length; ++i) {
             const presentation = this.resolvePortPresentation(kind, i, slots[i]);
-            const label =
-                presentation.hideLabelWhenCollapsed && this.node.flags?.collapsed
-                    ? ""
-                    : presentation.label;
-            if (!label) {
-                continue;
-            }
-            maxWidth = Math.max(
-                maxWidth,
-                Math.min(
-                    PORT_LABEL_MAX_WIDTH,
-                    measureTextWidth(
-                        String(label),
-                        '500 11px "Aptos", "Segoe UI", sans-serif'
-                    )
-                )
+            const geometry = this.resolvePortGeometry(
+                kind,
+                i,
+                slots[i],
+                presentation
             );
+            maxWidth = Math.max(maxWidth, geometry?.gutter || PORT_GUTTER_MIN);
         }
 
         if (!maxWidth) {
             return PORT_GUTTER_MIN;
         }
-        return Math.max(PORT_GUTTER_MIN, maxWidth + PORT_LABEL_PADDING + 10);
+        return Math.max(PORT_GUTTER_MIN, maxWidth);
     }
 
     private syncContentLayout(): void {
         const contentArea = this.getContentArea();
-        this.shell.contentLayer.visible = Boolean(contentArea);
+        const contentLayerRecord = this.shell.contentLayer as unknown as Record<
+            string,
+            unknown
+        >;
+        setAttrIfChanged(contentLayerRecord, "visible", Boolean(contentArea));
         if (!this.content || !contentArea) {
             return;
         }
 
-        this.content.x = contentArea.x;
-        this.content.y = contentArea.y;
-        if ("width" in (this.content as unknown as Record<string, unknown>)) {
-            (this.content as unknown as Record<string, unknown>).width =
-                contentArea.width;
+        const contentRecord = this.content as unknown as Record<string, unknown>;
+        setAttrIfChanged(contentRecord, "x", contentArea.x);
+        setAttrIfChanged(contentRecord, "y", contentArea.y);
+        if ("width" in contentRecord) {
+            setAttrIfChanged(contentRecord, "width", contentArea.width);
         }
-        if ("height" in (this.content as unknown as Record<string, unknown>)) {
-            (this.content as unknown as Record<string, unknown>).height =
-                contentArea.height;
+        if ("height" in contentRecord) {
+            setAttrIfChanged(contentRecord, "height", contentArea.height);
         }
     }
 
-    private syncWidgets(changeMask: ModernNodeChangeMaskValue): void {
+    private syncWidgets(
+        changeMask: ModernNodeChangeMaskValue,
+        nextSignature: string,
+        needsLayoutPass: boolean
+    ): void {
         const schemas = this.currentWidgetSchemas;
-        this.shell.widgetLayer.visible = schemas.length > 0;
-
-        const nextSignature = signatureOfWidgets(schemas);
+        const widgetLayerRecord = this.shell.widgetLayer as unknown as Record<
+            string,
+            unknown
+        >;
+        setAttrIfChanged(widgetLayerRecord, "visible", schemas.length > 0);
         const needsRebuild =
             this.widgetEntries.length !== schemas.length ||
-            this.lastWidgetSignature !== nextSignature ||
-            (changeMask & ModernNodeChangeMask.Layout) !== 0;
+            this.lastWidgetSignature !== nextSignature;
 
         if (!schemas.length) {
             this.clearWidgets();
@@ -1571,19 +1804,17 @@ export class ModernNodeHost implements NodeViewHost {
             return;
         }
 
-        const widgetArea = this.resolveWidgetArea();
-        const layouts: ModernNodeWidgetLayout[] = [];
-        for (let i = 0; i < schemas.length; ++i) {
-            const layout = resolveWidgetBounds(widgetArea, i, schemas.length);
-            layouts.push({
-                ...layout,
-                index: i,
-                id: schemas[i].id,
-                type: schemas[i].type,
-                action: schemas[i].type === "toggle" ? "toggle" : "activate",
-                actionZones: this.widgetEntries[i]?.handle.actionZones,
-            });
-        }
+        const shouldRecomputeLayout =
+            needsLayoutPass ||
+            needsRebuild ||
+            !Array.isArray(this.shellLayout.widgets) ||
+            this.shellLayout.widgets.length !== schemas.length;
+        const layouts = shouldRecomputeLayout
+            ? this.computeWidgetLayouts(schemas)
+            : this.reuseWidgetLayouts(schemas);
+        const widgetChangeMask = shouldRecomputeLayout
+            ? changeMask | ModernNodeChangeMask.Layout
+            : changeMask;
 
         if (needsRebuild) {
             this.clearWidgets();
@@ -1614,14 +1845,17 @@ export class ModernNodeHost implements NodeViewHost {
                 const nextSchema = schemas[i];
                 const nextLayout = layouts[i];
                 const shouldPatch =
-                    (changeMask &
+                    (widgetChangeMask &
                         (ModernNodeChangeMask.Layout |
                             ModernNodeChangeMask.Style)) !==
                         0 ||
                     entry.schema.value !== nextSchema.value ||
                     entry.schema.disabled !== nextSchema.disabled ||
+                    entry.schema.readonly !== nextSchema.readonly ||
                     entry.schema.label !== nextSchema.label ||
                     entry.schema.name !== nextSchema.name ||
+                    entry.schema.property !== nextSchema.property ||
+                    entry.schema.options !== nextSchema.options ||
                     entry.layout.x !== nextLayout.x ||
                     entry.layout.y !== nextLayout.y ||
                     entry.layout.width !== nextLayout.width ||
@@ -1632,7 +1866,7 @@ export class ModernNodeHost implements NodeViewHost {
                     entry.renderer.patchView(
                         this.createWidgetContext(entry.schema, nextLayout),
                         entry.handle,
-                        changeMask
+                        widgetChangeMask
                     );
                 }
                 this.widgetValueSnapshot.set(entry.schema.id, entry.schema.value);
@@ -1644,18 +1878,38 @@ export class ModernNodeHost implements NodeViewHost {
                 this.widgetEntries[i].handle.actionZones;
         }
         this.patchShellWidgetLayout(layouts);
+        this.lastWidgetSignature = nextSignature;
     }
 
-    private syncActionParts(changeMask: ModernNodeChangeMaskValue): void {
+    private syncActionParts(
+        _changeMask: ModernNodeChangeMaskValue,
+        nextSignature: string,
+        nextLayoutSignature: string,
+        needsLayoutPass: boolean
+    ): void {
         const visibleParts = this.currentActionPartSchemas;
-        this.shell.actionPartLayer.visible = visibleParts.length > 0;
+        const actionPartLayerRecord = this.shell.actionPartLayer as unknown as Record<
+            string,
+            unknown
+        >;
+        setAttrIfChanged(
+            actionPartLayerRecord,
+            "visible",
+            visibleParts.length > 0
+        );
 
-        const nextSignature = signatureOfActionParts(visibleParts);
         const needsRebuild =
             this.actionPartEntries.length !== visibleParts.length ||
-            this.lastActionPartSignature !== nextSignature ||
-            (changeMask & ModernNodeChangeMask.Layout) !== 0;
-        const layouts = this.computeActionPartLayouts(visibleParts);
+            this.lastActionPartSignature !== nextSignature;
+        const shouldRecomputeLayout =
+            needsLayoutPass ||
+            needsRebuild ||
+            this.lastActionPartLayoutSignature !== nextLayoutSignature ||
+            !Array.isArray(this.shellLayout.actionParts) ||
+            this.shellLayout.actionParts.length !== visibleParts.length;
+        const layouts = shouldRecomputeLayout
+            ? this.computeActionPartLayouts(visibleParts)
+            : this.reuseActionPartLayouts(visibleParts);
 
         if (needsRebuild) {
             this.clearActionParts();
@@ -1766,55 +2020,114 @@ export class ModernNodeHost implements NodeViewHost {
                 const entry = this.actionPartEntries[i];
                 entry.schema = visibleParts[i];
                 entry.layout = layouts[i];
-                entry.root.x = entry.layout.x;
-                entry.root.y = entry.layout.y;
-                entry.root.width = entry.layout.width;
-                entry.root.height = entry.layout.height;
-                entry.background.width = entry.layout.width;
-                entry.background.height = entry.layout.height;
-                entry.outline.width = Math.max(0, entry.layout.width);
-                entry.outline.height = Math.max(0, entry.layout.height);
+                const rootRecord = entry.root as unknown as Record<string, unknown>;
+                const backgroundRecord = entry.background as unknown as Record<
+                    string,
+                    unknown
+                >;
+                const outlineRecord = entry.outline as unknown as Record<
+                    string,
+                    unknown
+                >;
+                const contentRecord = entry.content as unknown as Record<
+                    string,
+                    unknown
+                >;
+                const labelRecord = entry.label as unknown as Record<
+                    string,
+                    unknown
+                >;
+                setRectIfChanged(rootRecord, entry.layout);
+                setAttrIfChanged(backgroundRecord, "width", entry.layout.width);
+                setAttrIfChanged(backgroundRecord, "height", entry.layout.height);
+                setAttrIfChanged(
+                    outlineRecord,
+                    "width",
+                    Math.max(0, entry.layout.width)
+                );
+                setAttrIfChanged(
+                    outlineRecord,
+                    "height",
+                    Math.max(0, entry.layout.height)
+                );
                 const isFooterSplitPart =
                     entry.schema.placement === "footer-left" ||
                     entry.schema.placement === "footer-right";
-                entry.outline.cornerRadius =
+                setAttrIfChanged(
+                    outlineRecord,
+                    "cornerRadius",
                     entry.schema.placement === "footer-left"
                         ? 4
                         : entry.schema.placement === "footer-right"
                           ? 4
-                          : 8;
-                entry.background.fill = isFooterSplitPart
-                    ? "#20252C"
-                    : "#172332";
-                entry.background.stroke = isFooterSplitPart
-                    ? "#394454"
-                    : "#2B4663";
-                entry.background.strokeWidth = 1;
-                entry.content.visible = !isFooterSplitPart;
-                entry.content.x = isFooterSplitPart ? 0 : 8;
-                entry.content.width = Math.max(
-                    1,
+                          : 8
+                );
+                setAttrIfChanged(
+                    backgroundRecord,
+                    "fill",
                     isFooterSplitPart
+                    ? "#20252C"
+                    : "#172332"
+                );
+                setAttrIfChanged(
+                    backgroundRecord,
+                    "stroke",
+                    isFooterSplitPart
+                    ? "#394454"
+                    : "#2B4663"
+                );
+                setAttrIfChanged(backgroundRecord, "strokeWidth", 1);
+                setAttrIfChanged(contentRecord, "visible", !isFooterSplitPart);
+                setAttrIfChanged(contentRecord, "x", isFooterSplitPart ? 0 : 8);
+                setAttrIfChanged(
+                    contentRecord,
+                    "width",
+                    Math.max(
+                        1,
+                        isFooterSplitPart
                         ? entry.layout.width
                         : entry.layout.width - 16
+                    )
                 );
-                entry.content.height = entry.layout.height;
-                entry.label.x = isFooterSplitPart ? 0 : 0;
-                entry.label.y = isFooterSplitPart ? -4 : 0;
-                entry.label.width = isFooterSplitPart ? entry.layout.width : 1;
-                entry.label.autoWidth = isFooterSplitPart ? 0 : 1;
-                entry.label.height = entry.layout.height;
-                entry.label.fontSize = isFooterSplitPart ? 13 : 12;
-                entry.label.visible = !isFooterSplitPart;
-                entry.label.text = String(entry.schema.label || entry.schema.id);
+                setAttrIfChanged(contentRecord, "height", entry.layout.height);
+                setAttrIfChanged(labelRecord, "x", 0);
+                setAttrIfChanged(labelRecord, "y", isFooterSplitPart ? -4 : 0);
+                setAttrIfChanged(
+                    labelRecord,
+                    "width",
+                    isFooterSplitPart ? entry.layout.width : 1
+                );
+                setAttrIfChanged(
+                    labelRecord,
+                    "autoWidth",
+                    isFooterSplitPart ? 0 : 1
+                );
+                setAttrIfChanged(labelRecord, "height", entry.layout.height);
+                setAttrIfChanged(
+                    labelRecord,
+                    "fontSize",
+                    isFooterSplitPart ? 13 : 12
+                );
+                setAttrIfChanged(labelRecord, "visible", !isFooterSplitPart);
+                setAttrIfChanged(
+                    labelRecord,
+                    "text",
+                    String(entry.schema.label || entry.schema.id)
+                );
                 if (entry.glyph) {
-                    entry.glyph.x = entry.layout.width / 2;
-                    entry.glyph.y = entry.layout.height / 2;
+                    const glyphRecord = entry.glyph as unknown as Record<
+                        string,
+                        unknown
+                    >;
+                    setAttrIfChanged(glyphRecord, "x", entry.layout.width / 2);
+                    setAttrIfChanged(glyphRecord, "y", entry.layout.height / 2);
                 }
             }
         }
 
         this.shellLayout.actionParts = layouts;
+        this.lastActionPartSignature = nextSignature;
+        this.lastActionPartLayoutSignature = nextLayoutSignature;
     }
 
     private syncPorts(): void {
@@ -1856,11 +2169,29 @@ export class ModernNodeHost implements NodeViewHost {
     private getContentArea(): ModernNodeRectLike | null {
         const body = this.shellLayout.body;
         if (!body) {
+            const cacheKey = "collapsed";
+            if (this.contentAreaCache?.key !== cacheKey) {
+                this.contentAreaCache = { key: cacheKey, area: null };
+            }
             return null;
         }
         const gutters = this.resolvePortGutters();
         const footerHeight = this.hasFooterActionParts() ? TITLE_HEIGHT : 0;
-        return {
+        const cacheKey = [
+            body.x,
+            body.y,
+            body.width,
+            body.height,
+            gutters.left,
+            gutters.right,
+            footerHeight,
+        ].join(",");
+        const cached = this.contentAreaCache;
+        if (cached?.key === cacheKey) {
+            return cached.area;
+        }
+
+        const area = {
             x: BODY_PADDING_X + gutters.left,
             y: BODY_PADDING_Y,
             width: Math.max(
@@ -1869,6 +2200,8 @@ export class ModernNodeHost implements NodeViewHost {
             ),
             height: Math.max(0, body.height - BODY_PADDING_Y * 2 - footerHeight),
         };
+        this.contentAreaCache = { key: cacheKey, area };
+        return area;
     }
 
     private hasFooterActionParts(): boolean {
@@ -1883,6 +2216,72 @@ export class ModernNodeHost implements NodeViewHost {
 
     private patchShellWidgetLayout(layout: ModernNodeWidgetLayout[]): void {
         this.shellLayout.widgets = layout;
+    }
+
+    private computeWidgetLayouts(
+        schemas: ReadonlyArray<ModernWidgetSchema>
+    ): ModernNodeWidgetLayout[] {
+        const widgetArea = this.resolveWidgetArea();
+        const layouts: ModernNodeWidgetLayout[] = [];
+        for (let i = 0; i < schemas.length; ++i) {
+            const layout = resolveWidgetBounds(widgetArea, i, schemas.length);
+            layouts.push({
+                ...layout,
+                index: i,
+                id: schemas[i].id,
+                type: schemas[i].type,
+                action: schemas[i].type === "toggle" ? "toggle" : "activate",
+                actionZones: this.widgetEntries[i]?.handle.actionZones,
+            });
+        }
+        return layouts;
+    }
+
+    private reuseWidgetLayouts(
+        schemas: ReadonlyArray<ModernWidgetSchema>
+    ): ModernNodeWidgetLayout[] {
+        const previousLayouts = this.shellLayout.widgets || [];
+        if (previousLayouts.length !== schemas.length) {
+            return this.computeWidgetLayouts(schemas);
+        }
+
+        return schemas.map((schema, index) => {
+            const layout = previousLayouts[index];
+            if (!layout) {
+                return this.computeWidgetLayouts(schemas)[index];
+            }
+            return {
+                ...layout,
+                index,
+                id: schema.id,
+                type: schema.type,
+                action: schema.type === "toggle" ? "toggle" : "activate",
+                actionZones: this.widgetEntries[index]?.handle.actionZones,
+            };
+        });
+    }
+
+    private reuseActionPartLayouts(
+        schemas: readonly ModernActionPartSchema<ModernNodeLike, ModernNodeHost>[]
+    ): ModernNodeActionPartLayout[] {
+        const previousLayouts = this.shellLayout.actionParts || [];
+        if (previousLayouts.length !== schemas.length) {
+            return this.computeActionPartLayouts(schemas);
+        }
+
+        return schemas.map((schema, index) => {
+            const layout = previousLayouts[index];
+            if (!layout) {
+                return this.computeActionPartLayouts(schemas)[index];
+            }
+            return {
+                ...layout,
+                index,
+                id: schema.id,
+                action: schema.action || schema.id,
+                cursor: schema.cursor || "pointer",
+            };
+        });
     }
 
     private resolveWidgetArea(): ModernNodeRectLike {
@@ -1984,38 +2383,29 @@ export class ModernNodeHost implements NodeViewHost {
         const layouts: ModernNodePortVisualLayout[] = [];
         for (let i = 0; i < slots.length; ++i) {
             const presentation = this.resolvePortPresentation(kind, i, slots[i]);
-            const anchor = this.resolvePortAnchorLocal(kind, i);
-            if (!anchor) {
+            const geometry = this.resolvePortGeometry(
+                kind,
+                i,
+                slots[i],
+                presentation
+            );
+            if (!geometry?.anchor) {
                 continue;
             }
-            const radius = Math.max(
-                toFiniteNumber(
-                    presentation.radius,
-                    this.node.getPortLayout?.(
-                        kind,
-                        i,
-                        this.createContextWithMask(
-                            ModernNodeChangeMask.Ports,
-                            this.shellState
-                        )
-                    )?.radius
-                ),
-                6
-            );
             const label = String(presentation.label || "");
             layouts.push({
                 index: i,
-                x: anchor[0] - radius,
-                y: anchor[1] - radius,
-                width: radius * 2,
-                height: radius * 2,
-                anchorX: anchor[0],
-                anchorY: anchor[1],
+                x: geometry.anchor[0] - geometry.radius,
+                y: geometry.anchor[1] - geometry.radius,
+                width: geometry.radius * 2,
+                height: geometry.radius * 2,
+                anchorX: geometry.anchor[0],
+                anchorY: geometry.anchor[1],
                 dir: toFiniteNumber(
                     presentation.dir,
                     kind === "input" ? PORT_DIRECTION_LEFT : PORT_DIRECTION_RIGHT
                 ),
-                radius,
+                radius: geometry.radius,
                 label,
                 hiddenLabelWhenCollapsed: Boolean(
                     isCollapsed && presentation.hideLabelWhenCollapsed !== false
@@ -2034,13 +2424,19 @@ export class ModernNodeHost implements NodeViewHost {
         slotIndex: number,
         slot: unknown
     ): ModernPortPresentation {
+        const cacheKey = `${kind}:${String(slotIndex)}`;
+        const cached = this.portPresentationCache.get(cacheKey);
+        if (cached?.version === this.portPresentationCacheVersion) {
+            return cached.presentation;
+        }
+
         const constants = getLiteGraphConstants();
         const slotRecord = (slot || {}) as Record<string, unknown>;
         const explicit =
             this.node.getPortPresentation?.(
                 kind,
                 slotIndex,
-                this.createLifecycleContext(ModernNodeChangeMask.Ports)
+                this.getPortLifecycleContext()
             ) || null;
         const hasExplicitLabel = Boolean(
             explicit && Object.prototype.hasOwnProperty.call(explicit, "label")
@@ -2066,7 +2462,7 @@ export class ModernNodeHost implements NodeViewHost {
                 ? constants.EVENT_LINK_COLOR
                 : constants.LINK_COLOR;
 
-        return {
+        const presentation = {
             label: String(
                 hasExplicitLabel
                     ? explicit?.label ?? ""
@@ -2081,27 +2477,74 @@ export class ModernNodeHost implements NodeViewHost {
             hideLabelWhenCollapsed: explicit?.hideLabelWhenCollapsed !== false,
             radius: explicit?.radius,
         };
+        this.portPresentationCache.set(cacheKey, {
+            version: this.portPresentationCacheVersion,
+            presentation,
+        });
+        return presentation;
     }
 
-    private resolvePortAnchorLocal(
+    private resolvePortGeometry(
         kind: NodeViewPortKind,
-        slotIndex: number
-    ): [number, number] | null {
-        const explicit = this.node.getPortLayout?.(
+        slotIndex: number,
+        _slot: unknown,
+        presentation: ModernPortPresentation
+    ): ModernPortGeometryCacheEntry | null {
+        const cacheKey = `${kind}:${String(slotIndex)}`;
+        const cached = this.portGeometryCache.get(cacheKey);
+        if (cached?.version === this.portGeometryCacheVersion) {
+            return cached;
+        }
+
+        const explicitLayout = this.node.getPortLayout?.(
             kind,
             slotIndex,
-            this.createContextWithMask(ModernNodeChangeMask.Ports, this.shellState)
+            this.getPortBuildContext()
         );
-        if (explicit) {
-            if (explicit.space === "world") {
-                return [
-                    explicit.x - toFiniteNumber(this.node.pos?.[0]),
-                    explicit.y - toFiniteNumber(this.node.pos?.[1]),
+        let anchor: [number, number] | null;
+        if (explicitLayout) {
+            if (explicitLayout.space === "world") {
+                anchor = [
+                    explicitLayout.x - toFiniteNumber(this.node.pos?.[0]),
+                    explicitLayout.y - toFiniteNumber(this.node.pos?.[1]),
+                ];
+            } else {
+                anchor = [
+                    toFiniteNumber(explicitLayout.x),
+                    toFiniteNumber(explicitLayout.y),
                 ];
             }
-            return [toFiniteNumber(explicit.x), toFiniteNumber(explicit.y)];
+        } else {
+            anchor = this.resolveDefaultPortAnchorLocal(kind, slotIndex);
         }
-        return this.resolveDefaultPortAnchorLocal(kind, slotIndex);
+
+        const label = String(presentation.label || "");
+        const labelWidth = label
+            ? Math.min(
+                  PORT_LABEL_MAX_WIDTH,
+                  measureTextWidth(
+                      label,
+                      '500 11px "Aptos", "Segoe UI", sans-serif'
+                  )
+              )
+            : 0;
+        const geometry: ModernPortGeometryCacheEntry = {
+            version: this.portGeometryCacheVersion,
+            anchor,
+            radius: Math.max(
+                toFiniteNumber(presentation.radius, explicitLayout?.radius),
+                6
+            ),
+            labelWidth,
+            gutter: labelWidth
+                ? Math.max(
+                      PORT_GUTTER_MIN,
+                      labelWidth + PORT_LABEL_PADDING + 10
+                  )
+                : PORT_GUTTER_MIN,
+        };
+        this.portGeometryCache.set(cacheKey, geometry);
+        return geometry;
     }
 
     private resolveDefaultPortAnchorLocal(
@@ -2165,6 +2608,7 @@ export class ModernNodeHost implements NodeViewHost {
         const layer =
             kind === "input" ? this.shell.inputPortLayer : this.shell.outputPortLayer;
         const activeKeys = new Set<string>();
+        const labelFrame = this.resolvePortLabelFrame(kind);
 
         for (let i = 0; i < layouts.length; ++i) {
             const layout = layouts[i];
@@ -2179,7 +2623,6 @@ export class ModernNodeHost implements NodeViewHost {
                     hittable: false,
                 });
                 const marker = createPortMarker(layout.shape, markerColor);
-                const labelFrame = this.resolvePortLabelFrame(kind);
                 const label = createText({
                     x: labelFrame.x,
                     y: layout.anchorY,
@@ -2203,8 +2646,10 @@ export class ModernNodeHost implements NodeViewHost {
             }
 
             entry.layout = layout;
-            entry.root.x = layout.anchorX;
-            entry.root.y = layout.anchorY;
+            const rootRecord = entry.root as unknown as Record<string, unknown>;
+            const labelRecord = entry.label as unknown as Record<string, unknown>;
+            setAttrIfChanged(rootRecord, "x", layout.anchorX);
+            setAttrIfChanged(rootRecord, "y", layout.anchorY);
             if (!this.isSameMarkerShape(entry.marker, layout.shape)) {
                 entry.marker.destroy();
                 entry.marker = createPortMarker(layout.shape, markerColor);
@@ -2213,13 +2658,16 @@ export class ModernNodeHost implements NodeViewHost {
                 setShapeColor(entry.marker, markerColor);
             }
 
-            entry.label.text = layout.label;
-            entry.label.visible = !layout.hiddenLabelWhenCollapsed && Boolean(layout.label);
-            const labelFrame = this.resolvePortLabelFrame(kind);
-            entry.label.x = labelFrame.x;
-            entry.label.y = layout.anchorY;
-            entry.label.width = labelFrame.width;
-            entry.label.textAlign = labelFrame.textAlign;
+            setAttrIfChanged(labelRecord, "text", layout.label);
+            setAttrIfChanged(
+                labelRecord,
+                "visible",
+                !layout.hiddenLabelWhenCollapsed && Boolean(layout.label)
+            );
+            setAttrIfChanged(labelRecord, "x", labelFrame.x);
+            setAttrIfChanged(labelRecord, "y", layout.anchorY);
+            setAttrIfChanged(labelRecord, "width", labelFrame.width);
+            setAttrIfChanged(labelRecord, "textAlign", labelFrame.textAlign);
         }
 
         for (const [key, entry] of this.portEntries.entries()) {
@@ -2296,37 +2744,66 @@ export class ModernNodeHost implements NodeViewHost {
             : "";
         const collapseState = partStateFor(this.interactionState, "collapse");
         const resizeState = partStateFor(this.interactionState, "resize");
+        const rootRecord = this.root as unknown as Record<string, unknown>;
+        const selectionOutlineRecord = this.shell.selectionOutline as unknown as Record<
+            string,
+            unknown
+        >;
+        const headerRecord = this.shell.header as unknown as Record<string, unknown>;
 
-        this.root.selected = Boolean(this.node.is_selected);
-        this.shell.selectionOutline.visible = Boolean(this.node.is_selected);
+        setAttrIfChanged(rootRecord, "selected", Boolean(this.node.is_selected));
+        setAttrIfChanged(
+            selectionOutlineRecord,
+            "visible",
+            Boolean(this.node.is_selected)
+        );
 
-        this.shell.header.stroke =
+        setAttrIfChanged(
+            headerRecord,
+            "stroke",
             headerState === "press"
                 ? "#76A8FF"
                 : headerState === "hover"
                   ? "#4E6D94"
-                  : shellState.borderColor || "#243342";
+                  : shellState.borderColor || "#243342"
+        );
         if (this.shellLayout.body) {
-            this.shell.body.stroke =
+            const bodyRecord = this.shell.body as unknown as Record<string, unknown>;
+            setAttrIfChanged(
+                bodyRecord,
+                "stroke",
                 bodyState === "press"
                     ? "#76A8FF"
                     : bodyState === "hover"
                       ? "#4E6D94"
-                      : shellState.borderColor || "#243342";
+                      : shellState.borderColor || "#243342"
+            );
         }
 
-        this.shell.collapseOverlay.fill =
+        const collapseOverlayRecord = this.shell.collapseOverlay as unknown as Record<
+            string,
+            unknown
+        >;
+        setAttrIfChanged(
+            collapseOverlayRecord,
+            "fill",
             collapseState === "press"
                 ? "rgba(255,255,255,0.16)"
                 : collapseState === "hover"
                   ? "rgba(255,255,255,0.08)"
-                  : "rgba(255,255,255,0)";
-        this.shell.resizeHandleGlyph.stroke =
+                  : "rgba(255,255,255,0)"
+        );
+        const resizeHandleGlyphRecord =
+            this.shell.resizeHandleGlyph as unknown as Record<string, unknown>;
+        setAttrIfChanged(
+            resizeHandleGlyphRecord,
+            "stroke",
             resizeState === "press"
                 ? "#76A8FF"
                 : resizeState === "hover"
                   ? "#C7D5E0"
-                  : "#8593A0";
+                  : "#8593A0"
+        );
 
         this.applyWidgetInteractionState();
         this.applyActionPartInteractionState();
@@ -2368,6 +2845,48 @@ export class ModernNodeHost implements NodeViewHost {
         };
     }
 
+    private refreshPortCacheVersions(
+        changeMask: ModernNodeChangeMaskValue,
+        needsGeometryPass: boolean
+    ): void {
+        const invalidatePresentation = Boolean(
+            needsGeometryPass ||
+                (changeMask &
+                    (ModernNodeChangeMask.Ports |
+                        ModernNodeChangeMask.Data |
+                        ModernNodeChangeMask.Style)) !==
+                    0
+        );
+        const invalidateGeometry =
+            needsGeometryPass ||
+            (changeMask &
+                (ModernNodeChangeMask.Ports | ModernNodeChangeMask.Layout)) !==
+                0;
+
+        if (invalidatePresentation) {
+            this.portPresentationCacheVersion += 1;
+        }
+        if (invalidateGeometry) {
+            this.portGeometryCacheVersion += 1;
+            this.portGutterCache = null;
+        }
+
+        this.portLifecycleContext = null;
+        this.portBuildContext = null;
+    }
+
+    private getPortLifecycleContext(): ModernNodeLifecycleContext<
+        ModernNodeLike,
+        ModernNodeHost
+    > {
+        if (!this.portLifecycleContext) {
+            this.portLifecycleContext = this.createLifecycleContext(
+                ModernNodeChangeMask.Ports
+            );
+        }
+        return this.portLifecycleContext;
+    }
+
     private createContextWithMask(
         changeMask: ModernNodeChangeMaskValue,
         shellState: ModernShellState
@@ -2382,6 +2901,16 @@ export class ModernNodeHost implements NodeViewHost {
             shellState,
             leafer,
         };
+    }
+
+    private getPortBuildContext(): ModernNodeBuildContext {
+        if (!this.portBuildContext) {
+            this.portBuildContext = this.createContextWithMask(
+                ModernNodeChangeMask.Ports,
+                this.shellState
+            );
+        }
+        return this.portBuildContext;
     }
 
     private createWidgetContext(
@@ -2418,24 +2947,25 @@ export class ModernNodeHost implements NodeViewHost {
             const outline = toUI(
                 (entry.handle as { outline?: unknown }).outline
             ) as Rect | null;
-            widgetRoot.disabled = Boolean(entry.schema.disabled);
+            const outlineRecord = outline as unknown as Record<string, unknown> | null;
+            setAttrIfChanged(widgetRoot, "disabled", Boolean(entry.schema.disabled));
             if (entry.schema.disabled) {
-                widgetRoot.state = "";
-                if (outline) {
-                    outline.visible = false;
-                    outline.opacity = 0;
+                setAttrIfChanged(widgetRoot, "state", "");
+                if (outlineRecord) {
+                    setAttrIfChanged(outlineRecord, "visible", false);
+                    setAttrIfChanged(outlineRecord, "opacity", 0);
                 }
                 continue;
             }
             if (pressedIndex === i) {
-                widgetRoot.state = "press";
+                setAttrIfChanged(widgetRoot, "state", "press");
             } else if (hoveredIndex === i) {
-                widgetRoot.state = "hover";
+                setAttrIfChanged(widgetRoot, "state", "hover");
             } else {
-                widgetRoot.state = "";
+                setAttrIfChanged(widgetRoot, "state", "");
             }
 
-            if (!outline) {
+            if (!outlineRecord) {
                 continue;
             }
 
@@ -2446,8 +2976,8 @@ export class ModernNodeHost implements NodeViewHost {
                       ? hoveredPart
                       : null;
             if (!activePart) {
-                outline.visible = false;
-                outline.opacity = 0;
+                setAttrIfChanged(outlineRecord, "visible", false);
+                setAttrIfChanged(outlineRecord, "opacity", 0);
                 continue;
             }
 
@@ -2461,15 +2991,27 @@ export class ModernNodeHost implements NodeViewHost {
                 width: entry.handle.bounds.width,
                 height: entry.handle.bounds.height,
             };
-            outline.x = frame.x;
-            outline.y = frame.y;
-            outline.width = Math.max(0, frame.width);
-            outline.height = Math.max(0, frame.height);
-            outline.cornerRadius = actionZone ? 8 : 10;
-            outline.stroke = pressedIndex === i ? "#A4CAFF" : "#7EB2FF";
-            outline.strokeWidth = pressedIndex === i ? 2 : 1.5;
-            outline.visible = true;
-            outline.opacity = pressedIndex === i ? 1 : 0.95;
+            setAttrIfChanged(outlineRecord, "x", frame.x);
+            setAttrIfChanged(outlineRecord, "y", frame.y);
+            setAttrIfChanged(outlineRecord, "width", Math.max(0, frame.width));
+            setAttrIfChanged(outlineRecord, "height", Math.max(0, frame.height));
+            setAttrIfChanged(outlineRecord, "cornerRadius", actionZone ? 8 : 10);
+            setAttrIfChanged(
+                outlineRecord,
+                "stroke",
+                pressedIndex === i ? "#A4CAFF" : "#7EB2FF"
+            );
+            setAttrIfChanged(
+                outlineRecord,
+                "strokeWidth",
+                pressedIndex === i ? 2 : 1.5
+            );
+            setAttrIfChanged(outlineRecord, "visible", true);
+            setAttrIfChanged(
+                outlineRecord,
+                "opacity",
+                pressedIndex === i ? 1 : 0.95
+            );
         }
     }
 
@@ -2485,59 +3027,112 @@ export class ModernNodeHost implements NodeViewHost {
             const isFooterSplitPart =
                 entry.schema.placement === "footer-left" ||
                 entry.schema.placement === "footer-right";
+            const backgroundRecord = entry.background as unknown as Record<
+                string,
+                unknown
+            >;
+            const outlineRecord = entry.outline as unknown as Record<string, unknown>;
+            const labelRecord = entry.label as unknown as Record<string, unknown>;
+            const glyphRecord = entry.glyph as unknown as Record<string, unknown> | null;
             if (isFooterSplitPart) {
-                entry.background.fill =
+                setAttrIfChanged(
+                    backgroundRecord,
+                    "fill",
                     state === "press"
                         ? "#2D3A48"
                         : state === "hover"
                           ? "#283442"
-                          : "#20252C";
-                entry.background.stroke =
+                          : "#20252C"
+                );
+                setAttrIfChanged(
+                    backgroundRecord,
+                    "stroke",
                     state === "press"
                         ? "#7EB2FF"
                         : state === "hover"
                           ? "#5D7898"
-                          : "#394454";
-                entry.outline.visible = state === "press" || state === "hover";
-                entry.outline.opacity =
-                    state === "press" ? 1 : state === "hover" ? 0.9 : 0;
-                entry.outline.stroke =
-                    state === "press" ? "#A4CAFF" : "#7EB2FF";
-                entry.outline.strokeWidth = state === "press" ? 2 : 1.5;
-                if (entry.glyph) {
-                    entry.glyph.stroke =
+                          : "#394454"
+                );
+                setAttrIfChanged(
+                    outlineRecord,
+                    "visible",
+                    state === "press" || state === "hover"
+                );
+                setAttrIfChanged(
+                    outlineRecord,
+                    "opacity",
+                    state === "press" ? 1 : state === "hover" ? 0.9 : 0
+                );
+                setAttrIfChanged(
+                    outlineRecord,
+                    "stroke",
+                    state === "press" ? "#A4CAFF" : "#7EB2FF"
+                );
+                setAttrIfChanged(
+                    outlineRecord,
+                    "strokeWidth",
+                    state === "press" ? 2 : 1.5
+                );
+                if (glyphRecord) {
+                    setAttrIfChanged(
+                        glyphRecord,
+                        "stroke",
                         state === "press"
                             ? "#F3F8FF"
                             : state === "hover"
                               ? "#DCEBFB"
-                              : "#B7C4D1";
+                              : "#B7C4D1"
+                    );
                 }
                 continue;
             }
-            entry.background.fill =
+            setAttrIfChanged(
+                backgroundRecord,
+                "fill",
                 state === "press"
                     ? "#1B3657"
                     : state === "hover"
                       ? "#21364E"
-                      : "#172332";
-            entry.background.stroke =
+                      : "#172332"
+            );
+            setAttrIfChanged(
+                backgroundRecord,
+                "stroke",
                 state === "press"
                     ? "#76A8FF"
                     : state === "hover"
                       ? "#5A7FA8"
-                      : "#2B4663";
-            entry.outline.visible = state === "press" || state === "hover";
-            entry.outline.opacity =
-                state === "press" ? 1 : state === "hover" ? 0.95 : 0;
-            entry.outline.stroke =
-                state === "press" ? "#A4CAFF" : "#7EB2FF";
-            entry.outline.strokeWidth = state === "press" ? 2 : 1.5;
-            entry.label.fill =
+                      : "#2B4663"
+            );
+            setAttrIfChanged(
+                outlineRecord,
+                "visible",
+                state === "press" || state === "hover"
+            );
+            setAttrIfChanged(
+                outlineRecord,
+                "opacity",
+                state === "press" ? 1 : state === "hover" ? 0.95 : 0
+            );
+            setAttrIfChanged(
+                outlineRecord,
+                "stroke",
+                state === "press" ? "#A4CAFF" : "#7EB2FF"
+            );
+            setAttrIfChanged(
+                outlineRecord,
+                "strokeWidth",
+                state === "press" ? 2 : 1.5
+            );
+            setAttrIfChanged(
+                labelRecord,
+                "fill",
                 state === "press"
                     ? "#F3F8FF"
                     : state === "hover"
                       ? "#D6E8FA"
-                      : "#BBD0E6";
+                      : "#BBD0E6"
+            );
         }
     }
 

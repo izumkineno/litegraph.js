@@ -143,7 +143,11 @@ class LeaferTextMetrics implements LeaferTextMetricsApi {
     }
 
     private ensureProbeText(): Text {
-        if (this.measurementRoot && this.probeText?.parent !== this.measurementRoot) {
+        if (
+            this.measurementRoot &&
+            this.probeText &&
+            (this.probeText.parent as unknown) !== this.measurementRoot
+        ) {
             this.probeText = null;
         }
         if (this.probeText) {

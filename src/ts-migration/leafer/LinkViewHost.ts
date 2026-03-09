@@ -29,8 +29,22 @@ interface LinkViewHostOptions {
 }
 
 const LINK_BORDER_COLOR = "transparent";
-const LINK_BORDER_EXTRA_WIDTH = 0;
 const LINK_FLOW_DOT_COUNT = 5;
+
+function isSameAttrValue(current: unknown, next: unknown): boolean {
+    return Object.is(current, next);
+}
+
+function setAttrIfChanged(
+    target: Record<string, unknown>,
+    key: string,
+    value: unknown
+): void {
+    if (isSameAttrValue(target[key], value)) {
+        return;
+    }
+    target[key] = value;
+}
 
 function toFiniteNumber(value: unknown, fallback = 0): number {
     const numericValue = Number(value);
@@ -50,6 +64,7 @@ export class LinkViewHost {
     private readonly flowDotLayer: Group;
     private readonly flowDots: Rect[] = [];
     private readonly getViewportScale: () => number;
+    private flowOverlayActive = false;
 
     constructor(name: string, options: LinkViewHostOptions = {}) {
         this.getViewportScale = options.getViewportScale || (() => 1);
@@ -65,6 +80,7 @@ export class LinkViewHost {
         });
 
         this.borderPath = this.createPath(`${name}:border`, LINK_BORDER_COLOR);
+        this.borderPath.visible = false;
         this.strokePath = this.createPath(`${name}:stroke`, "#9A9");
         this.flowPath = this.createPath(`${name}:flow`, "#FFF");
         this.flowPath.visible = false;
@@ -100,7 +116,8 @@ export class LinkViewHost {
     update(presentation: LinkViewPresentation): void {
         const curve = presentation.curve;
         const visible = presentation.visible !== false && Boolean(curve);
-        this.view.visible = visible;
+        const viewRecord = this.view as unknown as Record<string, unknown>;
+        setAttrIfChanged(viewRecord, "visible", visible);
 
         if (!visible || !curve) {
             this.hideFlowOverlay();
@@ -117,18 +134,12 @@ export class LinkViewHost {
         const path = curve.path;
         const startArrow = presentation.startArrow || "none";
         const endArrow = presentation.endArrow || "none";
-
-        this.borderPath.visible = false;
-        this.borderPath.path = path;
-        this.borderPath.strokeWidth = strokeWidth + LINK_BORDER_EXTRA_WIDTH;
-        this.borderPath.startArrow = "none";
-        this.borderPath.endArrow = "none";
-
-        this.strokePath.path = path;
-        this.strokePath.stroke = stroke;
-        this.strokePath.strokeWidth = strokeWidth;
-        this.strokePath.startArrow = startArrow;
-        this.strokePath.endArrow = endArrow;
+        const strokeRecord = this.strokePath as unknown as Record<string, unknown>;
+        setAttrIfChanged(strokeRecord, "path", path);
+        setAttrIfChanged(strokeRecord, "stroke", stroke);
+        setAttrIfChanged(strokeRecord, "strokeWidth", strokeWidth);
+        setAttrIfChanged(strokeRecord, "startArrow", startArrow);
+        setAttrIfChanged(strokeRecord, "endArrow", endArrow);
 
         this.updateFlowOverlay(
             path,
@@ -173,43 +184,64 @@ export class LinkViewHost {
         const flowOpacity = toOpacity(flow.opacity, 1);
         const dotRadius = Math.max(1, toFiniteNumber(flow.dotRadius, 5));
         const dots = flow.dots || [];
+        const flowPathRecord = this.flowPath as unknown as Record<string, unknown>;
+        const flowDotLayerRecord = this.flowDotLayer as unknown as Record<
+            string,
+            unknown
+        >;
 
-        this.flowPath.visible = true;
-        this.flowPath.path = path;
-        this.flowPath.stroke = flowColor;
-        this.flowPath.strokeWidth = strokeWidth;
-        this.flowPath.opacity = flowOpacity;
-        this.flowPath.startArrow = startArrow;
-        this.flowPath.endArrow = endArrow;
+        setAttrIfChanged(flowPathRecord, "visible", true);
+        setAttrIfChanged(flowPathRecord, "path", path);
+        setAttrIfChanged(flowPathRecord, "stroke", flowColor);
+        setAttrIfChanged(flowPathRecord, "strokeWidth", strokeWidth);
+        setAttrIfChanged(flowPathRecord, "opacity", flowOpacity);
+        setAttrIfChanged(flowPathRecord, "startArrow", startArrow);
+        setAttrIfChanged(flowPathRecord, "endArrow", endArrow);
 
-        this.flowDotLayer.visible = dots.length > 0;
+        setAttrIfChanged(flowDotLayerRecord, "visible", dots.length > 0);
         for (let index = 0; index < this.flowDots.length; ++index) {
             const dot = this.flowDots[index];
             const point = dots[index];
+            const dotRecord = dot as unknown as Record<string, unknown>;
             if (!point) {
-                dot.visible = false;
+                setAttrIfChanged(dotRecord, "visible", false);
                 continue;
             }
 
             const diameter = dotRadius * 2;
-            dot.visible = true;
-            dot.fill = flowColor;
-            dot.opacity = flowOpacity;
-            dot.x = point[0] - dotRadius;
-            dot.y = point[1] - dotRadius;
-            dot.width = diameter;
-            dot.height = diameter;
-            dot.cornerRadius = dotRadius;
+            setAttrIfChanged(dotRecord, "visible", true);
+            setAttrIfChanged(dotRecord, "fill", flowColor);
+            setAttrIfChanged(dotRecord, "opacity", flowOpacity);
+            setAttrIfChanged(dotRecord, "x", point[0] - dotRadius);
+            setAttrIfChanged(dotRecord, "y", point[1] - dotRadius);
+            setAttrIfChanged(dotRecord, "width", diameter);
+            setAttrIfChanged(dotRecord, "height", diameter);
+            setAttrIfChanged(dotRecord, "cornerRadius", dotRadius);
         }
+        this.flowOverlayActive = true;
     }
 
     private hideFlowOverlay(): void {
-        this.flowPath.visible = false;
-        this.flowPath.startArrow = "none";
-        this.flowPath.endArrow = "none";
-        this.flowDotLayer.visible = false;
-        for (let index = 0; index < this.flowDots.length; ++index) {
-            this.flowDots[index].visible = false;
+        if (!this.flowOverlayActive) {
+            return;
         }
+
+        const flowPathRecord = this.flowPath as unknown as Record<string, unknown>;
+        const flowDotLayerRecord = this.flowDotLayer as unknown as Record<
+            string,
+            unknown
+        >;
+        setAttrIfChanged(flowPathRecord, "visible", false);
+        setAttrIfChanged(flowPathRecord, "startArrow", "none");
+        setAttrIfChanged(flowPathRecord, "endArrow", "none");
+        setAttrIfChanged(flowDotLayerRecord, "visible", false);
+        for (let index = 0; index < this.flowDots.length; ++index) {
+            const dotRecord = this.flowDots[index] as unknown as Record<
+                string,
+                unknown
+            >;
+            setAttrIfChanged(dotRecord, "visible", false);
+        }
+        this.flowOverlayActive = false;
     }
 }

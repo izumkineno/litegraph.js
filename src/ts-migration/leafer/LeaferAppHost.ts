@@ -5,6 +5,7 @@ import {
     createLeaferLayerRegistry,
     type LeaferLayerRegistry,
 } from "./LeaferLayerRegistry";
+import { LeaferTaskWorker } from "./LeaferTaskWorker";
 import { getSharedLeaferTextMetrics } from "./LeaferTextMetrics";
 
 export interface LeaferAppHostOptions {
@@ -14,6 +15,7 @@ export interface LeaferAppHostOptions {
     backgroundTileSize?: number;
     backgroundAlpha?: number;
     zoomModifyBackgroundAlpha?: boolean;
+    useTaskWorker?: boolean;
 }
 
 /**
@@ -40,6 +42,7 @@ export class LeaferAppHost {
     readonly overlayWorld: LeaferLayerRegistry["overlayWorld"];
     readonly overlayScreen: LeaferLayerRegistry["overlayScreen"];
     readonly measurementRoot: Group;
+    readonly taskWorker: LeaferTaskWorker;
 
     private readonly backgroundColorLayer: HTMLDivElement;
     private readonly backgroundPatternLayer: HTMLDivElement;
@@ -109,6 +112,7 @@ export class LeaferAppHost {
         });
         this.skyRoot.add(this.measurementRoot);
         getSharedLeaferTextMetrics().attachRoot(this.measurementRoot);
+        this.taskWorker = new LeaferTaskWorker(options.useTaskWorker !== false);
         this.syncBackgroundViewport(0, 0, 1);
     }
 
@@ -163,6 +167,7 @@ export class LeaferAppHost {
 
     destroy(): void {
         getSharedLeaferTextMetrics().detachRoot(this.measurementRoot);
+        this.taskWorker.destroy();
         this.app.destroy();
         this.backgroundPatternLayer.remove();
         this.backgroundColorLayer.remove();
