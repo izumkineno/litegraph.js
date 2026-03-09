@@ -47,6 +47,7 @@ const CLASSIC_SCRIPT_PATHS = [
 ] as const;
 
 let bootPromise: Promise<void> | null = null;
+const FULL_RELOAD_PATH_PATTERN = /(?:^|[\\/])(editor|src)[\\/]/i;
 
 function resolveScriptUrl(relativePath: string): string {
     return new URL(relativePath, import.meta.url).href;
@@ -78,6 +79,27 @@ function removeClassicScripts(): void {
     scripts.forEach((script) => script.remove());
 }
 
+function teardownEditor(): void {
+    try {
+        (window as typeof window & {
+            graph?: { stop?: () => void };
+            graphcanvas?: { clear?: () => void };
+            editor?: { graph?: { stop?: () => void } };
+        }).graph?.stop?.();
+        (window as typeof window & {
+            editor?: { graph?: { stop?: () => void } };
+        }).editor?.graph?.stop?.();
+        (window as typeof window & {
+            graphcanvas?: { clear?: () => void };
+        }).graphcanvas?.clear?.();
+    } catch {
+        // Ignore teardown failures during dev reloads.
+    }
+
+    removeClassicScripts();
+    document.getElementById("main")?.replaceChildren();
+}
+
 async function bootEditor(): Promise<void> {
     window.LiteGraphTSMigration = LiteGraphTSMigration;
     window.__liteGraphTsDemoBundle = LiteGraphTSMigration.assembleLiteGraph({
@@ -93,8 +115,20 @@ if (!bootPromise) {
 }
 
 if (import.meta.hot) {
+    import.meta.hot.on("vite:beforeUpdate", (payload) => {
+        const shouldForceReload = payload.updates.some((update) =>
+            FULL_RELOAD_PATH_PATTERN.test(update.path)
+        );
+
+        if (shouldForceReload) {
+            import.meta.hot?.invalidate(
+                "[litegraph-editor] source update requires full reload"
+            );
+        }
+    });
+
     import.meta.hot.dispose(() => {
-        removeClassicScripts();
+        bootPromise = null;
+        teardownEditor();
     });
 }
-
