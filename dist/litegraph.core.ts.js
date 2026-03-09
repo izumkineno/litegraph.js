@@ -14183,8 +14183,26 @@ var LiteGraphTSMigration = (function(exports) {
     };
   }
   const WORKER_SOURCE = `
+const PORT_DIRECTION_LEFT = 1
+const PORT_DIRECTION_UP = 2
+const PORT_DIRECTION_RIGHT = 3
+const PORT_DIRECTION_DOWN = 4
+const CURVE_CACHE_LIMIT = 4096
+const curveCache = new Map()
+
+const clamp01 = (value) => Math.max(0, Math.min(1, Number.isFinite(value) ? value : 0))
+
+const cacheSet = (map, key, value, limit) => {
+  if (map.has(key)) map.delete(key)
+  map.set(key, value)
+  if (map.size > limit) {
+    const first = map.keys().next()
+    if (!first.done) map.delete(first.value)
+  }
+}
+
 const cubicPointAt = (start, c1, c2, end, t) => {
-  const clampedT = Math.max(0, Math.min(1, Number.isFinite(t) ? t : 0))
+  const clampedT = clamp01(t)
   const oneMinusT = 1 - clampedT
   const c1w = oneMinusT * oneMinusT * oneMinusT
   const c2w = 3 * oneMinusT * oneMinusT * clampedT
@@ -14196,23 +14214,125 @@ const cubicPointAt = (start, c1, c2, end, t) => {
   ]
 }
 
+const formatPoint = (point) => \`\${point[0]},\${point[1]}\`
+
+const buildLayoutKey = (task) =>
+  [
+    String(task.linkId),
+    formatPoint(task.start),
+    formatPoint(task.end),
+    Number(task.startDir) || 0,
+    Number(task.endDir) || 0
+  ].join('|')
+
+const buildPresentationCacheKey = (task) => {
+  const lastTime = Number.isFinite(task.lastTime) ? task.lastTime : 0
+  const lastTimeBucket = Math.max(0, Math.floor(lastTime / 16))
+  return \`\${buildLayoutKey(task)}|\${lastTimeBucket}\`
+}
+
+const buildLinkCurve = (start, end, startDir, endDir) => {
+  const safeStart = [Number(start[0]) || 0, Number(start[1]) || 0]
+  const safeEnd = [Number(end[0]) || 0, Number(end[1]) || 0]
+  const dx = safeEnd[0] - safeStart[0]
+  const dy = safeEnd[1] - safeStart[1]
+  const dist = Math.max(Math.hypot(dx, dy), 16)
+  const c1 = [safeStart[0], safeStart[1]]
+  const c2 = [safeEnd[0], safeEnd[1]]
+
+  if (startDir === PORT_DIRECTION_LEFT) c1[0] += dist * -0.25
+  else if (startDir === PORT_DIRECTION_RIGHT) c1[0] += dist * 0.25
+  else if (startDir === PORT_DIRECTION_UP) c1[1] += dist * -0.25
+  else if (startDir === PORT_DIRECTION_DOWN) c1[1] += dist * 0.25
+
+  if (endDir === PORT_DIRECTION_LEFT) c2[0] += dist * -0.25
+  else if (endDir === PORT_DIRECTION_RIGHT) c2[0] += dist * 0.25
+  else if (endDir === PORT_DIRECTION_UP) c2[1] += dist * -0.25
+  else if (endDir === PORT_DIRECTION_DOWN) c2[1] += dist * 0.25
+
+  return {
+    start: safeStart,
+    end: safeEnd,
+    startDir,
+    endDir,
+    c1,
+    c2,
+    path: \`M \${safeStart[0]} \${safeStart[1]} C \${c1[0]} \${c1[1]} \${c2[0]} \${c2[1]} \${safeEnd[0]} \${safeEnd[1]}\`
+  }
+}
+
+const getOrCreateCurve = (task) => {
+  const layoutKey = buildLayoutKey(task)
+  const cached = curveCache.get(layoutKey)
+  if (cached) {
+    return { layoutKey, curve: cached }
+  }
+
+  const curve = buildLinkCurve(task.start, task.end, task.startDir, task.endDir)
+  cacheSet(curveCache, layoutKey, curve, CURVE_CACHE_LIMIT)
+  return { layoutKey, curve }
+}
+
+const buildActiveLinkPresentation = (task, now, dotCount) => {
+  const { layoutKey, curve } = getOrCreateCurve(task)
+  const midpoint = cubicPointAt(curve.start, curve.c1, curve.c2, curve.end, 0.5)
+  const lastTime = Number.isFinite(task.lastTime) ? task.lastTime : 0
+  const elapsed = now - lastTime
+  const active = !!lastTime && elapsed >= 0 && elapsed < 1000
+  const opacity = active ? Math.max(0, Math.min(1, 2 - elapsed * 0.002)) : 0
+  const dots = []
+  if (active) {
+    for (let index = 0; index < dotCount; ++index) {
+      const t = (now * 0.001 + index * 0.2) % 1
+      dots.push(cubicPointAt(curve.start, curve.c1, curve.c2, curve.end, t))
+    }
+  }
+  return {
+    linkId: String(task.linkId),
+    layoutKey,
+    cacheKey: buildPresentationCacheKey(task),
+    active,
+    opacity,
+    curve,
+    midpoint,
+    dots
+  }
+}
+
 self.onmessage = (event) => {
   const data = event.data
-  if (!data || data.type !== "sample-link-flow-dots") return
+  if (!data) return
+
+  if (data.type === 'sample-link-flow-dots') {
+    const now = Number.isFinite(data.now) ? data.now : 0
+    const dotCount = Math.max(1, Number.isFinite(data.dotCount) ? data.dotCount : 5)
+    const results = (Array.isArray(data.tasks) ? data.tasks : []).map((task) => {
+      const dots = []
+      for (let index = 0; index < dotCount; ++index) {
+        const t = (now * 0.001 + index * 0.2) % 1
+        dots.push(cubicPointAt(task.start, task.c1, task.c2, task.end, t))
+      }
+      return { linkId: String(task.linkId), dots }
+    })
+
+    self.postMessage({
+      type: 'sample-link-flow-dots-result',
+      requestId: data.requestId,
+      results
+    })
+    return
+  }
+
+  if (data.type !== 'compute-active-link-presentations') return
 
   const now = Number.isFinite(data.now) ? data.now : 0
   const dotCount = Math.max(1, Number.isFinite(data.dotCount) ? data.dotCount : 5)
-  const results = (Array.isArray(data.tasks) ? data.tasks : []).map((task) => {
-    const dots = []
-    for (let index = 0; index < dotCount; ++index) {
-      const t = (now * 0.001 + index * 0.2) % 1
-      dots.push(cubicPointAt(task.start, task.c1, task.c2, task.end, t))
-    }
-    return { linkId: String(task.linkId), dots }
-  })
+  const results = (Array.isArray(data.tasks) ? data.tasks : []).map((task) =>
+    buildActiveLinkPresentation(task, now, dotCount)
+  )
 
   self.postMessage({
-    type: "sample-link-flow-dots-result",
+    type: 'compute-active-link-presentations-result',
     requestId: data.requestId,
     results
   })
@@ -14231,6 +14351,7 @@ self.onmessage = (event) => {
     constructor(enabled = true) {
       this.nextRequestId = 1;
       this.linkFlowListener = null;
+      this.activeLinkPresentationListener = null;
       if (!enabled || !LeaferTaskWorker.isSupported()) {
         this.worker = null;
         this.workerUrl = null;
@@ -14245,12 +14366,18 @@ self.onmessage = (event) => {
       this.workerUrl = workerUrl;
       this.worker = new Worker(workerUrl, { name: "litegraph-leafer-task-worker" });
       this.worker.onmessage = (event2) => {
-        var _a3;
+        var _a3, _b3;
         const data = event2.data;
-        if (!data || data.type !== "sample-link-flow-dots-result") {
+        if (!data) {
           return;
         }
-        (_a3 = this.linkFlowListener) == null ? void 0 : _a3.call(this, data.requestId, data.results);
+        if (data.type === "sample-link-flow-dots-result") {
+          (_a3 = this.linkFlowListener) == null ? void 0 : _a3.call(this, data.requestId, data.results);
+          return;
+        }
+        if (data.type === "compute-active-link-presentations-result") {
+          (_b3 = this.activeLinkPresentationListener) == null ? void 0 : _b3.call(this, data.requestId, data.results);
+        }
       };
     }
     static isSupported() {
@@ -14263,6 +14390,7 @@ self.onmessage = (event) => {
         URL.revokeObjectURL(this.workerUrl);
       }
       this.linkFlowListener = null;
+      this.activeLinkPresentationListener = null;
     }
     onLinkFlowSample(listener) {
       this.linkFlowListener = listener;
@@ -14274,6 +14402,23 @@ self.onmessage = (event) => {
       const requestId = this.nextRequestId++;
       this.worker.postMessage({
         type: "sample-link-flow-dots",
+        requestId,
+        now,
+        dotCount,
+        tasks
+      });
+      return requestId;
+    }
+    onActiveLinkPresentation(listener) {
+      this.activeLinkPresentationListener = listener;
+    }
+    requestActiveLinkPresentations(now, tasks, dotCount = 5) {
+      if (!this.worker || !tasks.length) {
+        return null;
+      }
+      const requestId = this.nextRequestId++;
+      this.worker.postMessage({
+        type: "compute-active-link-presentations",
         requestId,
         now,
         dotCount,
@@ -20944,6 +21089,22 @@ ${safeText}`;
     const numericValue = Number(value);
     return Number.isFinite(numericValue) ? numericValue : fallback;
   }
+  function formatWorkerPoint(point) {
+    return `${point[0]},${point[1]}`;
+  }
+  function buildActiveLinkLayoutKey(task) {
+    return [
+      String(task.linkId),
+      formatWorkerPoint(task.start),
+      formatWorkerPoint(task.end),
+      toFiniteNumber$1(task.startDir),
+      toFiniteNumber$1(task.endDir)
+    ].join("|");
+  }
+  function buildActiveLinkPresentationCacheKey(task) {
+    const lastTimeBucket = Math.max(0, Math.floor(toFiniteNumber$1(task.lastTime) / 16));
+    return `${buildActiveLinkLayoutKey(task)}|${lastTimeBucket}`;
+  }
   function toRenderBoundsLike(value) {
     if (!value || typeof value !== "object") {
       return null;
@@ -21005,8 +21166,11 @@ ${safeText}`;
       this.groupDirtyBridgeUninstallers = /* @__PURE__ */ new Map();
       this.activeLinkIds = /* @__PURE__ */ new Set();
       this.linkGeometryCache = /* @__PURE__ */ new Map();
-      this.linkFlowDotsById = /* @__PURE__ */ new Map();
-      this.lastLinkFlowSampleRequestId = 0;
+      this.activeLinkPresentationStateById = /* @__PURE__ */ new Map();
+      this.workerLinkPresentationById = /* @__PURE__ */ new Map();
+      this.activeLinkPresentationRequestInFlight = false;
+      this.pendingActiveLinkPresentationRequest = null;
+      this.lastHandledActiveLinkPresentationRequestId = 0;
       this.pendingSettledNodeRepaints = /* @__PURE__ */ new Set();
       this.runtimeAnimationFrame = null;
       this.getViewportScale = () => Math.max(
@@ -21033,26 +21197,51 @@ ${safeText}`;
           this.ensureRuntimeAnimationFrame();
         }
       };
-      this.handleLinkFlowSampleResult = (requestId, results) => {
-        if (!results.length || requestId !== this.lastLinkFlowSampleRequestId) {
+      this.handleActiveLinkPresentationResult = (requestId, results) => {
+        this.activeLinkPresentationRequestInFlight = false;
+        if (!results.length || requestId <= this.lastHandledActiveLinkPresentationRequestId) {
+          this.flushPendingActiveLinkPresentationRequest();
           return;
         }
+        this.lastHandledActiveLinkPresentationRequestId = requestId;
+        const shouldApplyImmediately = this.runtimeAnimationFrame === null;
         let dirtyBounds = null;
         for (let i2 = 0; i2 < results.length; ++i2) {
           const result = results[i2];
-          this.linkFlowDotsById.set(result.linkId, result.dots);
           const linkId = this.linkIdsByKey.get(result.linkId);
           if (linkId == null) {
             continue;
           }
-          dirtyBounds = mergeRenderBounds(
-            dirtyBounds,
-            this.captureLinkRenderBounds(linkId)
-          );
+          const previousBounds = shouldApplyImmediately ? this.captureLinkRenderBounds(linkId) : null;
+          this.workerLinkPresentationById.set(result.linkId, result);
+          this.linkGeometryCache.set(linkId, {
+            curve: result.curve
+          });
+          const link = this.linksById.get(linkId);
+          if (link && shouldApplyImmediately) {
+            this.syncLinkMidpointToPoint(
+              link,
+              result.midpoint
+            );
+            this.syncLinkView(
+              linkId,
+              link,
+              this.linkViews.get(linkId),
+              this.getRuntimeNow(),
+              true
+            );
+          }
+          if (shouldApplyImmediately) {
+            dirtyBounds = mergeRenderBounds(
+              dirtyBounds,
+              mergeRenderBounds(previousBounds, this.captureLinkRenderBounds(linkId))
+            );
+          }
         }
-        if (dirtyBounds && this.runtimeAnimationFrame === null) {
+        if (dirtyBounds && shouldApplyImmediately) {
           this.requestSceneRender(dirtyBounds);
         }
+        this.flushPendingActiveLinkPresentationRequest();
       };
       this.nodePortAdapter = new NodePortAdapter(
         graph,
@@ -21060,7 +21249,9 @@ ${safeText}`;
           resolveNodeHost: (nodeId) => this.nodeHosts.get(nodeId) || null
         }
       );
-      this.appHost.taskWorker.onLinkFlowSample(this.handleLinkFlowSampleResult);
+      this.appHost.taskWorker.onActiveLinkPresentation(
+        this.handleActiveLinkPresentationResult
+      );
       this.unsubscribers.push(
         this.bus.on("graph:clear", () => {
           this.clearScene();
@@ -21071,9 +21262,17 @@ ${safeText}`;
         this.bus.on("node:remove", ({ nodeId }) => {
           this.removeNodeHost(nodeId);
         }),
-        this.bus.on("node:dirty", ({ nodeId, node: node2 }) => {
-          this.handleNodeDirty(nodeId, node2);
-        }),
+        this.bus.on(
+          "node:dirty",
+          ({ nodeId, node: node2, dirtyForeground, dirtyBackground }) => {
+            this.handleNodeDirty(
+              nodeId,
+              node2,
+              dirtyForeground,
+              dirtyBackground
+            );
+          }
+        ),
         this.bus.on("node:moved", ({ nodeId, node: node2 }) => {
           this.syncNodeMoved(nodeId, node2);
         }),
@@ -21097,7 +21296,7 @@ ${safeText}`;
         this.unsubscribers[i2]();
       }
       this.unsubscribers.length = 0;
-      this.appHost.taskWorker.onLinkFlowSample(null);
+      this.appHost.taskWorker.onActiveLinkPresentation(null);
       this.clearScene();
     }
     requestRuntimeAnimation(forceNodeRepaint = false) {
@@ -21238,8 +21437,11 @@ ${safeText}`;
       this.groupDirtyBridgeUninstallers.clear();
       this.activeLinkIds.clear();
       this.linkGeometryCache.clear();
-      this.linkFlowDotsById.clear();
-      this.lastLinkFlowSampleRequestId = 0;
+      this.activeLinkPresentationStateById.clear();
+      this.workerLinkPresentationById.clear();
+      this.activeLinkPresentationRequestInFlight = false;
+      this.pendingActiveLinkPresentationRequest = null;
+      this.lastHandledActiveLinkPresentationRequestId = 0;
       this.pendingSettledNodeRepaints.clear();
     }
     ensureNodeHost(node2) {
@@ -21372,21 +21574,24 @@ ${safeText}`;
       this.linkIdsByKey.delete(toMutationKey(linkId));
       this.activeLinkIds.delete(linkId);
       this.linkGeometryCache.delete(linkId);
-      this.linkFlowDotsById.delete(toMutationKey(linkId));
+      this.activeLinkPresentationStateById.delete(linkId);
+      this.workerLinkPresentationById.delete(toMutationKey(linkId));
       if (!resolvedLink) {
         return;
       }
       (_a3 = this.linksByNodeId.get(resolvedLink.origin_id)) == null ? void 0 : _a3.delete(linkId);
       (_b3 = this.linksByNodeId.get(resolvedLink.target_id)) == null ? void 0 : _b3.delete(linkId);
     }
-    handleNodeDirty(nodeId, node2) {
+    handleNodeDirty(nodeId, node2, dirtyForeground, dirtyBackground) {
       var _a3;
       if (node2) {
         this.nodesById.set(nodeId, node2);
       }
       const previousBounds = this.captureNodeClusterBounds(nodeId);
       (_a3 = this.nodeHosts.get(nodeId)) == null ? void 0 : _a3.repaint();
-      this.updateIncidentLinks(nodeId);
+      if (!(dirtyForeground === true && dirtyBackground !== true)) {
+        this.updateIncidentLinks(nodeId);
+      }
       const nextBounds = this.captureNodeClusterBounds(nodeId);
       this.requestSceneRender(mergeRenderBounds(previousBounds, nextBounds));
     }
@@ -21511,14 +21716,19 @@ ${safeText}`;
       if (!link || !view) {
         this.activeLinkIds.delete(linkId);
         this.linkGeometryCache.delete(linkId);
-        this.linkFlowDotsById.delete(toMutationKey(linkId));
+        this.activeLinkPresentationStateById.delete(linkId);
+        this.workerLinkPresentationById.delete(toMutationKey(linkId));
         return false;
       }
-      const { curve, reused } = this.resolveLinkCurve(
+      const workerPresentation = preferCachedCurve && this.isLinkFlowActive(link, now) ? this.resolveWorkerLinkPresentation(
         linkId,
         link,
-        preferCachedCurve
-      );
+        now
+      ) : null;
+      const { curve, reused } = workerPresentation ? {
+        curve: workerPresentation.curve,
+        reused: true
+      } : this.resolveLinkCurve(linkId, link, preferCachedCurve);
       if (!curve) {
         view.update({
           curve: null,
@@ -21529,13 +21739,11 @@ ${safeText}`;
         });
         this.activeLinkIds.delete(linkId);
         this.linkGeometryCache.delete(linkId);
-        this.linkFlowDotsById.delete(toMutationKey(linkId));
+        this.activeLinkPresentationStateById.delete(linkId);
+        this.workerLinkPresentationById.delete(toMutationKey(linkId));
         return false;
       }
-      if (!reused) {
-        this.linkFlowDotsById.delete(toMutationKey(linkId));
-      }
-      const flow = this.buildLinkFlowPresentation(
+      const flow = workerPresentation ? this.buildWorkerLinkFlowPresentation(workerPresentation) : this.buildLinkFlowPresentation(
         linkId,
         link,
         curve,
@@ -21543,7 +21751,12 @@ ${safeText}`;
       );
       const strokeWidth = this.getLinkStrokeWidth();
       const arrows = this.buildLinkArrowPresentation(curve);
-      if (!reused) {
+      if (workerPresentation) {
+        this.syncLinkMidpointToPoint(
+          link,
+          workerPresentation.midpoint
+        );
+      } else if (!reused) {
         this.syncLinkMidpoint(link, curve);
       }
       view.update({
@@ -21559,6 +21772,7 @@ ${safeText}`;
         return true;
       }
       this.activeLinkIds.delete(linkId);
+      this.workerLinkPresentationById.delete(toMutationKey(linkId));
       return false;
     }
     getPrimaryCanvasLinkPresentation() {
@@ -21706,39 +21920,46 @@ ${safeText}`;
         }
       }
     }
-    prepareActiveLinkFlowSampling(now) {
+    prepareActiveLinkPresentations(now) {
+      this.activeLinkPresentationStateById.clear();
       if (!this.activeLinkIds.size) {
+        this.pendingActiveLinkPresentationRequest = null;
         return;
       }
       const tasks = [];
       for (const linkId of this.activeLinkIds) {
         const link = this.linksById.get(linkId);
         if (!link || !this.isLinkFlowActive(link, now)) {
+          this.workerLinkPresentationById.delete(toMutationKey(linkId));
           continue;
         }
-        const curve = this.resolveLinkCurve(linkId, link, true).curve;
-        if (!curve) {
+        const taskState = this.buildActiveLinkPresentationState(
+          linkId,
+          link
+        );
+        if (!taskState) {
+          this.workerLinkPresentationById.delete(toMutationKey(linkId));
           continue;
         }
-        tasks.push({
-          linkId: toMutationKey(linkId),
-          start: curve.start,
-          c1: curve.c1,
-          c2: curve.c2,
-          end: curve.end
-        });
+        this.activeLinkPresentationStateById.set(linkId, taskState);
+        tasks.push(taskState.task);
       }
-      const requestId = this.appHost.taskWorker.requestLinkFlowSample(now, tasks);
-      if (requestId !== null) {
-        this.lastLinkFlowSampleRequestId = requestId;
+      if (!tasks.length) {
+        this.pendingActiveLinkPresentationRequest = null;
+        return;
       }
+      if (this.activeLinkPresentationRequestInFlight) {
+        this.pendingActiveLinkPresentationRequest = { now, tasks };
+        return;
+      }
+      this.dispatchActiveLinkPresentationRequest(now, tasks);
     }
     refreshActiveLinkAnimations() {
       if (!this.activeLinkIds.size) {
         return { didUpdate: false, hasMore: false, dirtyBounds: null };
       }
       const now = this.getRuntimeNow();
-      this.prepareActiveLinkFlowSampling(now);
+      this.prepareActiveLinkPresentations(now);
       let didUpdate = false;
       let hasActiveLinks = false;
       let dirtyBounds = null;
@@ -21769,6 +21990,43 @@ ${safeText}`;
     isLinkFlowActive(link, now) {
       const lastTime = toFiniteNumber$1(link._last_time);
       return Boolean(lastTime) && now - lastTime < 1e3;
+    }
+    buildActiveLinkPresentationState(linkId, link) {
+      const layout = this.nodePortAdapter.getLinkLayout(link);
+      if (!layout) {
+        return null;
+      }
+      const task = {
+        linkId: toMutationKey(linkId),
+        start: [layout.start[0], layout.start[1]],
+        end: [layout.end[0], layout.end[1]],
+        startDir: layout.startDir,
+        endDir: layout.endDir,
+        lastTime: toFiniteNumber$1(link._last_time)
+      };
+      return {
+        task,
+        layoutKey: buildActiveLinkLayoutKey(task),
+        cacheKey: buildActiveLinkPresentationCacheKey(task)
+      };
+    }
+    resolveWorkerLinkPresentation(linkId, link, now) {
+      if (!this.isLinkFlowActive(link, now)) {
+        this.workerLinkPresentationById.delete(toMutationKey(linkId));
+        return null;
+      }
+      const currentState = this.activeLinkPresentationStateById.get(linkId);
+      if (!currentState) {
+        return null;
+      }
+      const presentation = this.workerLinkPresentationById.get(toMutationKey(linkId));
+      if (!presentation) {
+        return null;
+      }
+      if (!presentation.active || presentation.layoutKey !== currentState.layoutKey) {
+        return null;
+      }
+      return presentation;
     }
     resolveLinkCurve(linkId, link, preferCachedCurve = false) {
       var _a3;
@@ -21801,7 +22059,7 @@ ${safeText}`;
     isSameLinkCurve(current, next) {
       return current.path === next.path && current.startDir === next.startDir && current.endDir === next.endDir;
     }
-    buildLinkFlowPresentation(linkId, link, curve, now) {
+    buildLinkFlowPresentation(_linkId, link, curve, now) {
       const lastTime = toFiniteNumber$1(link._last_time);
       if (!lastTime) {
         return { active: false };
@@ -21811,7 +22069,7 @@ ${safeText}`;
         return { active: false };
       }
       const opacity = Math.max(0, Math.min(1, 2 - elapsed * 2e-3));
-      const dots = this.linkFlowDotsById.get(toMutationKey(linkId)) || Array.from(
+      const dots = Array.from(
         { length: 5 },
         (_2, index) => this.nodePortAdapter.getPointOnLinkCurve(
           curve,
@@ -21826,11 +22084,47 @@ ${safeText}`;
         dots
       };
     }
+    buildWorkerLinkFlowPresentation(presentation) {
+      if (!presentation.active) {
+        return { active: false };
+      }
+      return {
+        active: true,
+        color: "#FFF",
+        opacity: presentation.opacity,
+        dotRadius: 5,
+        dots: presentation.dots
+      };
+    }
     syncLinkMidpoint(link, curve) {
       const midpoint = this.nodePortAdapter.getPointOnLinkCurve(curve, 0.5);
+      this.syncLinkMidpointToPoint(link, midpoint);
+    }
+    syncLinkMidpointToPoint(link, midpoint) {
       const target = ArrayBuffer.isView(link._pos) ? link._pos : link._pos = new Float32Array(2);
       target[0] = midpoint[0];
       target[1] = midpoint[1];
+    }
+    dispatchActiveLinkPresentationRequest(now, tasks) {
+      const requestId = this.appHost.taskWorker.requestActiveLinkPresentations(
+        now,
+        tasks
+      );
+      this.activeLinkPresentationRequestInFlight = requestId !== null;
+      if (requestId === null) {
+        this.pendingActiveLinkPresentationRequest = null;
+      }
+    }
+    flushPendingActiveLinkPresentationRequest() {
+      if (this.activeLinkPresentationRequestInFlight) {
+        return;
+      }
+      const pending = this.pendingActiveLinkPresentationRequest;
+      if (!pending) {
+        return;
+      }
+      this.pendingActiveLinkPresentationRequest = null;
+      this.dispatchActiveLinkPresentationRequest(pending.now, pending.tasks);
     }
   }
   function r(t2, e2) {

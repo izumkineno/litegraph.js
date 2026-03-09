@@ -12,8 +12,8 @@ import { GraphGroupHost } from "./GraphGroupHost";
 import { LegacyNodeHost } from "./LegacyNodeHost";
 import type { LegacyNodeRenderHost } from "./LegacyNodePainter";
 import type {
-    LeaferLinkFlowSampleResult,
-    LeaferLinkFlowSampleTask,
+    LeaferActiveLinkPresentationResult,
+    LeaferActiveLinkPresentationTask,
 } from "./LeaferTaskWorker";
 import { LinkViewHost } from "./LinkViewHost";
 import { ModernNodeHost, type ModernNodeLike } from "./ModernNodeHost";
@@ -59,6 +59,17 @@ interface CachedLinkGeometry {
     readonly curve: LinkCurveGeometry;
 }
 
+interface ActiveLinkPresentationState {
+    readonly task: LeaferActiveLinkPresentationTask;
+    readonly layoutKey: string;
+    readonly cacheKey: string;
+}
+
+interface PendingActiveLinkPresentationRequest {
+    readonly now: number;
+    readonly tasks: ReadonlyArray<LeaferActiveLinkPresentationTask>;
+}
+
 function toMutationKey(id: GraphMutationNodeId | GraphMutationLinkId): string {
     return String(id);
 }
@@ -66,6 +77,27 @@ function toMutationKey(id: GraphMutationNodeId | GraphMutationLinkId): string {
 function toFiniteNumber(value: unknown, fallback = 0): number {
     const numericValue = Number(value);
     return Number.isFinite(numericValue) ? numericValue : fallback;
+}
+
+function formatWorkerPoint(point: readonly [number, number]): string {
+    return `${point[0]},${point[1]}`;
+}
+
+function buildActiveLinkLayoutKey(task: LeaferActiveLinkPresentationTask): string {
+    return [
+        String(task.linkId),
+        formatWorkerPoint(task.start),
+        formatWorkerPoint(task.end),
+        toFiniteNumber(task.startDir),
+        toFiniteNumber(task.endDir),
+    ].join("|");
+}
+
+function buildActiveLinkPresentationCacheKey(
+    task: LeaferActiveLinkPresentationTask
+): string {
+    const lastTimeBucket = Math.max(0, Math.floor(toFiniteNumber(task.lastTime) / 16));
+    return `${buildActiveLinkLayoutKey(task)}|${lastTimeBucket}`;
 }
 
 interface RenderBoundsLike {
@@ -168,11 +200,18 @@ export class SceneSyncController {
         GraphMutationLinkId,
         CachedLinkGeometry
     >();
-    private readonly linkFlowDotsById = new Map<
-        string,
-        ReadonlyArray<readonly [number, number]>
+    private readonly activeLinkPresentationStateById = new Map<
+        GraphMutationLinkId,
+        ActiveLinkPresentationState
     >();
-    private lastLinkFlowSampleRequestId = 0;
+    private readonly workerLinkPresentationById = new Map<
+        string,
+        LeaferActiveLinkPresentationResult
+    >();
+    private activeLinkPresentationRequestInFlight = false;
+    private pendingActiveLinkPresentationRequest: PendingActiveLinkPresentationRequest | null =
+        null;
+    private lastHandledActiveLinkPresentationRequestId = 0;
     private readonly pendingSettledNodeRepaints = new Set<GraphMutationNodeId>();
     private runtimeAnimationFrame: number | null = null;
     private readonly getViewportScale = (): number =>
@@ -203,7 +242,9 @@ export class SceneSyncController {
                 resolveNodeHost: (nodeId) => this.nodeHosts.get(nodeId) || null,
             }
         );
-        this.appHost.taskWorker.onLinkFlowSample(this.handleLinkFlowSampleResult);
+        this.appHost.taskWorker.onActiveLinkPresentation(
+            this.handleActiveLinkPresentationResult
+        );
 
         this.unsubscribers.push(
             this.bus.on("graph:clear", () => {
@@ -215,9 +256,17 @@ export class SceneSyncController {
             this.bus.on("node:remove", ({ nodeId }) => {
                 this.removeNodeHost(nodeId);
             }),
-            this.bus.on("node:dirty", ({ nodeId, node }) => {
-                this.handleNodeDirty(nodeId, node);
-            }),
+            this.bus.on(
+                "node:dirty",
+                ({ nodeId, node, dirtyForeground, dirtyBackground }) => {
+                    this.handleNodeDirty(
+                        nodeId,
+                        node,
+                        dirtyForeground,
+                        dirtyBackground
+                    );
+                }
+            ),
             this.bus.on("node:moved", ({ nodeId, node }) => {
                 this.syncNodeMoved(nodeId, node);
             }),
@@ -243,7 +292,7 @@ export class SceneSyncController {
             this.unsubscribers[i]();
         }
         this.unsubscribers.length = 0;
-        this.appHost.taskWorker.onLinkFlowSample(null);
+        this.appHost.taskWorker.onActiveLinkPresentation(null);
         this.clearScene();
     }
 
@@ -416,8 +465,11 @@ export class SceneSyncController {
         this.groupDirtyBridgeUninstallers.clear();
         this.activeLinkIds.clear();
         this.linkGeometryCache.clear();
-        this.linkFlowDotsById.clear();
-        this.lastLinkFlowSampleRequestId = 0;
+        this.activeLinkPresentationStateById.clear();
+        this.workerLinkPresentationById.clear();
+        this.activeLinkPresentationRequestInFlight = false;
+        this.pendingActiveLinkPresentationRequest = null;
+        this.lastHandledActiveLinkPresentationRequestId = 0;
         this.pendingSettledNodeRepaints.clear();
     }
 
@@ -579,7 +631,8 @@ export class SceneSyncController {
         this.linkIdsByKey.delete(toMutationKey(linkId));
         this.activeLinkIds.delete(linkId);
         this.linkGeometryCache.delete(linkId);
-        this.linkFlowDotsById.delete(toMutationKey(linkId));
+        this.activeLinkPresentationStateById.delete(linkId);
+        this.workerLinkPresentationById.delete(toMutationKey(linkId));
         if (!resolvedLink) {
             return;
         }
@@ -590,7 +643,9 @@ export class SceneSyncController {
 
     private handleNodeDirty(
         nodeId: GraphMutationNodeId,
-        node?: GraphMutationNodeLike
+        node?: GraphMutationNodeLike,
+        dirtyForeground?: boolean,
+        dirtyBackground?: boolean
     ): void {
         if (node) {
             this.nodesById.set(nodeId, node);
@@ -598,7 +653,9 @@ export class SceneSyncController {
 
         const previousBounds = this.captureNodeClusterBounds(nodeId);
         this.nodeHosts.get(nodeId)?.repaint();
-        this.updateIncidentLinks(nodeId);
+        if (!(dirtyForeground === true && dirtyBackground !== true)) {
+            this.updateIncidentLinks(nodeId);
+        }
         const nextBounds = this.captureNodeClusterBounds(nodeId);
         this.requestSceneRender(mergeRenderBounds(previousBounds, nextBounds));
     }
@@ -774,15 +831,25 @@ export class SceneSyncController {
         if (!link || !view) {
             this.activeLinkIds.delete(linkId);
             this.linkGeometryCache.delete(linkId);
-            this.linkFlowDotsById.delete(toMutationKey(linkId));
+            this.activeLinkPresentationStateById.delete(linkId);
+            this.workerLinkPresentationById.delete(toMutationKey(linkId));
             return false;
         }
 
-        const { curve, reused } = this.resolveLinkCurve(
-            linkId,
-            link,
-            preferCachedCurve
-        );
+        const workerPresentation =
+            preferCachedCurve && this.isLinkFlowActive(link as RuntimeAnimatedLink, now)
+                ? this.resolveWorkerLinkPresentation(
+                      linkId,
+                      link as RuntimeAnimatedLink,
+                      now
+                  )
+                : null;
+        const { curve, reused } = workerPresentation
+            ? {
+                  curve: workerPresentation.curve as LinkCurveGeometry,
+                  reused: true,
+              }
+            : this.resolveLinkCurve(linkId, link, preferCachedCurve);
         if (!curve) {
             view.update({
                 curve: null,
@@ -793,22 +860,27 @@ export class SceneSyncController {
             });
             this.activeLinkIds.delete(linkId);
             this.linkGeometryCache.delete(linkId);
-            this.linkFlowDotsById.delete(toMutationKey(linkId));
+            this.activeLinkPresentationStateById.delete(linkId);
+            this.workerLinkPresentationById.delete(toMutationKey(linkId));
             return false;
         }
-        if (!reused) {
-            this.linkFlowDotsById.delete(toMutationKey(linkId));
-        }
 
-        const flow = this.buildLinkFlowPresentation(
-            linkId,
-            link as RuntimeAnimatedLink,
-            curve,
-            now
-        );
+        const flow = workerPresentation
+            ? this.buildWorkerLinkFlowPresentation(workerPresentation)
+            : this.buildLinkFlowPresentation(
+                  linkId,
+                  link as RuntimeAnimatedLink,
+                  curve,
+                  now
+              );
         const strokeWidth = this.getLinkStrokeWidth();
         const arrows = this.buildLinkArrowPresentation(curve);
-        if (!reused) {
+        if (workerPresentation) {
+            this.syncLinkMidpointToPoint(
+                link as RuntimeAnimatedLink,
+                workerPresentation.midpoint
+            );
+        } else if (!reused) {
             this.syncLinkMidpoint(link as RuntimeAnimatedLink, curve);
         }
         view.update({
@@ -826,6 +898,7 @@ export class SceneSyncController {
         }
 
         this.activeLinkIds.delete(linkId);
+        this.workerLinkPresentationById.delete(toMutationKey(linkId));
         return false;
     }
 
@@ -1040,34 +1113,45 @@ export class SceneSyncController {
         }
     }
 
-    private prepareActiveLinkFlowSampling(now: number): void {
+    private prepareActiveLinkPresentations(now: number): void {
+        this.activeLinkPresentationStateById.clear();
         if (!this.activeLinkIds.size) {
+            this.pendingActiveLinkPresentationRequest = null;
             return;
         }
 
-        const tasks: LeaferLinkFlowSampleTask[] = [];
+        const tasks: LeaferActiveLinkPresentationTask[] = [];
         for (const linkId of this.activeLinkIds) {
             const link = this.linksById.get(linkId);
             if (!link || !this.isLinkFlowActive(link as RuntimeAnimatedLink, now)) {
+                this.workerLinkPresentationById.delete(toMutationKey(linkId));
                 continue;
             }
-            const curve = this.resolveLinkCurve(linkId, link, true).curve;
-            if (!curve) {
+
+            const taskState = this.buildActiveLinkPresentationState(
+                linkId,
+                link as RuntimeAnimatedLink
+            );
+            if (!taskState) {
+                this.workerLinkPresentationById.delete(toMutationKey(linkId));
                 continue;
             }
-            tasks.push({
-                linkId: toMutationKey(linkId),
-                start: curve.start,
-                c1: curve.c1,
-                c2: curve.c2,
-                end: curve.end,
-            });
+
+            this.activeLinkPresentationStateById.set(linkId, taskState);
+            tasks.push(taskState.task);
         }
 
-        const requestId = this.appHost.taskWorker.requestLinkFlowSample(now, tasks);
-        if (requestId !== null) {
-            this.lastLinkFlowSampleRequestId = requestId;
+        if (!tasks.length) {
+            this.pendingActiveLinkPresentationRequest = null;
+            return;
         }
+
+        if (this.activeLinkPresentationRequestInFlight) {
+            this.pendingActiveLinkPresentationRequest = { now, tasks };
+            return;
+        }
+
+        this.dispatchActiveLinkPresentationRequest(now, tasks);
     }
 
     private refreshActiveLinkAnimations(): AnimationRefreshResult {
@@ -1076,7 +1160,7 @@ export class SceneSyncController {
         }
 
         const now = this.getRuntimeNow();
-        this.prepareActiveLinkFlowSampling(now);
+        this.prepareActiveLinkPresentations(now);
         let didUpdate = false;
         let hasActiveLinks = false;
         let dirtyBounds: RenderBoundsLike | null = null;
@@ -1111,32 +1195,117 @@ export class SceneSyncController {
         return Boolean(lastTime) && now - lastTime < 1000;
     }
 
-    private readonly handleLinkFlowSampleResult = (
+    private readonly handleActiveLinkPresentationResult = (
         requestId: number,
-        results: ReadonlyArray<LeaferLinkFlowSampleResult>
+        results: ReadonlyArray<LeaferActiveLinkPresentationResult>
     ): void => {
-        if (!results.length || requestId !== this.lastLinkFlowSampleRequestId) {
+        this.activeLinkPresentationRequestInFlight = false;
+        if (
+            !results.length ||
+            requestId <= this.lastHandledActiveLinkPresentationRequestId
+        ) {
+            this.flushPendingActiveLinkPresentationRequest();
             return;
         }
+        this.lastHandledActiveLinkPresentationRequestId = requestId;
 
+        const shouldApplyImmediately = this.runtimeAnimationFrame === null;
         let dirtyBounds: RenderBoundsLike | null = null;
         for (let i = 0; i < results.length; ++i) {
             const result = results[i];
-            this.linkFlowDotsById.set(result.linkId, result.dots);
             const linkId = this.linkIdsByKey.get(result.linkId);
             if (linkId == null) {
                 continue;
             }
-            dirtyBounds = mergeRenderBounds(
-                dirtyBounds,
-                this.captureLinkRenderBounds(linkId)
-            );
+            const previousBounds = shouldApplyImmediately
+                ? this.captureLinkRenderBounds(linkId)
+                : null;
+            this.workerLinkPresentationById.set(result.linkId, result);
+            this.linkGeometryCache.set(linkId, {
+                curve: result.curve as LinkCurveGeometry,
+            });
+            const link = this.linksById.get(linkId);
+            if (link && shouldApplyImmediately) {
+                this.syncLinkMidpointToPoint(
+                    link as RuntimeAnimatedLink,
+                    result.midpoint
+                );
+                this.syncLinkView(
+                    linkId,
+                    link,
+                    this.linkViews.get(linkId),
+                    this.getRuntimeNow(),
+                    true
+                );
+            }
+            if (shouldApplyImmediately) {
+                dirtyBounds = mergeRenderBounds(
+                    dirtyBounds,
+                    mergeRenderBounds(previousBounds, this.captureLinkRenderBounds(linkId))
+                );
+            }
         }
 
-        if (dirtyBounds && this.runtimeAnimationFrame === null) {
+        if (dirtyBounds && shouldApplyImmediately) {
             this.requestSceneRender(dirtyBounds);
         }
+
+        this.flushPendingActiveLinkPresentationRequest();
     };
+
+    private buildActiveLinkPresentationState(
+        linkId: GraphMutationLinkId,
+        link: RuntimeAnimatedLink
+    ): ActiveLinkPresentationState | null {
+        const layout = this.nodePortAdapter.getLinkLayout(link);
+        if (!layout) {
+            return null;
+        }
+
+        const task: LeaferActiveLinkPresentationTask = {
+            linkId: toMutationKey(linkId),
+            start: [layout.start[0], layout.start[1]],
+            end: [layout.end[0], layout.end[1]],
+            startDir: layout.startDir,
+            endDir: layout.endDir,
+            lastTime: toFiniteNumber(link._last_time),
+        };
+        return {
+            task,
+            layoutKey: buildActiveLinkLayoutKey(task),
+            cacheKey: buildActiveLinkPresentationCacheKey(task),
+        };
+    }
+
+    private resolveWorkerLinkPresentation(
+        linkId: GraphMutationLinkId,
+        link: RuntimeAnimatedLink,
+        now: number
+    ): LeaferActiveLinkPresentationResult | null {
+        if (!this.isLinkFlowActive(link, now)) {
+            this.workerLinkPresentationById.delete(toMutationKey(linkId));
+            return null;
+        }
+
+        const currentState = this.activeLinkPresentationStateById.get(linkId);
+        if (!currentState) {
+            return null;
+        }
+
+        const presentation = this.workerLinkPresentationById.get(toMutationKey(linkId));
+        if (!presentation) {
+            return null;
+        }
+
+        if (
+            !presentation.active ||
+            presentation.layoutKey !== currentState.layoutKey
+        ) {
+            return null;
+        }
+
+        return presentation;
+    }
 
     private resolveLinkCurve(
         linkId: GraphMutationLinkId,
@@ -1185,7 +1354,7 @@ export class SceneSyncController {
     }
 
     private buildLinkFlowPresentation(
-        linkId: GraphMutationLinkId,
+        _linkId: GraphMutationLinkId,
         link: RuntimeAnimatedLink,
         curve: ReturnType<NodePortAdapter["getLinkCurve"]> extends infer TResult
             ? Exclude<TResult, null>
@@ -1203,14 +1372,12 @@ export class SceneSyncController {
         }
 
         const opacity = Math.max(0, Math.min(1, 2 - elapsed * 0.002));
-        const dots =
-            this.linkFlowDotsById.get(toMutationKey(linkId)) ||
-            Array.from({ length: 5 }, (_, index) =>
-                this.nodePortAdapter.getPointOnLinkCurve(
-                    curve,
-                    (now * 0.001 + index * 0.2) % 1
-                )
-            );
+        const dots = Array.from({ length: 5 }, (_, index) =>
+            this.nodePortAdapter.getPointOnLinkCurve(
+                curve,
+                (now * 0.001 + index * 0.2) % 1
+            )
+        );
 
         return {
             active: true,
@@ -1221,16 +1388,67 @@ export class SceneSyncController {
         };
     }
 
+    private buildWorkerLinkFlowPresentation(
+        presentation: LeaferActiveLinkPresentationResult
+    ): NonNullable<Parameters<LinkView["update"]>[0]["flow"]> {
+        if (!presentation.active) {
+            return { active: false };
+        }
+
+        return {
+            active: true,
+            color: "#FFF",
+            opacity: presentation.opacity,
+            dotRadius: 5,
+            dots: presentation.dots,
+        };
+    }
+
     private syncLinkMidpoint(
         link: RuntimeAnimatedLink,
         curve: Exclude<ReturnType<NodePortAdapter["getLinkCurve"]>, null>
     ): void {
         const midpoint = this.nodePortAdapter.getPointOnLinkCurve(curve, 0.5);
+        this.syncLinkMidpointToPoint(link, midpoint);
+    }
+
+    private syncLinkMidpointToPoint(
+        link: RuntimeAnimatedLink,
+        midpoint: readonly [number, number]
+    ): void {
         const target = ArrayBuffer.isView(link._pos)
             ? link._pos
             : (link._pos = new Float32Array(2));
 
         target[0] = midpoint[0];
         target[1] = midpoint[1];
+    }
+
+    private dispatchActiveLinkPresentationRequest(
+        now: number,
+        tasks: ReadonlyArray<LeaferActiveLinkPresentationTask>
+    ): void {
+        const requestId = this.appHost.taskWorker.requestActiveLinkPresentations(
+            now,
+            tasks
+        );
+        this.activeLinkPresentationRequestInFlight = requestId !== null;
+        if (requestId === null) {
+            this.pendingActiveLinkPresentationRequest = null;
+        }
+    }
+
+    private flushPendingActiveLinkPresentationRequest(): void {
+        if (this.activeLinkPresentationRequestInFlight) {
+            return;
+        }
+
+        const pending = this.pendingActiveLinkPresentationRequest;
+        if (!pending) {
+            return;
+        }
+
+        this.pendingActiveLinkPresentationRequest = null;
+        this.dispatchActiveLinkPresentationRequest(pending.now, pending.tasks);
     }
 }
