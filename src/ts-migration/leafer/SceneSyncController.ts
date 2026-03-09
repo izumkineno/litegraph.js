@@ -16,9 +16,11 @@ import { ModernNodeHost, type ModernNodeLike } from "./ModernNodeHost";
 import { discriminateNodeRuntime } from "./NodeRuntimeDiscriminator";
 import {
     NodePortAdapter,
+    type LinkCurveGeometry,
     type NodePortNodeLike,
 } from "./NodePortAdapter";
 import type { NodeViewHost } from "./NodeViewHost";
+import type { IArrowStyle } from "@leafer-ui/interface";
 
 export type NodeHost = NodeViewHost;
 export type LinkView = LinkViewHost;
@@ -41,6 +43,12 @@ interface RuntimeAnimatedLink extends GraphMutationLinkLike {
     _last_time?: number;
     _pos?: Float32Array | [number, number];
     color?: unknown;
+}
+
+interface GraphCanvasLinkPresentationLike {
+    render_connection_arrows?: unknown;
+    connections_width?: unknown;
+    default_link_color?: unknown;
 }
 
 function toMutationKey(id: GraphMutationNodeId | GraphMutationLinkId): string {
@@ -718,12 +726,15 @@ export class SceneSyncController {
             curve,
             now
         );
+        const strokeWidth = this.getLinkStrokeWidth();
+        const arrows = this.buildLinkArrowPresentation(curve);
         this.syncLinkMidpoint(link as RuntimeAnimatedLink, curve);
         view.update({
             curve,
-            stroke: (link.color as string) || "#9A9",
-            strokeWidth: 3,
+            stroke: this.getLinkStroke(link as RuntimeAnimatedLink),
+            strokeWidth,
             visible: true,
+            ...arrows,
             flow,
         });
 
@@ -734,6 +745,55 @@ export class SceneSyncController {
 
         this.activeLinkIds.delete(linkId);
         return false;
+    }
+
+    private getPrimaryCanvasLinkPresentation():
+        | GraphCanvasLinkPresentationLike
+        | null {
+        const graph = this.graph as GraphMutationGraphLike & {
+            list_of_graphcanvas?: GraphCanvasLinkPresentationLike[] | null;
+        };
+        const canvasList = graph.list_of_graphcanvas;
+        return canvasList?.length ? canvasList[0] : null;
+    }
+
+    private getLinkStrokeWidth(): number {
+        const canvas = this.getPrimaryCanvasLinkPresentation();
+        return Math.max(1, toFiniteNumber(canvas?.connections_width, 3));
+    }
+
+    private getLinkStroke(link: RuntimeAnimatedLink): string {
+        if (typeof link.color === "string" && link.color) {
+            return link.color;
+        }
+        const canvas = this.getPrimaryCanvasLinkPresentation();
+        if (
+            canvas &&
+            typeof canvas.default_link_color === "string" &&
+            canvas.default_link_color
+        ) {
+            return canvas.default_link_color;
+        }
+        return "#9A9";
+    }
+
+    private buildLinkArrowPresentation(curve: LinkCurveGeometry): {
+        startArrow: IArrowStyle | "none";
+        endArrow: IArrowStyle | "none";
+    } {
+        const canvas = this.getPrimaryCanvasLinkPresentation();
+        const renderArrows = Boolean(canvas?.render_connection_arrows);
+        if (!renderArrows || this.getViewportScale() < 0.6) {
+            return {
+                startArrow: "none",
+                endArrow: "none",
+            };
+        }
+
+        return {
+            startArrow: "none",
+            endArrow: curve.endDir ? "angle" : "none",
+        };
     }
 
     private getRuntimeWindow(): Window {

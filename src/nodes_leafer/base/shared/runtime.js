@@ -12,8 +12,8 @@
     var ModernNodeChangeMask =
         LiteGraph.ModernNodeChangeMask || ns.ModernNodeChangeMask || {};
 
-    var measureCanvas = null;
-    var measureContext = null;
+    var TITLE_MEASURE_FONT =
+        '600 13px "Aptos", "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif';
 
     function toFiniteNumber(value, fallback) {
         var numericValue = Number(value);
@@ -53,28 +53,35 @@
         return { inputs: inputs, outputs: outputs };
     }
 
-    function ensureMeasureContext() {
-        if (measureContext) {
-            return measureContext;
-        }
-        if (typeof document === "undefined" || !document.createElement) {
-            return null;
-        }
-        measureCanvas = document.createElement("canvas");
-        measureContext = measureCanvas.getContext("2d");
-        if (measureContext) {
-            measureContext.font = "14px Arial";
-        }
-        return measureContext;
-    }
-
     function measureTitleWidth(text) {
         var value = String(text || "");
-        var ctx = ensureMeasureContext();
-        if (ctx && typeof ctx.measureText === "function") {
-            return ctx.measureText(value).width;
+        var metrics =
+            LiteGraph &&
+            LiteGraph.__leaferMetrics &&
+            typeof LiteGraph.__leaferMetrics.measureTextWidth === "function"
+                ? LiteGraph.__leaferMetrics
+                : null;
+        if (metrics) {
+            return metrics.measureTextWidth(value, TITLE_MEASURE_FONT);
         }
-        return value.length * 7.2;
+
+        if (!value) {
+            return 0;
+        }
+
+        var units = 0;
+        for (var i = 0; i < value.length; ++i) {
+            var char = value.charAt(i);
+            if (char === " ") {
+                units += 0.34;
+            } else if (/[\u0000-\u00ff]/.test(char)) {
+                units += /[ilI1.,'`|]/.test(char) ? 0.34 : 0.58;
+            } else {
+                units += 1;
+            }
+        }
+
+        return units * 13 * 1.02;
     }
 
     function getNodeTitle(node) {

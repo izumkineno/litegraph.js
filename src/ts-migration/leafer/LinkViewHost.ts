@@ -1,4 +1,7 @@
+import "@leafer-in/arrow";
+
 import { Group, Path, Rect } from "leafer-ui";
+import type { IArrowStyle } from "@leafer-ui/interface";
 
 import type { LinkCurveGeometry } from "./NodePortAdapter";
 
@@ -15,6 +18,8 @@ export interface LinkViewPresentation {
     stroke?: string;
     strokeWidth?: number;
     visible?: boolean;
+    startArrow?: IArrowStyle | "none";
+    endArrow?: IArrowStyle | "none";
     flow?: LinkFlowPresentation;
 }
 
@@ -110,16 +115,28 @@ export class LinkViewHost {
         void viewportScale;
         const stroke = presentation.stroke || "#9A9";
         const path = curve.path;
+        const startArrow = presentation.startArrow || "none";
+        const endArrow = presentation.endArrow || "none";
 
         this.borderPath.visible = false;
         this.borderPath.path = path;
         this.borderPath.strokeWidth = strokeWidth + LINK_BORDER_EXTRA_WIDTH;
+        this.borderPath.startArrow = "none";
+        this.borderPath.endArrow = "none";
 
         this.strokePath.path = path;
         this.strokePath.stroke = stroke;
         this.strokePath.strokeWidth = strokeWidth;
+        this.strokePath.startArrow = startArrow;
+        this.strokePath.endArrow = endArrow;
 
-        this.updateFlowOverlay(path, strokeWidth, presentation.flow);
+        this.updateFlowOverlay(
+            path,
+            strokeWidth,
+            presentation.flow,
+            startArrow,
+            endArrow
+        );
     }
 
     destroy(): void {
@@ -143,7 +160,9 @@ export class LinkViewHost {
     private updateFlowOverlay(
         path: string,
         strokeWidth: number,
-        flow?: LinkFlowPresentation
+        flow?: LinkFlowPresentation,
+        startArrow: IArrowStyle | "none" = "none",
+        endArrow: IArrowStyle | "none" = "none"
     ): void {
         if (!flow?.active) {
             this.hideFlowOverlay();
@@ -160,6 +179,8 @@ export class LinkViewHost {
         this.flowPath.stroke = flowColor;
         this.flowPath.strokeWidth = strokeWidth;
         this.flowPath.opacity = flowOpacity;
+        this.flowPath.startArrow = startArrow;
+        this.flowPath.endArrow = endArrow;
 
         this.flowDotLayer.visible = dots.length > 0;
         for (let index = 0; index < this.flowDots.length; ++index) {
@@ -184,6 +205,8 @@ export class LinkViewHost {
 
     private hideFlowOverlay(): void {
         this.flowPath.visible = false;
+        this.flowPath.startArrow = "none";
+        this.flowPath.endArrow = "none";
         this.flowDotLayer.visible = false;
         for (let index = 0; index < this.flowDots.length; ++index) {
             this.flowDots[index].visible = false;

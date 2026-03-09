@@ -20,6 +20,12 @@ export {
 } from "./ModernNodeContracts";
 export { ModernNodeAuthoringUtils } from "./ModernNodeAuthoringUtils";
 export {
+    MODERN_NODE_TITLE_MEASURE_FONT,
+    getSharedLeaferTextMetrics,
+    measureLeaferTextWidth,
+    type LeaferTextMetricsApi,
+} from "./LeaferTextMetrics";
+export {
     attachModernNodeRegistryApi,
     registerModernNode,
     registerModernNodes,

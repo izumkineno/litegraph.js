@@ -28,6 +28,10 @@ import {
     resolveModernWidgetRenderer,
     resolveWidgetBounds,
 } from "./ModernWidgetRegistry";
+import {
+    measureLeaferTextWidth,
+    MODERN_NODE_TITLE_MEASURE_FONT,
+} from "./LeaferTextMetrics";
 import type {
     NodeViewHost,
     NodeViewPortHit,
@@ -399,28 +403,11 @@ function getLiteGraphConstants(): {
     };
 }
 
-let textMeasureCanvas: HTMLCanvasElement | null = null;
-let textMeasureContext: CanvasRenderingContext2D | null = null;
-
 function measureTextWidth(
     text: string,
-    font = '600 13px "Aptos", "Segoe UI", sans-serif'
+    font = MODERN_NODE_TITLE_MEASURE_FONT
 ): number {
-    if (
-        typeof document === "undefined" ||
-        typeof document.createElement !== "function"
-    ) {
-        return text.length * 7.2;
-    }
-    if (!textMeasureCanvas) {
-        textMeasureCanvas = document.createElement("canvas");
-        textMeasureContext = textMeasureCanvas.getContext("2d");
-    }
-    if (!textMeasureContext) {
-        return text.length * 7.2;
-    }
-    textMeasureContext.font = font;
-    return textMeasureContext.measureText(text).width;
+    return measureLeaferTextWidth(text, font);
 }
 
 function mergeShellState(

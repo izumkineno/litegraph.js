@@ -4,6 +4,10 @@ import type {
     ModernPortPresentation,
     ModernShellState,
 } from "./ModernNodeContracts";
+import {
+    measureLeaferTextWidth,
+    MODERN_NODE_TITLE_MEASURE_FONT,
+} from "./LeaferTextMetrics";
 
 interface LiteGraphAuthoringHostLike {
     EVENT?: number;
@@ -309,15 +313,7 @@ export function resolveShellState(
 }
 
 function measureTitleWidth(text: string): number {
-    if (typeof document !== "undefined" && document.createElement) {
-        const canvas = document.createElement("canvas");
-        const context = canvas.getContext("2d");
-        if (context) {
-            context.font = "14px Arial";
-            return context.measureText(text).width;
-        }
-    }
-    return text.length * 7.2;
+    return measureLeaferTextWidth(text, MODERN_NODE_TITLE_MEASURE_FONT);
 }
 
 export function resolveCollapsedWidth(

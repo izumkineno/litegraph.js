@@ -1,10 +1,11 @@
 import "@leafer-in/state";
-import { App } from "leafer-ui";
+import { App, Group } from "leafer-ui";
 
 import {
     createLeaferLayerRegistry,
     type LeaferLayerRegistry,
 } from "./LeaferLayerRegistry";
+import { getSharedLeaferTextMetrics } from "./LeaferTextMetrics";
 
 export interface LeaferAppHostOptions {
     fill?: string;
@@ -38,6 +39,7 @@ export class LeaferAppHost {
     readonly skyRoot: LeaferLayerRegistry["skyRoot"];
     readonly overlayWorld: LeaferLayerRegistry["overlayWorld"];
     readonly overlayScreen: LeaferLayerRegistry["overlayScreen"];
+    readonly measurementRoot: Group;
 
     private readonly backgroundColorLayer: HTMLDivElement;
     private readonly backgroundPatternLayer: HTMLDivElement;
@@ -100,6 +102,13 @@ export class LeaferAppHost {
         this.skyRoot = this.layers.skyRoot;
         this.overlayWorld = this.layers.overlayWorld;
         this.overlayScreen = this.layers.overlayScreen;
+        this.measurementRoot = new Group({
+            name: "litegraph-text-metrics-root",
+            visible: false,
+            hittable: false,
+        });
+        this.skyRoot.add(this.measurementRoot);
+        getSharedLeaferTextMetrics().attachRoot(this.measurementRoot);
         this.syncBackgroundViewport(0, 0, 1);
     }
 
@@ -153,6 +162,7 @@ export class LeaferAppHost {
     }
 
     destroy(): void {
+        getSharedLeaferTextMetrics().detachRoot(this.measurementRoot);
         this.app.destroy();
         this.backgroundPatternLayer.remove();
         this.backgroundColorLayer.remove();

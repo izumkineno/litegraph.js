@@ -73,6 +73,7 @@ import {
     attachModernNodeRegistryApi,
     DefaultModernNodeBase,
     flushPendingModernNodeModules,
+    getSharedLeaferTextMetrics,
     installModernNodeModule,
     installModernNodeModules,
     ModernNodeContracts,
@@ -154,6 +155,7 @@ export {
     DefaultModernNodeBase,
     ModernNodeContracts,
     ModernNodeChangeMask,
+    getSharedLeaferTextMetrics,
     getModernWidgetRenderer,
     installModernNodeModule,
     installModernNodeModules,
@@ -251,6 +253,7 @@ export type LiteGraphNamespace = LiteGraphConstantsShape &
         installModernNodeModules: (
             moduleDefinitions: ReadonlyArray<ModernNodeModuleDefinition>
         ) => string[];
+        __leaferMetrics?: ReturnType<typeof getSharedLeaferTextMetrics>;
     };
 
 export interface LiteGraphAssembly {
@@ -297,6 +300,7 @@ export interface LiteGraphAssemblyOptions extends LiteGraphAssemblyBridgeOptions
 
 function installModernNodeApi(liteGraph: LiteGraphNamespace): void {
     attachModernNodeRegistryApi(liteGraph);
+    liteGraph.__leaferMetrics = getSharedLeaferTextMetrics();
     liteGraph.ModernNodeBase = ModernNodeBase;
     liteGraph.DefaultModernNodeBase = DefaultModernNodeBase;
     liteGraph.ModernNodeContracts = ModernNodeContracts;
