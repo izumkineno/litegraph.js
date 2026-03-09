@@ -651,6 +651,16 @@ export class SceneSyncController {
             this.nodesById.set(nodeId, node);
         }
 
+        const fastPathBounds = this.tryHandleModernForegroundDirtyFastPath(
+            nodeId,
+            dirtyForeground,
+            dirtyBackground
+        );
+        if (fastPathBounds) {
+            this.requestSceneRender(fastPathBounds);
+            return;
+        }
+
         const previousBounds = this.captureNodeClusterBounds(nodeId);
         this.nodeHosts.get(nodeId)?.repaint();
         if (!(dirtyForeground === true && dirtyBackground !== true)) {
@@ -658,6 +668,27 @@ export class SceneSyncController {
         }
         const nextBounds = this.captureNodeClusterBounds(nodeId);
         this.requestSceneRender(mergeRenderBounds(previousBounds, nextBounds));
+    }
+
+    private tryHandleModernForegroundDirtyFastPath(
+        nodeId: GraphMutationNodeId,
+        dirtyForeground?: boolean,
+        dirtyBackground?: boolean
+    ): RenderBoundsLike | null {
+        if (!(dirtyForeground === true && dirtyBackground !== true)) {
+            return null;
+        }
+
+        const host = this.nodeHosts.get(nodeId);
+        if (!(host instanceof ModernNodeHost)) {
+            return null;
+        }
+
+        if (!host.repaintForegroundState()) {
+            return null;
+        }
+
+        return expandRenderBounds(this.captureWorldRenderBounds(host.root));
     }
 
     private installNodeDirtyBridge(node: GraphMutationNodeLike): void {

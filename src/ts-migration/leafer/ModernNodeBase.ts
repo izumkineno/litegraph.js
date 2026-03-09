@@ -139,6 +139,10 @@ export abstract class ModernNodeBase extends LGraphNodeCanvasCollab {
         return mask || ModernNodeChangeMask.Data;
     }
 
+    peekModernChangeMask(): ModernNodeChangeMaskValue {
+        return this.modernChangeMask;
+    }
+
     override setProperty(name: string, value: unknown): void {
         super.setProperty(name, value);
         this.requestModernPatch(

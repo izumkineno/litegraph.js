@@ -241,6 +241,7 @@ export interface ModernNodeLike extends GraphMutationNodeLike {
         context: ModernNodeLifecycleContext<ModernNodeLike, ModernNodeHost>
     ) => ModernPortPresentation | null;
     consumeModernChangeMask?: () => ModernNodeChangeMaskValue;
+    peekModernChangeMask?: () => ModernNodeChangeMaskValue;
     mountContent?: (
         context: ModernNodeLifecycleContext<ModernNodeLike, ModernNodeHost>
     ) => unknown;
@@ -843,6 +844,34 @@ export class ModernNodeHost implements NodeViewHost {
         this.applyInteractionState();
         this.syncPosition();
         this.storeInspectableState();
+    }
+
+    repaintForegroundState(): boolean {
+        if (!this.mounted) {
+            return false;
+        }
+
+        const pendingChangeMask = toFiniteNumber(
+            this.node.peekModernChangeMask?.(),
+            ModernNodeChangeMask.None
+        );
+        if (pendingChangeMask !== ModernNodeChangeMask.None) {
+            return false;
+        }
+
+        const nextShellState = this.resolveShellState(ModernNodeChangeMask.Style);
+        if (
+            signatureOfShellGeometry(nextShellState) !==
+            signatureOfShellGeometry(this.shellState)
+        ) {
+            return false;
+        }
+
+        this.shellState = nextShellState;
+        this.applyShellVisualState();
+        this.applyInteractionState();
+        this.storeInspectableState();
+        return true;
     }
 
     private collectWidgetSchemas(): ReadonlyArray<ModernWidgetSchema> {
@@ -1477,8 +1506,6 @@ export class ModernNodeHost implements NodeViewHost {
         const contentArea = this.getContentArea();
 
         setRectIfChanged(headerRect, header);
-        setAttrIfChanged(headerRect, "fill", shellState.titleColor || "#283444");
-        setAttrIfChanged(headerRect, "stroke", shellState.borderColor || "#314254");
         setAttrIfChanged(
             headerRect,
             "cornerRadius",
@@ -1488,8 +1515,6 @@ export class ModernNodeHost implements NodeViewHost {
         setAttrIfChanged(bodyRect, "visible", Boolean(body));
         if (body) {
             setRectIfChanged(bodyRect, body);
-            setAttrIfChanged(bodyRect, "fill", shellState.bodyColor || "#101720");
-            setAttrIfChanged(bodyRect, "stroke", shellState.borderColor || "#314254");
             setAttrIfChanged(bodyRect, "cornerRadius", [0, 0, 12, 12]);
         }
 
@@ -1562,18 +1587,12 @@ export class ModernNodeHost implements NodeViewHost {
             Math.max(20, contentArea?.width || layout.width - BODY_PADDING_X * 2)
         );
 
-        setAttrIfChanged(
-            signalLamp,
-            "visible",
-            shellState.showSignalLamp !== false
-        );
         setAttrIfChanged(signalLamp, "x", 10);
         setAttrIfChanged(
             signalLamp,
             "y",
             header.y + (header.height - HEADER_SIGNAL_SIZE) / 2
         );
-        setAttrIfChanged(signalLamp, "fill", shellState.boxColor || "#666666");
 
         setAttrIfChanged(collapseOverlay, "visible", Boolean(layout.collapse));
         if (layout.collapse) {
@@ -1598,6 +1617,28 @@ export class ModernNodeHost implements NodeViewHost {
             "height",
             totalHeight + OUTLINE_PADDING * 2
         );
+        this.applyShellVisualState();
+    }
+
+    private applyShellVisualState(): void {
+        const shellState = this.shellState;
+        const headerRecord = this.shell.header as unknown as Record<string, unknown>;
+        const bodyRecord = this.shell.body as unknown as Record<string, unknown>;
+        const titleText = this.shell.title as unknown as Record<string, unknown>;
+        const signalLamp = this.shell.signalLamp as unknown as Record<string, unknown>;
+
+        setAttrIfChanged(headerRecord, "fill", shellState.titleColor || "#283444");
+        setAttrIfChanged(titleText, "fill", shellState.titleTextColor || "#F5F7FA");
+        setAttrIfChanged(
+            signalLamp,
+            "visible",
+            shellState.showSignalLamp !== false
+        );
+        setAttrIfChanged(signalLamp, "fill", shellState.boxColor || "#666666");
+
+        if (this.shellLayout.body) {
+            setAttrIfChanged(bodyRecord, "fill", shellState.bodyColor || "#101720");
+        }
     }
 
     private resolveMinimumBodyHeight(shellState?: ModernShellState): number {

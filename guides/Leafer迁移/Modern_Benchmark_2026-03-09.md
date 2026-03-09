@@ -25,6 +25,11 @@
   - `data_step_avg_ms ~= 2.65`
   - `event_step_avg_ms ~= 74.23`
   - `event exec_avg_ms ~= 20.07`
+- After adding a modern foreground-only fast repaint path:
+  - `create_total_ms ~= 166.2`
+  - `data_step_avg_ms ~= 1.70`
+  - `event_step_avg_ms ~= 43.13`
+  - `event exec_avg_ms ~= 10.82`
 
 ## What Improved
 - Active link presentation results are no longer dropped on every `lastTime` change.
@@ -34,8 +39,8 @@
 
 ## What Did Not Reach Target
 - The planned target for this pass was `event_step_avg_ms <= 45`.
-- Current best measured non-profiler run is still `~74.23ms`.
-- Worker offload helped the async event runtime path much more than the synchronous benchmark step path.
+- That target is now met by the latest non-profiler run: `~43.13ms`.
+- `create_total_ms` is still far above legacy and remains outside the original aspirational range.
 
 ## Root Cause
 - `EditorBenchmark.measureStepSamples()` measures synchronous `graph.runStep(1)` cost in a tight loop.
@@ -86,14 +91,16 @@
   - tied to the main-thread Leafer app host
 
 ## Next Main-Thread Targets
-- Reduce `ModernNodeHost.repaint()` work for foreground-only dirty paths.
 - Further cut `ModernNodeHost.syncPortLayer()` attr writes when geometry is stable.
 - Reduce `LinkViewHost.update()` attr churn for active links whose path is unchanged.
 - Avoid repeated text normalization / measurement work on high-frequency runtime paths.
+- Reduce `create_total_ms`, which is now the clearest remaining gap versus legacy.
 
 ## Files Touched In This Pass
 - `src/ts-migration/leafer/LeaferTaskWorker.ts`
 - `src/ts-migration/leafer/SceneSyncController.ts`
+- `src/ts-migration/leafer/ModernNodeHost.ts`
+- `src/ts-migration/leafer/ModernNodeBase.ts`
 
 ## Validation
 - `bunx tsc -p tsconfig.typecheck.json --pretty false`

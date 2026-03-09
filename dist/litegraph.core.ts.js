@@ -17703,6 +17703,9 @@ ${safeText}`;
       this.modernChangeMask = ModernNodeChangeMask.None;
       return mask || ModernNodeChangeMask.Data;
     }
+    peekModernChangeMask() {
+      return this.modernChangeMask;
+    }
     setProperty(name, value) {
       super.setProperty(name, value);
       this.requestModernPatch(
@@ -19171,6 +19174,28 @@ ${safeText}`;
       this.syncPosition();
       this.storeInspectableState();
     }
+    repaintForegroundState() {
+      var _a3, _b3;
+      if (!this.mounted) {
+        return false;
+      }
+      const pendingChangeMask = toFiniteNumber$2(
+        (_b3 = (_a3 = this.node).peekModernChangeMask) == null ? void 0 : _b3.call(_a3),
+        ModernNodeChangeMask.None
+      );
+      if (pendingChangeMask !== ModernNodeChangeMask.None) {
+        return false;
+      }
+      const nextShellState = this.resolveShellState(ModernNodeChangeMask.Style);
+      if (signatureOfShellGeometry(nextShellState) !== signatureOfShellGeometry(this.shellState)) {
+        return false;
+      }
+      this.shellState = nextShellState;
+      this.applyShellVisualState();
+      this.applyInteractionState();
+      this.storeInspectableState();
+      return true;
+    }
     collectWidgetSchemas() {
       var _a3, _b3, _c2;
       if (Boolean((_a3 = this.node.flags) == null ? void 0 : _a3.collapsed)) {
@@ -19692,8 +19717,6 @@ ${safeText}`;
       const totalHeight = header.height + ((body == null ? void 0 : body.height) || 0);
       const contentArea = this.getContentArea();
       setRectIfChanged(headerRect, header);
-      setAttrIfChanged(headerRect, "fill", shellState.titleColor || "#283444");
-      setAttrIfChanged(headerRect, "stroke", shellState.borderColor || "#314254");
       setAttrIfChanged(
         headerRect,
         "cornerRadius",
@@ -19702,8 +19725,6 @@ ${safeText}`;
       setAttrIfChanged(bodyRect, "visible", Boolean(body));
       if (body) {
         setRectIfChanged(bodyRect, body);
-        setAttrIfChanged(bodyRect, "fill", shellState.bodyColor || "#101720");
-        setAttrIfChanged(bodyRect, "stroke", shellState.borderColor || "#314254");
         setAttrIfChanged(bodyRect, "cornerRadius", [0, 0, 12, 12]);
       }
       const headerMeta = textMetrics.headerMeta;
@@ -19761,18 +19782,12 @@ ${safeText}`;
         "width",
         Math.max(20, (contentArea == null ? void 0 : contentArea.width) || layout.width - BODY_PADDING_X * 2)
       );
-      setAttrIfChanged(
-        signalLamp,
-        "visible",
-        shellState.showSignalLamp !== false
-      );
       setAttrIfChanged(signalLamp, "x", 10);
       setAttrIfChanged(
         signalLamp,
         "y",
         header.y + (header.height - HEADER_SIGNAL_SIZE) / 2
       );
-      setAttrIfChanged(signalLamp, "fill", shellState.boxColor || "#666666");
       setAttrIfChanged(collapseOverlay, "visible", Boolean(layout.collapse));
       if (layout.collapse) {
         setRectIfChanged(collapseOverlay, layout.collapse);
@@ -19794,6 +19809,25 @@ ${safeText}`;
         "height",
         totalHeight + OUTLINE_PADDING * 2
       );
+      this.applyShellVisualState();
+    }
+    applyShellVisualState() {
+      const shellState = this.shellState;
+      const headerRecord = this.shell.header;
+      const bodyRecord = this.shell.body;
+      const titleText = this.shell.title;
+      const signalLamp = this.shell.signalLamp;
+      setAttrIfChanged(headerRecord, "fill", shellState.titleColor || "#283444");
+      setAttrIfChanged(titleText, "fill", shellState.titleTextColor || "#F5F7FA");
+      setAttrIfChanged(
+        signalLamp,
+        "visible",
+        shellState.showSignalLamp !== false
+      );
+      setAttrIfChanged(signalLamp, "fill", shellState.boxColor || "#666666");
+      if (this.shellLayout.body) {
+        setAttrIfChanged(bodyRecord, "fill", shellState.bodyColor || "#101720");
+      }
     }
     resolveMinimumBodyHeight(shellState) {
       const slotCount = Math.max(
@@ -21587,6 +21621,15 @@ ${safeText}`;
       if (node2) {
         this.nodesById.set(nodeId, node2);
       }
+      const fastPathBounds = this.tryHandleModernForegroundDirtyFastPath(
+        nodeId,
+        dirtyForeground,
+        dirtyBackground
+      );
+      if (fastPathBounds) {
+        this.requestSceneRender(fastPathBounds);
+        return;
+      }
       const previousBounds = this.captureNodeClusterBounds(nodeId);
       (_a3 = this.nodeHosts.get(nodeId)) == null ? void 0 : _a3.repaint();
       if (!(dirtyForeground === true && dirtyBackground !== true)) {
@@ -21594,6 +21637,19 @@ ${safeText}`;
       }
       const nextBounds = this.captureNodeClusterBounds(nodeId);
       this.requestSceneRender(mergeRenderBounds(previousBounds, nextBounds));
+    }
+    tryHandleModernForegroundDirtyFastPath(nodeId, dirtyForeground, dirtyBackground) {
+      if (!(dirtyForeground === true && dirtyBackground !== true)) {
+        return null;
+      }
+      const host = this.nodeHosts.get(nodeId);
+      if (!(host instanceof ModernNodeHost)) {
+        return null;
+      }
+      if (!host.repaintForegroundState()) {
+        return null;
+      }
+      return expandRenderBounds(this.captureWorldRenderBounds(host.root));
     }
     installNodeDirtyBridge(node2) {
       if (this.dirtyBridgeUninstallers.has(node2.id)) {
