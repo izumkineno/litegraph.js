@@ -70,6 +70,13 @@ interface PendingActiveLinkPresentationRequest {
     readonly tasks: ReadonlyArray<LeaferActiveLinkPresentationTask>;
 }
 
+interface DeferredNodeDirtySignal {
+    readonly nodeId: GraphMutationNodeId;
+    readonly node?: GraphMutationNodeLike;
+    readonly dirtyForeground: boolean;
+    readonly dirtyBackground: boolean;
+}
+
 function toMutationKey(id: GraphMutationNodeId | GraphMutationLinkId): string {
     return String(id);
 }
@@ -194,6 +201,10 @@ export class SceneSyncController {
     private readonly groupDirtyBridgeUninstallers = new Map<
         GraphMutationGroupLike,
         () => void
+    >();
+    private readonly deferredNodeDirtySignalsByKey = new Map<
+        string,
+        DeferredNodeDirtySignal
     >();
     private readonly activeLinkIds = new Set<GraphMutationLinkId>();
     private readonly linkGeometryCache = new Map<
@@ -326,6 +337,36 @@ export class SceneSyncController {
         if (linkRefresh.hasMore || hasPendingNodeFrames) {
             this.ensureRuntimeAnimationFrame();
         }
+    }
+
+    flushDeferredNodeDirtySignals(): GraphMutationNodeId[] {
+        if (!this.deferredNodeDirtySignalsByKey.size) {
+            return [];
+        }
+
+        const pendingSignals = Array.from(this.deferredNodeDirtySignalsByKey.values());
+        this.deferredNodeDirtySignalsByKey.clear();
+
+        let dirtyBounds: RenderBoundsLike | null = null;
+        const processedNodeIds: GraphMutationNodeId[] = [];
+        for (let i = 0; i < pendingSignals.length; ++i) {
+            const pendingSignal = pendingSignals[i];
+            processedNodeIds.push(pendingSignal.nodeId);
+            dirtyBounds = mergeRenderBounds(
+                dirtyBounds,
+                this.processNodeDirty(
+                    pendingSignal.nodeId,
+                    pendingSignal.node,
+                    pendingSignal.dirtyForeground,
+                    pendingSignal.dirtyBackground
+                )
+            );
+        }
+
+        if (dirtyBounds) {
+            this.requestSceneRender(dirtyBounds);
+        }
+        return processedNodeIds;
     }
 
     repaintNodeHost(nodeId: GraphMutationNodeId): void {
@@ -490,6 +531,7 @@ export class SceneSyncController {
         this.pendingActiveLinkPresentationRequest = null;
         this.lastHandledActiveLinkPresentationRequestId = 0;
         this.pendingSettledNodeRepaints.clear();
+        this.deferredNodeDirtySignalsByKey.clear();
     }
 
     private ensureNodeHost(node: GraphMutationNodeLike): NodeHost {
@@ -666,6 +708,23 @@ export class SceneSyncController {
         dirtyForeground?: boolean,
         dirtyBackground?: boolean
     ): void {
+        const dirtyBounds = this.processNodeDirty(
+            nodeId,
+            node,
+            dirtyForeground,
+            dirtyBackground
+        );
+        if (dirtyBounds) {
+            this.requestSceneRender(dirtyBounds);
+        }
+    }
+
+    private processNodeDirty(
+        nodeId: GraphMutationNodeId,
+        node?: GraphMutationNodeLike,
+        dirtyForeground?: boolean,
+        dirtyBackground?: boolean
+    ): RenderBoundsLike | null {
         if (node) {
             this.nodesById.set(nodeId, node);
         }
@@ -676,8 +735,7 @@ export class SceneSyncController {
             dirtyBackground
         );
         if (fastPathBounds) {
-            this.requestSceneRender(fastPathBounds);
-            return;
+            return fastPathBounds;
         }
 
         const previousBounds = this.captureNodeClusterBounds(nodeId);
@@ -686,7 +744,7 @@ export class SceneSyncController {
             this.updateIncidentLinks(nodeId);
         }
         const nextBounds = this.captureNodeClusterBounds(nodeId);
-        this.requestSceneRender(mergeRenderBounds(previousBounds, nextBounds));
+        return mergeRenderBounds(previousBounds, nextBounds);
     }
 
     private tryHandleModernForegroundDirtyFastPath(
@@ -731,6 +789,16 @@ export class SceneSyncController {
             dirtyBackground?: boolean
         ): void => {
             originalSetDirtyCanvas?.(dirtyForeground, dirtyBackground);
+            if (
+                this.deferNodeDirtySignal(
+                    node.id,
+                    node,
+                    dirtyForeground,
+                    dirtyBackground
+                )
+            ) {
+                return;
+            }
             this.bus.emit("node:dirty", {
                 graph: this.graph,
                 nodeId: node.id,
@@ -746,6 +814,43 @@ export class SceneSyncController {
                 targetNode.setDirtyCanvas = ownSetDirtyCanvas;
             }
         });
+    }
+
+    private deferNodeDirtySignal(
+        nodeId: GraphMutationNodeId,
+        node: GraphMutationNodeLike,
+        dirtyForeground: boolean,
+        dirtyBackground?: boolean
+    ): boolean {
+        if (!this.isExecutionPhaseActive()) {
+            return false;
+        }
+
+        const key = toMutationKey(nodeId);
+        const previousSignal = this.deferredNodeDirtySignalsByKey.get(key);
+        this.deferredNodeDirtySignalsByKey.set(key, {
+            nodeId,
+            node,
+            dirtyForeground:
+                dirtyForeground ||
+                Boolean(previousSignal?.dirtyForeground),
+            dirtyBackground:
+                Boolean(dirtyBackground) ||
+                Boolean(previousSignal?.dirtyBackground),
+        });
+        return true;
+    }
+
+    private isExecutionPhaseActive(): boolean {
+        return (
+            toFiniteNumber(
+                (
+                    this.graph as GraphMutationGraphLike & {
+                        execution_phase_depth?: unknown;
+                    }
+                ).execution_phase_depth
+            ) > 0
+        );
     }
 
     private installGroupDirtyBridge(group: GraphMutationGroupLike): void {
@@ -1112,6 +1217,7 @@ export class SceneSyncController {
                     this.repaintNodeHostWithBounds(activeNodeIds[i])
                 );
             }
+            this.decayTransientNodeAnimations(activeNodeIds);
             didUpdate = true;
         }
 
@@ -1122,6 +1228,31 @@ export class SceneSyncController {
                 this.syncPendingSettledNodeRepaints(activeNodeIds) ||
                 this.pendingSettledNodeRepaints.size > 0,
         };
+    }
+
+    private decayTransientNodeAnimations(
+        nodeIds: readonly GraphMutationNodeId[]
+    ): void {
+        for (let i = 0; i < nodeIds.length; ++i) {
+            const node = this.nodesById.get(nodeIds[i]);
+            if (!node) {
+                continue;
+            }
+
+            this.decayTransientNodeAnimation(node as RuntimeAnimatedNode);
+        }
+    }
+
+    private decayTransientNodeAnimation(node: RuntimeAnimatedNode): void {
+        const executeFrames = toFiniteNumber(node.execute_triggered);
+        if (executeFrames > 0) {
+            node.execute_triggered = Math.max(0, executeFrames - 1);
+        }
+
+        const actionFrames = toFiniteNumber(node.action_triggered);
+        if (actionFrames > 0) {
+            node.action_triggered = Math.max(0, actionFrames - 1);
+        }
     }
 
     private hasTransientNodeAnimation(node: GraphMutationNodeLike): boolean {

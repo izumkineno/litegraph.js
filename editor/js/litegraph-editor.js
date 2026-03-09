@@ -246,6 +246,14 @@ Editor.prototype.onPlayButton = function() {
 Editor.prototype.onPlayStepButton = function() {
     var graph = this.graph;
     graph.runStep(1);
+    if (
+        this.graphcanvas.renderRuntime === "leafer" &&
+        graph &&
+        typeof graph.flushRuntimeExecutionRender === "function"
+    ) {
+        graph.flushRuntimeExecutionRender();
+        return;
+    }
     this.requestRuntimeRender();
 };
 

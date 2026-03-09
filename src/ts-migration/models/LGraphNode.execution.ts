@@ -84,6 +84,7 @@ interface LGraphExecutionStateLike extends Pick<LGraph, "iteration"> {
     nodes_executing: Record<string, unknown>;
     nodes_actioning: Record<string, unknown>;
     nodes_executedAction: Record<string, unknown>;
+    trackRuntimeExecutionNode?: (nodeId: number | string) => void;
     _last_trigger_time?: number;
 }
 
@@ -530,6 +531,7 @@ export class LGraphNodeExecution extends LGraphNode {
                     this.id + "_exec_" + Math.floor(Math.random() * 9999);
             }
 
+            graph.trackRuntimeExecutionNode?.(this.id);
             graph.nodes_executing[String(this.id)] = true; // .push(this.id);
 
             this.onExecute(param, runtimeOptions);
@@ -578,6 +580,7 @@ export class LGraphNodeExecution extends LGraphNode {
                     Math.floor(Math.random() * 9999);
             }
 
+            graph.trackRuntimeExecutionNode?.(this.id);
             graph.nodes_actioning[String(this.id)] = action
                 ? action
                 : "actioning"; // .push(this.id);

@@ -44,6 +44,9 @@ interface GraphCanvasExecutionLike {
         forceNodeRepaint?: boolean,
         nodeIds?: readonly (number | string)[]
     ) => void;
+    sceneSyncController?: {
+        flushDeferredNodeDirtySignals?: () => readonly (number | string)[];
+    } | null;
 }
 
 type GraphNodeExecutionBase = Pick<
@@ -80,66 +83,51 @@ export class LGraphExecution extends LGraph {
         return nodesById[String(id)] || null;
     }
 
-    private requestLeaferExecutionRender(): void {
+    flushRuntimeExecutionRender(): void {
+        const nodeIds = this.consumeRuntimeDirtyNodeIds();
         const canvasList =
             this.list_of_graphcanvas as GraphCanvasExecutionLike[] | null;
         if (!canvasList?.length) {
             return;
         }
 
-        const nodeIds = this.collectRuntimeDirtyNodeIds();
-
         for (let i = 0; i < canvasList.length; ++i) {
             const canvas = canvasList[i];
-            if (
-                canvas?.renderRuntime !== "leafer" ||
-                typeof canvas.requestRuntimeRender !== "function"
-            ) {
+            if (canvas?.renderRuntime !== "leafer") {
                 continue;
             }
 
-            canvas.requestRuntimeRender(nodeIds.length > 0, nodeIds);
+            const processedNodeIds =
+                canvas.sceneSyncController?.flushDeferredNodeDirtySignals?.() || [];
+            if (typeof canvas.requestRuntimeRender !== "function") {
+                continue;
+            }
+
+            if (!nodeIds.length) {
+                if (processedNodeIds.length) {
+                    canvas.requestRuntimeRender(false);
+                }
+                continue;
+            }
+
+            const processedNodeKeySet =
+                processedNodeIds.length > 0
+                    ? new Set(processedNodeIds.map(String))
+                    : null;
+            const remainingNodeIds = processedNodeKeySet
+                ? nodeIds.filter((nodeId) => !processedNodeKeySet.has(String(nodeId)))
+                : nodeIds;
+
+            if (remainingNodeIds.length) {
+                canvas.requestRuntimeRender(true, remainingNodeIds);
+            } else if (processedNodeIds.length) {
+                canvas.requestRuntimeRender(false);
+            }
         }
     }
 
-    private collectRuntimeDirtyNodeIds(): (number | string)[] {
-        const collected = new Set<number | string>();
-        const sources = [
-            this.nodes_executing as unknown as
-                | Record<string, unknown>
-                | null
-                | undefined,
-            this.nodes_actioning as unknown as
-                | Record<string, unknown>
-                | null
-                | undefined,
-            this.nodes_executedAction as unknown as
-                | Record<string, unknown>
-                | null
-                | undefined,
-        ];
-
-        for (let sourceIndex = 0; sourceIndex < sources.length; ++sourceIndex) {
-            const source = sources[sourceIndex];
-            if (!source) {
-                continue;
-            }
-
-            for (const [key, value] of Object.entries(source)) {
-                if (!value) {
-                    continue;
-                }
-
-                const node = this.getNodeByIdExecution(key);
-                if (!node) {
-                    continue;
-                }
-
-                collected.add(node.id);
-            }
-        }
-
-        return Array.from(collected);
+    protected override afterExecutionTick(): void {
+        this.flushRuntimeExecutionRender();
     }
 
     /**
@@ -150,108 +138,106 @@ export class LGraphExecution extends LGraph {
      * @param {number} limit max number of nodes to execute (used to execute from start to a node)
      */
     runStep(num?: number, do_not_catch_errors?: boolean, limit?: number): void {
-        const liteGraph = resolveExecutionHost(this);
+        this.execution_phase_depth += 1;
+        try {
+            const liteGraph = resolveExecutionHost(this);
 
-        num = num || 1;
+            num = num || 1;
+            const totalSteps = num;
 
-        const start = liteGraph.getTime();
-        this.globaltime = 0.001 * (start - this.starttime);
+            const start = liteGraph.getTime();
+            this.globaltime = 0.001 * (start - this.starttime);
 
-        // not optimal: executes possible pending actions in node, problem is it is not optimized
-        // it is done here as if it was done in the later loop it wont be called in the node missed the onExecute
+            // not optimal: executes possible pending actions in node, problem is it is not optimized
+            // it is done here as if it was done in the later loop it wont be called in the node missed the onExecute
 
-        // from now on it will iterate only on executable nodes which is faster
-        const nodes = (this._nodes_executable
-            ? this._nodes_executable
-            : this._nodes) as GraphNodeExecutionLike[] | null;
-        if (!nodes) {
-            return;
-        }
+            // from now on it will iterate only on executable nodes which is faster
+            const nodes = (this._nodes_executable
+                ? this._nodes_executable
+                : this._nodes) as GraphNodeExecutionLike[] | null;
+            if (!nodes) {
+                return;
+            }
 
-        limit = limit || nodes.length;
+            const maxNodes =
+                limit && limit > 0 ? Math.min(limit, nodes.length) : nodes.length;
+            const useDeferredActions = liteGraph.use_deferred_actions === true;
+            const onExecuteStep = this.onExecuteStep;
+            const onAfterExecute = this.onAfterExecute;
+            const executeNode = (node: GraphNodeExecutionLike): void => {
+                if (
+                    useDeferredActions &&
+                    node._waiting_actions &&
+                    node._waiting_actions.length &&
+                    typeof node.executePendingActions === "function"
+                ) {
+                    node.executePendingActions();
+                }
 
-        if (do_not_catch_errors) {
-            // iterations
-            for (let i = 0; i < num; i++) {
-                for (let j = 0; j < limit; ++j) {
-                    const node = nodes[j];
-                    if (
-                        liteGraph.use_deferred_actions &&
-                        node._waiting_actions &&
-                        node._waiting_actions.length
-                    ) {
-                        (node as { executePendingActions: () => void }).executePendingActions();
-                    }
-                    if (node.mode == liteGraph.ALWAYS && node.onExecute) {
-                        // wrap node.onExecute();
-                        (node as { doExecute: () => void }).doExecute();
-                    }
+                if (node.mode != liteGraph.ALWAYS || !node.onExecute) {
+                    return;
+                }
+
+                if (typeof node.doExecute === "function") {
+                    node.doExecute();
+                    return;
+                }
+
+                node.onExecute();
+            };
+            const runSingleStep = (): void => {
+                for (let j = 0; j < maxNodes; ++j) {
+                    executeNode(nodes[j]);
                 }
 
                 this.fixedtime += this.fixedtime_lapse;
-                if (this.onExecuteStep) {
-                    this.onExecuteStep();
+                if (onExecuteStep) {
+                    onExecuteStep();
+                }
+            };
+            const runAllSteps = (): void => {
+                for (let i = 0; i < totalSteps; ++i) {
+                    runSingleStep();
+                }
+                if (onAfterExecute) {
+                    onAfterExecute();
+                }
+            };
+
+            if (do_not_catch_errors) {
+                runAllSteps();
+            } else {
+                try {
+                    runAllSteps();
+                    this.errors_in_execution = false;
+                } catch (err) {
+                    this.errors_in_execution = true;
+                    if (liteGraph.throw_errors) {
+                        throw err;
+                    }
+                    if (liteGraph.debug) {
+                        console.log("Error during execution: " + err);
+                    }
+                    this.stop();
                 }
             }
 
-            if (this.onAfterExecute) {
-                this.onAfterExecute();
+            const now = liteGraph.getTime();
+            let elapsed = now - start;
+            if (elapsed == 0) {
+                elapsed = 1;
             }
-        } else {
-            // catch errors
-            try {
-                // iterations
-                for (let i = 0; i < num; i++) {
-                    for (let j = 0; j < limit; ++j) {
-                        const node = nodes[j];
-                        if (
-                            liteGraph.use_deferred_actions &&
-                            node._waiting_actions &&
-                            node._waiting_actions.length
-                        ) {
-                            (node as { executePendingActions: () => void }).executePendingActions();
-                        }
-                        if (node.mode == liteGraph.ALWAYS && node.onExecute) {
-                            node.onExecute();
-                        }
-                    }
-
-                    this.fixedtime += this.fixedtime_lapse;
-                    if (this.onExecuteStep) {
-                        this.onExecuteStep();
-                    }
-                }
-
-                if (this.onAfterExecute) {
-                    this.onAfterExecute();
-                }
-                this.errors_in_execution = false;
-            } catch (err) {
-                this.errors_in_execution = true;
-                if (liteGraph.throw_errors) {
-                    throw err;
-                }
-                if (liteGraph.debug) {
-                    console.log("Error during execution: " + err);
-                }
-                this.stop();
+            this.execution_time = 0.001 * elapsed;
+            this.globaltime += 0.001 * elapsed;
+            this.iteration += 1;
+            this.elapsed_time = (now - this.last_update_time) * 0.001;
+            this.last_update_time = now;
+            this.resetRuntimeExecutionState();
+        } finally {
+            if (this.execution_phase_depth > 0) {
+                this.execution_phase_depth -= 1;
             }
         }
-
-        const now = liteGraph.getTime();
-        let elapsed = now - start;
-        if (elapsed == 0) {
-            elapsed = 1;
-        }
-        this.execution_time = 0.001 * elapsed;
-        this.globaltime += 0.001 * elapsed;
-        this.iteration += 1;
-        this.elapsed_time = (now - this.last_update_time) * 0.001;
-        this.last_update_time = now;
-        this.requestLeaferExecutionRender();
-        this.nodes_executing = [];
-        this.nodes_actioning = [];
-        this.nodes_executedAction = [];
     }
 
     /**

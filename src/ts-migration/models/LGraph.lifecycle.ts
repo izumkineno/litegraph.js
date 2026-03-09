@@ -16,10 +16,25 @@ interface LGraphCanvasLifecycleGraphLike {
     detachCanvas: (canvas: LGraphCanvasLifecycleLike) => void;
 }
 
+interface LeaferExecutionAppLike {
+    nextRender: (item: () => void, bind?: object, off?: "off") => void;
+    removeNextRender?: (item: () => void) => void;
+    requestRender: (change?: boolean) => void;
+}
+
+interface LGraphCanvasExecutionSchedulerLike extends LGraphCanvasLifecycleLike {
+    renderRuntime?: "legacy-canvas" | "leafer";
+    leaferAppHost?: {
+        app?: LeaferExecutionAppLike | null;
+    } | null;
+}
+
 export interface LGraphCanvasLifecycleLike
     extends GraphCanvasLifecyclePort<LGraphCanvasLifecycleGraphLike> {
     constructor: unknown;
 }
+
+type ExecutionScheduleKind = "none" | "leafer-frame" | "raf" | "timer";
 
 export interface LiteGraphLifecycleHost
     extends Pick<LiteGraphConstantsShape, "debug"> {
@@ -90,20 +105,56 @@ export class LGraph {
 
     catch_errors = true;
 
-    nodes_executing: unknown[] = [];
-    nodes_actioning: unknown[] = [];
-    nodes_executedAction: unknown[] = [];
+    nodes_executing: Record<string, unknown> = {};
+    nodes_actioning: Record<string, unknown> = {};
+    nodes_executedAction: Record<string, unknown> = {};
 
     // subgraph_data
     inputs: Record<string, unknown> = {};
     outputs: Record<string, unknown> = {};
 
-    execution_timer_id: number | ReturnType<typeof setInterval> | null = null;
+    execution_timer_id: number | ReturnType<typeof setTimeout> | null = null;
+    protected execution_schedule_kind: ExecutionScheduleKind = "none";
+    protected execution_schedule_interval = 0;
+    protected execution_leafer_app: LeaferExecutionAppLike | null = null;
+    protected execution_animation_frame_id: number | null = null;
+    protected execution_phase_depth = 0;
+    protected readonly runtime_dirty_node_ids = new Set<number | string>();
+    protected readonly runtime_state_touched_node_keys = new Set<string>();
+    protected readonly runtime_state_touched_node_id_list: string[] = [];
 
     onPlayEvent?: () => void;
     onStopEvent?: () => void;
     onBeforeStep?: () => void;
     onAfterStep?: () => void;
+    protected readonly executionTick = (): void => {
+        const scheduleKind = this.execution_schedule_kind;
+        if (scheduleKind === "none" || this.status !== LGraph.STATUS_RUNNING) {
+            return;
+        }
+
+        if (scheduleKind === "timer") {
+            this.execution_timer_id = null;
+        } else if (scheduleKind === "raf") {
+            this.execution_animation_frame_id = null;
+            this.execution_timer_id = null;
+        }
+
+        if (this.onBeforeStep) {
+            this.onBeforeStep();
+        }
+        this.runStep(1, !this.catch_errors);
+        this.afterExecutionTick();
+        if (this.onAfterStep) {
+            this.onAfterStep();
+        }
+
+        if (this.status !== LGraph.STATUS_RUNNING) {
+            return;
+        }
+
+        this.scheduleNextExecutionTick();
+    };
 
     constructor(o?: object) {
         if (resolveLifecycleHost(this).debug) {
@@ -175,9 +226,13 @@ export class LGraph {
 
         this.catch_errors = true;
 
-        this.nodes_executing = [];
-        this.nodes_actioning = [];
-        this.nodes_executedAction = [];
+        this.nodes_executing = {};
+        this.nodes_actioning = {};
+        this.nodes_executedAction = {};
+        this.execution_phase_depth = 0;
+        this.runtime_dirty_node_ids.clear();
+        this.runtime_state_touched_node_keys.clear();
+        this.runtime_state_touched_node_id_list.length = 0;
 
         // subgraph_data
         this.inputs = {};
@@ -253,42 +308,8 @@ export class LGraph {
         // launch
         this.starttime = resolveLifecycleHost(this).getTime();
         this.last_update_time = this.starttime;
-        interval = interval || 0;
-        const that = this;
-
-        // execute once per frame
-        if (
-            interval == 0 &&
-            typeof window != "undefined" &&
-            window.requestAnimationFrame
-        ) {
-            const on_frame = (): void => {
-                if (that.execution_timer_id != -1) {
-                    return;
-                }
-                window.requestAnimationFrame(on_frame);
-                if (that.onBeforeStep) {
-                    that.onBeforeStep();
-                }
-                that.runStep(1, !that.catch_errors);
-                if (that.onAfterStep) {
-                    that.onAfterStep();
-                }
-            };
-            this.execution_timer_id = -1;
-            on_frame();
-        } else {
-            // execute every 'interval' ms
-            this.execution_timer_id = setInterval(function() {
-                if (that.onBeforeStep) {
-                    that.onBeforeStep();
-                }
-                that.runStep(1, !that.catch_errors);
-                if (that.onAfterStep) {
-                    that.onAfterStep();
-                }
-            }, interval);
-        }
+        this.execution_schedule_interval = Math.max(0, interval || 0);
+        this.beginExecutionSchedule();
     }
 
     /**
@@ -306,12 +327,7 @@ export class LGraph {
             this.onStopEvent();
         }
 
-        if (this.execution_timer_id != null) {
-            if (this.execution_timer_id != -1) {
-                clearInterval(this.execution_timer_id as ReturnType<typeof setInterval>);
-            }
-            this.execution_timer_id = null;
-        }
+        this.clearExecutionSchedule();
 
         this.sendEventToAllNodes("onStop");
     }
@@ -353,6 +369,42 @@ export class LGraph {
         // implemented in Task 11
     }
 
+    protected trackRuntimeExecutionNode(nodeId: number | string): void {
+        this.runtime_dirty_node_ids.add(nodeId);
+        const key = String(nodeId);
+        if (!this.runtime_state_touched_node_keys.has(key)) {
+            this.runtime_state_touched_node_keys.add(key);
+            this.runtime_state_touched_node_id_list.push(key);
+        }
+    }
+
+    protected consumeRuntimeDirtyNodeIds(): (number | string)[] {
+        if (!this.runtime_dirty_node_ids.size) {
+            return [];
+        }
+
+        const dirtyNodeIds = Array.from(this.runtime_dirty_node_ids);
+        this.runtime_dirty_node_ids.clear();
+        return dirtyNodeIds;
+    }
+
+    protected resetRuntimeExecutionState(): void {
+        const touchedNodeIds = this.runtime_state_touched_node_id_list;
+        for (let i = 0; i < touchedNodeIds.length; ++i) {
+            const key = touchedNodeIds[i];
+            delete this.nodes_executing[key];
+            delete this.nodes_actioning[key];
+            delete this.nodes_executedAction[key];
+        }
+
+        touchedNodeIds.length = 0;
+        this.runtime_state_touched_node_keys.clear();
+    }
+
+    protected afterExecutionTick(): void {
+        // implemented by execution host when runtime-side flushing is needed
+    }
+
     change(): void {
         // implemented in later tasks
     }
@@ -367,5 +419,116 @@ export class LGraph {
         _mode?: unknown
     ): void {
         // implemented in later tasks
+    }
+
+    private beginExecutionSchedule(): void {
+        this.clearExecutionSchedule();
+
+        if (this.execution_schedule_interval > 0) {
+            this.execution_schedule_kind = "timer";
+            this.scheduleNextExecutionTick();
+            return;
+        }
+
+        const leaferApp = this.resolveLeaferExecutionApp();
+        if (leaferApp) {
+            this.execution_schedule_kind = "leafer-frame";
+            this.execution_leafer_app = leaferApp;
+            this.scheduleNextExecutionTick();
+            return;
+        }
+
+        if (typeof window != "undefined") {
+            this.execution_schedule_kind = "raf";
+            this.scheduleNextExecutionTick();
+            return;
+        }
+
+        this.execution_schedule_kind = "timer";
+        this.scheduleNextExecutionTick();
+    }
+
+    private scheduleNextExecutionTick(): void {
+        switch (this.execution_schedule_kind) {
+            case "leafer-frame":
+                if (!this.execution_leafer_app) {
+                    this.execution_schedule_kind = "timer";
+                    this.scheduleNextExecutionTick();
+                    return;
+                }
+                this.execution_leafer_app.nextRender(this.executionTick, this);
+                this.execution_leafer_app.requestRender();
+                return;
+            case "raf":
+                this.execution_animation_frame_id = window.requestAnimationFrame(
+                    this.executionTick
+                );
+                this.execution_timer_id = this.execution_animation_frame_id;
+                return;
+            case "timer":
+                this.execution_timer_id = setTimeout(
+                    this.executionTick,
+                    this.execution_schedule_interval
+                );
+                return;
+            default:
+                return;
+        }
+    }
+
+    private clearExecutionSchedule(): void {
+        const previousKind = this.execution_schedule_kind;
+        const previousTimerId = this.execution_timer_id;
+        const previousAnimationFrameId = this.execution_animation_frame_id;
+        const previousLeaferApp = this.execution_leafer_app;
+
+        this.execution_schedule_kind = "none";
+        this.execution_timer_id = null;
+        this.execution_animation_frame_id = null;
+        this.execution_leafer_app = null;
+
+        if (previousKind === "leafer-frame" && previousLeaferApp) {
+            if (typeof previousLeaferApp.removeNextRender === "function") {
+                previousLeaferApp.removeNextRender(this.executionTick);
+            } else {
+                previousLeaferApp.nextRender(this.executionTick, this, "off");
+            }
+            return;
+        }
+
+        if (previousKind === "raf" && previousAnimationFrameId !== null) {
+            window.cancelAnimationFrame(previousAnimationFrameId);
+            return;
+        }
+
+        if (previousKind === "timer" && previousTimerId != null) {
+            clearTimeout(previousTimerId as ReturnType<typeof setTimeout>);
+        }
+    }
+
+    private resolveLeaferExecutionApp(): LeaferExecutionAppLike | null {
+        const canvasList =
+            this.list_of_graphcanvas as LGraphCanvasExecutionSchedulerLike[] | null;
+        if (!canvasList?.length) {
+            return null;
+        }
+
+        for (let i = 0; i < canvasList.length; ++i) {
+            const canvas = canvasList[i];
+            if (canvas?.renderRuntime !== "leafer") {
+                continue;
+            }
+
+            const app = canvas.leaferAppHost?.app || null;
+            if (
+                app &&
+                typeof app.nextRender === "function" &&
+                typeof app.requestRender === "function"
+            ) {
+                return app;
+            }
+        }
+
+        return null;
     }
 }
