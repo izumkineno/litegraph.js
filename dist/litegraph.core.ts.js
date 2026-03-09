@@ -8620,6 +8620,308 @@ var LiteGraphTSMigration = (function(exports) {
     }
     return dialog;
   }
+  function toText(value) {
+    if (value === null || value === void 0) {
+      return "";
+    }
+    return String(value);
+  }
+  function getVisibleSlots(node2, side) {
+    const source = side === "inputs" ? (node2 == null ? void 0 : node2.inputs) || [] : (node2 == null ? void 0 : node2.outputs) || [];
+    const filtered = [];
+    for (let i2 = 0; i2 < source.length; ++i2) {
+      const slot = source[i2];
+      if (!slot) {
+        continue;
+      }
+      if (side === "inputs" && slot.not_subgraph_input) {
+        continue;
+      }
+      if (side === "outputs" && slot.not_subgraph_output) {
+        continue;
+      }
+      filtered.push(slot);
+    }
+    return filtered;
+  }
+  function createSignature(node2) {
+    const inputs = getVisibleSlots(node2, "inputs").map((slot) => `${toText(slot.name)}:${toText(slot.type)}`).join("|");
+    const outputs = getVisibleSlots(node2, "outputs").map((slot) => `${toText(slot.name)}:${toText(slot.type)}`).join("|");
+    return `${inputs}__${outputs}`;
+  }
+  function styleSidebarRoot(root) {
+    root.style.position = "absolute";
+    root.style.inset = "0";
+    root.style.pointerEvents = "none";
+    root.style.zIndex = "30";
+  }
+  function styleSidebarPanel(root, side) {
+    root.style.position = "absolute";
+    root.style.top = "10px";
+    root.style.bottom = "10px";
+    root.style.width = "200px";
+    root.style.display = "flex";
+    root.style.flexDirection = "column";
+    root.style.pointerEvents = "auto";
+    root.style.borderRadius = "8px";
+    root.style.background = "rgba(17,17,17,0.88)";
+    root.style.border = "1px solid rgba(255,255,255,0.06)";
+    root.style.boxShadow = "0 8px 24px rgba(0,0,0,0.18)";
+    root.style.backdropFilter = "blur(4px)";
+    root.style.overflow = "hidden";
+    if (side === "left") {
+      root.style.left = "10px";
+    } else {
+      root.style.right = "10px";
+    }
+  }
+  function createSidebarDom(documentRef, side) {
+    const root = documentRef.createElement("div");
+    root.className = `litegraph subgraph-sidebar subgraph-sidebar-${side}`;
+    styleSidebarPanel(root, side);
+    const header = documentRef.createElement("div");
+    header.style.display = "flex";
+    header.style.alignItems = "center";
+    header.style.justifyContent = "space-between";
+    header.style.padding = "12px 10px 8px";
+    header.style.gap = "8px";
+    const title = documentRef.createElement("span");
+    title.style.fontSize = "14px";
+    title.style.color = "#888";
+    title.style.fontFamily = "Arial, sans-serif";
+    const closeButton = documentRef.createElement("button");
+    closeButton.type = "button";
+    closeButton.textContent = "X";
+    closeButton.style.width = "20px";
+    closeButton.style.height = "20px";
+    closeButton.style.border = "0";
+    closeButton.style.borderRadius = "4px";
+    closeButton.style.background = "#151515";
+    closeButton.style.color = "#AAA";
+    closeButton.style.cursor = "pointer";
+    closeButton.style.padding = "0";
+    closeButton.style.lineHeight = "20px";
+    closeButton.style.fontSize = "12px";
+    header.append(title, closeButton);
+    const body = documentRef.createElement("div");
+    body.style.flex = "1";
+    body.style.overflow = "auto";
+    body.style.padding = "0 10px";
+    const footer = documentRef.createElement("div");
+    footer.style.padding = "8px 10px 10px";
+    const addButton = documentRef.createElement("button");
+    addButton.type = "button";
+    addButton.textContent = "+";
+    addButton.style.width = "100%";
+    addButton.style.height = "28px";
+    addButton.style.border = "0";
+    addButton.style.borderRadius = "6px";
+    addButton.style.background = "#151515";
+    addButton.style.color = "#AAA";
+    addButton.style.cursor = "pointer";
+    addButton.style.fontSize = "18px";
+    addButton.style.lineHeight = "28px";
+    addButton.style.padding = "0";
+    footer.appendChild(addButton);
+    root.append(header, body, footer);
+    return {
+      root,
+      title,
+      closeButton,
+      body,
+      footer,
+      addButton
+    };
+  }
+  function createSlotRow(documentRef, slot, side, onClick) {
+    const row = documentRef.createElement("button");
+    row.type = "button";
+    row.className = "subgraph_property";
+    row.style.width = "100%";
+    row.style.display = "flex";
+    row.style.alignItems = "center";
+    row.style.gap = "4px";
+    row.style.padding = "6px 8px";
+    row.style.margin = "0 0 6px";
+    row.style.border = "0";
+    row.style.borderRadius = "6px";
+    row.style.background = "rgba(255,255,255,0.02)";
+    row.style.color = "#AAA";
+    row.style.cursor = "pointer";
+    row.style.textAlign = "left";
+    const bullet = documentRef.createElement("span");
+    bullet.className = "bullet_icon";
+    bullet.style.marginLeft = "0";
+    bullet.style.backgroundColor = "#9C9";
+    if (side === "outputs") {
+      bullet.style.order = "3";
+      bullet.style.marginLeft = "8px";
+      bullet.style.marginRight = "0";
+    }
+    const name = documentRef.createElement("span");
+    name.className = "name";
+    name.textContent = toText(slot.name);
+    name.style.flex = "1";
+    name.style.minWidth = "0";
+    name.style.overflow = "hidden";
+    name.style.textOverflow = "ellipsis";
+    name.style.whiteSpace = "nowrap";
+    name.style.color = "#AAA";
+    const type = documentRef.createElement("span");
+    type.className = "type";
+    type.textContent = toText(slot.type);
+    type.style.color = "#777";
+    type.style.marginLeft = side === "inputs" ? "8px" : "0";
+    type.style.whiteSpace = "nowrap";
+    if (side === "inputs") {
+      row.append(bullet, name, type);
+    } else {
+      row.append(type, name, bullet);
+    }
+    row.addEventListener("click", onClick);
+    return row;
+  }
+  function spawnSubgraphProxyNode(context, subnode, slot, side, event2) {
+    var _a3, _b3, _c2, _d2, _e2, _f, _g, _h2;
+    const graph = context.getCurrentGraph();
+    if (!(graph == null ? void 0 : graph.add)) {
+      return;
+    }
+    const type = side === "inputs" ? ((_a3 = subnode.constructor) == null ? void 0 : _a3.input_node_type) || "graph/input" : ((_b3 = subnode.constructor) == null ? void 0 : _b3.output_node_type) || "graph/output";
+    const newNode = context.createNode(type);
+    if (!newNode) {
+      console.error(
+        side === "inputs" ? "graph input node not found:" : "graph output node not found:",
+        type
+      );
+      return;
+    }
+    (_c2 = graph.beforeChange) == null ? void 0 : _c2.call(graph);
+    graph.add(newNode);
+    if (typeof newNode.setProperty === "function") {
+      newNode.setProperty("name", slot.name);
+      newNode.setProperty("type", slot.type);
+    } else {
+      newNode.properties = newNode.properties || {};
+      newNode.properties.name = slot.name;
+      newNode.properties.type = slot.type;
+    }
+    const offset = context.convertEventToCanvasOffset(event2);
+    newNode.pos[0] = offset[0] - 5;
+    newNode.pos[1] = offset[1] - 5;
+    (_d2 = graph.afterChange) == null ? void 0 : _d2.call(graph);
+    context.selectNodes([newNode]);
+    (_f = (_e2 = context.sceneSyncController) == null ? void 0 : _e2.repaintAllNodeHosts) == null ? void 0 : _f.call(_e2);
+    (_h2 = (_g = context.canvas) == null ? void 0 : _g.focus) == null ? void 0 : _h2.call(_g);
+  }
+  function renderSidebar(context, dom, subnode, side) {
+    dom.title.textContent = side === "inputs" ? "Graph Inputs" : "Graph Outputs";
+    dom.body.innerHTML = "";
+    const slots = getVisibleSlots(subnode, side);
+    for (let i2 = 0; i2 < slots.length; ++i2) {
+      const slot = slots[i2];
+      const row = createSlotRow(
+        dom.body.ownerDocument,
+        slot,
+        side,
+        (event2) => {
+          spawnSubgraphProxyNode(context, subnode, slot, side, event2);
+        }
+      );
+      dom.body.appendChild(row);
+    }
+  }
+  function destroySubgraphSidebars(state) {
+    state == null ? void 0 : state.destroy();
+    return null;
+  }
+  function syncSubgraphSidebars(context, currentState) {
+    const mount = context.mount;
+    const graph = context.getCurrentGraph() || null;
+    const subnode = (graph == null ? void 0 : graph._subgraph_node) || null;
+    if (!mount || !graph || !subnode) {
+      return destroySubgraphSidebars(currentState);
+    }
+    if (!mount.style.position) {
+      mount.style.position = "relative";
+    }
+    if (currentState) {
+      if (!currentState.root.isConnected) {
+        currentState = destroySubgraphSidebars(currentState);
+      } else {
+        currentState.refresh();
+        if (currentState.root.isConnected) {
+          return currentState;
+        }
+        currentState = null;
+      }
+    }
+    const documentRef = mount.ownerDocument;
+    const root = documentRef.createElement("div");
+    root.className = "litegraph litegraph-subgraph-sidebars";
+    styleSidebarRoot(root);
+    const left = createSidebarDom(documentRef, "left");
+    const right = createSidebarDom(documentRef, "right");
+    root.append(left.root, right.root);
+    mount.appendChild(root);
+    let signature = "";
+    let graphRef = null;
+    let nodeRef = null;
+    const ownerWindow = documentRef.defaultView || window;
+    const refresh = () => {
+      const liveGraph = context.getCurrentGraph() || null;
+      const liveNode = (liveGraph == null ? void 0 : liveGraph._subgraph_node) || null;
+      if (!liveGraph || !liveNode || !root.isConnected) {
+        state.destroy();
+        return;
+      }
+      if (root.parentElement !== context.mount && context.mount) {
+        context.mount.appendChild(root);
+      }
+      const nextSignature = createSignature(liveNode);
+      if (nextSignature === signature && graphRef === liveGraph && nodeRef === liveNode) {
+        return;
+      }
+      signature = nextSignature;
+      graphRef = liveGraph;
+      nodeRef = liveNode;
+      renderSidebar(context, left, liveNode, "inputs");
+      renderSidebar(context, right, liveNode, "outputs");
+    };
+    const state = {
+      root,
+      left,
+      right,
+      signature,
+      graphRef,
+      nodeRef,
+      refresh,
+      destroy: () => {
+        if (pollHandle !== null) {
+          ownerWindow.clearInterval(pollHandle);
+        }
+        root.remove();
+      }
+    };
+    left.closeButton.addEventListener("click", () => {
+      context.closeSubgraph();
+    });
+    right.closeButton.addEventListener("click", () => {
+      context.closeSubgraph();
+    });
+    left.addButton.addEventListener("click", () => {
+      context.showSubgraphPropertiesDialog(subnode);
+    });
+    right.addButton.addEventListener("click", () => {
+      context.showSubgraphPropertiesDialogRight(subnode);
+    });
+    const pollHandle = ownerWindow.setInterval(refresh, 180);
+    refresh();
+    state.signature = signature;
+    state.graphRef = graphRef;
+    state.nodeRef = nodeRef;
+    return state;
+  }
   function showSubgraphIoPanel(context, node2, side) {
     var _a3, _b3, _c2, _d2, _e2;
     const oldPanel = (_b3 = (_a3 = context.canvas) == null ? void 0 : _a3.parentNode) == null ? void 0 : _b3.querySelector(".subgraph_dialog");
@@ -12406,6 +12708,8 @@ var LiteGraphTSMigration = (function(exports) {
       this.lastTapNodeId = null;
       this.lastTapPart = null;
       this.lastTapAt = 0;
+      this.lastBackgroundTapAt = 0;
+      this.lastBackgroundTapPagePoint = null;
       this.handleViewPointerDown = (event2) => {
         var _a3, _b3, _c2, _d2;
         if (!this.isScenePointerEvent(event2)) {
@@ -12418,6 +12722,7 @@ var LiteGraphTSMigration = (function(exports) {
         if (!this.shouldHandleLegacyPointerDown(event2)) {
           return;
         }
+        this.closeOpenContextMenus();
         const source = this.createPointerSource(event2);
         const pagePoint = source.getPagePoint();
         const worldPoint = source.getWorldPoint();
@@ -12599,7 +12904,7 @@ var LiteGraphTSMigration = (function(exports) {
         this.dispatchPointerMoveWhileDown(event2);
       };
       this.handleDocumentPointerUp = (event2) => {
-        var _a3, _b3, _c2, _d2, _e2, _f, _g, _h2, _i2;
+        var _a3, _b3, _c2, _d2, _e2, _f, _g, _h2;
         if (!this.pointerIsDown && event2.button !== 0) {
           return;
         }
@@ -12635,19 +12940,16 @@ var LiteGraphTSMigration = (function(exports) {
           );
           this.stopEvent(event2);
         } else if (((_c2 = this.session) == null ? void 0 : _c2.kind) === "background-press") {
-          if (!this.session.additive) {
-            this.canvas.deselectAllNodes();
-            (_d2 = this.canvas.sceneSyncController) == null ? void 0 : _d2.repaintAllNodeHosts();
-          }
+          this.finishBackgroundTap(this.session, normalizedPagePoint, event2);
           this.stopEvent(event2);
-        } else if (((_e2 = this.session) == null ? void 0 : _e2.kind) === "modern-press") {
+        } else if (((_d2 = this.session) == null ? void 0 : _d2.kind) === "modern-press") {
           this.finishModernPress(
             this.session,
             normalizedWorldPoint,
             event2
           );
           this.stopEvent(event2);
-        } else if (((_f = this.session) == null ? void 0 : _f.kind) === "node-press") {
+        } else if (((_e2 = this.session) == null ? void 0 : _e2.kind) === "node-press") {
           if (this.session.legacyPointerUp) {
             this.dispatchLegacyPointerUp(source, normalizedPagePoint, event2);
           } else {
@@ -12658,13 +12960,13 @@ var LiteGraphTSMigration = (function(exports) {
             );
             this.stopEvent(event2);
           }
-        } else if (((_g = this.session) == null ? void 0 : _g.kind) === "node-resize") {
+        } else if (((_f = this.session) == null ? void 0 : _f.kind) === "node-resize") {
           this.finishNodeResize(this.session);
           this.stopEvent(event2);
-        } else if (((_h2 = this.session) == null ? void 0 : _h2.kind) === "node-drag") {
+        } else if (((_g = this.session) == null ? void 0 : _g.kind) === "node-drag") {
           this.finishNodeDrag(this.session);
           this.stopEvent(event2);
-        } else if (((_i2 = this.session) == null ? void 0 : _i2.kind) === "group-drag") {
+        } else if (((_h2 = this.session) == null ? void 0 : _h2.kind) === "group-drag") {
           this.finishGroupDrag(this.session, event2.ctrlKey);
           this.stopEvent(event2);
         } else {
@@ -12736,6 +13038,8 @@ var LiteGraphTSMigration = (function(exports) {
       this.lastTapNodeId = null;
       this.lastTapPart = null;
       this.lastTapAt = 0;
+      this.lastBackgroundTapAt = 0;
+      this.lastBackgroundTapPagePoint = null;
       this.connectionController.destroy();
       this.selectionController.destroy();
       this.overlayPrimitives.destroy();
@@ -13199,6 +13503,29 @@ var LiteGraphTSMigration = (function(exports) {
       (_d2 = (_c2 = this.canvas).processNodeDblClicked) == null ? void 0 : _d2.call(_c2, session.node);
       (_e2 = this.canvas.sceneSyncController) == null ? void 0 : _e2.repaintNodeHost(session.node.id);
     }
+    finishBackgroundTap(session, pagePoint, event2) {
+      var _a3;
+      if (!session.additive) {
+        this.canvas.deselectAllNodes();
+        (_a3 = this.canvas.sceneSyncController) == null ? void 0 : _a3.repaintAllNodeHosts();
+      }
+      if (session.additive || this.canvas.read_only || !this.canvas.allow_searchbox || typeof this.canvas.showSearchBox !== "function") {
+        return;
+      }
+      const now = Date.now();
+      const isDoubleTap = Boolean(this.lastBackgroundTapPagePoint) && now - this.lastBackgroundTapAt < 320 && getPointerDistance(
+        this.lastBackgroundTapPagePoint,
+        pagePoint
+      ) < 12;
+      this.lastBackgroundTapAt = now;
+      this.lastBackgroundTapPagePoint = pagePoint;
+      if (!isDoubleTap) {
+        return;
+      }
+      this.lastBackgroundTapAt = 0;
+      this.lastBackgroundTapPagePoint = null;
+      this.canvas.showSearchBox(event2);
+    }
     executeModernWidgetAction(node2, host, part, event2) {
       var _a3, _b3, _c2, _d2;
       if (part.index == null) {
@@ -13534,7 +13861,7 @@ var LiteGraphTSMigration = (function(exports) {
       return [toFiniteNumber$8(pos2[0]), toFiniteNumber$8(pos2[1])];
     }
     dispatchContextMenu(event2) {
-      var _a3, _b3, _c2, _d2, _e2, _f, _g;
+      var _a3, _b3, _c2;
       const source = this.createPointerSource(event2);
       const graphPoint = source.getInnerPoint();
       const hit = this.hitTestService.hitNodeAt(graphPoint.x, graphPoint.y);
@@ -13542,9 +13869,7 @@ var LiteGraphTSMigration = (function(exports) {
       if (this.canvas.allow_interaction === false || this.canvas.read_only) {
         return;
       }
-      const refWindow = ((_b3 = (_a3 = this.canvas).getCanvasWindow) == null ? void 0 : _b3.call(_a3)) || ((_c2 = this.view.ownerDocument) == null ? void 0 : _c2.defaultView) || window;
-      const liteGraphHost = globalThis.LiteGraph;
-      (_d2 = liteGraphHost == null ? void 0 : liteGraphHost.closeAllContextMenus) == null ? void 0 : _d2.call(liteGraphHost, refWindow);
+      this.closeOpenContextMenus();
       if (node2) {
         const selectedNodes = this.canvas.selected_nodes || {};
         if (Object.keys(selectedNodes).length && (selectedNodes[String(node2.id)] || event2.shiftKey || event2.ctrlKey || event2.metaKey)) {
@@ -13554,7 +13879,7 @@ var LiteGraphTSMigration = (function(exports) {
         } else {
           this.canvas.selectNodes([node2]);
         }
-        (_e2 = this.canvas.sceneSyncController) == null ? void 0 : _e2.repaintAllNodeHosts();
+        (_a3 = this.canvas.sceneSyncController) == null ? void 0 : _a3.repaintAllNodeHosts();
       }
       const contextMenuEvent = createNativeContextMenuEvent({
         event: source,
@@ -13563,7 +13888,13 @@ var LiteGraphTSMigration = (function(exports) {
         targets: this.collectTargets(this.toLegacyHost((hit == null ? void 0 : hit.host) || null)),
         dragging: false
       });
-      (_g = (_f = this.canvas).processContextMenu) == null ? void 0 : _g.call(_f, node2, contextMenuEvent);
+      (_c2 = (_b3 = this.canvas).processContextMenu) == null ? void 0 : _c2.call(_b3, node2, contextMenuEvent);
+    }
+    closeOpenContextMenus() {
+      var _a3, _b3, _c2, _d2;
+      const refWindow = ((_b3 = (_a3 = this.canvas).getCanvasWindow) == null ? void 0 : _b3.call(_a3)) || ((_c2 = this.view.ownerDocument) == null ? void 0 : _c2.defaultView) || window;
+      const liteGraphHost = globalThis.LiteGraph;
+      (_d2 = liteGraphHost == null ? void 0 : liteGraphHost.closeAllContextMenus) == null ? void 0 : _d2.call(liteGraphHost, refWindow);
     }
     attachDocumentTracking() {
       if (this.documentTrackingBound) {
@@ -13654,6 +13985,7 @@ var LiteGraphTSMigration = (function(exports) {
           ".graphcontextualmenu",
           ".litemenu",
           ".litecontextmenu",
+          ".litegraph-subgraph-sidebars",
           ".litegraph-editor-dialog",
           ".litegraph-editor-panel",
           "#node-panel",
@@ -21415,7 +21747,8 @@ var LiteGraphTSMigration = (function(exports) {
       return resolveCanvasLifecycleHost(this);
     }
     clear() {
-      var _a3;
+      var _a3, _b3;
+      (_a3 = this.closeSubgraphSidebars) == null ? void 0 : _a3.call(this);
       this.frame = 0;
       this.last_draw_time = 0;
       this.render_time = 0;
@@ -21441,9 +21774,10 @@ var LiteGraphTSMigration = (function(exports) {
       this.pointer_is_double = false;
       this.visible_area.set([0, 0, 0, 0]);
       const self = this;
-      (_a3 = self.onClear) == null ? void 0 : _a3.call(self);
+      (_b3 = self.onClear) == null ? void 0 : _b3.call(self);
     }
     setGraph(graph, skip_clear) {
+      var _a3, _b3;
       if (this.graph == graph) {
         return;
       }
@@ -21453,6 +21787,7 @@ var LiteGraphTSMigration = (function(exports) {
       if (!graph && this.graph) {
         this.graph.detachCanvas(this);
         this.destroySceneSyncBackbone();
+        (_a3 = this.closeSubgraphSidebars) == null ? void 0 : _a3.call(this);
         return;
       }
       this.destroySceneSyncBackbone();
@@ -21462,6 +21797,7 @@ var LiteGraphTSMigration = (function(exports) {
       }
       this.attachSceneSyncBackbone();
       this.setDirty(true, true);
+      (_b3 = this.syncSubgraphSidebars) == null ? void 0 : _b3.call(this);
     }
     getTopGraph() {
       if (this._graph_stack.length) {
@@ -21490,6 +21826,7 @@ var LiteGraphTSMigration = (function(exports) {
       this.setDirty(true, true);
     }
     closeSubgraph() {
+      var _a3;
       if (!this._graph_stack || this._graph_stack.length == 0) {
         return;
       }
@@ -21500,6 +21837,7 @@ var LiteGraphTSMigration = (function(exports) {
       this.destroySceneSyncBackbone();
       graph.attachCanvas(this);
       this.attachSceneSyncBackbone();
+      (_a3 = this.syncSubgraphSidebars) == null ? void 0 : _a3.call(this);
       this.setDirty(true, true);
       if (subgraph_node) {
         const self = this;
@@ -25937,6 +26275,10 @@ var LiteGraphTSMigration = (function(exports) {
     }
   }
   class LGraphCanvasMenuPanel extends LGraphCanvasRender {
+    constructor() {
+      super(...arguments);
+      this.subgraphSidebarsState = null;
+    }
     menuClass() {
       return resolveMenuPanelCanvasClass();
     }
@@ -26137,8 +26479,32 @@ var LiteGraphTSMigration = (function(exports) {
         "outputs"
       );
     }
+    syncSubgraphSidebars() {
+      var _a3;
+      this.subgraphSidebarsState = syncSubgraphSidebars(
+        {
+          mount: ((_a3 = this.canvas) == null ? void 0 : _a3.parentNode) || null,
+          canvas: this.canvas,
+          getCurrentGraph: () => this.graph,
+          createNode: (type) => this.getLiteGraphHost().createNode(type),
+          selectNodes: this.selectNodes.bind(this),
+          convertEventToCanvasOffset: this.convertEventToCanvasOffset.bind(this),
+          closeSubgraph: this.closeSubgraph.bind(this),
+          showSubgraphPropertiesDialog: this.showSubgraphPropertiesDialog.bind(this),
+          showSubgraphPropertiesDialogRight: this.showSubgraphPropertiesDialogRight.bind(this),
+          sceneSyncController: this.sceneSyncController
+        },
+        this.subgraphSidebarsState
+      );
+    }
+    closeSubgraphSidebars() {
+      this.subgraphSidebarsState = destroySubgraphSidebars(
+        this.subgraphSidebarsState
+      );
+    }
     checkPanels() {
       var _a3;
+      this.syncSubgraphSidebars();
       const parent = (_a3 = this.canvas) == null ? void 0 : _a3.parentNode;
       if (!parent) {
         return;

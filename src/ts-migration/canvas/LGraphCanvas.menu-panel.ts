@@ -26,6 +26,11 @@ import { createPanel } from "../services/panel-factory";
 import { showEditPropertyValueDialog } from "../services/property-value-dialog-controller";
 import { showPromptDialog } from "../services/prompt-dialog-controller";
 import { showSearchBoxController } from "../services/searchbox-controller";
+import {
+    destroySubgraphSidebars,
+    syncSubgraphSidebars,
+    type SubgraphSidebarsPresenterState,
+} from "../services/subgraph-sidebars-presenter";
 import { showSubgraphIoPanel } from "../services/subgraph-io-panel-presenter";
 import { LGraphCanvasRender } from "./LGraphCanvas.render";
 
@@ -37,6 +42,7 @@ export class LGraphCanvasMenuPanel
     extends LGraphCanvasRender
     implements GraphCanvasWidgetPort {
     [key: string]: any;
+    private subgraphSidebarsState: SubgraphSidebarsPresenterState | null = null;
 
     private menuClass(): ResolvedMenuPanelCanvasClassPort {
         return resolveMenuPanelCanvasClass();
@@ -255,7 +261,36 @@ export class LGraphCanvasMenuPanel
         );
     }
 
+    syncSubgraphSidebars(): void {
+        this.subgraphSidebarsState = syncSubgraphSidebars(
+            {
+                mount: (this.canvas?.parentNode as HTMLElement | null) || null,
+                canvas: this.canvas,
+                getCurrentGraph: () => this.graph,
+                createNode: (type: string) =>
+                    this.getLiteGraphHost().createNode(type),
+                selectNodes: this.selectNodes.bind(this),
+                convertEventToCanvasOffset:
+                    this.convertEventToCanvasOffset.bind(this),
+                closeSubgraph: this.closeSubgraph.bind(this),
+                showSubgraphPropertiesDialog:
+                    this.showSubgraphPropertiesDialog.bind(this),
+                showSubgraphPropertiesDialogRight:
+                    this.showSubgraphPropertiesDialogRight.bind(this),
+                sceneSyncController: this.sceneSyncController,
+            },
+            this.subgraphSidebarsState
+        );
+    }
+
+    closeSubgraphSidebars(): void {
+        this.subgraphSidebarsState = destroySubgraphSidebars(
+            this.subgraphSidebarsState
+        );
+    }
+
     checkPanels(): void {
+        this.syncSubgraphSidebars();
         const parent = this.canvas?.parentNode;
         if (!parent) {
             return;

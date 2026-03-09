@@ -40,12 +40,14 @@ interface InteractionCanvasHost {
     readonly connecting_node?: unknown;
     readonly allow_dragnodes?: boolean;
     readonly allow_interaction?: boolean;
+    readonly allow_searchbox?: boolean;
     readonly read_only?: boolean;
     readonly align_to_grid?: boolean;
     readonly onNodeMoved?: ((node: GraphMutationNodeLike) => void) | null;
     processMouseDown: (event: unknown) => boolean | undefined;
     processMouseMove: (event: unknown) => boolean | undefined;
     processMouseUp: (event: unknown) => boolean | undefined;
+    showSearchBox?: (event?: MouseEvent, options?: any) => unknown;
     processContextMenu?: (
         node: GraphMutationNodeLike | null,
         event: unknown
@@ -236,6 +238,8 @@ export class InteractionController {
     private lastTapNodeId: GraphMutationNodeId | null = null;
     private lastTapPart: ModernNodePartHit | null = null;
     private lastTapAt = 0;
+    private lastBackgroundTapAt = 0;
+    private lastBackgroundTapPagePoint: PointLike | null = null;
 
     constructor(
         graph: GraphMutationGraphLike,
@@ -304,6 +308,8 @@ export class InteractionController {
         this.lastTapNodeId = null;
         this.lastTapPart = null;
         this.lastTapAt = 0;
+        this.lastBackgroundTapAt = 0;
+        this.lastBackgroundTapPagePoint = null;
         this.connectionController.destroy();
         this.selectionController.destroy();
         this.overlayPrimitives.destroy();
@@ -322,6 +328,8 @@ export class InteractionController {
         if (!this.shouldHandleLegacyPointerDown(event)) {
             return;
         }
+
+        this.closeOpenContextMenus();
 
         const source = this.createPointerSource(event);
         const pagePoint = source.getPagePoint();
@@ -570,10 +578,7 @@ export class InteractionController {
             );
             this.stopEvent(event);
         } else if (this.session?.kind === "background-press") {
-            if (!this.session.additive) {
-                this.canvas.deselectAllNodes();
-                this.canvas.sceneSyncController?.repaintAllNodeHosts();
-            }
+            this.finishBackgroundTap(this.session, normalizedPagePoint, event);
             this.stopEvent(event);
         } else if (this.session?.kind === "modern-press") {
             this.finishModernPress(
@@ -1221,6 +1226,46 @@ export class InteractionController {
         this.canvas.sceneSyncController?.repaintNodeHost(session.node.id);
     }
 
+    private finishBackgroundTap(
+        session: Extract<PointerSession, { kind: "background-press" }>,
+        pagePoint: PointLike,
+        event: PointerEvent
+    ): void {
+        if (!session.additive) {
+            this.canvas.deselectAllNodes();
+            this.canvas.sceneSyncController?.repaintAllNodeHosts();
+        }
+
+        if (
+            session.additive ||
+            this.canvas.read_only ||
+            !this.canvas.allow_searchbox ||
+            typeof this.canvas.showSearchBox !== "function"
+        ) {
+            return;
+        }
+
+        const now = Date.now();
+        const isDoubleTap =
+            Boolean(this.lastBackgroundTapPagePoint) &&
+            now - this.lastBackgroundTapAt < 320 &&
+            getPointerDistance(
+                this.lastBackgroundTapPagePoint as PointLike,
+                pagePoint
+            ) < 12;
+
+        this.lastBackgroundTapAt = now;
+        this.lastBackgroundTapPagePoint = pagePoint;
+
+        if (!isDoubleTap) {
+            return;
+        }
+
+        this.lastBackgroundTapAt = 0;
+        this.lastBackgroundTapPagePoint = null;
+        this.canvas.showSearchBox(event as MouseEvent);
+    }
+
     private executeModernWidgetAction(
         node: GraphMutationNodeLike,
         host: ModernNodeHost,
@@ -1681,16 +1726,7 @@ export class InteractionController {
             return;
         }
 
-        const refWindow =
-            this.canvas.getCanvasWindow?.() ||
-            this.view.ownerDocument?.defaultView ||
-            window;
-        const liteGraphHost = (globalThis as typeof globalThis & {
-            LiteGraph?: {
-                closeAllContextMenus?: (refWindow?: Window) => void;
-            };
-        }).LiteGraph;
-        liteGraphHost?.closeAllContextMenus?.(refWindow);
+        this.closeOpenContextMenus();
 
         if (node) {
             const selectedNodes = this.canvas.selected_nodes || {};
@@ -1719,6 +1755,19 @@ export class InteractionController {
         });
 
         this.canvas.processContextMenu?.(node, contextMenuEvent);
+    }
+
+    private closeOpenContextMenus(): void {
+        const refWindow =
+            this.canvas.getCanvasWindow?.() ||
+            this.view.ownerDocument?.defaultView ||
+            window;
+        const liteGraphHost = (globalThis as typeof globalThis & {
+            LiteGraph?: {
+                closeAllContextMenus?: (refWindow?: Window) => void;
+            };
+        }).LiteGraph;
+        liteGraphHost?.closeAllContextMenus?.(refWindow);
     }
 
     private attachDocumentTracking(): void {
@@ -1826,6 +1875,7 @@ export class InteractionController {
                     ".graphcontextualmenu",
                     ".litemenu",
                     ".litecontextmenu",
+                    ".litegraph-subgraph-sidebars",
                     ".litegraph-editor-dialog",
                     ".litegraph-editor-panel",
                     "#node-panel",

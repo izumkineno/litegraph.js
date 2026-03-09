@@ -525,6 +525,11 @@ export class LGraphCanvasLifecycle extends LGraphCanvasStatic {
     }
 
     clear(): void {
+        (
+            this as unknown as {
+                closeSubgraphSidebars?: () => void;
+            }
+        ).closeSubgraphSidebars?.();
         this.frame = 0;
         this.last_draw_time = 0;
         this.render_time = 0;
@@ -566,6 +571,11 @@ export class LGraphCanvasLifecycle extends LGraphCanvasStatic {
         if (!graph && this.graph) {
             this.graph.detachCanvas(this);
             this.destroySceneSyncBackbone();
+            (
+                this as unknown as {
+                    closeSubgraphSidebars?: () => void;
+                }
+            ).closeSubgraphSidebars?.();
             return;
         }
 
@@ -577,6 +587,11 @@ export class LGraphCanvasLifecycle extends LGraphCanvasStatic {
 
         this.attachSceneSyncBackbone();
         this.setDirty(true, true);
+        (
+            this as unknown as {
+                syncSubgraphSidebars?: () => void;
+            }
+        ).syncSubgraphSidebars?.();
     }
 
     getTopGraph(): GraphLike | null {
@@ -620,6 +635,11 @@ export class LGraphCanvasLifecycle extends LGraphCanvasStatic {
         this.destroySceneSyncBackbone();
         graph.attachCanvas(this);
         this.attachSceneSyncBackbone();
+        (
+            this as unknown as {
+                syncSubgraphSidebars?: () => void;
+            }
+        ).syncSubgraphSidebars?.();
         this.setDirty(true, true);
         if (subgraph_node) {
             const self = this as unknown as {
