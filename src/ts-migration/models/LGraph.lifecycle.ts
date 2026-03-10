@@ -118,6 +118,7 @@ export class LGraph {
     protected execution_schedule_interval = 0;
     protected execution_leafer_app: LeaferExecutionAppLike | null = null;
     protected execution_animation_frame_id: number | null = null;
+    protected execution_schedule_revision = 0;
     protected execution_phase_depth = 0;
     protected readonly runtime_dirty_node_ids = new Set<number | string>();
     protected readonly runtime_state_touched_node_keys = new Set<string>();
@@ -434,13 +435,13 @@ export class LGraph {
         if (leaferApp) {
             this.execution_schedule_kind = "leafer-frame";
             this.execution_leafer_app = leaferApp;
-            this.scheduleNextExecutionTick();
+            this.scheduleInitialExecutionTick();
             return;
         }
 
         if (typeof window != "undefined") {
             this.execution_schedule_kind = "raf";
-            this.scheduleNextExecutionTick();
+            this.scheduleInitialExecutionTick();
             return;
         }
 
@@ -476,12 +477,30 @@ export class LGraph {
         }
     }
 
+    private scheduleInitialExecutionTick(): void {
+        const scheduleRevision = this.execution_schedule_revision;
+        const runInitialTick = (): void => {
+            if (this.execution_schedule_revision !== scheduleRevision) {
+                return;
+            }
+            this.executionTick();
+        };
+
+        if (typeof queueMicrotask === "function") {
+            queueMicrotask(runInitialTick);
+            return;
+        }
+
+        Promise.resolve().then(runInitialTick);
+    }
+
     private clearExecutionSchedule(): void {
         const previousKind = this.execution_schedule_kind;
         const previousTimerId = this.execution_timer_id;
         const previousAnimationFrameId = this.execution_animation_frame_id;
         const previousLeaferApp = this.execution_leafer_app;
 
+        this.execution_schedule_revision += 1;
         this.execution_schedule_kind = "none";
         this.execution_timer_id = null;
         this.execution_animation_frame_id = null;

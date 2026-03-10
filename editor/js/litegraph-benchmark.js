@@ -825,6 +825,26 @@
         return samples;
     };
 
+    EditorBenchmark.prototype.flushRuntimeVisualState = async function() {
+        if (typeof this.graph.flushRuntimeExecutionRender === "function") {
+            this.graph.flushRuntimeExecutionRender();
+        } else if (this.graphcanvas.renderRuntime === "leafer") {
+            if (
+                this.graphcanvas.sceneSyncController &&
+                typeof this.graphcanvas.sceneSyncController.flushDeferredNodeDirtySignals === "function"
+            ) {
+                this.graphcanvas.sceneSyncController.flushDeferredNodeDirtySignals();
+            }
+            if (typeof this.graphcanvas.requestRuntimeRender === "function") {
+                this.graphcanvas.requestRuntimeRender(false);
+            }
+        } else if (typeof this.graphcanvas.draw === "function") {
+            this.graphcanvas.draw(true, true);
+        }
+
+        await nextFrame();
+    };
+
     EditorBenchmark.prototype.collectRuntimeSamples = function(sampleFrames, beforeStep) {
         var that = this;
         return new Promise(function(resolve, reject) {
@@ -925,6 +945,7 @@
         }
 
         var stepSamples = this.measureStepSamples(preset.sampleFrames, graphInfo.tick);
+        await this.flushRuntimeVisualState();
         await delay(10);
         var runtimeSamples = await this.collectRuntimeSamples(preset.sampleFrames, graphInfo.tick);
 

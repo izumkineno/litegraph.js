@@ -7,7 +7,7 @@ describe("LGraph execution runtime", () => {
         jest.restoreAllMocks();
     });
 
-    test("start(0) prefers Leafer scheduling and stop clears pending nextRender", () => {
+    test("start(0) uses an immediate first tick and keeps Leafer scheduling for subsequent frames", async () => {
         const graph = new LGraphExecution();
         const scheduledFrames: Array<() => void> = [];
         const leaferApp = {
@@ -33,14 +33,21 @@ describe("LGraph execution runtime", () => {
 
         graph.start(0);
 
-        expect(leaferApp.nextRender).toHaveBeenCalledTimes(1);
-        expect(leaferApp.requestRender).toHaveBeenCalledTimes(1);
+        expect(leaferApp.nextRender).not.toHaveBeenCalled();
+        expect(leaferApp.requestRender).not.toHaveBeenCalled();
         expect(runStepSpy).not.toHaveBeenCalled();
 
-        scheduledFrames.shift()?.();
+        await Promise.resolve();
 
         expect(runStepSpy).toHaveBeenCalledWith(1, !graph.catch_errors);
         expect(flushSpy).toHaveBeenCalledTimes(1);
+        expect(leaferApp.nextRender).toHaveBeenCalledTimes(1);
+        expect(leaferApp.requestRender).toHaveBeenCalledTimes(1);
+
+        scheduledFrames.shift()?.();
+
+        expect(runStepSpy).toHaveBeenCalledTimes(2);
+        expect(flushSpy).toHaveBeenCalledTimes(2);
         expect(leaferApp.nextRender).toHaveBeenCalledTimes(2);
         expect(leaferApp.requestRender).toHaveBeenCalledTimes(2);
 

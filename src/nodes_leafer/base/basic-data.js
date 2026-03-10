@@ -42,6 +42,16 @@
         return null;
     }
 
+    function updateJsonVisualState(node, nextBoxColor, changeMask) {
+        if (node.boxcolor === nextBoxColor) {
+            return false;
+        }
+
+        node.boxcolor = nextBoxColor;
+        node.requestModernPatch(changeMask);
+        return true;
+    }
+
     return {
         id: "base/basic-data",
         define: function(api) {
@@ -243,8 +253,9 @@
             parse() {
                 this._str = this.getInputData(1);
                 if (!this._str) {
-                    this.boxcolor = null;
-                    this.requestModernPatch(
+                    updateJsonVisualState(
+                        this,
+                        null,
                         ModernNodeChangeMask.Data |
                             ModernNodeChangeMask.Style
                     );
@@ -253,15 +264,17 @@
 
                 try {
                     this._obj = JSON.parse(this._str);
-                    this.boxcolor = "#AEA";
-                    this.requestModernPatch(
+                    updateJsonVisualState(
+                        this,
+                        "#AEA",
                         ModernNodeChangeMask.Data |
                             ModernNodeChangeMask.Style
                     );
                     this.triggerSlot(0);
                 } catch (err) {
-                    this.boxcolor = "red";
-                    this.requestModernPatch(
+                    updateJsonVisualState(
+                        this,
+                        "red",
                         ModernNodeChangeMask.Data |
                             ModernNodeChangeMask.Style
                     );

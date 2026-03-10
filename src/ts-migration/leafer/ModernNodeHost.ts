@@ -709,6 +709,26 @@ function setRectIfChanged(
     setAttrIfChanged(target, "height", rect.height);
 }
 
+function setAttrsBatch(
+    target: unknown,
+    data: Record<string, unknown>
+): void {
+    if (!target || typeof target !== "object") {
+        return;
+    }
+
+    const uiTarget = target as { set?: (data: Record<string, unknown>) => void };
+    if (typeof uiTarget.set === "function") {
+        uiTarget.set(data);
+        return;
+    }
+
+    const recordTarget = target as Record<string, unknown>;
+    for (const [key, value] of Object.entries(data)) {
+        setAttrIfChanged(recordTarget, key, value);
+    }
+}
+
 export class ModernNodeHost implements NodeViewHost {
     readonly runtime = "modern" as const;
     readonly node: ModernNodeLike;
@@ -755,6 +775,7 @@ export class ModernNodeHost implements NodeViewHost {
         | null = null;
     private portBuildContext: ModernNodeBuildContext | null = null;
     private mounted = false;
+    private shellLayoutInitialized = false;
     private resizeAnchor: {
         startWorldX: number;
         startWorldY: number;
@@ -775,7 +796,6 @@ export class ModernNodeHost implements NodeViewHost {
         });
         this.shell = this.createShellParts();
         this.root.add(this.shell.shell);
-        this.repaint();
     }
 
     repaint(): void {
@@ -1529,6 +1549,104 @@ export class ModernNodeHost implements NodeViewHost {
             ? headerMetaWidth + HEADER_META_GAP + 12
             : 14;
         const titleWidth = Math.max(24, header.width - titleStartX - titleEndPadding);
+        const summaryVisible = Boolean(
+            body && !this.widgetEntries.length && !this.content && shellState.summaryText
+        );
+        const summaryX = contentArea?.x || BODY_PADDING_X;
+        const summaryY =
+            (contentArea?.y || BODY_PADDING_Y) +
+            Math.min(20, Math.max(14, (contentArea?.height || 24) * 0.45));
+        const summaryWidth = Math.max(
+            20,
+            contentArea?.width || layout.width - BODY_PADDING_X * 2
+        );
+        const signalLampY =
+            header.y + (header.height - HEADER_SIGNAL_SIZE) / 2;
+        const selectionOutlineX = -OUTLINE_PADDING;
+        const selectionOutlineY = header.y - OUTLINE_PADDING;
+        const selectionOutlineWidth = layout.width + OUTLINE_PADDING * 2;
+        const selectionOutlineHeight = totalHeight + OUTLINE_PADDING * 2;
+        const headerFill = shellState.titleColor || "#283444";
+        const titleFill = shellState.titleTextColor || "#F5F7FA";
+        const signalLampVisible = shellState.showSignalLamp !== false;
+        const signalLampFill = shellState.boxColor || "#666666";
+        const bodyFill = shellState.bodyColor || "#101720";
+
+        if (!this.shellLayoutInitialized) {
+            setAttrsBatch(this.shell.header, {
+                ...header,
+                cornerRadius: body ? [12, 12, 0, 0] : [12, 12, 12, 12],
+                fill: headerFill,
+            });
+            setAttrsBatch(this.shell.body, body
+                ? {
+                      ...body,
+                      visible: true,
+                      cornerRadius: [0, 0, 12, 12],
+                      fill: bodyFill,
+                  }
+                : {
+                      visible: false,
+                  });
+            setAttrsBatch(this.shell.headerContent, {
+                x: titleStartX,
+                y: header.y,
+                width: Math.max(24, header.width - titleStartX - 12),
+                height: header.height,
+                visible: shellState.titleMode !== "hidden" || showHeaderMeta,
+            });
+            setAttrsBatch(this.shell.title, {
+                text: textMetrics.titleText,
+                fill: titleFill,
+                height: header.height,
+                width: titleWidth,
+                visible: shellState.titleMode !== "hidden",
+            });
+            setAttrsBatch(this.shell.headerMeta, {
+                text: headerMeta,
+                visible: showHeaderMeta,
+                width: Math.max(HEADER_META_MIN_WIDTH, headerMetaWidth),
+                height: header.height,
+            });
+            setAttrsBatch(this.shell.summary, {
+                text: textMetrics.summaryText,
+                visible: summaryVisible,
+                x: summaryX,
+                y: summaryY,
+                width: summaryWidth,
+            });
+            setAttrsBatch(this.shell.signalLamp, {
+                x: 10,
+                y: signalLampY,
+                visible: signalLampVisible,
+                fill: signalLampFill,
+            });
+            setAttrsBatch(this.shell.collapseOverlay, layout.collapse
+                ? {
+                      ...layout.collapse,
+                      visible: true,
+                  }
+                : {
+                      visible: false,
+                  });
+            setAttrsBatch(this.shell.resizeHandle, layout.resize
+                ? {
+                      x: layout.resize.x,
+                      y: layout.resize.y,
+                      visible: true,
+                  }
+                : {
+                      visible: false,
+                  });
+            setAttrsBatch(this.shell.selectionOutline, {
+                x: selectionOutlineX,
+                y: selectionOutlineY,
+                width: selectionOutlineWidth,
+                height: selectionOutlineHeight,
+            });
+            this.shellLayoutInitialized = true;
+            return;
+        }
 
         setAttrIfChanged(headerContent, "x", titleStartX);
         setAttrIfChanged(headerContent, "y", header.y);
@@ -1567,32 +1685,14 @@ export class ModernNodeHost implements NodeViewHost {
         setAttrIfChanged(
             summaryText,
             "visible",
-            Boolean(
-                body &&
-                    !this.widgetEntries.length &&
-                    !this.content &&
-                    shellState.summaryText
-            )
+            summaryVisible
         );
-        setAttrIfChanged(summaryText, "x", contentArea?.x || BODY_PADDING_X);
-        setAttrIfChanged(
-            summaryText,
-            "y",
-            (contentArea?.y || BODY_PADDING_Y) +
-                Math.min(20, Math.max(14, (contentArea?.height || 24) * 0.45))
-        );
-        setAttrIfChanged(
-            summaryText,
-            "width",
-            Math.max(20, contentArea?.width || layout.width - BODY_PADDING_X * 2)
-        );
+        setAttrIfChanged(summaryText, "x", summaryX);
+        setAttrIfChanged(summaryText, "y", summaryY);
+        setAttrIfChanged(summaryText, "width", summaryWidth);
 
         setAttrIfChanged(signalLamp, "x", 10);
-        setAttrIfChanged(
-            signalLamp,
-            "y",
-            header.y + (header.height - HEADER_SIGNAL_SIZE) / 2
-        );
+        setAttrIfChanged(signalLamp, "y", signalLampY);
 
         setAttrIfChanged(collapseOverlay, "visible", Boolean(layout.collapse));
         if (layout.collapse) {
@@ -1605,18 +1705,10 @@ export class ModernNodeHost implements NodeViewHost {
             setAttrIfChanged(resizeHandle, "y", layout.resize.y);
         }
 
-        setAttrIfChanged(selectionOutline, "x", -OUTLINE_PADDING);
-        setAttrIfChanged(selectionOutline, "y", header.y - OUTLINE_PADDING);
-        setAttrIfChanged(
-            selectionOutline,
-            "width",
-            layout.width + OUTLINE_PADDING * 2
-        );
-        setAttrIfChanged(
-            selectionOutline,
-            "height",
-            totalHeight + OUTLINE_PADDING * 2
-        );
+        setAttrIfChanged(selectionOutline, "x", selectionOutlineX);
+        setAttrIfChanged(selectionOutline, "y", selectionOutlineY);
+        setAttrIfChanged(selectionOutline, "width", selectionOutlineWidth);
+        setAttrIfChanged(selectionOutline, "height", selectionOutlineHeight);
         this.applyShellVisualState();
     }
 

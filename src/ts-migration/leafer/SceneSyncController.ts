@@ -77,6 +77,12 @@ interface DeferredNodeDirtySignal {
     readonly dirtyBackground: boolean;
 }
 
+interface EnsureNodeHostOptions {
+    readonly syncPosition?: boolean;
+    readonly repaint?: boolean;
+    readonly updateLinks?: boolean;
+}
+
 function toMutationKey(id: GraphMutationNodeId | GraphMutationLinkId): string {
     return String(id);
 }
@@ -319,8 +325,8 @@ export class SceneSyncController {
             const activeNodeIds = this.captureActiveTransientNodeIds();
             const repaintNodeIds = this.resolveRuntimeRepaintNodeIds(nodeIds);
             dirtyBounds = repaintNodeIds
-                ? this.repaintNodeHostsWithBounds(repaintNodeIds)
-                : this.repaintAllNodeHostsWithBounds();
+                ? this.repaintRuntimeNodeHostsWithBounds(repaintNodeIds)
+                : this.repaintAllNodeHostsWithBounds(false);
             hasPendingNodeFrames =
                 this.syncPendingSettledNodeRepaints(activeNodeIds) ||
                 this.pendingSettledNodeRepaints.size > 0;
@@ -369,43 +375,55 @@ export class SceneSyncController {
         return processedNodeIds;
     }
 
-    repaintNodeHost(nodeId: GraphMutationNodeId): void {
+    repaintNodeHost(
+        nodeId: GraphMutationNodeId,
+        syncIncidentLinks = true
+    ): void {
         this.nodeHosts.get(nodeId)?.repaint();
-        this.updateIncidentLinks(nodeId);
-    }
-
-    repaintNodeHosts(nodeIds: readonly GraphMutationNodeId[]): void {
-        for (let i = 0; i < nodeIds.length; ++i) {
-            this.repaintNodeHost(nodeIds[i]);
-        }
-    }
-
-    repaintAllNodeHosts(): void {
-        for (const [nodeId, host] of this.nodeHosts.entries()) {
-            host.repaint();
+        if (syncIncidentLinks) {
             this.updateIncidentLinks(nodeId);
         }
     }
 
-    private repaintAllNodeHostsWithBounds(): RenderBoundsLike | null {
+    repaintNodeHosts(
+        nodeIds: readonly GraphMutationNodeId[],
+        syncIncidentLinks = true
+    ): void {
+        for (let i = 0; i < nodeIds.length; ++i) {
+            this.repaintNodeHost(nodeIds[i], syncIncidentLinks);
+        }
+    }
+
+    repaintAllNodeHosts(syncIncidentLinks = true): void {
+        for (const [nodeId, host] of this.nodeHosts.entries()) {
+            host.repaint();
+            if (syncIncidentLinks) {
+                this.updateIncidentLinks(nodeId);
+            }
+        }
+    }
+
+    private repaintAllNodeHostsWithBounds(
+        syncIncidentLinks = true
+    ): RenderBoundsLike | null {
         let dirtyBounds: RenderBoundsLike | null = null;
         for (const nodeId of this.nodeHosts.keys()) {
             dirtyBounds = mergeRenderBounds(
                 dirtyBounds,
-                this.repaintNodeHostWithBounds(nodeId)
+                this.repaintNodeHostWithBounds(nodeId, syncIncidentLinks)
             );
         }
         return dirtyBounds;
     }
 
-    private repaintNodeHostsWithBounds(
+    private repaintRuntimeNodeHostsWithBounds(
         nodeIds: readonly GraphMutationNodeId[]
     ): RenderBoundsLike | null {
         let dirtyBounds: RenderBoundsLike | null = null;
         for (let i = 0; i < nodeIds.length; ++i) {
             dirtyBounds = mergeRenderBounds(
                 dirtyBounds,
-                this.repaintNodeHostWithBounds(nodeIds[i])
+                this.repaintRuntimeNodeHostWithBounds(nodeIds[i])
             );
         }
         return dirtyBounds;
@@ -488,7 +506,9 @@ export class SceneSyncController {
             ? this.graph._nodes
             : [];
         for (let i = 0; i < existingNodes.length; ++i) {
-            this.ensureNodeHost(existingNodes[i]);
+            this.ensureNodeHost(existingNodes[i], {
+                updateLinks: false,
+            });
         }
 
         for (const [linkId, link] of Object.entries(this.graph.links || {})) {
@@ -534,18 +554,28 @@ export class SceneSyncController {
         this.deferredNodeDirtySignalsByKey.clear();
     }
 
-    private ensureNodeHost(node: GraphMutationNodeLike): NodeHost {
+    private ensureNodeHost(
+        node: GraphMutationNodeLike,
+        options?: EnsureNodeHostOptions
+    ): NodeHost {
         const nodeId = node.id;
         const runtime = discriminateNodeRuntime(node);
         const existingHost = this.nodeHosts.get(nodeId);
+        const shouldSyncPosition = options?.syncPosition !== false;
+        const shouldRepaint = options?.repaint !== false;
+        const shouldUpdateLinks = options?.updateLinks !== false;
 
         this.nodesById.set(nodeId, node);
         this.ensureTrackedNodeId(nodeId);
         this.installNodeDirtyBridge(node);
 
         if (existingHost && existingHost.runtime === runtime) {
-            existingHost.syncPosition();
-            this.updateIncidentLinks(nodeId);
+            if (shouldSyncPosition) {
+                existingHost.syncPosition();
+            }
+            if (shouldUpdateLinks) {
+                this.updateIncidentLinks(nodeId);
+            }
             return existingHost;
         }
 
@@ -556,9 +586,15 @@ export class SceneSyncController {
 
         const nodeHost = this.createNodeHost(runtime, node);
         this.nodeHosts.set(nodeId, nodeHost);
-        nodeHost.syncPosition();
-        nodeHost.repaint();
-        this.updateIncidentLinks(nodeId);
+        if (shouldSyncPosition) {
+            nodeHost.syncPosition();
+        }
+        if (shouldRepaint) {
+            nodeHost.repaint();
+        }
+        if (shouldUpdateLinks) {
+            this.updateIncidentLinks(nodeId);
+        }
 
         return nodeHost;
     }
@@ -649,12 +685,20 @@ export class SceneSyncController {
         const originNode = this.findGraphNode(link.origin_id);
         const targetNode = this.findGraphNode(link.target_id);
         if (originNode) {
-            this.ensureNodeHost(originNode);
+            if (!this.nodeHosts.has(link.origin_id)) {
+                this.ensureNodeHost(originNode, {
+                    updateLinks: false,
+                });
+            }
         } else {
             this.ensureTrackedNodeId(link.origin_id);
         }
         if (targetNode) {
-            this.ensureNodeHost(targetNode);
+            if (!this.nodeHosts.has(link.target_id)) {
+                this.ensureNodeHost(targetNode, {
+                    updateLinks: false,
+                });
+            }
         } else {
             this.ensureTrackedNodeId(link.target_id);
         }
@@ -933,12 +977,32 @@ export class SceneSyncController {
     }
 
     private repaintNodeHostWithBounds(
-        nodeId: GraphMutationNodeId
+        nodeId: GraphMutationNodeId,
+        syncIncidentLinks = true
     ): RenderBoundsLike | null {
         const previousBounds = this.captureNodeClusterBounds(nodeId);
-        this.repaintNodeHost(nodeId);
+        this.repaintNodeHost(nodeId, syncIncidentLinks);
         const nextBounds = this.captureNodeClusterBounds(nodeId);
         return mergeRenderBounds(previousBounds, nextBounds);
+    }
+
+    private repaintRuntimeNodeHostWithBounds(
+        nodeId: GraphMutationNodeId
+    ): RenderBoundsLike | null {
+        const host = this.nodeHosts.get(nodeId);
+        if (!host) {
+            return null;
+        }
+
+        if (host instanceof ModernNodeHost) {
+            if (!host.repaintForegroundState()) {
+                host.repaint();
+            }
+        } else {
+            host.repaint();
+        }
+
+        return expandRenderBounds(this.captureWorldRenderBounds(host.root));
     }
 
     private resolveRuntimeRepaintNodeIds(
@@ -1203,7 +1267,7 @@ export class SceneSyncController {
             for (let i = 0; i < settledIds.length; ++i) {
                 dirtyBounds = mergeRenderBounds(
                     dirtyBounds,
-                    this.repaintNodeHostWithBounds(settledIds[i])
+                    this.repaintRuntimeNodeHostWithBounds(settledIds[i])
                 );
                 didUpdate = true;
             }
@@ -1214,7 +1278,7 @@ export class SceneSyncController {
             for (let i = 0; i < activeNodeIds.length; ++i) {
                 dirtyBounds = mergeRenderBounds(
                     dirtyBounds,
-                    this.repaintNodeHostWithBounds(activeNodeIds[i])
+                    this.repaintRuntimeNodeHostWithBounds(activeNodeIds[i])
                 );
             }
             this.decayTransientNodeAnimations(activeNodeIds);
