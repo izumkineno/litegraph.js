@@ -29,7 +29,9 @@ export declare class LGraphExecution extends LGraph {
     onExecuteStep?: () => void;
     onAfterExecute?: () => void;
     private getNodeByIdExecution;
-    private requestLeaferExecutionRender;
+    flushRuntimeExecutionRender(): void;
+    protected afterExecutionTick(): void;
+    protected flushInternalSceneBatch(): void;
     /**
      * Run N steps (cycles) of the graph
      * @method runStep
@@ -44,6 +46,7 @@ export declare class LGraphExecution extends LGraph {
      * @method updateExecutionOrder
      */
     updateExecutionOrder(): void;
+    private applyExecutionOrderNow;
     computeExecutionOrder(only_onExecute?: boolean, set_level?: boolean): GraphNodeExecutionLike[];
     /**
      * Returns all the nodes that could affect this one (ancestors) by crawling all the inputs recursively.

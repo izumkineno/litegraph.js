@@ -5659,10 +5659,11 @@ var LiteGraphTSMigration = (function(exports) {
       }
     }
     context.graphcanvas.graph.add(newNode);
-    newNode.pos = [
+    const nextPos = [
       opts.position[0] + opts.posAdd[0] + (opts.posSizeFix[0] ? opts.posSizeFix[0] * newNode.size[0] : 0),
       opts.position[1] + opts.posAdd[1] + (opts.posSizeFix[1] ? opts.posSizeFix[1] * newNode.size[1] : 0)
     ];
+    newNode.pos = context.graphcanvas.clampNodePosition ? context.graphcanvas.clampNodePosition(newNode, nextPos[0], nextPos[1]) : nextPos;
     if (isFrom) {
       opts.nodeFrom.connectByType(slotIndex, newNode, fromSlotType);
     } else {
@@ -6600,7 +6601,10 @@ var LiteGraphTSMigration = (function(exports) {
       canvasRef.getCanvasWindow();
       const host = _a2.callbackHost();
       const group = new host.LGraphGroup();
-      group.pos = canvas.convertEventToCanvasOffset(mouse_event);
+      group.pos = canvas.clampNodePosition ? canvas.clampNodePosition(
+        group,
+        ...canvas.convertEventToCanvasOffset(mouse_event)
+      ) : canvas.convertEventToCanvasOffset(mouse_event);
       canvas.graph.add(group);
     }
     /**
@@ -6758,7 +6762,15 @@ var LiteGraphTSMigration = (function(exports) {
               canvasRef.graph.beforeChange();
               const newNode = host.createNode(selected.value || "");
               if (newNode) {
-                newNode.pos = canvasRef.convertEventToCanvasOffset(first_event);
+                const nextPos = canvasRef.clampNodePosition ? canvasRef.clampNodePosition(
+                  newNode,
+                  ...canvasRef.convertEventToCanvasOffset(
+                    first_event
+                  )
+                ) : canvasRef.convertEventToCanvasOffset(
+                  first_event
+                );
+                newNode.pos = nextPos;
                 canvasRef.graph.add(newNode);
               }
               if (callback) {
@@ -8390,7 +8402,14 @@ var LiteGraphTSMigration = (function(exports) {
           (_c2 = (_b3 = graphcanvas.graph).beforeChange) == null ? void 0 : _c2.call(_b3);
           const node2 = (_d2 = host.createNode) == null ? void 0 : _d2.call(host, name);
           if (node2) {
-            node2.pos = graphcanvas.convertEventToCanvasOffset(event2);
+            const graphPoint = graphcanvas.convertEventToCanvasOffset(
+              event2
+            );
+            node2.pos = graphcanvas.clampNodePosition ? graphcanvas.clampNodePosition(
+              node2,
+              graphPoint[0],
+              graphPoint[1]
+            ) : graphPoint;
             graphcanvas.graph.add(node2, false);
           }
           if (extra && extra.data && node2) {
@@ -8807,8 +8826,9 @@ var LiteGraphTSMigration = (function(exports) {
       newNode.properties.type = slot.type;
     }
     const offset = context.convertEventToCanvasOffset(event2);
-    newNode.pos[0] = offset[0] - 5;
-    newNode.pos[1] = offset[1] - 5;
+    const nextPos = context.clampNodePosition ? context.clampNodePosition(newNode, offset[0] - 5, offset[1] - 5) : [offset[0] - 5, offset[1] - 5];
+    newNode.pos[0] = nextPos[0];
+    newNode.pos[1] = nextPos[1];
     (_d2 = graph.afterChange) == null ? void 0 : _d2.call(graph);
     context.selectNodes([newNode]);
     (_f = (_e2 = context.sceneSyncController) == null ? void 0 : _e2.repaintAllNodeHosts) == null ? void 0 : _f.call(_e2);
@@ -9056,7 +9076,7 @@ var LiteGraphTSMigration = (function(exports) {
   function toMutationKey$1(nodeId) {
     return String(nodeId);
   }
-  function toFiniteNumber$c(value, fallback = 0) {
+  function toFiniteNumber$d(value, fallback = 0) {
     const numericValue = Number(value);
     return Number.isFinite(numericValue) ? numericValue : fallback;
   }
@@ -9070,7 +9090,7 @@ var LiteGraphTSMigration = (function(exports) {
     return "mouseup";
   }
   function resolveButtons(event2) {
-    return toFiniteNumber$c(event2.buttons);
+    return toFiniteNumber$d(event2.buttons);
   }
   function resolveButton(event2) {
     const pointerEvent = event2;
@@ -9101,21 +9121,21 @@ var LiteGraphTSMigration = (function(exports) {
   function buildLocalPosMap(event2, targets) {
     const localPosByNodeId = /* @__PURE__ */ new Map();
     const pagePoint = event2.getPagePoint();
-    const pageX = toFiniteNumber$c(pagePoint.x);
-    const pageY = toFiniteNumber$c(pagePoint.y);
+    const pageX = toFiniteNumber$d(pagePoint.x);
+    const pageY = toFiniteNumber$d(pagePoint.y);
     for (let i2 = 0; i2 < targets.length; ++i2) {
       const target = targets[i2];
       if (target.nodePosition) {
         localPosByNodeId.set(toMutationKey$1(target.nodeId), [
-          pageX - toFiniteNumber$c(target.nodePosition[0]),
-          pageY - toFiniteNumber$c(target.nodePosition[1])
+          pageX - toFiniteNumber$d(target.nodePosition[0]),
+          pageY - toFiniteNumber$d(target.nodePosition[1])
         ]);
         continue;
       }
       const localPoint = event2.getInnerPoint(target.nodeRoot);
       localPosByNodeId.set(toMutationKey$1(target.nodeId), [
-        toFiniteNumber$c(localPoint.x),
-        toFiniteNumber$c(localPoint.y)
+        toFiniteNumber$d(localPoint.x),
+        toFiniteNumber$d(localPoint.y)
       ]);
     }
     return localPosByNodeId;
@@ -9123,11 +9143,11 @@ var LiteGraphTSMigration = (function(exports) {
   function createLegacyPointerEvent(options) {
     const { event: event2, hostElement } = options;
     const pagePoint = event2.getPagePoint();
-    const canvasX = toFiniteNumber$c(pagePoint.x);
-    const canvasY = toFiniteNumber$c(pagePoint.y);
+    const canvasX = toFiniteNumber$d(pagePoint.x);
+    const canvasY = toFiniteNumber$d(pagePoint.y);
     const hostRect = hostElement.getBoundingClientRect();
-    const clientX = toFiniteNumber$c(event2.clientX, hostRect.left + canvasX);
-    const clientY = toFiniteNumber$c(event2.clientY, hostRect.top + canvasY);
+    const clientX = toFiniteNumber$d(event2.clientX, hostRect.left + canvasX);
+    const clientY = toFiniteNumber$d(event2.clientY, hostRect.top + canvasY);
     const button = resolveButton(event2);
     const buttons = resolveButtons(event2);
     const localPosByNodeId = buildLocalPosMap(event2, options.targets || []);
@@ -9147,22 +9167,22 @@ var LiteGraphTSMigration = (function(exports) {
       type: resolveMouseType(options.type),
       canvasX,
       canvasY,
-      pageX: toFiniteNumber$c(event2.pageX, clientX),
-      pageY: toFiniteNumber$c(event2.pageY, clientY),
+      pageX: toFiniteNumber$d(event2.pageX, clientX),
+      pageY: toFiniteNumber$d(event2.pageY, clientY),
       clientX,
       clientY,
-      screenX: toFiniteNumber$c(event2.screenX, clientX),
-      screenY: toFiniteNumber$c(event2.screenY, clientY),
+      screenX: toFiniteNumber$d(event2.screenX, clientX),
+      screenY: toFiniteNumber$d(event2.screenY, clientY),
       offsetX: canvasX,
       offsetY: canvasY,
-      deltaX: toFiniteNumber$c(options.deltaX),
-      deltaY: toFiniteNumber$c(options.deltaY),
-      deltax: toFiniteNumber$c(options.deltaX),
-      deltay: toFiniteNumber$c(options.deltaY),
+      deltaX: toFiniteNumber$d(options.deltaX),
+      deltaY: toFiniteNumber$d(options.deltaY),
+      deltax: toFiniteNumber$d(options.deltaX),
+      deltay: toFiniteNumber$d(options.deltaY),
       which: resolveWhich(button),
       button,
       buttons,
-      click_time: Math.max(0, toFiniteNumber$c(options.clickTime)),
+      click_time: Math.max(0, toFiniteNumber$d(options.clickTime)),
       dragging: Boolean(options.dragging),
       shiftKey: Boolean(event2.shiftKey),
       ctrlKey: Boolean(event2.ctrlKey),
@@ -9376,6 +9396,13 @@ var LiteGraphTSMigration = (function(exports) {
   }
   const instrumentedGraphs = /* @__PURE__ */ new WeakMap();
   function dispatchGraphMutation(state, eventName, payload) {
+    if (eventName === "graph:clear" && state.batchDepth > 0) {
+      state.batchClearedScene = true;
+    }
+    if (state.batchDepth > 0 && eventName !== "graph:clear") {
+      state.pendingHydrate = true;
+      return;
+    }
     for (const listener of Array.from(state.listeners)) {
       listener(eventName, payload);
     }
@@ -9435,6 +9462,24 @@ var LiteGraphTSMigration = (function(exports) {
       state.hadOwnClear,
       state.originalClear || null
     );
+    restoreGraphMethod(
+      graph,
+      "__litegraphBeginSceneBatch",
+      state.hadOwnBeginSceneBatch,
+      state.originalBeginSceneBatch || null
+    );
+    restoreGraphMethod(
+      graph,
+      "__litegraphEndSceneBatch",
+      state.hadOwnEndSceneBatch,
+      state.originalEndSceneBatch || null
+    );
+    restoreGraphMethod(
+      graph,
+      "__litegraphRunSceneBatch",
+      state.hadOwnRunSceneBatch,
+      state.originalRunSceneBatch || null
+    );
     instrumentedGraphs.delete(graph);
   }
   function instrumentGraph(graph) {
@@ -9446,6 +9491,9 @@ var LiteGraphTSMigration = (function(exports) {
     state.graph = graph;
     state.refCount = 0;
     state.listeners = /* @__PURE__ */ new Set();
+    state.batchDepth = 0;
+    state.pendingHydrate = false;
+    state.batchClearedScene = false;
     state.hadOwnAdd = Object.prototype.hasOwnProperty.call(graph, "add");
     state.hadOwnRemove = Object.prototype.hasOwnProperty.call(graph, "remove");
     state.hadOwnOnNodeAdded = Object.prototype.hasOwnProperty.call(
@@ -9457,11 +9505,26 @@ var LiteGraphTSMigration = (function(exports) {
       "onNodeRemoved"
     );
     state.hadOwnClear = Object.prototype.hasOwnProperty.call(graph, "clear");
+    state.hadOwnBeginSceneBatch = Object.prototype.hasOwnProperty.call(
+      graph,
+      "__litegraphBeginSceneBatch"
+    );
+    state.hadOwnEndSceneBatch = Object.prototype.hasOwnProperty.call(
+      graph,
+      "__litegraphEndSceneBatch"
+    );
+    state.hadOwnRunSceneBatch = Object.prototype.hasOwnProperty.call(
+      graph,
+      "__litegraphRunSceneBatch"
+    );
     state.originalAdd = typeof graph.add === "function" ? graph.add.bind(graph) : void 0;
     state.originalRemove = typeof graph.remove === "function" ? graph.remove.bind(graph) : void 0;
     state.userOnNodeAdded = typeof graph.onNodeAdded === "function" ? graph.onNodeAdded : null;
     state.userOnNodeRemoved = typeof graph.onNodeRemoved === "function" ? graph.onNodeRemoved : null;
     state.originalClear = typeof graph.clear === "function" ? graph.clear.bind(graph) : void 0;
+    state.originalBeginSceneBatch = typeof graph.__litegraphBeginSceneBatch === "function" ? graph.__litegraphBeginSceneBatch.bind(graph) : null;
+    state.originalEndSceneBatch = typeof graph.__litegraphEndSceneBatch === "function" ? graph.__litegraphEndSceneBatch.bind(graph) : null;
+    state.originalRunSceneBatch = typeof graph.__litegraphRunSceneBatch === "function" ? graph.__litegraphRunSceneBatch.bind(graph) : null;
     state.addBridge = (...args) => {
       var _a3;
       const result = (_a3 = state.originalAdd) == null ? void 0 : _a3.call(state, ...args);
@@ -9513,6 +9576,40 @@ var LiteGraphTSMigration = (function(exports) {
       });
       return result;
     };
+    state.beginSceneBatch = () => {
+      var _a3;
+      if (state.batchDepth === 0) {
+        state.pendingHydrate = false;
+        state.batchClearedScene = false;
+      }
+      (_a3 = state.originalBeginSceneBatch) == null ? void 0 : _a3.call(state);
+      state.batchDepth += 1;
+    };
+    state.endSceneBatch = () => {
+      var _a3;
+      if (state.batchDepth <= 0) {
+        return;
+      }
+      state.batchDepth -= 1;
+      (_a3 = state.originalEndSceneBatch) == null ? void 0 : _a3.call(state);
+      if (state.batchDepth === 0 && state.pendingHydrate) {
+        const sceneAlreadyCleared = state.batchClearedScene;
+        state.pendingHydrate = false;
+        state.batchClearedScene = false;
+        dispatchGraphMutation(state, "graph:hydrate", {
+          graph,
+          sceneAlreadyCleared
+        });
+      }
+    };
+    state.runSceneBatch = (work) => {
+      state.beginSceneBatch();
+      try {
+        return work();
+      } finally {
+        state.endSceneBatch();
+      }
+    };
     Object.defineProperty(graph, "onNodeAdded", {
       configurable: true,
       enumerable: true,
@@ -9536,6 +9633,9 @@ var LiteGraphTSMigration = (function(exports) {
       graph.remove = state.removeBridge;
     }
     graph.clear = state.clearBridge;
+    graph.__litegraphBeginSceneBatch = state.beginSceneBatch;
+    graph.__litegraphEndSceneBatch = state.endSceneBatch;
+    graph.__litegraphRunSceneBatch = state.runSceneBatch;
     state.linksProxy = new GraphLinksProxy(graph, {
       onLinkAdded: (linkId, link) => {
         dispatchGraphMutation(state, "link:add", {
@@ -12030,17 +12130,17 @@ var LiteGraphTSMigration = (function(exports) {
   const PORT_DIRECTION_RIGHT = 2;
   const PORT_DIRECTION_DOWN = 3;
   const PORT_DIRECTION_LEFT = 4;
-  function toFiniteNumber$b(value, fallback = 0) {
+  function toFiniteNumber$c(value, fallback = 0) {
     const numericValue = Number(value);
     return Number.isFinite(numericValue) ? numericValue : fallback;
   }
   function toPoint$1(value) {
     if (Array.isArray(value) || ArrayBuffer.isView(value) || typeof value === "object" && value !== null && "0" in value && "1" in value) {
       const indexedValue = value;
-      return [toFiniteNumber$b(indexedValue[0]), toFiniteNumber$b(indexedValue[1])];
+      return [toFiniteNumber$c(indexedValue[0]), toFiniteNumber$c(indexedValue[1])];
     }
     const point = value;
-    return [toFiniteNumber$b(point.x), toFiniteNumber$b(point.y)];
+    return [toFiniteNumber$c(point.x), toFiniteNumber$c(point.y)];
   }
   function distance(a2, b2) {
     const dx = b2[0] - a2[0];
@@ -12089,10 +12189,10 @@ var LiteGraphTSMigration = (function(exports) {
         if (!bounds) {
           continue;
         }
-        const left = toFiniteNumber$b(bounds[0]);
-        const top = toFiniteNumber$b(bounds[1]);
-        const width2 = toFiniteNumber$b(bounds[2]);
-        const height = toFiniteNumber$b(bounds[3]);
+        const left = toFiniteNumber$c(bounds[0]);
+        const top = toFiniteNumber$c(bounds[1]);
+        const width2 = toFiniteNumber$c(bounds[2]);
+        const height = toFiniteNumber$c(bounds[3]);
         if (x2 >= left && x2 <= left + width2 && y2 >= top && y2 <= top + height) {
           return node2;
         }
@@ -12152,7 +12252,7 @@ var LiteGraphTSMigration = (function(exports) {
         slotIndex
       );
       if (hostAnchor) {
-        return [toFiniteNumber$b(hostAnchor[0]), toFiniteNumber$b(hostAnchor[1])];
+        return [toFiniteNumber$c(hostAnchor[0]), toFiniteNumber$c(hostAnchor[1])];
       }
       const node2 = this.getNodeById(nodeId);
       if (!node2 || typeof node2.getConnectionPos !== "function") {
@@ -12165,8 +12265,8 @@ var LiteGraphTSMigration = (function(exports) {
       if (typeof rawPoint === "object" && rawPoint !== null && "0" in rawPoint) {
         const indexedPoint = rawPoint;
         return [
-          toFiniteNumber$b(indexedPoint[0]),
-          toFiniteNumber$b(indexedPoint[1])
+          toFiniteNumber$c(indexedPoint[0]),
+          toFiniteNumber$c(indexedPoint[1])
         ];
       }
       return toPoint$1(rawPoint);
@@ -12179,14 +12279,14 @@ var LiteGraphTSMigration = (function(exports) {
         slotIndex
       );
       if (hostDirection != null) {
-        const normalizedDirection = toFiniteNumber$b(hostDirection, 0);
+        const normalizedDirection = toFiniteNumber$c(hostDirection, 0);
         if (normalizedDirection) {
           return normalizedDirection;
         }
       }
       const slotList = kind === "input" ? node2.inputs : node2.outputs;
       const resolvedSlot = slot || (slotList == null ? void 0 : slotList[slotIndex]) || null;
-      const explicitDir = toFiniteNumber$b(resolvedSlot == null ? void 0 : resolvedSlot.dir, 0);
+      const explicitDir = toFiniteNumber$c(resolvedSlot == null ? void 0 : resolvedSlot.dir, 0);
       if (explicitDir) {
         return explicitDir;
       }
@@ -12269,7 +12369,7 @@ var LiteGraphTSMigration = (function(exports) {
       return this.buildLinkCurve(start, end, startDir, endDir).path;
     }
     getPointOnLinkCurve(curve, t2) {
-      const clampedT = Math.max(0, Math.min(1, toFiniteNumber$b(t2, 0)));
+      const clampedT = Math.max(0, Math.min(1, toFiniteNumber$c(t2, 0)));
       const oneMinusT = 1 - clampedT;
       const c1 = oneMinusT * oneMinusT * oneMinusT;
       const c2 = 3 * oneMinusT * oneMinusT * clampedT;
@@ -12411,7 +12511,7 @@ var LiteGraphTSMigration = (function(exports) {
       return this.sceneSyncController.nodeHosts.get(node2.id) || null;
     }
   }
-  function toFiniteNumber$a(value, fallback = 0) {
+  function toFiniteNumber$b(value, fallback = 0) {
     const numericValue = Number(value);
     return Number.isFinite(numericValue) ? numericValue : fallback;
   }
@@ -12440,6 +12540,23 @@ var LiteGraphTSMigration = (function(exports) {
         visible: false,
         hittable: false
       });
+      this.workspaceBoundsOutline = new xe$2({
+        name: "litegraph-workspace-bounds-outline",
+        x: 0,
+        y: 0,
+        width: 1,
+        height: 1,
+        fill: "rgba(0,0,0,0)",
+        stroke: "#8EA2B8",
+        strokeWidth: 4,
+        strokeCap: "round",
+        strokeJoin: "round",
+        dashPattern: [18, 10],
+        opacity: 0.92,
+        visible: false,
+        hittable: false
+      });
+      this.appHost.workspaceLayer.add(this.workspaceBoundsOutline);
       this.appHost.overlayWorld.add([
         this.connectionPreview,
         this.selectionBox
@@ -12448,6 +12565,18 @@ var LiteGraphTSMigration = (function(exports) {
     destroy() {
       this.connectionPreview.destroy();
       this.selectionBox.destroy();
+      this.workspaceBoundsOutline.destroy();
+    }
+    setWorkspaceBounds(bounds) {
+      if (!bounds || bounds.width <= 0 || bounds.height <= 0) {
+        this.workspaceBoundsOutline.visible = false;
+        return;
+      }
+      this.workspaceBoundsOutline.x = bounds.x;
+      this.workspaceBoundsOutline.y = bounds.y;
+      this.workspaceBoundsOutline.width = bounds.width;
+      this.workspaceBoundsOutline.height = bounds.height;
+      this.workspaceBoundsOutline.visible = true;
     }
     setConnectionPreview(curve, color = "#7F7") {
       this.syncWorldTransform();
@@ -12475,10 +12604,10 @@ var LiteGraphTSMigration = (function(exports) {
     }
     syncWorldTransform() {
       const zoomLayer = this.appHost.treeZoomLayer;
-      this.appHost.overlayWorld.x = toFiniteNumber$a(zoomLayer.x);
-      this.appHost.overlayWorld.y = toFiniteNumber$a(zoomLayer.y);
-      this.appHost.overlayWorld.scaleX = toFiniteNumber$a(zoomLayer.scaleX, 1);
-      this.appHost.overlayWorld.scaleY = toFiniteNumber$a(zoomLayer.scaleY, 1);
+      this.appHost.overlayWorld.x = toFiniteNumber$b(zoomLayer.x);
+      this.appHost.overlayWorld.y = toFiniteNumber$b(zoomLayer.y);
+      this.appHost.overlayWorld.scaleX = toFiniteNumber$b(zoomLayer.scaleX, 1);
+      this.appHost.overlayWorld.scaleY = toFiniteNumber$b(zoomLayer.scaleY, 1);
     }
   }
   function normalizeBounds(startX, startY, endX, endY) {
@@ -12571,7 +12700,7 @@ var LiteGraphTSMigration = (function(exports) {
       return Boolean(this.activeSelection);
     }
   }
-  function toFiniteNumber$9(value) {
+  function toFiniteNumber$a(value) {
     const numericValue = Number(value);
     return Number.isFinite(numericValue) ? numericValue : 0;
   }
@@ -12603,6 +12732,7 @@ var LiteGraphTSMigration = (function(exports) {
   }
   class InteractionController {
     constructor(graph, canvas, appHost, sceneSyncController) {
+      var _a3, _b3;
       this.canvas = canvas;
       this.appHost = appHost;
       this.sceneViewElement = null;
@@ -12620,7 +12750,7 @@ var LiteGraphTSMigration = (function(exports) {
       this.lastBackgroundTapAt = 0;
       this.lastBackgroundTapPagePoint = null;
       this.handleViewPointerDown = (event2) => {
-        var _a3, _b3, _c2, _d2;
+        var _a4, _b4, _c2, _d2;
         if (!this.isScenePointerEvent(event2)) {
           return;
         }
@@ -12637,16 +12767,16 @@ var LiteGraphTSMigration = (function(exports) {
         const worldPoint = source.getWorldPoint();
         const graphPoint = source.getInnerPoint();
         const normalizedPagePoint = {
-          x: toFiniteNumber$9(pagePoint.x),
-          y: toFiniteNumber$9(pagePoint.y)
+          x: toFiniteNumber$a(pagePoint.x),
+          y: toFiniteNumber$a(pagePoint.y)
         };
         const normalizedWorldPoint = {
-          x: toFiniteNumber$9(worldPoint.x),
-          y: toFiniteNumber$9(worldPoint.y)
+          x: toFiniteNumber$a(worldPoint.x),
+          y: toFiniteNumber$a(worldPoint.y)
         };
         const normalizedGraphPoint = {
-          x: toFiniteNumber$9(graphPoint.x),
-          y: toFiniteNumber$9(graphPoint.y)
+          x: toFiniteNumber$a(graphPoint.x),
+          y: toFiniteNumber$a(graphPoint.y)
         };
         this.pointerIsDown = true;
         this.pointerDownAt = Date.now();
@@ -12721,7 +12851,7 @@ var LiteGraphTSMigration = (function(exports) {
             deltaY: 0
           });
           this.canvas.processMouseDown(legacyEvent);
-          (_a3 = this.canvas.sceneSyncController) == null ? void 0 : _a3.repaintAllNodeHosts();
+          (_a4 = this.canvas.sceneSyncController) == null ? void 0 : _a4.repaintAllNodeHosts();
           this.session = {
             kind: "legacy-press"
           };
@@ -12733,7 +12863,7 @@ var LiteGraphTSMigration = (function(exports) {
         }
         if (!isAlreadySelected || additiveSelection) {
           this.canvas.selectNodes([hit.node], additiveSelection);
-          (_b3 = this.canvas.sceneSyncController) == null ? void 0 : _b3.repaintAllNodeHosts();
+          (_b4 = this.canvas.sceneSyncController) == null ? void 0 : _b4.repaintAllNodeHosts();
         }
         if (modernHost) {
           modernHost.updateInteractionState({
@@ -12813,7 +12943,7 @@ var LiteGraphTSMigration = (function(exports) {
         this.dispatchPointerMoveWhileDown(event2);
       };
       this.handleDocumentPointerUp = (event2) => {
-        var _a3, _b3, _c2, _d2, _e2, _f, _g, _h2;
+        var _a4, _b4, _c2, _d2, _e2, _f, _g, _h2;
         if (!this.pointerIsDown && event2.button !== 0) {
           return;
         }
@@ -12825,24 +12955,24 @@ var LiteGraphTSMigration = (function(exports) {
         const worldPoint = source.getWorldPoint();
         const graphPoint = source.getInnerPoint();
         const normalizedPagePoint = {
-          x: toFiniteNumber$9(pagePoint.x),
-          y: toFiniteNumber$9(pagePoint.y)
+          x: toFiniteNumber$a(pagePoint.x),
+          y: toFiniteNumber$a(pagePoint.y)
         };
         const normalizedWorldPoint = {
-          x: toFiniteNumber$9(worldPoint.x),
-          y: toFiniteNumber$9(worldPoint.y)
+          x: toFiniteNumber$a(worldPoint.x),
+          y: toFiniteNumber$a(worldPoint.y)
         };
         const normalizedGraphPoint = {
-          x: toFiniteNumber$9(graphPoint.x),
-          y: toFiniteNumber$9(graphPoint.y)
+          x: toFiniteNumber$a(graphPoint.x),
+          y: toFiniteNumber$a(graphPoint.y)
         };
-        if (((_a3 = this.session) == null ? void 0 : _a3.kind) === "connection") {
+        if (((_a4 = this.session) == null ? void 0 : _a4.kind) === "connection") {
           this.connectionController.finish(
             normalizedGraphPoint.x,
             normalizedGraphPoint.y
           );
           this.stopEvent(event2, true);
-        } else if (((_b3 = this.session) == null ? void 0 : _b3.kind) === "selection") {
+        } else if (((_b4 = this.session) == null ? void 0 : _b4.kind) === "selection") {
           this.selectionController.finish(
             normalizedGraphPoint.x,
             normalizedGraphPoint.y
@@ -12900,6 +13030,15 @@ var LiteGraphTSMigration = (function(exports) {
         }
       );
       this.overlayPrimitives = new OverlayPrimitives(this.appHost);
+      const initialWorldBounds = ((_b3 = (_a3 = this.canvas).getWorldBounds) == null ? void 0 : _b3.call(_a3)) || null;
+      this.overlayPrimitives.setWorkspaceBounds(
+        initialWorldBounds ? {
+          x: initialWorldBounds[0],
+          y: initialWorldBounds[1],
+          width: initialWorldBounds[2],
+          height: initialWorldBounds[3]
+        } : null
+      );
       this.connectionController = new ConnectionController(
         this.graphRef,
         sceneSyncController,
@@ -12973,8 +13112,8 @@ var LiteGraphTSMigration = (function(exports) {
       const targets = this.collectTargets(this.toLegacyHost((hit == null ? void 0 : hit.host) || null));
       const shouldDispatch = targets.length > 0 || Boolean(this.canvas.node_widget) || Boolean(this.canvas.node_over) || Boolean(this.canvas.node_capturing_input) || Boolean(this.canvas.node_dragged) || Boolean(this.canvas.resizing_node) || Boolean(this.canvas.connecting_node);
       const normalizedPagePoint = {
-        x: toFiniteNumber$9(pagePoint.x),
-        y: toFiniteNumber$9(pagePoint.y)
+        x: toFiniteNumber$a(pagePoint.x),
+        y: toFiniteNumber$a(pagePoint.y)
       };
       const deltaX2 = this.lastPagePoint ? normalizedPagePoint.x - this.lastPagePoint.x : 0;
       const deltaY = this.lastPagePoint ? normalizedPagePoint.y - this.lastPagePoint.y : 0;
@@ -13005,16 +13144,16 @@ var LiteGraphTSMigration = (function(exports) {
       const worldPoint = source.getWorldPoint();
       const graphPoint = source.getInnerPoint();
       const normalizedPagePoint = {
-        x: toFiniteNumber$9(pagePoint.x),
-        y: toFiniteNumber$9(pagePoint.y)
+        x: toFiniteNumber$a(pagePoint.x),
+        y: toFiniteNumber$a(pagePoint.y)
       };
       const normalizedWorldPoint = {
-        x: toFiniteNumber$9(worldPoint.x),
-        y: toFiniteNumber$9(worldPoint.y)
+        x: toFiniteNumber$a(worldPoint.x),
+        y: toFiniteNumber$a(worldPoint.y)
       };
       const normalizedGraphPoint = {
-        x: toFiniteNumber$9(graphPoint.x),
-        y: toFiniteNumber$9(graphPoint.y)
+        x: toFiniteNumber$a(graphPoint.x),
+        y: toFiniteNumber$a(graphPoint.y)
       };
       if (this.session.kind === "connection") {
         this.connectionController.update(
@@ -13054,17 +13193,33 @@ var LiteGraphTSMigration = (function(exports) {
       }
       if (this.session.kind === "group-drag") {
         if (this.session.resizing) {
-          this.session.group.size = [
+          const nextSize = this.canvas.clampGroupSize ? this.canvas.clampGroupSize(
+            this.session.group,
             normalizedGraphPoint.x - this.session.group.pos[0],
             normalizedGraphPoint.y - this.session.group.pos[1]
+          ) : [
+            normalizedGraphPoint.x - this.session.group.pos[0],
+            normalizedGraphPoint.y - this.session.group.pos[1]
+          ];
+          this.session.group.size = [
+            nextSize[0],
+            nextSize[1]
           ];
           (_a3 = this.canvas.sceneSyncController) == null ? void 0 : _a3.syncGroupChanged(
             this.session.group
           );
           this.view.style.cursor = "se-resize";
         } else {
-          const deltaX2 = normalizedGraphPoint.x - this.session.lastGraphPoint.x;
-          const deltaY = normalizedGraphPoint.y - this.session.lastGraphPoint.y;
+          let deltaX2 = normalizedGraphPoint.x - this.session.lastGraphPoint.x;
+          let deltaY = normalizedGraphPoint.y - this.session.lastGraphPoint.y;
+          if (this.canvas.clampGroupMoveDelta) {
+            [deltaX2, deltaY] = this.canvas.clampGroupMoveDelta(
+              this.session.group,
+              deltaX2,
+              deltaY,
+              event2.ctrlKey
+            );
+          }
           if (deltaX2 || deltaY) {
             this.session.group.move(deltaX2, deltaY, event2.ctrlKey);
             if (!event2.ctrlKey) {
@@ -13168,11 +13323,17 @@ var LiteGraphTSMigration = (function(exports) {
         }
       }
       if (this.session.kind === "node-resize") {
-        const didResize = this.session.host.updateResize(
+        const resizeSession = this.session;
+        const didResize = resizeSession.host.updateResize(
           normalizedGraphPoint.x,
-          normalizedGraphPoint.y
+          normalizedGraphPoint.y,
+          this.canvas.clampNodeSize ? (width2, height) => this.canvas.clampNodeSize(
+            resizeSession.node,
+            width2,
+            height
+          ) : void 0
         );
-        this.session.host.updateInteractionState({
+        resizeSession.host.updateInteractionState({
           hovered: true,
           pressed: true,
           resizing: true,
@@ -13187,7 +13348,7 @@ var LiteGraphTSMigration = (function(exports) {
         });
         if (didResize) {
           (_g = this.canvas.sceneSyncController) == null ? void 0 : _g.repaintNodeHost(
-            this.session.node.id
+            resizeSession.node.id
           );
         }
         this.lastPagePoint = normalizedPagePoint;
@@ -13196,8 +13357,15 @@ var LiteGraphTSMigration = (function(exports) {
         return;
       }
       if (this.session.kind === "node-drag") {
-        const deltaX2 = normalizedGraphPoint.x - this.session.lastGraphPoint.x;
-        const deltaY = normalizedGraphPoint.y - this.session.lastGraphPoint.y;
+        let deltaX2 = normalizedGraphPoint.x - this.session.lastGraphPoint.x;
+        let deltaY = normalizedGraphPoint.y - this.session.lastGraphPoint.y;
+        if (this.canvas.clampNodeMoveDelta) {
+          [deltaX2, deltaY] = this.canvas.clampNodeMoveDelta(
+            this.session.dragNodes,
+            deltaX2,
+            deltaY
+          );
+        }
         if (deltaX2 || deltaY) {
           for (let i2 = 0; i2 < this.session.dragNodes.length; ++i2) {
             const node2 = this.session.dragNodes[i2];
@@ -13452,8 +13620,8 @@ var LiteGraphTSMigration = (function(exports) {
         clientY: event2.clientY
       });
       const localPos = host.getLocalPoint(
-        toFiniteNumber$9(worldPoint.x),
-        toFiniteNumber$9(worldPoint.y)
+        toFiniteNumber$a(worldPoint.x),
+        toFiniteNumber$a(worldPoint.y)
       );
       const propertyName = entry.schema.property;
       const widgetMeta = {
@@ -13480,7 +13648,7 @@ var LiteGraphTSMigration = (function(exports) {
           widgetMeta
         );
         if (node2.graph) {
-          node2.graph._version = toFiniteNumber$9(
+          node2.graph._version = toFiniteNumber$a(
             node2.graph._version
           ) + 1;
         }
@@ -13616,8 +13784,8 @@ var LiteGraphTSMigration = (function(exports) {
     }
     isPointerNearGroupResizeHandle(group, graphPoint) {
       const resizeCorner = {
-        x: toFiniteNumber$9(group.pos[0]) + toFiniteNumber$9(group.size[0]),
-        y: toFiniteNumber$9(group.pos[1]) + toFiniteNumber$9(group.size[1])
+        x: toFiniteNumber$a(group.pos[0]) + toFiniteNumber$a(group.size[0]),
+        y: toFiniteNumber$a(group.pos[1]) + toFiniteNumber$a(group.size[1])
       };
       return getPointerDistance(graphPoint, resizeCorner) * this.getViewportScale() < 10;
     }
@@ -13625,7 +13793,7 @@ var LiteGraphTSMigration = (function(exports) {
       return Math.max(
         1e-4,
         Math.abs(
-          toFiniteNumber$9(
+          toFiniteNumber$a(
             this.appHost.treeZoomLayer.scaleX || 1
           )
         )
@@ -13767,7 +13935,7 @@ var LiteGraphTSMigration = (function(exports) {
         return void 0;
       }
       const pos2 = rawPos;
-      return [toFiniteNumber$9(pos2[0]), toFiniteNumber$9(pos2[1])];
+      return [toFiniteNumber$a(pos2[0]), toFiniteNumber$a(pos2[1])];
     }
     dispatchContextMenu(event2) {
       var _a3, _b3, _c2;
@@ -14145,6 +14313,7 @@ var LiteGraphTSMigration = (function(exports) {
   function createLeaferLayerRegistry(app) {
     const groundRoot = createLayerGroup("litegraph-ground-root");
     const treeRoot = createLayerGroup("litegraph-tree-root", true);
+    const workspaceLayer = createLayerGroup("litegraph-workspace-layer");
     const groupLayer = createLayerGroup("litegraph-group-layer");
     const linkLayerBack = createLayerGroup("litegraph-link-layer-back");
     const legacyNodeLayer = createLayerGroup("litegraph-legacy-node-layer", true);
@@ -14156,6 +14325,7 @@ var LiteGraphTSMigration = (function(exports) {
     app.ground.add(groundRoot);
     app.tree.zoomLayer.add(treeRoot);
     treeRoot.add([
+      workspaceLayer,
       groupLayer,
       linkLayerBack,
       legacyNodeLayer,
@@ -14172,6 +14342,7 @@ var LiteGraphTSMigration = (function(exports) {
       treeZoomLayer: app.tree.zoomLayer,
       groundRoot,
       treeRoot,
+      workspaceLayer,
       groupLayer,
       linkLayerBack,
       legacyNodeLayer,
@@ -14188,9 +14359,20 @@ const PORT_DIRECTION_UP = 2
 const PORT_DIRECTION_RIGHT = 3
 const PORT_DIRECTION_DOWN = 4
 const CURVE_CACHE_LIMIT = 4096
+const ACTIVE_LINK_WINDOW_MS = 180
+const ACTIVE_LINK_OPACITY_BUCKETS = 6
 const curveCache = new Map()
 
 const clamp01 = (value) => Math.max(0, Math.min(1, Number.isFinite(value) ? value : 0))
+const quantizeOpacity = (value) => {
+  if (!(value > 0)) return 0
+  return Math.round(clamp01(value) * ACTIVE_LINK_OPACITY_BUCKETS) / ACTIVE_LINK_OPACITY_BUCKETS
+}
+const resolveActiveLinkOpacity = (lastTime, now) => {
+  const elapsed = now - lastTime
+  if (elapsed < 0 || elapsed >= ACTIVE_LINK_WINDOW_MS) return 0
+  return quantizeOpacity(1 - elapsed / ACTIVE_LINK_WINDOW_MS)
+}
 
 const cacheSet = (map, key, value, limit) => {
   if (map.has(key)) map.delete(key)
@@ -14273,20 +14455,12 @@ const getOrCreateCurve = (task) => {
   return { layoutKey, curve }
 }
 
-const buildActiveLinkPresentation = (task, now, dotCount) => {
+const buildActiveLinkPresentation = (task, now) => {
   const { layoutKey, curve } = getOrCreateCurve(task)
   const midpoint = cubicPointAt(curve.start, curve.c1, curve.c2, curve.end, 0.5)
   const lastTime = Number.isFinite(task.lastTime) ? task.lastTime : 0
-  const elapsed = now - lastTime
-  const active = !!lastTime && elapsed >= 0 && elapsed < 1000
-  const opacity = active ? Math.max(0, Math.min(1, 2 - elapsed * 0.002)) : 0
-  const dots = []
-  if (active) {
-    for (let index = 0; index < dotCount; ++index) {
-      const t = (now * 0.001 + index * 0.2) % 1
-      dots.push(cubicPointAt(curve.start, curve.c1, curve.c2, curve.end, t))
-    }
-  }
+  const opacity = lastTime ? resolveActiveLinkOpacity(lastTime, now) : 0
+  const active = opacity > 0
   return {
     linkId: String(task.linkId),
     layoutKey,
@@ -14294,8 +14468,7 @@ const buildActiveLinkPresentation = (task, now, dotCount) => {
     active,
     opacity,
     curve,
-    midpoint,
-    dots
+    midpoint
   }
 }
 
@@ -14303,32 +14476,11 @@ self.onmessage = (event) => {
   const data = event.data
   if (!data) return
 
-  if (data.type === 'sample-link-flow-dots') {
-    const now = Number.isFinite(data.now) ? data.now : 0
-    const dotCount = Math.max(1, Number.isFinite(data.dotCount) ? data.dotCount : 5)
-    const results = (Array.isArray(data.tasks) ? data.tasks : []).map((task) => {
-      const dots = []
-      for (let index = 0; index < dotCount; ++index) {
-        const t = (now * 0.001 + index * 0.2) % 1
-        dots.push(cubicPointAt(task.start, task.c1, task.c2, task.end, t))
-      }
-      return { linkId: String(task.linkId), dots }
-    })
-
-    self.postMessage({
-      type: 'sample-link-flow-dots-result',
-      requestId: data.requestId,
-      results
-    })
-    return
-  }
-
   if (data.type !== 'compute-active-link-presentations') return
 
   const now = Number.isFinite(data.now) ? data.now : 0
-  const dotCount = Math.max(1, Number.isFinite(data.dotCount) ? data.dotCount : 5)
   const results = (Array.isArray(data.tasks) ? data.tasks : []).map((task) =>
-    buildActiveLinkPresentation(task, now, dotCount)
+    buildActiveLinkPresentation(task, now)
   )
 
   self.postMessage({
@@ -14350,7 +14502,6 @@ self.onmessage = (event) => {
   class LeaferTaskWorker {
     constructor(enabled = true) {
       this.nextRequestId = 1;
-      this.linkFlowListener = null;
       this.activeLinkPresentationListener = null;
       if (!enabled || !LeaferTaskWorker.isSupported()) {
         this.worker = null;
@@ -14366,17 +14517,13 @@ self.onmessage = (event) => {
       this.workerUrl = workerUrl;
       this.worker = new Worker(workerUrl, { name: "litegraph-leafer-task-worker" });
       this.worker.onmessage = (event2) => {
-        var _a3, _b3;
+        var _a3;
         const data = event2.data;
         if (!data) {
           return;
         }
-        if (data.type === "sample-link-flow-dots-result") {
-          (_a3 = this.linkFlowListener) == null ? void 0 : _a3.call(this, data.requestId, data.results);
-          return;
-        }
         if (data.type === "compute-active-link-presentations-result") {
-          (_b3 = this.activeLinkPresentationListener) == null ? void 0 : _b3.call(this, data.requestId, data.results);
+          (_a3 = this.activeLinkPresentationListener) == null ? void 0 : _a3.call(this, data.requestId, data.results);
         }
       };
     }
@@ -14389,30 +14536,12 @@ self.onmessage = (event) => {
       if (this.workerUrl && typeof URL !== "undefined") {
         URL.revokeObjectURL(this.workerUrl);
       }
-      this.linkFlowListener = null;
       this.activeLinkPresentationListener = null;
-    }
-    onLinkFlowSample(listener) {
-      this.linkFlowListener = listener;
-    }
-    requestLinkFlowSample(now, tasks, dotCount = 5) {
-      if (!this.worker || !tasks.length) {
-        return null;
-      }
-      const requestId = this.nextRequestId++;
-      this.worker.postMessage({
-        type: "sample-link-flow-dots",
-        requestId,
-        now,
-        dotCount,
-        tasks
-      });
-      return requestId;
     }
     onActiveLinkPresentation(listener) {
       this.activeLinkPresentationListener = listener;
     }
-    requestActiveLinkPresentations(now, tasks, dotCount = 5) {
+    requestActiveLinkPresentations(now, tasks) {
       if (!this.worker || !tasks.length) {
         return null;
       }
@@ -14421,7 +14550,6 @@ self.onmessage = (event) => {
         type: "compute-active-link-presentations",
         requestId,
         now,
-        dotCount,
         tasks
       });
       return requestId;
@@ -14601,6 +14729,7 @@ ${safeText}`;
       this.treeZoomLayer = this.layers.treeZoomLayer;
       this.groundRoot = this.layers.groundRoot;
       this.treeRoot = this.layers.treeRoot;
+      this.workspaceLayer = this.layers.workspaceLayer;
       this.groupLayer = this.layers.groupLayer;
       this.linkLayerBack = this.layers.linkLayerBack;
       this.legacyNodeLayer = this.layers.legacyNodeLayer;
@@ -14741,7 +14870,7 @@ ${safeText}`;
     }
     return hex;
   }
-  function toFiniteNumber$8(value, fallback = 0) {
+  function toFiniteNumber$9(value, fallback = 0) {
     const numericValue = Number(value);
     return Number.isFinite(numericValue) ? numericValue : fallback;
   }
@@ -14794,7 +14923,7 @@ ${safeText}`;
         x: 4,
         y: 4,
         text: typeof group.title === "string" ? group.title : "Group",
-        fontSize: Math.max(12, toFiniteNumber$8(group.font_size, 24)),
+        fontSize: Math.max(12, toFiniteNumber$9(group.font_size, 24)),
         fill: typeof group.color === "string" ? group.color : "#88A",
         hittable: false
       });
@@ -14803,7 +14932,7 @@ ${safeText}`;
     repaint() {
       const position = this.resolvePosition();
       const size = this.resolveSize();
-      const fontSize = Math.max(12, toFiniteNumber$8(this.group.font_size, 24));
+      const fontSize = Math.max(12, toFiniteNumber$9(this.group.font_size, 24));
       const color = typeof this.group.color === "string" && this.group.color ? this.group.color : "#88A";
       this.root.x = position[0];
       this.root.y = position[1];
@@ -14824,15 +14953,15 @@ ${safeText}`;
       const worldBounds = this.root.worldRenderBounds || null;
       if ((worldBounds == null ? void 0 : worldBounds.width) && (worldBounds == null ? void 0 : worldBounds.height)) {
         return {
-          x: toFiniteNumber$8(worldBounds.x),
-          y: toFiniteNumber$8(worldBounds.y),
-          width: Math.max(0, toFiniteNumber$8(worldBounds.width)),
-          height: Math.max(0, toFiniteNumber$8(worldBounds.height))
+          x: toFiniteNumber$9(worldBounds.x),
+          y: toFiniteNumber$9(worldBounds.y),
+          width: Math.max(0, toFiniteNumber$9(worldBounds.width)),
+          height: Math.max(0, toFiniteNumber$9(worldBounds.height))
         };
       }
       const [x2, y2] = this.resolvePosition();
       const [width2, height] = this.resolveSize();
-      const fontSize = Math.max(12, toFiniteNumber$8(this.group.font_size, 24));
+      const fontSize = Math.max(12, toFiniteNumber$9(this.group.font_size, 24));
       return {
         x: x2,
         y: y2,
@@ -14843,15 +14972,15 @@ ${safeText}`;
     resolvePosition() {
       const pos2 = this.group.pos || this.group._pos;
       return [
-        toFiniteNumber$8(pos2 == null ? void 0 : pos2[0]),
-        toFiniteNumber$8(pos2 == null ? void 0 : pos2[1])
+        toFiniteNumber$9(pos2 == null ? void 0 : pos2[0]),
+        toFiniteNumber$9(pos2 == null ? void 0 : pos2[1])
       ];
     }
     resolveSize() {
       const size = this.group.size || this.group._size;
       return [
-        Math.max(140, toFiniteNumber$8(size == null ? void 0 : size[0], 140)),
-        Math.max(80, toFiniteNumber$8(size == null ? void 0 : size[1], 80))
+        Math.max(140, toFiniteNumber$9(size == null ? void 0 : size[0], 140)),
+        Math.max(80, toFiniteNumber$9(size == null ? void 0 : size[1], 80))
       ];
     }
   }
@@ -14969,7 +15098,7 @@ ${safeText}`;
       return resolvedBounds;
     }
   }
-  function toFiniteNumber$7(value, fallback = 0) {
+  function toFiniteNumber$8(value, fallback = 0) {
     const numericValue = Number(value);
     return Number.isFinite(numericValue) ? numericValue : fallback;
   }
@@ -14979,14 +15108,14 @@ ${safeText}`;
   function resolveDevicePixelRatio(view) {
     var _a3;
     const windowRef = ((_a3 = view == null ? void 0 : view.ownerDocument) == null ? void 0 : _a3.defaultView) || window;
-    return Math.max(1, toFiniteNumber$7(windowRef.devicePixelRatio, 1));
+    return Math.max(1, toFiniteNumber$8(windowRef.devicePixelRatio, 1));
   }
   function resolveRasterRenderScale(options) {
     const devicePixelRatio2 = resolveDevicePixelRatio(options.view);
-    const zoomScale = Math.max(1, toFiniteNumber$7(options.zoomScale, 1));
+    const zoomScale = Math.max(1, toFiniteNumber$8(options.zoomScale, 1));
     const maxPixelRatio = Math.max(
       devicePixelRatio2,
-      toFiniteNumber$7(options.maxPixelRatio, 4)
+      toFiniteNumber$8(options.maxPixelRatio, 4)
     );
     const scaledRatio = devicePixelRatio2 * zoomScale;
     return clamp$1(Math.ceil(scaledRatio * 2) / 2, devicePixelRatio2, maxPixelRatio);
@@ -15265,7 +15394,6 @@ ${safeText}`;
     t2.__.dashPattern && (r2.beginPath(), t2.__drawPathByData(r2, t2.__.__pathForArrow), r2.dashPattern = null, r2.stroke());
   } });
   const LINK_BORDER_COLOR = "transparent";
-  const LINK_FLOW_DOT_COUNT = 5;
   function isSameAttrValue$1(current, next) {
     return Object.is(current, next);
   }
@@ -15275,18 +15403,16 @@ ${safeText}`;
     }
     target[key] = value;
   }
-  function toFiniteNumber$6(value, fallback = 0) {
+  function toFiniteNumber$7(value, fallback = 0) {
     const numericValue = Number(value);
     return Number.isFinite(numericValue) ? numericValue : fallback;
   }
   function toOpacity(value, fallback = 1) {
-    return Math.max(0, Math.min(1, toFiniteNumber$6(value, fallback)));
+    return Math.max(0, Math.min(1, toFiniteNumber$7(value, fallback)));
   }
   class LinkViewHost {
     constructor(name, options = {}) {
-      this.flowDots = [];
       this.flowOverlayActive = false;
-      this.getViewportScale = options.getViewportScale || (() => 1);
       this.view = new ye$1({
         name,
         hittable: false,
@@ -15301,30 +15427,7 @@ ${safeText}`;
       this.strokePath = this.createPath(`${name}:stroke`, "#9A9");
       this.flowPath = this.createPath(`${name}:flow`, "#FFF");
       this.flowPath.visible = false;
-      this.flowDotLayer = new ye$1({
-        name: `${name}:flow-dots`,
-        hittable: false,
-        visible: false
-      });
-      for (let index = 0; index < LINK_FLOW_DOT_COUNT; ++index) {
-        const dot = new xe$2({
-          name: `${name}:flow-dot:${String(index)}`,
-          width: 0,
-          height: 0,
-          cornerRadius: 999,
-          fill: "#FFF",
-          visible: false,
-          hittable: false
-        });
-        this.flowDots.push(dot);
-        this.flowDotLayer.add(dot);
-      }
-      this.view.add([
-        this.borderPath,
-        this.strokePath,
-        this.flowPath,
-        this.flowDotLayer
-      ]);
+      this.view.add([this.borderPath, this.strokePath, this.flowPath]);
     }
     update(presentation) {
       const curve = presentation.curve;
@@ -15337,9 +15440,8 @@ ${safeText}`;
       }
       const strokeWidth = Math.max(
         1,
-        toFiniteNumber$6(presentation.strokeWidth, 3)
+        toFiniteNumber$7(presentation.strokeWidth, 3)
       );
-      this.getViewportScale();
       const stroke = presentation.stroke || "#9A9";
       const path = curve.path;
       const startArrow = presentation.startArrow || "none";
@@ -15350,13 +15452,7 @@ ${safeText}`;
       setAttrIfChanged$1(strokeRecord, "strokeWidth", strokeWidth);
       setAttrIfChanged$1(strokeRecord, "startArrow", startArrow);
       setAttrIfChanged$1(strokeRecord, "endArrow", endArrow);
-      this.updateFlowOverlay(
-        path,
-        strokeWidth,
-        presentation.flow,
-        startArrow,
-        endArrow
-      );
+      this.updateFlowOverlay(path, strokeWidth, presentation.flow);
     }
     destroy() {
       this.view.destroy();
@@ -15374,43 +15470,19 @@ ${safeText}`;
         strokeJoin: "round"
       });
     }
-    updateFlowOverlay(path, strokeWidth, flow, startArrow = "none", endArrow = "none") {
+    updateFlowOverlay(path, strokeWidth, flow) {
       if (!(flow == null ? void 0 : flow.active)) {
         this.hideFlowOverlay();
         return;
       }
       const flowColor = flow.color || "#FFF";
       const flowOpacity = toOpacity(flow.opacity, 1);
-      const dotRadius = Math.max(1, toFiniteNumber$6(flow.dotRadius, 5));
-      const dots = flow.dots || [];
       const flowPathRecord = this.flowPath;
-      const flowDotLayerRecord = this.flowDotLayer;
       setAttrIfChanged$1(flowPathRecord, "visible", true);
       setAttrIfChanged$1(flowPathRecord, "path", path);
       setAttrIfChanged$1(flowPathRecord, "stroke", flowColor);
       setAttrIfChanged$1(flowPathRecord, "strokeWidth", strokeWidth);
       setAttrIfChanged$1(flowPathRecord, "opacity", flowOpacity);
-      setAttrIfChanged$1(flowPathRecord, "startArrow", startArrow);
-      setAttrIfChanged$1(flowPathRecord, "endArrow", endArrow);
-      setAttrIfChanged$1(flowDotLayerRecord, "visible", dots.length > 0);
-      for (let index = 0; index < this.flowDots.length; ++index) {
-        const dot = this.flowDots[index];
-        const point = dots[index];
-        const dotRecord = dot;
-        if (!point) {
-          setAttrIfChanged$1(dotRecord, "visible", false);
-          continue;
-        }
-        const diameter = dotRadius * 2;
-        setAttrIfChanged$1(dotRecord, "visible", true);
-        setAttrIfChanged$1(dotRecord, "fill", flowColor);
-        setAttrIfChanged$1(dotRecord, "opacity", flowOpacity);
-        setAttrIfChanged$1(dotRecord, "x", point[0] - dotRadius);
-        setAttrIfChanged$1(dotRecord, "y", point[1] - dotRadius);
-        setAttrIfChanged$1(dotRecord, "width", diameter);
-        setAttrIfChanged$1(dotRecord, "height", diameter);
-        setAttrIfChanged$1(dotRecord, "cornerRadius", dotRadius);
-      }
       this.flowOverlayActive = true;
     }
     hideFlowOverlay() {
@@ -15418,15 +15490,7 @@ ${safeText}`;
         return;
       }
       const flowPathRecord = this.flowPath;
-      const flowDotLayerRecord = this.flowDotLayer;
       setAttrIfChanged$1(flowPathRecord, "visible", false);
-      setAttrIfChanged$1(flowPathRecord, "startArrow", "none");
-      setAttrIfChanged$1(flowPathRecord, "endArrow", "none");
-      setAttrIfChanged$1(flowDotLayerRecord, "visible", false);
-      for (let index = 0; index < this.flowDots.length; ++index) {
-        const dotRecord = this.flowDots[index];
-        setAttrIfChanged$1(dotRecord, "visible", false);
-      }
       this.flowOverlayActive = false;
     }
   }
@@ -16206,12 +16270,14 @@ ${safeText}`;
      * @param {*} options
      */
     doExecute(param, options) {
+      var _a3;
       const runtimeOptions = options || {};
       const graph = this.getExecutionGraph();
       if (this.onExecute) {
         if (!runtimeOptions.action_call) {
           runtimeOptions.action_call = this.id + "_exec_" + Math.floor(Math.random() * 9999);
         }
+        (_a3 = graph.trackRuntimeExecutionNode) == null ? void 0 : _a3.call(graph, this.id);
         graph.nodes_executing[String(this.id)] = true;
         this.onExecute(param, runtimeOptions);
         graph.nodes_executing[String(this.id)] = false;
@@ -16233,12 +16299,14 @@ ${safeText}`;
      * @param {*} param
      */
     actionDo(action, param, options, action_slot) {
+      var _a3;
       const runtimeOptions = options || {};
       const graph = this.getExecutionGraph();
       if (this.onAction) {
         if (!runtimeOptions.action_call) {
           runtimeOptions.action_call = this.id + "_" + (action ? action : "action") + "_" + Math.floor(Math.random() * 9999);
         }
+        (_a3 = graph.trackRuntimeExecutionNode) == null ? void 0 : _a3.call(graph, this.id);
         graph.nodes_actioning[String(this.id)] = action ? action : "actioning";
         this.onAction(action, param, runtimeOptions, action_slot);
         graph.nodes_actioning[String(this.id)] = false;
@@ -16283,6 +16351,7 @@ ${safeText}`;
      * @param {Number} link_id [optional] in case you want to trigger and specific output link in a slot
      */
     triggerSlot(slot, param, link_id, options) {
+      var _a3;
       const runtimeOptions = options || {};
       if (!this.outputs) {
         return;
@@ -16309,7 +16378,8 @@ ${safeText}`;
       if (!graph) {
         return;
       }
-      graph._last_trigger_time = host.getTime();
+      const triggerTime = host.getTime();
+      graph._last_trigger_time = triggerTime;
       for (let k2 = 0; k2 < links.length; ++k2) {
         const id = links[k2];
         if (link_id != null && link_id != id) {
@@ -16319,7 +16389,8 @@ ${safeText}`;
         if (!link_info) {
           continue;
         }
-        link_info._last_time = host.getTime();
+        link_info._last_time = triggerTime;
+        (_a3 = graph.trackRuntimeExecutionLink) == null ? void 0 : _a3.call(graph, id);
         const node2 = graph.getNodeById(link_info.target_id);
         if (!node2) {
           continue;
@@ -16367,6 +16438,7 @@ ${safeText}`;
      * @param {Number} link_id [optional] in case you want to trigger and specific output link in a slot
      */
     clearTriggeredSlot(slot, link_id) {
+      var _a3;
       if (!this.outputs) {
         return;
       }
@@ -16388,7 +16460,11 @@ ${safeText}`;
         if (!link_info) {
           continue;
         }
+        if (!link_info._last_time) {
+          continue;
+        }
         link_info._last_time = 0;
+        (_a3 = graph.trackRuntimeExecutionLink) == null ? void 0 : _a3.call(graph, id);
       }
     }
   }
@@ -17632,7 +17708,7 @@ ${safeText}`;
     }
   }
   var _a, _b;
-  function toFiniteNumber$5(value, fallback = 0) {
+  function toFiniteNumber$6(value, fallback = 0) {
     const numericValue = Number(value);
     return Number.isFinite(numericValue) ? numericValue : fallback;
   }
@@ -17692,7 +17768,7 @@ ${safeText}`;
       this.ensureModernPorts(true);
     }
     requestModernPatch(changeMask = ModernNodeChangeMask.All, dirtyBackground = false) {
-      const normalizedMask = toFiniteNumber$5(changeMask, ModernNodeChangeMask.None) | ModernNodeChangeMask.None;
+      const normalizedMask = toFiniteNumber$6(changeMask, ModernNodeChangeMask.None) | ModernNodeChangeMask.None;
       if (normalizedMask) {
         this.modernChangeMask |= normalizedMask;
       }
@@ -17775,7 +17851,7 @@ ${safeText}`;
   };
   _ModernNodeBase.modernContractVersion = 1;
   let ModernNodeBase = _ModernNodeBase;
-  function toFiniteNumber$4(value, fallback = 0) {
+  function toFiniteNumber$5(value, fallback = 0) {
     const numericValue = Number(value);
     return Number.isFinite(numericValue) ? numericValue : fallback;
   }
@@ -17816,7 +17892,7 @@ ${safeText}`;
     if (!text) {
       return "";
     }
-    const safeMaxLength = Math.max(toFiniteNumber$4(maxLength, 24), 4);
+    const safeMaxLength = Math.max(toFiniteNumber$5(maxLength, 24), 4);
     if (text.length <= safeMaxLength) {
       return text;
     }
@@ -17908,7 +17984,7 @@ ${safeText}`;
       return "#AAAAAA";
     }
     const modeColors = Array.isArray(host.NODE_MODES_COLORS) ? host.NODE_MODES_COLORS : null;
-    const mode = toFiniteNumber$4(node2.mode, -1);
+    const mode = toFiniteNumber$5(node2.mode, -1);
     if (modeColors && mode >= 0 && modeColors[mode]) {
       return modeColors[mode];
     }
@@ -17956,9 +18032,9 @@ ${safeText}`;
     var _a3;
     const runtimeNode = node2 || {};
     const host = resolveLiteGraphAuthoringHost(hostInput);
-    const titleHeight = toFiniteNumber$4(host.NODE_TITLE_HEIGHT, 30);
+    const titleHeight = toFiniteNumber$5(host.NODE_TITLE_HEIGHT, 30);
     const nodeWidth = Math.max(
-      toFiniteNumber$4((_a3 = runtimeNode.size) == null ? void 0 : _a3[0], 140),
+      toFiniteNumber$5((_a3 = runtimeNode.size) == null ? void 0 : _a3[0], 140),
       80
     );
     return Math.min(
@@ -18245,7 +18321,7 @@ ${safeText}`;
   const STEPPER_GAP = 6;
   const FLOW_GAP = 8;
   const ACTION_FLOW_GAP = 4;
-  function toFiniteNumber$3(value, fallback = 0) {
+  function toFiniteNumber$4(value, fallback = 0) {
     const numericValue = Number(value);
     return Number.isFinite(numericValue) ? numericValue : fallback;
   }
@@ -18649,11 +18725,11 @@ ${safeText}`;
           builtinHandle.rightText.width = frames.actionWidth;
           builtinHandle.rightText.height = contentHeight;
         }
-        const contentX = toFiniteNumber$3((_a3 = builtinHandle.content) == null ? void 0 : _a3.x, INLINE_PADDING);
-        const labelWidth = builtinHandle.labelText ? toFiniteNumber$3(builtinHandle.labelText.width, frames.labelWidth) : frames.labelWidth;
-        const valueWidth = builtinHandle.valueText ? toFiniteNumber$3(builtinHandle.valueText.width, frames.valueWidth) : frames.valueWidth;
-        const decrementWidth = builtinHandle.leftText ? toFiniteNumber$3(builtinHandle.leftText.width, frames.actionWidth) : frames.actionWidth;
-        const incrementWidth = builtinHandle.rightText ? toFiniteNumber$3(builtinHandle.rightText.width, frames.actionWidth) : frames.actionWidth;
+        const contentX = toFiniteNumber$4((_a3 = builtinHandle.content) == null ? void 0 : _a3.x, INLINE_PADDING);
+        const labelWidth = builtinHandle.labelText ? toFiniteNumber$4(builtinHandle.labelText.width, frames.labelWidth) : frames.labelWidth;
+        const valueWidth = builtinHandle.valueText ? toFiniteNumber$4(builtinHandle.valueText.width, frames.valueWidth) : frames.valueWidth;
+        const decrementWidth = builtinHandle.leftText ? toFiniteNumber$4(builtinHandle.leftText.width, frames.actionWidth) : frames.actionWidth;
+        const incrementWidth = builtinHandle.rightText ? toFiniteNumber$4(builtinHandle.rightText.width, frames.actionWidth) : frames.actionWidth;
         const editX = contentX + labelWidth + FLOW_GAP;
         const editWidth = valueWidth;
         const decrementX = editX + valueWidth + FLOW_GAP;
@@ -18685,15 +18761,15 @@ ${safeText}`;
           return { consumed: true, openEditor: true };
         }
         if (type === "number") {
-          const step = toFiniteNumber$3((_a3 = context.schema.options) == null ? void 0 : _a3.step, 1) || 1;
+          const step = toFiniteNumber$4((_a3 = context.schema.options) == null ? void 0 : _a3.step, 1) || 1;
           const min = (_b3 = context.schema.options) == null ? void 0 : _b3.min;
           const max = (_c2 = context.schema.options) == null ? void 0 : _c2.max;
-          let nextValue = toFiniteNumber$3(context.schema.value) + (context.action === "decrement" ? -step : step);
+          let nextValue = toFiniteNumber$4(context.schema.value) + (context.action === "decrement" ? -step : step);
           if (min != null) {
-            nextValue = Math.max(toFiniteNumber$3(min), nextValue);
+            nextValue = Math.max(toFiniteNumber$4(min), nextValue);
           }
           if (max != null) {
-            nextValue = Math.min(toFiniteNumber$3(max), nextValue);
+            nextValue = Math.min(toFiniteNumber$4(max), nextValue);
           }
           return { consumed: true, nextValue };
         }
@@ -18798,7 +18874,7 @@ ${safeText}`;
   const PORT_GUTTER_MIN = 14;
   const WIDGET_ROW_HEIGHT = 28;
   const WIDGET_ROW_GAP = 6;
-  function toFiniteNumber$2(value, fallback = 0) {
+  function toFiniteNumber$3(value, fallback = 0) {
     const numericValue = Number(value);
     return Number.isFinite(numericValue) ? numericValue : fallback;
   }
@@ -18808,10 +18884,10 @@ ${safeText}`;
     }
     if (typeof value === "object" && value !== null && ("0" in value || ArrayBuffer.isView(value))) {
       const indexed = value;
-      return [toFiniteNumber$2(indexed[0]), toFiniteNumber$2(indexed[1])];
+      return [toFiniteNumber$3(indexed[0]), toFiniteNumber$3(indexed[1])];
     }
     const point = value;
-    return [toFiniteNumber$2(point.x), toFiniteNumber$2(point.y)];
+    return [toFiniteNumber$3(point.x), toFiniteNumber$3(point.y)];
   }
   function pointInsideRect(point, rect) {
     if (!rect) {
@@ -18869,19 +18945,19 @@ ${safeText}`;
     const host = globalThis;
     const liteGraph = host.LiteGraph || {};
     return {
-      NODE_TITLE_HEIGHT: toFiniteNumber$2(liteGraph.NODE_TITLE_HEIGHT, TITLE_HEIGHT),
-      NODE_SLOT_HEIGHT: toFiniteNumber$2(liteGraph.NODE_SLOT_HEIGHT, SLOT_HEIGHT),
+      NODE_TITLE_HEIGHT: toFiniteNumber$3(liteGraph.NODE_TITLE_HEIGHT, TITLE_HEIGHT),
+      NODE_SLOT_HEIGHT: toFiniteNumber$3(liteGraph.NODE_SLOT_HEIGHT, SLOT_HEIGHT),
       NODE_DEFAULT_COLOR: String(liteGraph.NODE_DEFAULT_COLOR || "#333333"),
       NODE_DEFAULT_BGCOLOR: String(liteGraph.NODE_DEFAULT_BGCOLOR || "#353535"),
       NODE_DEFAULT_BOXCOLOR: String(liteGraph.NODE_DEFAULT_BOXCOLOR || "#666666"),
       NODE_MODES_COLORS: Array.isArray(liteGraph.NODE_MODES_COLORS) ? liteGraph.NODE_MODES_COLORS : ["#666666", "#422222", "#333333", "#224422", "#662266"],
       LINK_COLOR: String(liteGraph.LINK_COLOR || "#9A9"),
       EVENT_LINK_COLOR: String(liteGraph.EVENT_LINK_COLOR || "#A86"),
-      BOX_SHAPE: toFiniteNumber$2(liteGraph.BOX_SHAPE, 1),
-      ARROW_SHAPE: toFiniteNumber$2(liteGraph.ARROW_SHAPE, 5),
-      GRID_SHAPE: toFiniteNumber$2(liteGraph.GRID_SHAPE, 6),
-      EVENT: toFiniteNumber$2(liteGraph.EVENT, -1),
-      ACTION: toFiniteNumber$2(liteGraph.ACTION, -1)
+      BOX_SHAPE: toFiniteNumber$3(liteGraph.BOX_SHAPE, 1),
+      ARROW_SHAPE: toFiniteNumber$3(liteGraph.ARROW_SHAPE, 5),
+      GRID_SHAPE: toFiniteNumber$3(liteGraph.GRID_SHAPE, 6),
+      EVENT: toFiniteNumber$3(liteGraph.EVENT, -1),
+      ACTION: toFiniteNumber$3(liteGraph.ACTION, -1)
     };
   }
   function measureTextWidth(text, font = MODERN_NODE_TITLE_MEASURE_FONT) {
@@ -18896,7 +18972,7 @@ ${safeText}`;
   function defaultShellState(node2) {
     const constants = getLiteGraphConstants();
     const ctor = node2.constructor || {};
-    const triggeredColor = toFiniteNumber$2(node2.action_triggered) > 0 ? "#FFFFFF" : toFiniteNumber$2(node2.execute_triggered) > 0 ? "#AAAAAA" : null;
+    const triggeredColor = toFiniteNumber$3(node2.action_triggered) > 0 ? "#FFFFFF" : toFiniteNumber$3(node2.execute_triggered) > 0 ? "#AAAAAA" : null;
     const modeColor = node2.mode != null && constants.NODE_MODES_COLORS[node2.mode] ? constants.NODE_MODES_COLORS[node2.mode] : null;
     return {
       title: typeof node2.getTitle === "function" && node2.getTitle() || node2.title || node2.type || "Node",
@@ -19072,6 +19148,20 @@ ${safeText}`;
     setAttrIfChanged(target, "width", rect.width);
     setAttrIfChanged(target, "height", rect.height);
   }
+  function setAttrsBatch(target, data) {
+    if (!target || typeof target !== "object") {
+      return;
+    }
+    const uiTarget = target;
+    if (typeof uiTarget.set === "function") {
+      uiTarget.set(data);
+      return;
+    }
+    const recordTarget = target;
+    for (const [key, value] of Object.entries(data)) {
+      setAttrIfChanged(recordTarget, key, value);
+    }
+  }
   class ModernNodeHost {
     constructor(node2) {
       this.runtime = "modern";
@@ -19103,11 +19193,14 @@ ${safeText}`;
       this.lastWidgetSignature = "";
       this.lastActionPartSignature = "";
       this.lastActionPartLayoutSignature = "";
+      this.lastMeasuredNodeWidth = NaN;
+      this.lastMeasuredNodeHeight = NaN;
       this.portPresentationCacheVersion = 1;
       this.portGeometryCacheVersion = 1;
       this.portLifecycleContext = null;
       this.portBuildContext = null;
       this.mounted = false;
+      this.shellLayoutInitialized = false;
       this.resizeAnchor = null;
       this.node = node2;
       ensureDefaultModernWidgetRenderers();
@@ -19121,7 +19214,6 @@ ${safeText}`;
       });
       this.shell = this.createShellParts();
       this.root.add(this.shell.shell);
-      this.repaint();
     }
     repaint() {
       var _a3, _b3;
@@ -19138,8 +19230,9 @@ ${safeText}`;
       const nextActionPartLayoutSignature = signatureOfActionPartLayouts(
         this.currentActionPartSchemas
       );
+      const nodeSizeChanged = this.didMeasuredNodeSizeChange();
       const shellGeometryChanged = signatureOfShellGeometry(previousShellState) !== signatureOfShellGeometry(this.shellState);
-      const needsGeometryPass = !this.mounted || (changeMask & (ModernNodeChangeMask.Layout | ModernNodeChangeMask.Ports)) !== 0 || shellGeometryChanged || this.lastWidgetSignature !== nextWidgetSignature || this.lastActionPartLayoutSignature !== nextActionPartLayoutSignature;
+      const needsGeometryPass = !this.mounted || (changeMask & (ModernNodeChangeMask.Layout | ModernNodeChangeMask.Ports)) !== 0 || nodeSizeChanged || shellGeometryChanged || this.lastWidgetSignature !== nextWidgetSignature || this.lastActionPartLayoutSignature !== nextActionPartLayoutSignature;
       this.refreshPortCacheVersions(changeMask, needsGeometryPass);
       if (needsGeometryPass) {
         this.ensureMinimumNodeSize(this.shellState);
@@ -19172,6 +19265,7 @@ ${safeText}`;
       }
       this.applyInteractionState();
       this.syncPosition();
+      this.syncMeasuredNodeSize();
       this.storeInspectableState();
     }
     repaintForegroundState() {
@@ -19179,7 +19273,7 @@ ${safeText}`;
       if (!this.mounted) {
         return false;
       }
-      const pendingChangeMask = toFiniteNumber$2(
+      const pendingChangeMask = toFiniteNumber$3(
         (_b3 = (_a3 = this.node).peekModernChangeMask) == null ? void 0 : _b3.call(_a3),
         ModernNodeChangeMask.None
       );
@@ -19222,13 +19316,13 @@ ${safeText}`;
       }
       const size = this.node.size;
       const nextWidth = Math.max(
-        toFiniteNumber$2(size == null ? void 0 : size[0], BODY_MIN_WIDTH),
-        toFiniteNumber$2(shellState.minimumWidth, BODY_MIN_WIDTH),
+        toFiniteNumber$3(size == null ? void 0 : size[0], BODY_MIN_WIDTH),
+        toFiniteNumber$3(shellState.minimumWidth, BODY_MIN_WIDTH),
         this.resolveMinimumShellWidth(shellState)
       );
       const nextHeight = Math.max(
-        toFiniteNumber$2(size == null ? void 0 : size[1], BODY_MIN_HEIGHT),
-        toFiniteNumber$2(shellState.minimumHeight, BODY_MIN_HEIGHT),
+        toFiniteNumber$3(size == null ? void 0 : size[1], BODY_MIN_HEIGHT),
+        toFiniteNumber$3(shellState.minimumHeight, BODY_MIN_HEIGHT),
         this.resolveMinimumBodyHeight(shellState)
       );
       if (size) {
@@ -19241,8 +19335,8 @@ ${safeText}`;
     syncPosition() {
       var _a3, _b3;
       const rootRecord = this.root;
-      setAttrIfChanged(rootRecord, "x", toFiniteNumber$2((_a3 = this.node.pos) == null ? void 0 : _a3[0]));
-      setAttrIfChanged(rootRecord, "y", toFiniteNumber$2((_b3 = this.node.pos) == null ? void 0 : _b3[1]));
+      setAttrIfChanged(rootRecord, "x", toFiniteNumber$3((_a3 = this.node.pos) == null ? void 0 : _a3[0]));
+      setAttrIfChanged(rootRecord, "y", toFiniteNumber$3((_b3 = this.node.pos) == null ? void 0 : _b3[1]));
     }
     destroy() {
       var _a3;
@@ -19345,8 +19439,8 @@ ${safeText}`;
       this.resizeAnchor = {
         startWorldX: worldX,
         startWorldY: worldY,
-        startWidth: Math.max(toFiniteNumber$2((_a3 = this.node.size) == null ? void 0 : _a3[0], 160), 80),
-        startHeight: Math.max(toFiniteNumber$2((_b3 = this.node.size) == null ? void 0 : _b3[1], 80), 30)
+        startWidth: Math.max(toFiniteNumber$3((_a3 = this.node.size) == null ? void 0 : _a3[0], 160), 80),
+        startHeight: Math.max(toFiniteNumber$3((_b3 = this.node.size) == null ? void 0 : _b3[1], 80), 30)
       };
       this.updateInteractionState({
         resizing: true,
@@ -19354,24 +19448,32 @@ ${safeText}`;
         pressed: true
       });
     }
-    updateResize(worldX, worldY) {
+    updateResize(worldX, worldY, clampSize) {
       var _a3, _b3;
       if (!this.resizeAnchor) {
         return false;
       }
-      const nextWidth = Math.max(
+      let nextWidth = Math.max(
         BODY_MIN_WIDTH,
         Math.round(
           this.resizeAnchor.startWidth + (worldX - this.resizeAnchor.startWorldX)
         )
       );
-      const nextHeight = Math.max(
+      let nextHeight = Math.max(
         BODY_MIN_HEIGHT,
         Math.round(
           this.resizeAnchor.startHeight + (worldY - this.resizeAnchor.startWorldY)
         )
       );
-      if (nextWidth === toFiniteNumber$2((_a3 = this.node.size) == null ? void 0 : _a3[0]) && nextHeight === toFiniteNumber$2((_b3 = this.node.size) == null ? void 0 : _b3[1])) {
+      if (clampSize) {
+        const [clampedWidth, clampedHeight] = clampSize(
+          nextWidth,
+          nextHeight
+        );
+        nextWidth = Math.max(BODY_MIN_WIDTH, Math.round(clampedWidth));
+        nextHeight = Math.max(BODY_MIN_HEIGHT, Math.round(clampedHeight));
+      }
+      if (nextWidth === toFiniteNumber$3((_a3 = this.node.size) == null ? void 0 : _a3[0]) && nextHeight === toFiniteNumber$3((_b3 = this.node.size) == null ? void 0 : _b3[1])) {
         return false;
       }
       this.node.size[0] = nextWidth;
@@ -19418,15 +19520,15 @@ ${safeText}`;
     }
     getLocalPoint(worldX, worldY) {
       const point = this.root.getInnerPoint({ x: worldX, y: worldY });
-      return [toFiniteNumber$2(point.x), toFiniteNumber$2(point.y)];
+      return [toFiniteNumber$3(point.x), toFiniteNumber$3(point.y)];
     }
     getPortAnchor(kind, slotIndex) {
       var _a3, _b3;
       const layout = this.resolvePortLayout(kind, slotIndex);
       if (layout) {
         return [
-          toFiniteNumber$2(this.root.x) + layout.anchorX,
-          toFiniteNumber$2(this.root.y) + layout.anchorY
+          toFiniteNumber$3(this.root.x) + layout.anchorX,
+          toFiniteNumber$3(this.root.y) + layout.anchorY
         ];
       }
       const fallbackPoint = toPoint(
@@ -19619,7 +19721,7 @@ ${safeText}`;
       if (rawMask == null) {
         return ModernNodeChangeMask.All;
       }
-      const normalizedMask = toFiniteNumber$2(rawMask, ModernNodeChangeMask.None);
+      const normalizedMask = toFiniteNumber$3(rawMask, ModernNodeChangeMask.None);
       return normalizedMask <= ModernNodeChangeMask.None ? ModernNodeChangeMask.None : normalizedMask;
     }
     resolveShellState(changeMask) {
@@ -19636,18 +19738,18 @@ ${safeText}`;
       const titleHeight = Math.max(constants.NODE_TITLE_HEIGHT, TITLE_HEIGHT);
       const textMetrics = this.resolveShellTextMetrics(shellState);
       const bodyHeight = Math.max(
-        toFiniteNumber$2((_a3 = this.node.size) == null ? void 0 : _a3[1], BODY_MIN_HEIGHT),
-        toFiniteNumber$2(shellState.minimumHeight, BODY_MIN_HEIGHT),
+        toFiniteNumber$3((_a3 = this.node.size) == null ? void 0 : _a3[1], BODY_MIN_HEIGHT),
+        toFiniteNumber$3(shellState.minimumHeight, BODY_MIN_HEIGHT),
         this.resolveMinimumBodyHeight(shellState)
       );
       const isCollapsed = Boolean((_b3 = this.node.flags) == null ? void 0 : _b3.collapsed);
       const minWidth = this.resolveMinimumShellWidth(shellState, titleHeight);
       const expandedWidth = Math.max(
-        toFiniteNumber$2((_c2 = this.node.size) == null ? void 0 : _c2[0], BODY_MIN_WIDTH),
+        toFiniteNumber$3((_c2 = this.node.size) == null ? void 0 : _c2[0], BODY_MIN_WIDTH),
         minWidth
       );
       const collapsedWidth = shellState.collapsedWidth != null ? Math.max(
-        toFiniteNumber$2(shellState.collapsedWidth, expandedWidth),
+        toFiniteNumber$3(shellState.collapsedWidth, expandedWidth),
         Math.min(minWidth, expandedWidth),
         56
       ) : Math.min(
@@ -19692,6 +19794,23 @@ ${safeText}`;
         outputPorts: []
       };
     }
+    didMeasuredNodeSizeChange() {
+      var _a3, _b3;
+      const width2 = toFiniteNumber$3((_a3 = this.node.size) == null ? void 0 : _a3[0], BODY_MIN_WIDTH);
+      const height = toFiniteNumber$3((_b3 = this.node.size) == null ? void 0 : _b3[1], BODY_MIN_HEIGHT);
+      return this.lastMeasuredNodeWidth !== width2 || this.lastMeasuredNodeHeight !== height;
+    }
+    syncMeasuredNodeSize() {
+      var _a3, _b3;
+      this.lastMeasuredNodeWidth = toFiniteNumber$3(
+        (_a3 = this.node.size) == null ? void 0 : _a3[0],
+        BODY_MIN_WIDTH
+      );
+      this.lastMeasuredNodeHeight = toFiniteNumber$3(
+        (_b3 = this.node.size) == null ? void 0 : _b3[1],
+        BODY_MIN_HEIGHT
+      );
+    }
     applyShellLayout() {
       var _a3;
       const layout = this.shellLayout;
@@ -19733,6 +19852,94 @@ ${safeText}`;
       const showHeaderMeta = Boolean(headerMeta) && !Boolean((_a3 = this.node.flags) == null ? void 0 : _a3.collapsed) && header.width - titleStartX - headerMetaWidth - HEADER_META_GAP - 12 >= 56;
       const titleEndPadding = showHeaderMeta ? headerMetaWidth + HEADER_META_GAP + 12 : 14;
       const titleWidth = Math.max(24, header.width - titleStartX - titleEndPadding);
+      const summaryVisible = Boolean(
+        body && !this.widgetEntries.length && !this.content && shellState.summaryText
+      );
+      const summaryX = (contentArea == null ? void 0 : contentArea.x) || BODY_PADDING_X;
+      const summaryY = ((contentArea == null ? void 0 : contentArea.y) || BODY_PADDING_Y) + Math.min(20, Math.max(14, ((contentArea == null ? void 0 : contentArea.height) || 24) * 0.45));
+      const summaryWidth = Math.max(
+        20,
+        (contentArea == null ? void 0 : contentArea.width) || layout.width - BODY_PADDING_X * 2
+      );
+      const signalLampY = header.y + (header.height - HEADER_SIGNAL_SIZE) / 2;
+      const selectionOutlineX = -OUTLINE_PADDING;
+      const selectionOutlineY = header.y - OUTLINE_PADDING;
+      const selectionOutlineWidth = layout.width + OUTLINE_PADDING * 2;
+      const selectionOutlineHeight = totalHeight + OUTLINE_PADDING * 2;
+      const headerFill = shellState.titleColor || "#283444";
+      const titleFill = shellState.titleTextColor || "#F5F7FA";
+      const signalLampVisible = shellState.showSignalLamp !== false;
+      const signalLampFill = shellState.boxColor || "#666666";
+      const bodyFill = shellState.bodyColor || "#101720";
+      if (!this.shellLayoutInitialized) {
+        setAttrsBatch(this.shell.header, {
+          ...header,
+          cornerRadius: body ? [12, 12, 0, 0] : [12, 12, 12, 12],
+          fill: headerFill
+        });
+        setAttrsBatch(this.shell.body, body ? {
+          ...body,
+          visible: true,
+          cornerRadius: [0, 0, 12, 12],
+          fill: bodyFill
+        } : {
+          visible: false
+        });
+        setAttrsBatch(this.shell.headerContent, {
+          x: titleStartX,
+          y: header.y,
+          width: Math.max(24, header.width - titleStartX - 12),
+          height: header.height,
+          visible: shellState.titleMode !== "hidden" || showHeaderMeta
+        });
+        setAttrsBatch(this.shell.title, {
+          text: textMetrics.titleText,
+          fill: titleFill,
+          height: header.height,
+          width: titleWidth,
+          visible: shellState.titleMode !== "hidden"
+        });
+        setAttrsBatch(this.shell.headerMeta, {
+          text: headerMeta,
+          visible: showHeaderMeta,
+          width: Math.max(HEADER_META_MIN_WIDTH, headerMetaWidth),
+          height: header.height
+        });
+        setAttrsBatch(this.shell.summary, {
+          text: textMetrics.summaryText,
+          visible: summaryVisible,
+          x: summaryX,
+          y: summaryY,
+          width: summaryWidth
+        });
+        setAttrsBatch(this.shell.signalLamp, {
+          x: 10,
+          y: signalLampY,
+          visible: signalLampVisible,
+          fill: signalLampFill
+        });
+        setAttrsBatch(this.shell.collapseOverlay, layout.collapse ? {
+          ...layout.collapse,
+          visible: true
+        } : {
+          visible: false
+        });
+        setAttrsBatch(this.shell.resizeHandle, layout.resize ? {
+          x: layout.resize.x,
+          y: layout.resize.y,
+          visible: true
+        } : {
+          visible: false
+        });
+        setAttrsBatch(this.shell.selectionOutline, {
+          x: selectionOutlineX,
+          y: selectionOutlineY,
+          width: selectionOutlineWidth,
+          height: selectionOutlineHeight
+        });
+        this.shellLayoutInitialized = true;
+        return;
+      }
       setAttrIfChanged(headerContent, "x", titleStartX);
       setAttrIfChanged(headerContent, "y", header.y);
       setAttrIfChanged(
@@ -19767,27 +19974,13 @@ ${safeText}`;
       setAttrIfChanged(
         summaryText,
         "visible",
-        Boolean(
-          body && !this.widgetEntries.length && !this.content && shellState.summaryText
-        )
+        summaryVisible
       );
-      setAttrIfChanged(summaryText, "x", (contentArea == null ? void 0 : contentArea.x) || BODY_PADDING_X);
-      setAttrIfChanged(
-        summaryText,
-        "y",
-        ((contentArea == null ? void 0 : contentArea.y) || BODY_PADDING_Y) + Math.min(20, Math.max(14, ((contentArea == null ? void 0 : contentArea.height) || 24) * 0.45))
-      );
-      setAttrIfChanged(
-        summaryText,
-        "width",
-        Math.max(20, (contentArea == null ? void 0 : contentArea.width) || layout.width - BODY_PADDING_X * 2)
-      );
+      setAttrIfChanged(summaryText, "x", summaryX);
+      setAttrIfChanged(summaryText, "y", summaryY);
+      setAttrIfChanged(summaryText, "width", summaryWidth);
       setAttrIfChanged(signalLamp, "x", 10);
-      setAttrIfChanged(
-        signalLamp,
-        "y",
-        header.y + (header.height - HEADER_SIGNAL_SIZE) / 2
-      );
+      setAttrIfChanged(signalLamp, "y", signalLampY);
       setAttrIfChanged(collapseOverlay, "visible", Boolean(layout.collapse));
       if (layout.collapse) {
         setRectIfChanged(collapseOverlay, layout.collapse);
@@ -19797,18 +19990,10 @@ ${safeText}`;
         setAttrIfChanged(resizeHandle, "x", layout.resize.x);
         setAttrIfChanged(resizeHandle, "y", layout.resize.y);
       }
-      setAttrIfChanged(selectionOutline, "x", -OUTLINE_PADDING);
-      setAttrIfChanged(selectionOutline, "y", header.y - OUTLINE_PADDING);
-      setAttrIfChanged(
-        selectionOutline,
-        "width",
-        layout.width + OUTLINE_PADDING * 2
-      );
-      setAttrIfChanged(
-        selectionOutline,
-        "height",
-        totalHeight + OUTLINE_PADDING * 2
-      );
+      setAttrIfChanged(selectionOutline, "x", selectionOutlineX);
+      setAttrIfChanged(selectionOutline, "y", selectionOutlineY);
+      setAttrIfChanged(selectionOutline, "width", selectionOutlineWidth);
+      setAttrIfChanged(selectionOutline, "height", selectionOutlineHeight);
       this.applyShellVisualState();
     }
     applyShellVisualState() {
@@ -19840,7 +20025,7 @@ ${safeText}`;
       const footerHeight = this.hasFooterActionParts() ? TITLE_HEIGHT : 0;
       return Math.max(
         BODY_MIN_HEIGHT,
-        toFiniteNumber$2(shellState == null ? void 0 : shellState.minimumHeight, BODY_MIN_HEIGHT),
+        toFiniteNumber$3(shellState == null ? void 0 : shellState.minimumHeight, BODY_MIN_HEIGHT),
         widgetHeight + footerHeight,
         portHeight + footerHeight,
         summaryHeight + footerHeight
@@ -19852,7 +20037,7 @@ ${safeText}`;
       const contentWidth = this.resolveMinimumContentWidth();
       return Math.max(
         BODY_MIN_WIDTH,
-        toFiniteNumber$2(shellState.minimumWidth, BODY_MIN_WIDTH),
+        toFiniteNumber$3(shellState.minimumWidth, BODY_MIN_WIDTH),
         BODY_PADDING_X * 2 + gutters.left + gutters.right + contentWidth,
         this.resolveTitleStartX(Boolean(shellState.collapsible), headerHeight) + textMetrics.titleWidth + (textMetrics.headerMetaWidth ? HEADER_META_GAP + textMetrics.headerMetaWidth + 12 : 14)
       );
@@ -20463,7 +20648,7 @@ ${safeText}`;
           height: geometry.radius * 2,
           anchorX: geometry.anchor[0],
           anchorY: geometry.anchor[1],
-          dir: toFiniteNumber$2(
+          dir: toFiniteNumber$3(
             presentation.dir,
             kind === "input" ? PORT_DIRECTION_LEFT : PORT_DIRECTION_RIGHT
           ),
@@ -20500,11 +20685,11 @@ ${safeText}`;
       );
       let shape = (explicit == null ? void 0 : explicit.shape) || "circle";
       if (!(explicit == null ? void 0 : explicit.shape)) {
-        if (toFiniteNumber$2(slotRecord.shape) === constants.BOX_SHAPE || slotRecord.type === constants.EVENT || slotRecord.type === constants.ACTION) {
+        if (toFiniteNumber$3(slotRecord.shape) === constants.BOX_SHAPE || slotRecord.type === constants.EVENT || slotRecord.type === constants.ACTION) {
           shape = "box";
-        } else if (toFiniteNumber$2(slotRecord.shape) === constants.ARROW_SHAPE) {
+        } else if (toFiniteNumber$3(slotRecord.shape) === constants.ARROW_SHAPE) {
           shape = "arrow";
-        } else if (toFiniteNumber$2(slotRecord.shape) === constants.GRID_SHAPE) {
+        } else if (toFiniteNumber$3(slotRecord.shape) === constants.GRID_SHAPE) {
           shape = "grid";
         }
       }
@@ -20543,13 +20728,13 @@ ${safeText}`;
       if (explicitLayout) {
         if (explicitLayout.space === "world") {
           anchor = [
-            explicitLayout.x - toFiniteNumber$2((_c2 = this.node.pos) == null ? void 0 : _c2[0]),
-            explicitLayout.y - toFiniteNumber$2((_d2 = this.node.pos) == null ? void 0 : _d2[1])
+            explicitLayout.x - toFiniteNumber$3((_c2 = this.node.pos) == null ? void 0 : _c2[0]),
+            explicitLayout.y - toFiniteNumber$3((_d2 = this.node.pos) == null ? void 0 : _d2[1])
           ];
         } else {
           anchor = [
-            toFiniteNumber$2(explicitLayout.x),
-            toFiniteNumber$2(explicitLayout.y)
+            toFiniteNumber$3(explicitLayout.x),
+            toFiniteNumber$3(explicitLayout.y)
           ];
         }
       } else {
@@ -20567,7 +20752,7 @@ ${safeText}`;
         version: this.portGeometryCacheVersion,
         anchor,
         radius: Math.max(
-          toFiniteNumber$2(presentation.radius, explicitLayout == null ? void 0 : explicitLayout.radius),
+          toFiniteNumber$3(presentation.radius, explicitLayout == null ? void 0 : explicitLayout.radius),
           6
         ),
         labelWidth,
@@ -21119,7 +21304,7 @@ ${safeText}`;
   function toMutationKey(id) {
     return String(id);
   }
-  function toFiniteNumber$1(value, fallback = 0) {
+  function toFiniteNumber$2(value, fallback = 0) {
     const numericValue = Number(value);
     return Number.isFinite(numericValue) ? numericValue : fallback;
   }
@@ -21131,23 +21316,48 @@ ${safeText}`;
       String(task.linkId),
       formatWorkerPoint(task.start),
       formatWorkerPoint(task.end),
-      toFiniteNumber$1(task.startDir),
-      toFiniteNumber$1(task.endDir)
+      toFiniteNumber$2(task.startDir),
+      toFiniteNumber$2(task.endDir)
     ].join("|");
   }
   function buildActiveLinkPresentationCacheKey(task) {
-    const lastTimeBucket = Math.max(0, Math.floor(toFiniteNumber$1(task.lastTime) / 16));
+    const lastTimeBucket = Math.max(
+      0,
+      Math.floor(toFiniteNumber$2(task.lastTime) / ACTIVE_LINK_CACHE_BUCKET_MS)
+    );
     return `${buildActiveLinkLayoutKey(task)}|${lastTimeBucket}`;
+  }
+  const ACTIVE_LINK_WINDOW_MS = 180;
+  const ACTIVE_LINK_OPACITY_BUCKETS = 6;
+  const ACTIVE_LINK_CACHE_BUCKET_MS = Math.max(
+    1,
+    Math.floor(ACTIVE_LINK_WINDOW_MS / ACTIVE_LINK_OPACITY_BUCKETS)
+  );
+  function clamp01(value) {
+    return Math.max(0, Math.min(1, value));
+  }
+  function quantizeActiveLinkOpacity(value) {
+    if (!(value > 0)) {
+      return 0;
+    }
+    return Math.round(clamp01(value) * ACTIVE_LINK_OPACITY_BUCKETS) / ACTIVE_LINK_OPACITY_BUCKETS;
+  }
+  function resolveActiveLinkOpacity(lastTime, now) {
+    const elapsed = now - lastTime;
+    if (elapsed < 0 || elapsed >= ACTIVE_LINK_WINDOW_MS) {
+      return 0;
+    }
+    return quantizeActiveLinkOpacity(1 - elapsed / ACTIVE_LINK_WINDOW_MS);
   }
   function toRenderBoundsLike(value) {
     if (!value || typeof value !== "object") {
       return null;
     }
     const bounds = value;
-    const x2 = toFiniteNumber$1(bounds.x);
-    const y2 = toFiniteNumber$1(bounds.y);
-    const width2 = Math.max(0, toFiniteNumber$1(bounds.width));
-    const height = Math.max(0, toFiniteNumber$1(bounds.height));
+    const x2 = toFiniteNumber$2(bounds.x);
+    const y2 = toFiniteNumber$2(bounds.y);
+    const width2 = Math.max(0, toFiniteNumber$2(bounds.width));
+    const height = Math.max(0, toFiniteNumber$2(bounds.height));
     if (!width2 || !height) {
       return null;
     }
@@ -21198,7 +21408,10 @@ ${safeText}`;
       this.linkIdsByKey = /* @__PURE__ */ new Map();
       this.dirtyBridgeUninstallers = /* @__PURE__ */ new Map();
       this.groupDirtyBridgeUninstallers = /* @__PURE__ */ new Map();
+      this.deferredNodeDirtySignalsByKey = /* @__PURE__ */ new Map();
+      this.activeTransientNodeIds = /* @__PURE__ */ new Set();
       this.activeLinkIds = /* @__PURE__ */ new Set();
+      this.dirtyRuntimeLinkIds = /* @__PURE__ */ new Set();
       this.linkGeometryCache = /* @__PURE__ */ new Map();
       this.activeLinkPresentationStateById = /* @__PURE__ */ new Map();
       this.workerLinkPresentationById = /* @__PURE__ */ new Map();
@@ -21206,29 +21419,71 @@ ${safeText}`;
       this.pendingActiveLinkPresentationRequest = null;
       this.lastHandledActiveLinkPresentationRequestId = 0;
       this.pendingSettledNodeRepaints = /* @__PURE__ */ new Set();
-      this.runtimeAnimationFrame = null;
+      this.pendingRuntimeDirtyNodeIds = /* @__PURE__ */ new Map();
+      this.pendingRuntimeDirtyLinkIds = /* @__PURE__ */ new Map();
+      this.pendingRuntimeDirtyBounds = null;
+      this.pendingRuntimeForceNodeRepaint = false;
+      this.pendingRuntimeRepaintAllNodes = false;
+      this.runtimeVisualFrameHandle = null;
+      this.runtimeVisualFrameScheduled = false;
+      this.runtimeVisualFrameDriver = "none";
+      this.runtimeFlushEnqueueCount = 0;
+      this.runtimeVisualFrameCount = 0;
+      this.runtimeSceneRenderCount = 0;
       this.getViewportScale = () => Math.max(
         1,
-        toFiniteNumber$1(
+        toFiniteNumber$2(
           this.appHost.treeZoomLayer.scaleX,
           1
         )
       );
-      this.handleRuntimeAnimationFrame = () => {
-        this.runtimeAnimationFrame = null;
-        const nodeFrame = this.repaintAnimatedNodes();
+      this.handleRuntimeVisualFrame = () => {
+        this.runtimeVisualFrameHandle = null;
+        this.runtimeVisualFrameDriver = "none";
+        this.runtimeVisualFrameScheduled = false;
+        this.runtimeVisualFrameCount += 1;
+        let dirtyBounds = this.consumePendingRuntimeDirtyBounds();
+        let didUpdate = Boolean(dirtyBounds);
+        const pendingNodeIds = this.consumePendingRuntimeNodeIds();
+        const pendingLinkIds = this.consumePendingRuntimeLinkIds();
+        const forceNodeRepaint = this.pendingRuntimeForceNodeRepaint;
+        const repaintAllNodes = this.pendingRuntimeRepaintAllNodes;
+        this.pendingRuntimeForceNodeRepaint = false;
+        this.pendingRuntimeRepaintAllNodes = false;
+        let freshNodeIds;
+        if (forceNodeRepaint) {
+          const repaintNodeIds = repaintAllNodes ? null : this.resolveRuntimeRepaintNodeIds(pendingNodeIds);
+          if (repaintNodeIds == null ? void 0 : repaintNodeIds.length) {
+            freshNodeIds = repaintNodeIds;
+            this.syncTransientNodeTrackingFor(repaintNodeIds);
+          }
+          dirtyBounds = mergeRenderBounds(
+            dirtyBounds,
+            repaintNodeIds ? this.repaintRuntimeNodeHostsWithBounds(repaintNodeIds) : this.repaintAllNodeHostsWithBounds(false)
+          );
+          didUpdate = true;
+        } else if (pendingNodeIds.length) {
+          this.syncTransientNodeTrackingFor(pendingNodeIds);
+        }
+        if (pendingLinkIds.length) {
+          this.queueDirtyRuntimeLinkIds(pendingLinkIds);
+        }
+        const nodeFrame = this.repaintAnimatedNodes(freshNodeIds);
         const linkFrame = this.refreshActiveLinkAnimations();
-        const dirtyBounds = mergeRenderBounds(
-          nodeFrame.dirtyBounds,
-          linkFrame.dirtyBounds
+        dirtyBounds = mergeRenderBounds(
+          dirtyBounds,
+          mergeRenderBounds(nodeFrame.dirtyBounds, linkFrame.dirtyBounds)
         );
-        if (dirtyBounds) {
+        const shouldRender = Boolean(dirtyBounds);
+        if (shouldRender) {
+          this.runtimeSceneRenderCount += 1;
           this.requestSceneRender(dirtyBounds);
-        } else if (nodeFrame.didUpdate || linkFrame.didUpdate) {
+        } else if (didUpdate || nodeFrame.didUpdate || linkFrame.didUpdate) {
+          this.runtimeSceneRenderCount += 1;
           this.requestSceneRender();
         }
-        if (nodeFrame.hasMore || linkFrame.hasMore) {
-          this.ensureRuntimeAnimationFrame();
+        if (nodeFrame.hasMore || linkFrame.hasMore || this.hasPendingRuntimeVisualWork()) {
+          this.ensureRuntimeVisualFrame();
         }
       };
       this.handleActiveLinkPresentationResult = (requestId, results) => {
@@ -21238,42 +21493,30 @@ ${safeText}`;
           return;
         }
         this.lastHandledActiveLinkPresentationRequestId = requestId;
-        const shouldApplyImmediately = this.runtimeAnimationFrame === null;
-        let dirtyBounds = null;
+        let hasQueuedVisualWork = false;
         for (let i2 = 0; i2 < results.length; ++i2) {
           const result = results[i2];
           const linkId = this.linkIdsByKey.get(result.linkId);
           if (linkId == null) {
             continue;
           }
-          const previousBounds = shouldApplyImmediately ? this.captureLinkRenderBounds(linkId) : null;
           this.workerLinkPresentationById.set(result.linkId, result);
           this.linkGeometryCache.set(linkId, {
             curve: result.curve
           });
           const link = this.linksById.get(linkId);
-          if (link && shouldApplyImmediately) {
+          if (link) {
             this.syncLinkMidpointToPoint(
               link,
               result.midpoint
             );
-            this.syncLinkView(
-              linkId,
-              link,
-              this.linkViews.get(linkId),
-              this.getRuntimeNow(),
-              true
-            );
           }
-          if (shouldApplyImmediately) {
-            dirtyBounds = mergeRenderBounds(
-              dirtyBounds,
-              mergeRenderBounds(previousBounds, this.captureLinkRenderBounds(linkId))
-            );
-          }
+          this.queuePendingRuntimeLinkIds([linkId]);
+          hasQueuedVisualWork = true;
         }
-        if (dirtyBounds && shouldApplyImmediately) {
-          this.requestSceneRender(dirtyBounds);
+        if (hasQueuedVisualWork) {
+          this.runtimeFlushEnqueueCount += 1;
+          this.ensureRuntimeVisualFrame();
         }
         this.flushPendingActiveLinkPresentationRequest();
       };
@@ -21289,6 +21532,14 @@ ${safeText}`;
       this.unsubscribers.push(
         this.bus.on("graph:clear", () => {
           this.clearScene();
+        }),
+        this.bus.on("graph:hydrate", ({ sceneAlreadyCleared }) => {
+          if (sceneAlreadyCleared) {
+            this.hydrateFromGraph();
+            this.requestSceneRender();
+            return;
+          }
+          this.resyncFromGraph();
         }),
         this.bus.on("node:add", ({ node: node2 }) => {
           this.ensureNodeHost(node2);
@@ -21333,59 +21584,96 @@ ${safeText}`;
       this.appHost.taskWorker.onActiveLinkPresentation(null);
       this.clearScene();
     }
-    requestRuntimeAnimation(forceNodeRepaint = false, nodeIds) {
-      let dirtyBounds = null;
-      let hasPendingNodeFrames = this.pendingSettledNodeRepaints.size > 0 || this.hasAnyTransientNodeAnimation();
-      if (forceNodeRepaint) {
-        const activeNodeIds = this.captureActiveTransientNodeIds();
-        const repaintNodeIds = this.resolveRuntimeRepaintNodeIds(nodeIds);
-        dirtyBounds = repaintNodeIds ? this.repaintNodeHostsWithBounds(repaintNodeIds) : this.repaintAllNodeHostsWithBounds();
-        hasPendingNodeFrames = this.syncPendingSettledNodeRepaints(activeNodeIds) || this.pendingSettledNodeRepaints.size > 0;
-      }
-      this.collectActiveLinks();
-      const linkRefresh = this.refreshActiveLinkAnimations();
-      dirtyBounds = mergeRenderBounds(dirtyBounds, linkRefresh.dirtyBounds);
-      if (forceNodeRepaint) {
-        this.requestSceneRender(dirtyBounds);
-      } else if (linkRefresh.didUpdate) {
-        this.requestSceneRender(dirtyBounds);
-      }
-      if (linkRefresh.hasMore || hasPendingNodeFrames) {
-        this.ensureRuntimeAnimationFrame();
-      }
+    cancelPendingRuntimeVisualFrame() {
+      this.cancelRuntimeVisualFrame();
+      this.pendingRuntimeDirtyNodeIds.clear();
+      this.pendingRuntimeDirtyLinkIds.clear();
+      this.pendingRuntimeDirtyBounds = null;
+      this.pendingRuntimeForceNodeRepaint = false;
+      this.pendingRuntimeRepaintAllNodes = false;
     }
-    repaintNodeHost(nodeId) {
+    requestRuntimeAnimation(forceNodeRepaint = false, nodeIds, linkIds) {
+      this.queuePendingRuntimeNodeIds(nodeIds);
+      this.queuePendingRuntimeLinkIds(linkIds);
+      if (forceNodeRepaint) {
+        this.pendingRuntimeForceNodeRepaint = true;
+        if (!(nodeIds == null ? void 0 : nodeIds.length)) {
+          this.pendingRuntimeRepaintAllNodes = true;
+        }
+      }
+      if (!this.hasPendingRuntimeVisualWork()) {
+        return;
+      }
+      this.runtimeFlushEnqueueCount += 1;
+      this.ensureRuntimeVisualFrame();
+    }
+    flushDeferredNodeDirtySignals(requestRender = true) {
+      if (!this.deferredNodeDirtySignalsByKey.size) {
+        return [];
+      }
+      const pendingSignals = Array.from(this.deferredNodeDirtySignalsByKey.values());
+      this.deferredNodeDirtySignalsByKey.clear();
+      let dirtyBounds = null;
+      const processedNodeIds = [];
+      for (let i2 = 0; i2 < pendingSignals.length; ++i2) {
+        const pendingSignal = pendingSignals[i2];
+        processedNodeIds.push(pendingSignal.nodeId);
+        dirtyBounds = mergeRenderBounds(
+          dirtyBounds,
+          this.processNodeDirty(
+            pendingSignal.nodeId,
+            pendingSignal.node,
+            pendingSignal.dirtyForeground,
+            pendingSignal.dirtyBackground
+          )
+        );
+      }
+      if (dirtyBounds && requestRender) {
+        this.requestSceneRender(dirtyBounds);
+      } else if (dirtyBounds) {
+        this.pendingRuntimeDirtyBounds = mergeRenderBounds(
+          this.pendingRuntimeDirtyBounds,
+          dirtyBounds
+        );
+      }
+      return processedNodeIds;
+    }
+    repaintNodeHost(nodeId, syncIncidentLinks = true) {
       var _a3;
       (_a3 = this.nodeHosts.get(nodeId)) == null ? void 0 : _a3.repaint();
-      this.updateIncidentLinks(nodeId);
-    }
-    repaintNodeHosts(nodeIds) {
-      for (let i2 = 0; i2 < nodeIds.length; ++i2) {
-        this.repaintNodeHost(nodeIds[i2]);
-      }
-    }
-    repaintAllNodeHosts() {
-      for (const [nodeId, host] of this.nodeHosts.entries()) {
-        host.repaint();
+      if (syncIncidentLinks) {
         this.updateIncidentLinks(nodeId);
       }
     }
-    repaintAllNodeHostsWithBounds() {
+    repaintNodeHosts(nodeIds, syncIncidentLinks = true) {
+      for (let i2 = 0; i2 < nodeIds.length; ++i2) {
+        this.repaintNodeHost(nodeIds[i2], syncIncidentLinks);
+      }
+    }
+    repaintAllNodeHosts(syncIncidentLinks = true) {
+      for (const [nodeId, host] of this.nodeHosts.entries()) {
+        host.repaint();
+        if (syncIncidentLinks) {
+          this.updateIncidentLinks(nodeId);
+        }
+      }
+    }
+    repaintAllNodeHostsWithBounds(syncIncidentLinks = true) {
       let dirtyBounds = null;
       for (const nodeId of this.nodeHosts.keys()) {
         dirtyBounds = mergeRenderBounds(
           dirtyBounds,
-          this.repaintNodeHostWithBounds(nodeId)
+          this.repaintNodeHostWithBounds(nodeId, syncIncidentLinks)
         );
       }
       return dirtyBounds;
     }
-    repaintNodeHostsWithBounds(nodeIds) {
+    repaintRuntimeNodeHostsWithBounds(nodeIds) {
       let dirtyBounds = null;
       for (let i2 = 0; i2 < nodeIds.length; ++i2) {
         dirtyBounds = mergeRenderBounds(
           dirtyBounds,
-          this.repaintNodeHostWithBounds(nodeIds[i2])
+          this.repaintRuntimeNodeHostWithBounds(nodeIds[i2])
         );
       }
       return dirtyBounds;
@@ -21443,19 +21731,36 @@ ${safeText}`;
     }
     hydrateFromGraph() {
       const existingGroups = Array.isArray(this.graph._groups) ? this.graph._groups : [];
+      const hydratedGroupHosts = [];
       for (let i2 = 0; i2 < existingGroups.length; ++i2) {
-        this.ensureGroupHost(existingGroups[i2]);
+        hydratedGroupHosts.push(
+          this.ensureGroupHost(existingGroups[i2], {
+            repaint: false
+          })
+        );
       }
       const existingNodes = Array.isArray(this.graph._nodes) ? this.graph._nodes : [];
       for (let i2 = 0; i2 < existingNodes.length; ++i2) {
-        this.ensureNodeHost(existingNodes[i2]);
+        this.ensureNodeHost(existingNodes[i2], {
+          updateLinks: false,
+          repaint: false
+        });
       }
       for (const [linkId, link] of Object.entries(this.graph.links || {})) {
         this.ensureLinkView(linkId, link);
       }
+      for (let i2 = 0; i2 < hydratedGroupHosts.length; ++i2) {
+        hydratedGroupHosts[i2].repaint();
+      }
+      this.repaintAllNodeHosts(false);
+    }
+    resyncFromGraph() {
+      this.clearScene();
+      this.hydrateFromGraph();
+      this.requestSceneRender();
     }
     clearScene() {
-      this.cancelRuntimeAnimationFrame();
+      this.cancelPendingRuntimeVisualFrame();
       for (const host of this.nodeHosts.values()) {
         host.destroy();
       }
@@ -21487,18 +21792,32 @@ ${safeText}`;
       this.activeLinkPresentationRequestInFlight = false;
       this.pendingActiveLinkPresentationRequest = null;
       this.lastHandledActiveLinkPresentationRequestId = 0;
+      this.activeTransientNodeIds.clear();
       this.pendingSettledNodeRepaints.clear();
+      this.deferredNodeDirtySignalsByKey.clear();
+      this.dirtyRuntimeLinkIds.clear();
+      this.runtimeFlushEnqueueCount = 0;
+      this.runtimeVisualFrameCount = 0;
+      this.runtimeSceneRenderCount = 0;
     }
-    ensureNodeHost(node2) {
+    ensureNodeHost(node2, options) {
       const nodeId = node2.id;
       const runtime2 = discriminateNodeRuntime(node2);
       const existingHost = this.nodeHosts.get(nodeId);
+      const shouldSyncPosition = (options == null ? void 0 : options.syncPosition) !== false;
+      const shouldRepaint = (options == null ? void 0 : options.repaint) !== false;
+      const shouldUpdateLinks = (options == null ? void 0 : options.updateLinks) !== false;
       this.nodesById.set(nodeId, node2);
+      this.syncTransientNodeTracking(nodeId, node2);
       this.ensureTrackedNodeId(nodeId);
       this.installNodeDirtyBridge(node2);
       if (existingHost && existingHost.runtime === runtime2) {
-        existingHost.syncPosition();
-        this.updateIncidentLinks(nodeId);
+        if (shouldSyncPosition) {
+          existingHost.syncPosition();
+        }
+        if (shouldUpdateLinks) {
+          this.updateIncidentLinks(nodeId);
+        }
         return existingHost;
       }
       if (existingHost) {
@@ -21507,9 +21826,15 @@ ${safeText}`;
       }
       const nodeHost = this.createNodeHost(runtime2, node2);
       this.nodeHosts.set(nodeId, nodeHost);
-      nodeHost.syncPosition();
-      nodeHost.repaint();
-      this.updateIncidentLinks(nodeId);
+      if (shouldSyncPosition) {
+        nodeHost.syncPosition();
+      }
+      if (shouldRepaint) {
+        nodeHost.repaint();
+      }
+      if (shouldUpdateLinks) {
+        this.updateIncidentLinks(nodeId);
+      }
       return nodeHost;
     }
     createNodeHost(runtime2, node2) {
@@ -21529,19 +21854,24 @@ ${safeText}`;
       this.appHost.legacyNodeLayer.add(nodeHost.root);
       return nodeHost;
     }
-    ensureGroupHost(group) {
+    ensureGroupHost(group, options) {
+      const shouldRepaint = (options == null ? void 0 : options.repaint) !== false;
       const existingHost = this.groupHosts.get(group);
       if (existingHost) {
         this.installGroupDirtyBridge(group);
-        existingHost.repaint();
+        if (shouldRepaint) {
+          existingHost.repaint();
+        }
         return existingHost;
       }
       const groupHost = new GraphGroupHost(group);
       this.groupHosts.set(group, groupHost);
       this.installGroupDirtyBridge(group);
       this.appHost.groupLayer.add(groupHost.root);
-      groupHost.repaint();
-      this.requestSceneRender(groupHost.captureRenderBounds());
+      if (shouldRepaint) {
+        groupHost.repaint();
+        this.requestSceneRender(groupHost.captureRenderBounds());
+      }
       return groupHost;
     }
     removeGroupHost(group) {
@@ -21569,6 +21899,7 @@ ${safeText}`;
       this.dirtyBridgeUninstallers.delete(nodeId);
       this.nodesById.delete(nodeId);
       this.linksByNodeId.delete(nodeId);
+      this.activeTransientNodeIds.delete(nodeId);
       this.pendingSettledNodeRepaints.delete(nodeId);
     }
     ensureLinkView(linkId, link) {
@@ -21582,12 +21913,20 @@ ${safeText}`;
       const originNode = this.findGraphNode(link.origin_id);
       const targetNode = this.findGraphNode(link.target_id);
       if (originNode) {
-        this.ensureNodeHost(originNode);
+        if (!this.nodeHosts.has(link.origin_id)) {
+          this.ensureNodeHost(originNode, {
+            updateLinks: false
+          });
+        }
       } else {
         this.ensureTrackedNodeId(link.origin_id);
       }
       if (targetNode) {
-        this.ensureNodeHost(targetNode);
+        if (!this.nodeHosts.has(link.target_id)) {
+          this.ensureNodeHost(targetNode, {
+            updateLinks: false
+          });
+        }
       } else {
         this.ensureTrackedNodeId(link.target_id);
       }
@@ -21618,6 +21957,7 @@ ${safeText}`;
       this.linksById.delete(linkId);
       this.linkIdsByKey.delete(toMutationKey(linkId));
       this.activeLinkIds.delete(linkId);
+      this.dirtyRuntimeLinkIds.delete(linkId);
       this.linkGeometryCache.delete(linkId);
       this.activeLinkPresentationStateById.delete(linkId);
       this.workerLinkPresentationById.delete(toMutationKey(linkId));
@@ -21628,9 +21968,21 @@ ${safeText}`;
       (_b3 = this.linksByNodeId.get(resolvedLink.target_id)) == null ? void 0 : _b3.delete(linkId);
     }
     handleNodeDirty(nodeId, node2, dirtyForeground, dirtyBackground) {
+      const dirtyBounds = this.processNodeDirty(
+        nodeId,
+        node2,
+        dirtyForeground,
+        dirtyBackground
+      );
+      if (dirtyBounds) {
+        this.requestSceneRender(dirtyBounds);
+      }
+    }
+    processNodeDirty(nodeId, node2, dirtyForeground, dirtyBackground) {
       var _a3;
       if (node2) {
         this.nodesById.set(nodeId, node2);
+        this.syncTransientNodeTracking(nodeId, node2);
       }
       const fastPathBounds = this.tryHandleModernForegroundDirtyFastPath(
         nodeId,
@@ -21638,8 +21990,7 @@ ${safeText}`;
         dirtyBackground
       );
       if (fastPathBounds) {
-        this.requestSceneRender(fastPathBounds);
-        return;
+        return fastPathBounds;
       }
       const previousBounds = this.captureNodeClusterBounds(nodeId);
       (_a3 = this.nodeHosts.get(nodeId)) == null ? void 0 : _a3.repaint();
@@ -21647,7 +21998,7 @@ ${safeText}`;
         this.updateIncidentLinks(nodeId);
       }
       const nextBounds = this.captureNodeClusterBounds(nodeId);
-      this.requestSceneRender(mergeRenderBounds(previousBounds, nextBounds));
+      return mergeRenderBounds(previousBounds, nextBounds);
     }
     tryHandleModernForegroundDirtyFastPath(nodeId, dirtyForeground, dirtyBackground) {
       if (!(dirtyForeground === true && dirtyBackground !== true)) {
@@ -21675,6 +22026,14 @@ ${safeText}`;
       const originalSetDirtyCanvas = typeof targetNode.setDirtyCanvas === "function" ? targetNode.setDirtyCanvas.bind(targetNode) : null;
       targetNode.setDirtyCanvas = (dirtyForeground, dirtyBackground) => {
         originalSetDirtyCanvas == null ? void 0 : originalSetDirtyCanvas(dirtyForeground, dirtyBackground);
+        if (this.deferNodeDirtySignal(
+          node2.id,
+          node2,
+          dirtyForeground,
+          dirtyBackground
+        )) {
+          return;
+        }
         this.bus.emit("node:dirty", {
           graph: this.graph,
           nodeId: node2.id,
@@ -21689,6 +22048,25 @@ ${safeText}`;
           targetNode.setDirtyCanvas = ownSetDirtyCanvas;
         }
       });
+    }
+    deferNodeDirtySignal(nodeId, node2, dirtyForeground, dirtyBackground) {
+      if (!this.isExecutionPhaseActive()) {
+        return false;
+      }
+      const key = toMutationKey(nodeId);
+      const previousSignal = this.deferredNodeDirtySignalsByKey.get(key);
+      this.deferredNodeDirtySignalsByKey.set(key, {
+        nodeId,
+        node: node2,
+        dirtyForeground: dirtyForeground || Boolean(previousSignal == null ? void 0 : previousSignal.dirtyForeground),
+        dirtyBackground: Boolean(dirtyBackground) || Boolean(previousSignal == null ? void 0 : previousSignal.dirtyBackground)
+      });
+      return true;
+    }
+    isExecutionPhaseActive() {
+      return toFiniteNumber$2(
+        this.graph.execution_phase_depth
+      ) > 0;
     }
     installGroupDirtyBridge(group) {
       if (this.groupDirtyBridgeUninstallers.has(group)) {
@@ -21749,11 +22127,25 @@ ${safeText}`;
         this.syncLinkView(linkId);
       }
     }
-    repaintNodeHostWithBounds(nodeId) {
+    repaintNodeHostWithBounds(nodeId, syncIncidentLinks = true) {
       const previousBounds = this.captureNodeClusterBounds(nodeId);
-      this.repaintNodeHost(nodeId);
+      this.repaintNodeHost(nodeId, syncIncidentLinks);
       const nextBounds = this.captureNodeClusterBounds(nodeId);
       return mergeRenderBounds(previousBounds, nextBounds);
+    }
+    repaintRuntimeNodeHostWithBounds(nodeId) {
+      const host = this.nodeHosts.get(nodeId);
+      if (!host) {
+        return null;
+      }
+      if (host instanceof ModernNodeHost) {
+        if (!host.repaintForegroundState()) {
+          host.repaint();
+        }
+      } else {
+        host.repaint();
+      }
+      return expandRenderBounds(this.captureWorldRenderBounds(host.root));
     }
     resolveRuntimeRepaintNodeIds(nodeIds) {
       if (!nodeIds) {
@@ -21830,7 +22222,6 @@ ${safeText}`;
       const flow = workerPresentation ? this.buildWorkerLinkFlowPresentation(workerPresentation) : this.buildLinkFlowPresentation(
         linkId,
         link,
-        curve,
         now
       );
       const strokeWidth = this.getLinkStrokeWidth();
@@ -21866,7 +22257,7 @@ ${safeText}`;
     }
     getLinkStrokeWidth() {
       const canvas = this.getPrimaryCanvasLinkPresentation();
-      return Math.max(1, toFiniteNumber$1(canvas == null ? void 0 : canvas.connections_width, 3));
+      return Math.max(1, toFiniteNumber$2(canvas == null ? void 0 : canvas.connections_width, 3));
     }
     getLinkStroke(link) {
       if (typeof link.color === "string" && link.color) {
@@ -21913,22 +22304,48 @@ ${safeText}`;
       }
       this.appHost.app.forceRender();
     }
-    ensureRuntimeAnimationFrame() {
-      if (this.runtimeAnimationFrame !== null) {
+    ensureRuntimeVisualFrame() {
+      var _a3;
+      if (this.runtimeVisualFrameScheduled || !this.hasPendingRuntimeVisualWork()) {
         return;
       }
-      this.runtimeAnimationFrame = this.getRuntimeWindow().requestAnimationFrame(
-        this.handleRuntimeAnimationFrame
+      const leaferApp = this.resolveRuntimeVisualScheduler();
+      this.runtimeVisualFrameScheduled = true;
+      if (leaferApp) {
+        this.runtimeVisualFrameDriver = "leafer";
+        leaferApp.nextRender(this.handleRuntimeVisualFrame, this);
+        (_a3 = leaferApp.requestRender) == null ? void 0 : _a3.call(leaferApp);
+        return;
+      }
+      this.runtimeVisualFrameDriver = "raf";
+      this.runtimeVisualFrameHandle = this.getRuntimeWindow().requestAnimationFrame(
+        this.handleRuntimeVisualFrame
       );
     }
-    cancelRuntimeAnimationFrame() {
-      if (this.runtimeAnimationFrame === null) {
+    cancelRuntimeVisualFrame() {
+      if (!this.runtimeVisualFrameScheduled) {
         return;
       }
-      this.getRuntimeWindow().cancelAnimationFrame(this.runtimeAnimationFrame);
-      this.runtimeAnimationFrame = null;
+      if (this.runtimeVisualFrameDriver === "leafer") {
+        const leaferApp = this.resolveRuntimeVisualScheduler();
+        if (leaferApp) {
+          if (typeof leaferApp.removeNextRender === "function") {
+            leaferApp.removeNextRender(this.handleRuntimeVisualFrame);
+          } else {
+            leaferApp.nextRender(this.handleRuntimeVisualFrame, this, "off");
+          }
+        }
+      } else if (this.runtimeVisualFrameDriver === "raf" && this.runtimeVisualFrameHandle !== null) {
+        this.getRuntimeWindow().cancelAnimationFrame(
+          this.runtimeVisualFrameHandle
+        );
+      }
+      this.runtimeVisualFrameHandle = null;
+      this.runtimeVisualFrameDriver = "none";
+      this.runtimeVisualFrameScheduled = false;
     }
-    repaintAnimatedNodes() {
+    repaintAnimatedNodes(skipNodeIds) {
+      const skipNodeKeys = skipNodeIds && skipNodeIds.length ? new Set(skipNodeIds.map(toMutationKey)) : null;
       let didUpdate = false;
       let dirtyBounds = null;
       if (this.pendingSettledNodeRepaints.size) {
@@ -21937,43 +22354,84 @@ ${safeText}`;
         for (let i2 = 0; i2 < settledIds.length; ++i2) {
           dirtyBounds = mergeRenderBounds(
             dirtyBounds,
-            this.repaintNodeHostWithBounds(settledIds[i2])
+            this.repaintRuntimeNodeHostWithBounds(settledIds[i2])
           );
           didUpdate = true;
         }
       }
-      const activeNodeIds = this.captureActiveTransientNodeIds();
+      const activeNodeIds = this.captureTrackedTransientNodeIds(skipNodeKeys);
       if (activeNodeIds.length) {
         for (let i2 = 0; i2 < activeNodeIds.length; ++i2) {
           dirtyBounds = mergeRenderBounds(
             dirtyBounds,
-            this.repaintNodeHostWithBounds(activeNodeIds[i2])
+            this.repaintRuntimeNodeHostWithBounds(activeNodeIds[i2])
           );
         }
+        this.decayTransientNodeAnimations(activeNodeIds);
+        this.syncTransientNodeTrackingFor(activeNodeIds);
         didUpdate = true;
       }
       return {
         didUpdate,
         dirtyBounds,
-        hasMore: this.syncPendingSettledNodeRepaints(activeNodeIds) || this.pendingSettledNodeRepaints.size > 0
+        hasMore: this.syncPendingSettledNodeRepaints(activeNodeIds) || this.activeTransientNodeIds.size > 0 || this.pendingSettledNodeRepaints.size > 0
       };
+    }
+    decayTransientNodeAnimations(nodeIds) {
+      for (let i2 = 0; i2 < nodeIds.length; ++i2) {
+        const node2 = this.nodesById.get(nodeIds[i2]);
+        if (!node2) {
+          continue;
+        }
+        this.decayTransientNodeAnimation(node2);
+      }
+    }
+    decayTransientNodeAnimation(node2) {
+      const executeFrames = toFiniteNumber$2(node2.execute_triggered);
+      if (executeFrames > 0) {
+        node2.execute_triggered = Math.max(0, executeFrames - 1);
+      }
+      const actionFrames = toFiniteNumber$2(node2.action_triggered);
+      if (actionFrames > 0) {
+        node2.action_triggered = Math.max(0, actionFrames - 1);
+      }
     }
     hasTransientNodeAnimation(node2) {
       const animatedNode = node2;
-      return toFiniteNumber$1(animatedNode.execute_triggered) > 0 || toFiniteNumber$1(animatedNode.action_triggered) > 0;
+      return toFiniteNumber$2(animatedNode.execute_triggered) > 0 || toFiniteNumber$2(animatedNode.action_triggered) > 0;
     }
-    hasAnyTransientNodeAnimation() {
-      for (const node2 of this.nodesById.values()) {
-        if (this.hasTransientNodeAnimation(node2)) {
-          return true;
-        }
+    syncTransientNodeTracking(nodeId, node2) {
+      const resolvedNode = node2 || this.nodesById.get(nodeId);
+      if (resolvedNode && this.hasTransientNodeAnimation(resolvedNode)) {
+        this.activeTransientNodeIds.add(nodeId);
+        return true;
       }
+      this.activeTransientNodeIds.delete(nodeId);
       return false;
     }
-    captureActiveTransientNodeIds() {
+    syncTransientNodeTrackingFor(nodeIds) {
       const activeNodeIds = [];
-      for (const [nodeId, node2] of this.nodesById.entries()) {
-        if (this.hasTransientNodeAnimation(node2)) {
+      const seenNodeIds = /* @__PURE__ */ new Set();
+      for (let i2 = 0; i2 < nodeIds.length; ++i2) {
+        const nodeId = nodeIds[i2];
+        const nodeKey = toMutationKey(nodeId);
+        if (seenNodeIds.has(nodeKey)) {
+          continue;
+        }
+        seenNodeIds.add(nodeKey);
+        if (this.syncTransientNodeTracking(nodeId)) {
+          activeNodeIds.push(nodeId);
+        }
+      }
+      return activeNodeIds;
+    }
+    captureTrackedTransientNodeIds(skipNodeKeys) {
+      const activeNodeIds = [];
+      for (const nodeId of Array.from(this.activeTransientNodeIds)) {
+        if (skipNodeKeys == null ? void 0 : skipNodeKeys.has(toMutationKey(nodeId))) {
+          continue;
+        }
+        if (this.syncTransientNodeTracking(nodeId)) {
           activeNodeIds.push(nodeId);
         }
       }
@@ -21996,13 +22454,123 @@ ${safeText}`;
       }
       return hasMore;
     }
-    collectActiveLinks() {
-      const now = this.getRuntimeNow();
-      for (const [linkId, link] of this.linksById.entries()) {
-        if (this.isLinkFlowActive(link, now)) {
-          this.activeLinkIds.add(linkId);
-        }
+    queuePendingRuntimeNodeIds(nodeIds) {
+      if (!(nodeIds == null ? void 0 : nodeIds.length)) {
+        return;
       }
+      for (let i2 = 0; i2 < nodeIds.length; ++i2) {
+        const nodeId = nodeIds[i2];
+        this.pendingRuntimeDirtyNodeIds.set(toMutationKey(nodeId), nodeId);
+      }
+    }
+    queuePendingRuntimeLinkIds(linkIds) {
+      var _a3;
+      if (!(linkIds == null ? void 0 : linkIds.length)) {
+        return;
+      }
+      for (let i2 = 0; i2 < linkIds.length; ++i2) {
+        const rawLinkId = linkIds[i2];
+        const resolvedLinkId = (_a3 = this.linkIdsByKey.get(toMutationKey(rawLinkId))) != null ? _a3 : rawLinkId;
+        this.pendingRuntimeDirtyLinkIds.set(
+          toMutationKey(resolvedLinkId),
+          resolvedLinkId
+        );
+      }
+    }
+    consumePendingRuntimeNodeIds() {
+      if (!this.pendingRuntimeDirtyNodeIds.size) {
+        return [];
+      }
+      const nodeIds = Array.from(this.pendingRuntimeDirtyNodeIds.values());
+      this.pendingRuntimeDirtyNodeIds.clear();
+      return nodeIds;
+    }
+    consumePendingRuntimeLinkIds() {
+      if (!this.pendingRuntimeDirtyLinkIds.size) {
+        return [];
+      }
+      const linkIds = Array.from(this.pendingRuntimeDirtyLinkIds.values());
+      this.pendingRuntimeDirtyLinkIds.clear();
+      return linkIds;
+    }
+    consumePendingRuntimeDirtyBounds() {
+      const dirtyBounds = this.pendingRuntimeDirtyBounds;
+      this.pendingRuntimeDirtyBounds = null;
+      return dirtyBounds;
+    }
+    hasPendingRuntimeVisualWork() {
+      return this.pendingRuntimeForceNodeRepaint || this.pendingRuntimeRepaintAllNodes || this.pendingRuntimeDirtyNodeIds.size > 0 || this.pendingRuntimeDirtyLinkIds.size > 0 || this.pendingRuntimeDirtyBounds !== null || this.pendingSettledNodeRepaints.size > 0 || this.activeTransientNodeIds.size > 0 || this.activeLinkIds.size > 0 || this.dirtyRuntimeLinkIds.size > 0;
+    }
+    resolveRuntimeVisualScheduler() {
+      const app = this.appHost.app;
+      if (!app || typeof app.nextRender !== "function") {
+        return null;
+      }
+      return app;
+    }
+    getRuntimeDiagnostics() {
+      return {
+        runtimeFlushEnqueueCount: this.runtimeFlushEnqueueCount,
+        runtimeVisualFrameCount: this.runtimeVisualFrameCount,
+        runtimeSceneRenderCount: this.runtimeSceneRenderCount
+      };
+    }
+    queueDirtyRuntimeLinkIds(linkIds) {
+      var _a3;
+      if (!(linkIds == null ? void 0 : linkIds.length)) {
+        return;
+      }
+      for (let i2 = 0; i2 < linkIds.length; ++i2) {
+        const rawLinkId = linkIds[i2];
+        const resolvedLinkId = (_a3 = this.linkIdsByKey.get(toMutationKey(rawLinkId))) != null ? _a3 : rawLinkId;
+        this.dirtyRuntimeLinkIds.add(resolvedLinkId);
+      }
+    }
+    syncActiveLinkTracking(linkId, link, now = this.getRuntimeNow()) {
+      const resolvedLink = link || this.linksById.get(linkId);
+      if (resolvedLink && this.isLinkFlowActive(resolvedLink, now)) {
+        this.activeLinkIds.add(linkId);
+        return true;
+      }
+      this.activeLinkIds.delete(linkId);
+      return false;
+    }
+    consumeRuntimeLinkRefreshIds(now) {
+      var _a3;
+      if (!this.activeLinkIds.size && !this.dirtyRuntimeLinkIds.size) {
+        return [];
+      }
+      const refreshIds = [];
+      const seenLinkIds = /* @__PURE__ */ new Set();
+      const pushRefreshId = (linkId) => {
+        const key = toMutationKey(linkId);
+        if (seenLinkIds.has(key)) {
+          return;
+        }
+        seenLinkIds.add(key);
+        refreshIds.push(linkId);
+      };
+      for (const dirtyLinkId of Array.from(this.dirtyRuntimeLinkIds)) {
+        const resolvedLinkId = (_a3 = this.linkIdsByKey.get(toMutationKey(dirtyLinkId))) != null ? _a3 : dirtyLinkId;
+        this.syncActiveLinkTracking(
+          resolvedLinkId,
+          this.linksById.get(resolvedLinkId),
+          now
+        );
+        pushRefreshId(resolvedLinkId);
+      }
+      this.dirtyRuntimeLinkIds.clear();
+      for (const activeLinkId of Array.from(this.activeLinkIds)) {
+        if (!this.linksById.has(activeLinkId)) {
+          this.activeLinkIds.delete(activeLinkId);
+          this.linkGeometryCache.delete(activeLinkId);
+          this.activeLinkPresentationStateById.delete(activeLinkId);
+          this.workerLinkPresentationById.delete(toMutationKey(activeLinkId));
+          continue;
+        }
+        pushRefreshId(activeLinkId);
+      }
+      return refreshIds;
     }
     prepareActiveLinkPresentations(now) {
       this.activeLinkPresentationStateById.clear();
@@ -22039,15 +22607,16 @@ ${safeText}`;
       this.dispatchActiveLinkPresentationRequest(now, tasks);
     }
     refreshActiveLinkAnimations() {
-      if (!this.activeLinkIds.size) {
+      const now = this.getRuntimeNow();
+      const refreshLinkIds = this.consumeRuntimeLinkRefreshIds(now);
+      if (!refreshLinkIds.length) {
         return { didUpdate: false, hasMore: false, dirtyBounds: null };
       }
-      const now = this.getRuntimeNow();
       this.prepareActiveLinkPresentations(now);
       let didUpdate = false;
-      let hasActiveLinks = false;
       let dirtyBounds = null;
-      for (const linkId of Array.from(this.activeLinkIds)) {
+      for (let i2 = 0; i2 < refreshLinkIds.length; ++i2) {
+        const linkId = refreshLinkIds[i2];
         const previousBounds = this.captureLinkRenderBounds(linkId);
         const wasTracked = this.activeLinkIds.has(linkId);
         const isActive = this.syncLinkView(
@@ -22065,15 +22634,16 @@ ${safeText}`;
         if (wasTracked || isActive) {
           didUpdate = true;
         }
-        if (isActive) {
-          hasActiveLinks = true;
-        }
       }
-      return { didUpdate, hasMore: hasActiveLinks, dirtyBounds };
+      return {
+        didUpdate,
+        hasMore: this.activeLinkIds.size > 0,
+        dirtyBounds
+      };
     }
     isLinkFlowActive(link, now) {
-      const lastTime = toFiniteNumber$1(link._last_time);
-      return Boolean(lastTime) && now - lastTime < 1e3;
+      const lastTime = toFiniteNumber$2(link._last_time);
+      return Boolean(lastTime) && now - lastTime < ACTIVE_LINK_WINDOW_MS;
     }
     buildActiveLinkPresentationState(linkId, link) {
       const layout = this.nodePortAdapter.getLinkLayout(link);
@@ -22086,7 +22656,7 @@ ${safeText}`;
         end: [layout.end[0], layout.end[1]],
         startDir: layout.startDir,
         endDir: layout.endDir,
-        lastTime: toFiniteNumber$1(link._last_time)
+        lastTime: toFiniteNumber$2(link._last_time)
       };
       return {
         task,
@@ -22143,29 +22713,19 @@ ${safeText}`;
     isSameLinkCurve(current, next) {
       return current.path === next.path && current.startDir === next.startDir && current.endDir === next.endDir;
     }
-    buildLinkFlowPresentation(_linkId, link, curve, now) {
-      const lastTime = toFiniteNumber$1(link._last_time);
+    buildLinkFlowPresentation(_linkId, link, now) {
+      const lastTime = toFiniteNumber$2(link._last_time);
       if (!lastTime) {
         return { active: false };
       }
-      const elapsed = now - lastTime;
-      if (elapsed < 0 || elapsed >= 1e3) {
+      const opacity = resolveActiveLinkOpacity(lastTime, now);
+      if (!(opacity > 0)) {
         return { active: false };
       }
-      const opacity = Math.max(0, Math.min(1, 2 - elapsed * 2e-3));
-      const dots = Array.from(
-        { length: 5 },
-        (_2, index) => this.nodePortAdapter.getPointOnLinkCurve(
-          curve,
-          (now * 1e-3 + index * 0.2) % 1
-        )
-      );
       return {
         active: true,
         color: "#FFF",
-        opacity,
-        dotRadius: 5,
-        dots
+        opacity
       };
     }
     buildWorkerLinkFlowPresentation(presentation) {
@@ -22175,9 +22735,7 @@ ${safeText}`;
       return {
         active: true,
         color: "#FFF",
-        opacity: presentation.opacity,
-        dotRadius: 5,
-        dots: presentation.dots
+        opacity: presentation.opacity
       };
     }
     syncLinkMidpoint(link, curve) {
@@ -22497,14 +23055,16 @@ ${safeText}`;
   }, F.autoMoveCancel = function() {
     this.autoMoveTimer && (clearInterval(this.autoMoveTimer), this.autoMoveTimer = 0);
   }, he$3.add("viewport");
-  function toFiniteNumber(value, fallback = 0) {
+  function toFiniteNumber$1(value, fallback = 0) {
     const numericValue = Number(value);
     return Number.isFinite(numericValue) ? numericValue : fallback;
   }
+  const WORLD_BOUNDS_CAMERA_RING$1 = 160;
   class ViewportController {
-    constructor(appHost, dragAndScale) {
+    constructor(appHost, dragAndScale, getWorldBounds) {
       this.appHost = appHost;
       this.dragAndScale = dragAndScale;
+      this.getWorldBounds = getWorldBounds;
       this.scaleListenerId = null;
       this.moveListenerId = null;
       this.sceneSyncController = null;
@@ -22512,6 +23072,7 @@ ${safeText}`;
       this.lastScale = 1;
       this.handleTreeScale = () => {
         const nextScale = this.getScale();
+        this.applyClampedOffset(nextScale);
         this.syncBackgroundViewport();
         if (Math.abs(nextScale - this.lastScale) < 1e-4) {
           return;
@@ -22520,6 +23081,7 @@ ${safeText}`;
         this.queueLegacyScaleRepaint();
       };
       this.handleTreeMove = () => {
+        this.applyClampedOffset();
         this.syncBackgroundViewport();
       };
       O(this.appHost.tree, {
@@ -22579,19 +23141,19 @@ ${safeText}`;
       this.sceneSyncController = sceneSyncController;
     }
     getScale() {
-      const scale = toFiniteNumber(
+      const scale = toFiniteNumber$1(
         this.appHost.treeZoomLayer.scaleX,
         1
       );
       return scale || 1;
     }
     getOffsetX() {
-      return toFiniteNumber(
+      return toFiniteNumber$1(
         this.appHost.treeZoomLayer.x
       ) / this.getScale();
     }
     getOffsetY() {
-      return toFiniteNumber(
+      return toFiniteNumber$1(
         this.appHost.treeZoomLayer.y
       ) / this.getScale();
     }
@@ -22604,6 +23166,7 @@ ${safeText}`;
       const zoomableTree = this.appHost.tree;
       if (!zoomingCenter && typeof zoomableTree.zoom === "function") {
         zoomableTree.zoom(nextScale, 0, null, false);
+        this.applyClampedOffset(nextScale);
         this.lastScale = this.getScale();
         this.syncBackgroundViewport();
         this.queueLegacyScaleRepaint();
@@ -22614,26 +23177,45 @@ ${safeText}`;
         worldOrigin,
         nextScale / currentScale
       );
+      this.applyClampedOffset(nextScale);
       this.lastScale = nextScale;
       this.syncBackgroundViewport();
       this.queueLegacyScaleRepaint();
     }
     setOffset(x2, y2) {
       const scale = this.getScale();
-      this.appHost.treeZoomLayer.x = toFiniteNumber(x2) * scale;
-      this.appHost.treeZoomLayer.y = toFiniteNumber(y2) * scale;
+      const [nextX, nextY] = this.clampOffset(
+        toFiniteNumber$1(x2),
+        toFiniteNumber$1(y2),
+        scale
+      );
+      this.appHost.treeZoomLayer.x = nextX * scale;
+      this.appHost.treeZoomLayer.y = nextY * scale;
       this.syncBackgroundViewport();
     }
     moveByScreenDelta(deltaX2, deltaY) {
       if (!deltaX2 && !deltaY) {
         return;
       }
-      this.appHost.treeZoomLayer.move(deltaX2, deltaY);
+      const scale = this.getScale();
+      const currentX = this.getOffsetX();
+      const currentY = this.getOffsetY();
+      const [nextX, nextY] = this.clampOffset(
+        currentX + toFiniteNumber$1(deltaX2) / scale,
+        currentY + toFiniteNumber$1(deltaY) / scale,
+        scale
+      );
+      if (Math.abs(nextX - currentX) < 1e-4 && Math.abs(nextY - currentY) < 1e-4) {
+        return;
+      }
+      this.appHost.treeZoomLayer.x = nextX * scale;
+      this.appHost.treeZoomLayer.y = nextY * scale;
       this.syncBackgroundViewport();
     }
     reset() {
-      this.appHost.treeZoomLayer.x = 0;
-      this.appHost.treeZoomLayer.y = 0;
+      const [nextX, nextY] = this.clampOffset(0, 0, 1);
+      this.appHost.treeZoomLayer.x = nextX;
+      this.appHost.treeZoomLayer.y = nextY;
       this.appHost.treeZoomLayer.scale = 1;
       this.lastScale = 1;
       this.syncBackgroundViewport();
@@ -22653,10 +23235,14 @@ ${safeText}`;
       });
     }
     clampScale(value) {
-      const numericValue = toFiniteNumber(value, 1);
+      const numericValue = toFiniteNumber$1(value, 1);
+      const dynamicMinScale = this.resolveWorldBoundsMinScale();
       return Math.min(
         this.dragAndScale.max_scale,
-        Math.max(this.dragAndScale.min_scale, numericValue)
+        Math.max(
+          Math.max(this.dragAndScale.min_scale, dynamicMinScale),
+          numericValue
+        )
       );
     }
     resolveWorldOrigin(zoomingCenter) {
@@ -22671,10 +23257,68 @@ ${safeText}`;
         true
       );
     }
+    clampOffset(x2, y2, scale) {
+      var _a3;
+      const bounds = (_a3 = this.getWorldBounds) == null ? void 0 : _a3.call(this);
+      if (!bounds) {
+        return [x2, y2];
+      }
+      const rect = this.appHost.view.getBoundingClientRect();
+      const safeScale = Math.max(1e-4, toFiniteNumber$1(scale, 1));
+      const viewWidth = Math.max(1, rect.width / safeScale);
+      const viewHeight = Math.max(1, rect.height / safeScale);
+      const minOffsetX = viewWidth - (bounds[0] + bounds[2] + WORLD_BOUNDS_CAMERA_RING$1);
+      const maxOffsetX = WORLD_BOUNDS_CAMERA_RING$1 - bounds[0];
+      const minOffsetY = viewHeight - (bounds[1] + bounds[3] + WORLD_BOUNDS_CAMERA_RING$1);
+      const maxOffsetY = WORLD_BOUNDS_CAMERA_RING$1 - bounds[1];
+      return [
+        this.clampValue(x2, minOffsetX, maxOffsetX),
+        this.clampValue(y2, minOffsetY, maxOffsetY)
+      ];
+    }
+    clampValue(value, min, max) {
+      if (min > max) {
+        return (min + max) * 0.5;
+      }
+      return Math.min(max, Math.max(min, value));
+    }
+    applyClampedOffset(scale = this.getScale()) {
+      const currentX = this.getOffsetX();
+      const currentY = this.getOffsetY();
+      const [nextX, nextY] = this.clampOffset(currentX, currentY, scale);
+      if (Math.abs(nextX - currentX) < 1e-4 && Math.abs(nextY - currentY) < 1e-4) {
+        return;
+      }
+      this.appHost.treeZoomLayer.x = nextX * scale;
+      this.appHost.treeZoomLayer.y = nextY * scale;
+    }
+    resolveWorldBoundsMinScale() {
+      var _a3;
+      const bounds = (_a3 = this.getWorldBounds) == null ? void 0 : _a3.call(this);
+      if (!bounds) {
+        return this.dragAndScale.min_scale;
+      }
+      const rect = this.appHost.view.getBoundingClientRect();
+      const maxVisibleWorldWidth = Math.max(
+        1,
+        bounds[2] + WORLD_BOUNDS_CAMERA_RING$1 * 2
+      );
+      const maxVisibleWorldHeight = Math.max(
+        1,
+        bounds[3] + WORLD_BOUNDS_CAMERA_RING$1 * 2
+      );
+      const fitWidthScale = rect.width / maxVisibleWorldWidth;
+      const fitHeightScale = rect.height / maxVisibleWorldHeight;
+      return Math.max(
+        this.dragAndScale.min_scale,
+        toFiniteNumber$1(fitWidthScale, this.dragAndScale.min_scale),
+        toFiniteNumber$1(fitHeightScale, this.dragAndScale.min_scale)
+      );
+    }
     syncBackgroundViewport() {
       this.appHost.syncBackgroundViewport(
-        toFiniteNumber(this.appHost.treeZoomLayer.x),
-        toFiniteNumber(this.appHost.treeZoomLayer.y),
+        toFiniteNumber$1(this.appHost.treeZoomLayer.x),
+        toFiniteNumber$1(this.appHost.treeZoomLayer.y),
         this.getScale()
       );
     }
@@ -23219,6 +23863,23 @@ ${safeText}`;
       lostpointercapture: "touchend"
     }
   };
+  const DEFAULT_WORLD_BOUNDS = [
+    0,
+    0,
+    2048,
+    2048
+  ];
+  const WORLD_BOUNDS_CAMERA_RING = 160;
+  function toFiniteNumber(value, fallback = 0) {
+    const numericValue = Number(value);
+    return Number.isFinite(numericValue) ? numericValue : fallback;
+  }
+  function clampValue(value, min, max) {
+    if (min > max) {
+      return (min + max) * 0.5;
+    }
+    return Math.min(max, Math.max(min, value));
+  }
   function resolvePointerEventName(method, semanticName) {
     const requested = String(semanticName || "").toLowerCase();
     if (requested.startsWith("mouse") || requested.startsWith("pointer") || requested.startsWith("touch")) {
@@ -23396,6 +24057,9 @@ ${safeText}`;
       this.visible_area = this.ds.visible_area;
       this.visible_links = [];
       this.viewport = this.options.viewport || null;
+      this.world_bounds = this.normalizeWorldBounds(
+        options && Object.prototype.hasOwnProperty.call(options, "worldBounds") ? options.worldBounds || null : DEFAULT_WORLD_BOUNDS
+      );
       this.canvas = null;
       this.canvasHostElement = null;
       this.bgcanvas = null;
@@ -23665,7 +24329,8 @@ ${safeText}`;
       });
       this.viewportController = new ViewportController(
         this.leaferAppHost,
-        this.ds
+        this.ds,
+        () => this.getWorldBounds()
       );
       this.attachSceneSyncBackbone();
       this.viewportController.setSceneSyncController(this.sceneSyncController);
@@ -23708,6 +24373,158 @@ ${safeText}`;
         this.sceneSyncController
       );
       (_a3 = this.viewportController) == null ? void 0 : _a3.setSceneSyncController(this.sceneSyncController);
+    }
+    getWorldBounds() {
+      if (!this.world_bounds) {
+        return null;
+      }
+      return [
+        this.world_bounds[0],
+        this.world_bounds[1],
+        this.world_bounds[2],
+        this.world_bounds[3]
+      ];
+    }
+    clampCanvasOffset(offsetX, offsetY, scale = this.ds.scale, viewportWidth, viewportHeight) {
+      if (!this.world_bounds) {
+        return [offsetX, offsetY];
+      }
+      const bounds = this.world_bounds;
+      const safeScale = Math.max(1e-4, toFiniteNumber(scale, 1));
+      const size = this.resolveViewportPixelSize();
+      const viewWidth = Math.max(
+        1,
+        toFiniteNumber(viewportWidth, size[0]) / safeScale
+      );
+      const viewHeight = Math.max(
+        1,
+        toFiniteNumber(viewportHeight, size[1]) / safeScale
+      );
+      const minOffsetX = viewWidth - (bounds[0] + bounds[2] + WORLD_BOUNDS_CAMERA_RING);
+      const maxOffsetX = WORLD_BOUNDS_CAMERA_RING - bounds[0];
+      const minOffsetY = viewHeight - (bounds[1] + bounds[3] + WORLD_BOUNDS_CAMERA_RING);
+      const maxOffsetY = WORLD_BOUNDS_CAMERA_RING - bounds[1];
+      return [
+        clampValue(toFiniteNumber(offsetX), minOffsetX, maxOffsetX),
+        clampValue(toFiniteNumber(offsetY), minOffsetY, maxOffsetY)
+      ];
+    }
+    clampWorldPoint(x2, y2) {
+      return this.clampRectPosition(x2, y2, 0, 0);
+    }
+    clampNodePosition(node2, x2, y2) {
+      var _a3, _b3, _c2, _d2;
+      const width2 = toFiniteNumber((_a3 = node2 == null ? void 0 : node2.size) == null ? void 0 : _a3[0]);
+      const height = toFiniteNumber((_b3 = node2 == null ? void 0 : node2.size) == null ? void 0 : _b3[1]);
+      const left = x2 === void 0 ? toFiniteNumber((_c2 = node2 == null ? void 0 : node2.pos) == null ? void 0 : _c2[0]) : x2;
+      const top = y2 === void 0 ? toFiniteNumber((_d2 = node2 == null ? void 0 : node2.pos) == null ? void 0 : _d2[1]) : y2;
+      return this.clampRectPosition(left, top, width2, height);
+    }
+    clampNodeMoveDelta(nodes, deltaX2, deltaY) {
+      return this.clampAggregateMoveDelta(
+        nodes,
+        toFiniteNumber(deltaX2),
+        toFiniteNumber(deltaY)
+      );
+    }
+    clampGroupMoveDelta(group, deltaX2, deltaY, ignoreNodes = false) {
+      const items = [group];
+      if (!ignoreNodes && Array.isArray(group._nodes)) {
+        items.push(...group._nodes);
+      }
+      return this.clampAggregateMoveDelta(
+        items,
+        toFiniteNumber(deltaX2),
+        toFiniteNumber(deltaY)
+      );
+    }
+    clampNodeSize(node2, width2, height) {
+      var _a3, _b3;
+      if (!this.world_bounds) {
+        return [Math.round(width2), Math.round(height)];
+      }
+      const bounds = this.world_bounds;
+      const left = toFiniteNumber((_a3 = node2 == null ? void 0 : node2.pos) == null ? void 0 : _a3[0]);
+      const top = toFiniteNumber((_b3 = node2 == null ? void 0 : node2.pos) == null ? void 0 : _b3[1]);
+      const maxWidth = bounds[0] + bounds[2] - left;
+      const maxHeight = bounds[1] + bounds[3] - top;
+      const clampedWidth = maxWidth > 0 ? Math.min(toFiniteNumber(width2), maxWidth) : toFiniteNumber(width2);
+      const clampedHeight = maxHeight > 0 ? Math.min(toFiniteNumber(height), maxHeight) : toFiniteNumber(height);
+      return [Math.round(clampedWidth), Math.round(clampedHeight)];
+    }
+    clampGroupSize(group, width2, height) {
+      return this.clampNodeSize(group, width2, height);
+    }
+    normalizeWorldBounds(bounds) {
+      if (!bounds || bounds.length < 4) {
+        return null;
+      }
+      const x2 = toFiniteNumber(bounds[0]);
+      const y2 = toFiniteNumber(bounds[1]);
+      const width2 = Math.max(1, toFiniteNumber(bounds[2], 1));
+      const height = Math.max(1, toFiniteNumber(bounds[3], 1));
+      return [x2, y2, width2, height];
+    }
+    resolveViewportPixelSize() {
+      var _a3;
+      const target = this.canvasHostElement || this.ds.element || this.canvas || null;
+      const rect = (_a3 = target == null ? void 0 : target.getBoundingClientRect) == null ? void 0 : _a3.call(target);
+      const width2 = Math.max(
+        1,
+        toFiniteNumber(rect == null ? void 0 : rect.width, (target == null ? void 0 : target.width) || 0)
+      );
+      const height = Math.max(
+        1,
+        toFiniteNumber(rect == null ? void 0 : rect.height, (target == null ? void 0 : target.height) || 0)
+      );
+      return [width2, height];
+    }
+    clampRectPosition(x2, y2, width2, height) {
+      if (!this.world_bounds) {
+        return [toFiniteNumber(x2), toFiniteNumber(y2)];
+      }
+      const bounds = this.world_bounds;
+      const minX = bounds[0];
+      const minY = bounds[1];
+      const maxX = bounds[0] + bounds[2] - Math.max(0, toFiniteNumber(width2));
+      const maxY = bounds[1] + bounds[3] - Math.max(0, toFiniteNumber(height));
+      return [
+        clampValue(toFiniteNumber(x2), minX, maxX),
+        clampValue(toFiniteNumber(y2), minY, maxY)
+      ];
+    }
+    clampAggregateMoveDelta(items, deltaX2, deltaY) {
+      var _a3, _b3, _c2, _d2;
+      if (!this.world_bounds || items.length === 0) {
+        return [deltaX2, deltaY];
+      }
+      let minLeft = Infinity;
+      let minTop = Infinity;
+      let maxRight = -Infinity;
+      let maxBottom = -Infinity;
+      for (let i2 = 0; i2 < items.length; ++i2) {
+        const item = items[i2];
+        const left = toFiniteNumber((_a3 = item == null ? void 0 : item.pos) == null ? void 0 : _a3[0]);
+        const top = toFiniteNumber((_b3 = item == null ? void 0 : item.pos) == null ? void 0 : _b3[1]);
+        const width2 = Math.max(0, toFiniteNumber((_c2 = item == null ? void 0 : item.size) == null ? void 0 : _c2[0]));
+        const height = Math.max(0, toFiniteNumber((_d2 = item == null ? void 0 : item.size) == null ? void 0 : _d2[1]));
+        minLeft = Math.min(minLeft, left);
+        minTop = Math.min(minTop, top);
+        maxRight = Math.max(maxRight, left + width2);
+        maxBottom = Math.max(maxBottom, top + height);
+      }
+      if (!Number.isFinite(minLeft) || !Number.isFinite(minTop) || !Number.isFinite(maxRight) || !Number.isFinite(maxBottom)) {
+        return [deltaX2, deltaY];
+      }
+      const bounds = this.world_bounds;
+      const minDeltaX = bounds[0] - minLeft;
+      const maxDeltaX = bounds[0] + bounds[2] - maxRight;
+      const minDeltaY = bounds[1] - minTop;
+      const maxDeltaY = bounds[1] + bounds[3] - maxBottom;
+      return [
+        maxDeltaX < minDeltaX ? 0 : clampValue(toFiniteNumber(deltaX2), minDeltaX, maxDeltaX),
+        maxDeltaY < minDeltaY ? 0 : clampValue(toFiniteNumber(deltaY), minDeltaY, maxDeltaY)
+      ];
     }
     setCanvas(canvas, skip_events) {
       let targetCanvas = canvas;
@@ -24076,13 +24893,14 @@ ${safeText}`;
         this.dirty_bgcanvas = true;
       }
     }
-    requestRuntimeRender(forceNodeRepaint = false, nodeIds) {
+    requestRuntimeRender(forceNodeRepaint = false, nodeIds, linkIds) {
       var _a3, _b3;
       if (this.renderRuntime === "leafer") {
         if (this.sceneSyncController) {
           this.sceneSyncController.requestRuntimeAnimation(
             forceNodeRepaint,
-            nodeIds
+            nodeIds,
+            linkIds
           );
           return;
         }
@@ -24094,6 +24912,13 @@ ${safeText}`;
         return;
       }
       this.draw(forceNodeRepaint, forceNodeRepaint);
+    }
+    cancelPendingRuntimeRender() {
+      var _a3;
+      if (this.renderRuntime !== "leafer") {
+        return;
+      }
+      (_a3 = this.sceneSyncController) == null ? void 0 : _a3.cancelPendingRuntimeVisualFrame();
     }
     notifyDirtySignal(fgcanvas, bgcanvas) {
       this.setDirty(Boolean(fgcanvas), Boolean(bgcanvas));
@@ -24668,13 +25493,21 @@ ${safeText}`;
         this.dirty_canvas = true;
       } else if (this.selected_group && !this.read_only) {
         if (this.selected_group_resizing) {
-          this.selected_group.size = [
+          const nextSize = this.clampGroupSize(
+            this.selected_group,
             e2.canvasX - this.selected_group.pos[0],
             e2.canvasY - this.selected_group.pos[1]
-          ];
+          );
+          this.selected_group.size = [nextSize[0], nextSize[1]];
         } else {
-          const deltax = delta2[0] / this.ds.scale;
-          const deltay = delta2[1] / this.ds.scale;
+          let deltax = delta2[0] / this.ds.scale;
+          let deltay = delta2[1] / this.ds.scale;
+          [deltax, deltay] = this.clampGroupMoveDelta(
+            this.selected_group,
+            deltax,
+            deltay,
+            e2.ctrlKey
+          );
           this.selected_group.move(deltax, deltay, e2.ctrlKey);
           if (this.selected_group._nodes.length) {
             this.dirty_canvas = true;
@@ -24686,8 +25519,13 @@ ${safeText}`;
           this.dragging_canvas = false;
           return;
         }
-        this.ds.offset[0] += delta2[0] / this.ds.scale;
-        this.ds.offset[1] += delta2[1] / this.ds.scale;
+        const nextOffset = this.clampCanvasOffset(
+          this.ds.offset[0] + delta2[0] / this.ds.scale,
+          this.ds.offset[1] + delta2[1] / this.ds.scale,
+          this.ds.scale
+        );
+        this.ds.offset[0] = nextOffset[0];
+        this.ds.offset[1] = nextOffset[1];
         this.dirty_canvas = true;
         this.dirty_bgcanvas = true;
       } else if ((this.allow_interaction || node2 && node2.flags.allow_interaction) && !this.read_only) {
@@ -24792,10 +25630,16 @@ ${safeText}`;
         }
         if (this.node_dragged && !this.live_mode) {
           const selected_nodes = this.selectedNodesRef();
+          const draggedNodes = Object.values(selected_nodes);
+          const moveDelta = this.clampNodeMoveDelta(
+            draggedNodes,
+            delta2[0] / this.ds.scale,
+            delta2[1] / this.ds.scale
+          );
           for (const i2 in selected_nodes) {
             const n2 = selected_nodes[i2];
-            n2.pos[0] += delta2[0] / this.ds.scale;
-            n2.pos[1] += delta2[1] / this.ds.scale;
+            n2.pos[0] += moveDelta[0];
+            n2.pos[1] += moveDelta[1];
             if (!n2.is_selected) {
               this.processNodeSelected(n2, e2);
             }
@@ -24811,7 +25655,12 @@ ${safeText}`;
           const min_size = this.resizing_node.computeSize();
           desired_size[0] = Math.max(min_size[0], desired_size[0]);
           desired_size[1] = Math.max(min_size[1], desired_size[1]);
-          this.resizing_node.setSize(desired_size);
+          const nextSize = this.clampNodeSize(
+            this.resizing_node,
+            desired_size[0],
+            desired_size[1]
+          );
+          this.resizing_node.setSize(nextSize);
           this.canvas.style.cursor = "se-resize";
           this.dirty_canvas = true;
           this.dirty_bgcanvas = true;
@@ -25235,10 +26084,16 @@ ${safeText}`;
       }
       if (this.node_dragged && !this.live_mode) {
         const selected_nodes = this.selectedNodesRef();
+        const draggedNodes = Object.values(selected_nodes);
+        const moveDelta = this.clampNodeMoveDelta(
+          draggedNodes,
+          delta2[0],
+          delta2[1]
+        );
         for (const key in selected_nodes) {
           const draggedNode = selected_nodes[key];
-          draggedNode.pos[0] += delta2[0];
-          draggedNode.pos[1] += delta2[1];
+          draggedNode.pos[0] += moveDelta[0];
+          draggedNode.pos[1] += moveDelta[1];
           if (!draggedNode.is_selected) {
             this.processNodeSelected(
               draggedNode,
@@ -25259,7 +26114,12 @@ ${safeText}`;
         const min_size = this.resizing_node.computeSize();
         desired_size[0] = Math.max(min_size[0], desired_size[0]);
         desired_size[1] = Math.max(min_size[1], desired_size[1]);
-        this.resizing_node.setSize(desired_size);
+        const nextSize = this.clampNodeSize(
+          this.resizing_node,
+          desired_size[0],
+          desired_size[1]
+        );
+        this.resizing_node.setSize(nextSize);
         if (this.canvas) {
           this.canvas.style.cursor = "se-resize";
         }
@@ -25664,12 +26524,18 @@ ${safeText}`;
         const node2 = LiteGraph2.createNode(node_data.type);
         if (node2) {
           node2.configure(node_data);
-          const sourceMinPos = posMin || [0, 0];
-          node2.pos[0] += this.graph_mouse[0] - sourceMinPos[0];
-          node2.pos[1] += this.graph_mouse[1] - sourceMinPos[1];
-          this.graph.add(node2, { doProcessChange: false });
           nodes.push(node2);
         }
+      }
+      const sourceMinPos = posMin || [0, 0];
+      let deltaX2 = this.graph_mouse[0] - sourceMinPos[0];
+      let deltaY = this.graph_mouse[1] - sourceMinPos[1];
+      [deltaX2, deltaY] = this.clampNodeMoveDelta(nodes, deltaX2, deltaY);
+      for (let i2 = 0; i2 < nodes.length; ++i2) {
+        const node2 = nodes[i2];
+        node2.pos[0] += deltaX2;
+        node2.pos[1] += deltaY;
+        this.graph.add(node2, { doProcessChange: false });
       }
       for (let i2 = 0; i2 < clipboard_info.links.length; ++i2) {
         const link_info = clipboard_info.links[i2];
@@ -25995,7 +26861,11 @@ ${safeText}`;
     // converts event coordinates from canvas2D to graph coordinates
     convertEventToCanvasOffset(e2) {
       const rect = this.canvas.getBoundingClientRect();
-      return this.convertCanvasToOffset([e2.clientX - rect.left, e2.clientY - rect.top]);
+      const graphPoint = this.convertCanvasToOffset([
+        e2.clientX - rect.left,
+        e2.clientY - rect.top
+      ]);
+      return this.clampWorldPoint(graphPoint[0], graphPoint[1]);
     }
     /**
      * brings a node to front (above all other nodes)
@@ -28069,6 +28939,7 @@ ${safeText}`;
             onSearchBoxSelection: this.onSearchBoxSelection,
             onSearchBox: this.onSearchBox,
             convertEventToCanvasOffset: this.convertEventToCanvasOffset.bind(this),
+            clampNodePosition: this.clampNodePosition.bind(this),
             focusCanvas: () => {
               var _a3;
               (_a3 = this.canvas) == null ? void 0 : _a3.focus();
@@ -28195,6 +29066,7 @@ ${safeText}`;
           createNode: (type) => this.getLiteGraphHost().createNode(type),
           selectNodes: this.selectNodes.bind(this),
           convertEventToCanvasOffset: this.convertEventToCanvasOffset.bind(this),
+          clampNodePosition: this.clampNodePosition.bind(this),
           closeSubgraph: this.closeSubgraph.bind(this),
           showSubgraphPropertiesDialog: this.showSubgraphPropertiesDialog.bind(this),
           showSubgraphPropertiesDialogRight: this.showSubgraphPropertiesDialogRight.bind(this),
@@ -29169,12 +30041,52 @@ ${safeText}`;
       this.last_update_time = 0;
       this.starttime = 0;
       this.catch_errors = true;
-      this.nodes_executing = [];
-      this.nodes_actioning = [];
-      this.nodes_executedAction = [];
+      this.nodes_executing = {};
+      this.nodes_actioning = {};
+      this.nodes_executedAction = {};
       this.inputs = {};
       this.outputs = {};
       this.execution_timer_id = null;
+      this.execution_schedule_kind = "none";
+      this.execution_schedule_interval = 0;
+      this.execution_leafer_app = null;
+      this.execution_animation_frame_id = null;
+      this.execution_schedule_revision = 0;
+      this.execution_phase_depth = 0;
+      this.runtime_dirty_node_ids = /* @__PURE__ */ new Set();
+      this.runtime_dirty_link_ids = /* @__PURE__ */ new Set();
+      this.runtime_state_touched_node_keys = /* @__PURE__ */ new Set();
+      this.runtime_state_touched_node_id_list = [];
+      this.internal_scene_batch_depth = 0;
+      this.internal_scene_batch_execution_order_dirty = false;
+      this.internal_scene_batch_change_requested = false;
+      this.internal_scene_batch_dirty_foreground = false;
+      this.internal_scene_batch_dirty_background = false;
+      this.internal_scene_batch_canvas_actions = /* @__PURE__ */ new Set();
+      this.executionTick = () => {
+        const scheduleKind = this.execution_schedule_kind;
+        if (scheduleKind === "none" || this.status !== _c.STATUS_RUNNING) {
+          return;
+        }
+        if (scheduleKind === "timer") {
+          this.execution_timer_id = null;
+        } else if (scheduleKind === "raf") {
+          this.execution_animation_frame_id = null;
+          this.execution_timer_id = null;
+        }
+        if (this.onBeforeStep) {
+          this.onBeforeStep();
+        }
+        this.runStep(1, !this.catch_errors);
+        this.afterExecutionTick();
+        if (this.onAfterStep) {
+          this.onAfterStep();
+        }
+        if (this.status !== _c.STATUS_RUNNING) {
+          return;
+        }
+        this.scheduleNextExecutionTick();
+      };
       if (resolveLifecycleHost(this).debug) {
         console.log("Graph created");
       }
@@ -29223,9 +30135,14 @@ ${safeText}`;
       this.last_update_time = 0;
       this.starttime = 0;
       this.catch_errors = true;
-      this.nodes_executing = [];
-      this.nodes_actioning = [];
-      this.nodes_executedAction = [];
+      this.nodes_executing = {};
+      this.nodes_actioning = {};
+      this.nodes_executedAction = {};
+      this.execution_phase_depth = 0;
+      this.runtime_dirty_node_ids.clear();
+      this.runtime_dirty_link_ids.clear();
+      this.runtime_state_touched_node_keys.clear();
+      this.runtime_state_touched_node_id_list.length = 0;
       this.inputs = {};
       this.outputs = {};
       this.change();
@@ -29281,35 +30198,8 @@ ${safeText}`;
       this.sendEventToAllNodes("onStart");
       this.starttime = resolveLifecycleHost(this).getTime();
       this.last_update_time = this.starttime;
-      interval = interval || 0;
-      const that2 = this;
-      if (interval == 0 && typeof window != "undefined" && window.requestAnimationFrame) {
-        const on_frame = () => {
-          if (that2.execution_timer_id != -1) {
-            return;
-          }
-          window.requestAnimationFrame(on_frame);
-          if (that2.onBeforeStep) {
-            that2.onBeforeStep();
-          }
-          that2.runStep(1, !that2.catch_errors);
-          if (that2.onAfterStep) {
-            that2.onAfterStep();
-          }
-        };
-        this.execution_timer_id = -1;
-        on_frame();
-      } else {
-        this.execution_timer_id = setInterval(function() {
-          if (that2.onBeforeStep) {
-            that2.onBeforeStep();
-          }
-          that2.runStep(1, !that2.catch_errors);
-          if (that2.onAfterStep) {
-            that2.onAfterStep();
-          }
-        }, interval);
-      }
+      this.execution_schedule_interval = Math.max(0, interval || 0);
+      this.beginExecutionSchedule();
     }
     /**
      * Stops the execution loop of the graph
@@ -29323,13 +30213,9 @@ ${safeText}`;
       if (this.onStopEvent) {
         this.onStopEvent();
       }
-      if (this.execution_timer_id != null) {
-        if (this.execution_timer_id != -1) {
-          clearInterval(this.execution_timer_id);
-        }
-        this.execution_timer_id = null;
-      }
+      this.clearExecutionSchedule();
       this.sendEventToAllNodes("onStop");
+      this.cancelPendingRuntimeVisualFlush();
     }
     /**
      * Returns the amount of time the graph has been running in milliseconds
@@ -29362,11 +30248,267 @@ ${safeText}`;
     }
     runStep(_num, _do_not_catch_errors) {
     }
+    trackRuntimeExecutionNode(nodeId) {
+      this.runtime_dirty_node_ids.add(nodeId);
+      const key = String(nodeId);
+      if (!this.runtime_state_touched_node_keys.has(key)) {
+        this.runtime_state_touched_node_keys.add(key);
+        this.runtime_state_touched_node_id_list.push(key);
+      }
+    }
+    trackRuntimeExecutionLink(linkId) {
+      this.runtime_dirty_link_ids.add(linkId);
+    }
+    consumeRuntimeDirtyNodeIds() {
+      if (!this.runtime_dirty_node_ids.size) {
+        return [];
+      }
+      const dirtyNodeIds = Array.from(this.runtime_dirty_node_ids);
+      this.runtime_dirty_node_ids.clear();
+      return dirtyNodeIds;
+    }
+    consumeRuntimeDirtyLinkIds() {
+      if (!this.runtime_dirty_link_ids.size) {
+        return [];
+      }
+      const dirtyLinkIds = Array.from(this.runtime_dirty_link_ids);
+      this.runtime_dirty_link_ids.clear();
+      return dirtyLinkIds;
+    }
+    resetRuntimeExecutionState() {
+      const touchedNodeIds = this.runtime_state_touched_node_id_list;
+      for (let i2 = 0; i2 < touchedNodeIds.length; ++i2) {
+        const key = touchedNodeIds[i2];
+        delete this.nodes_executing[key];
+        delete this.nodes_actioning[key];
+        delete this.nodes_executedAction[key];
+      }
+      touchedNodeIds.length = 0;
+      this.runtime_state_touched_node_keys.clear();
+    }
+    afterExecutionTick() {
+    }
+    __litegraphBeginSceneBatch() {
+      if (this.internal_scene_batch_depth === 0) {
+        this.internal_scene_batch_execution_order_dirty = false;
+        this.internal_scene_batch_change_requested = false;
+        this.internal_scene_batch_dirty_foreground = false;
+        this.internal_scene_batch_dirty_background = false;
+        this.internal_scene_batch_canvas_actions.clear();
+      }
+      this.internal_scene_batch_depth += 1;
+    }
+    __litegraphEndSceneBatch() {
+      if (this.internal_scene_batch_depth <= 0) {
+        return;
+      }
+      this.internal_scene_batch_depth -= 1;
+      if (this.internal_scene_batch_depth !== 0) {
+        return;
+      }
+      this.flushInternalSceneBatch();
+      this.internal_scene_batch_execution_order_dirty = false;
+      this.internal_scene_batch_change_requested = false;
+      this.internal_scene_batch_dirty_foreground = false;
+      this.internal_scene_batch_dirty_background = false;
+      this.internal_scene_batch_canvas_actions.clear();
+    }
+    __litegraphRunSceneBatch(work) {
+      this.__litegraphBeginSceneBatch();
+      try {
+        return work();
+      } finally {
+        this.__litegraphEndSceneBatch();
+      }
+    }
+    isInternalSceneBatchActive() {
+      return this.internal_scene_batch_depth > 0;
+    }
+    queueInternalSceneBatchExecutionOrder() {
+      if (!this.isInternalSceneBatchActive()) {
+        return false;
+      }
+      this.internal_scene_batch_execution_order_dirty = true;
+      return true;
+    }
+    consumeInternalSceneBatchExecutionOrder() {
+      const pending = this.internal_scene_batch_execution_order_dirty;
+      this.internal_scene_batch_execution_order_dirty = false;
+      return pending;
+    }
+    queueInternalSceneBatchChange() {
+      if (!this.isInternalSceneBatchActive()) {
+        return false;
+      }
+      this.internal_scene_batch_change_requested = true;
+      return true;
+    }
+    consumeInternalSceneBatchChange() {
+      const pending = this.internal_scene_batch_change_requested;
+      this.internal_scene_batch_change_requested = false;
+      return pending;
+    }
+    queueInternalSceneBatchDirty(dirtyForeground, dirtyBackground) {
+      if (!this.isInternalSceneBatchActive()) {
+        return false;
+      }
+      this.internal_scene_batch_dirty_foreground = this.internal_scene_batch_dirty_foreground || dirtyForeground === true;
+      this.internal_scene_batch_dirty_background = this.internal_scene_batch_dirty_background || dirtyBackground === true;
+      return true;
+    }
+    consumeInternalSceneBatchDirty() {
+      const dirtyForeground = this.internal_scene_batch_dirty_foreground;
+      const dirtyBackground = this.internal_scene_batch_dirty_background;
+      this.internal_scene_batch_dirty_foreground = false;
+      this.internal_scene_batch_dirty_background = false;
+      if (!dirtyForeground && !dirtyBackground) {
+        return null;
+      }
+      return [dirtyForeground, dirtyBackground];
+    }
+    queueInternalSceneBatchCanvasAction(action) {
+      if (!this.isInternalSceneBatchActive()) {
+        return false;
+      }
+      this.internal_scene_batch_canvas_actions.add(action);
+      return true;
+    }
+    consumeInternalSceneBatchCanvasActions() {
+      const actions = Array.from(this.internal_scene_batch_canvas_actions);
+      this.internal_scene_batch_canvas_actions.clear();
+      return actions;
+    }
+    flushInternalSceneBatch() {
+    }
     change() {
     }
     sendActionToCanvas(_action, ..._params) {
     }
     sendEventToAllNodes(_eventname, _params, _mode) {
+    }
+    beginExecutionSchedule() {
+      this.clearExecutionSchedule();
+      if (this.execution_schedule_interval > 0) {
+        this.execution_schedule_kind = "timer";
+        this.scheduleNextExecutionTick();
+        return;
+      }
+      if (typeof window != "undefined") {
+        this.execution_schedule_kind = "raf";
+        this.scheduleInitialExecutionTick();
+        return;
+      }
+      const leaferApp = this.resolveLeaferExecutionApp();
+      if (leaferApp) {
+        this.execution_schedule_kind = "leafer-frame";
+        this.execution_leafer_app = leaferApp;
+        this.scheduleInitialExecutionTick();
+        return;
+      }
+      this.execution_schedule_kind = "timer";
+      this.scheduleNextExecutionTick();
+    }
+    scheduleNextExecutionTick() {
+      switch (this.execution_schedule_kind) {
+        case "leafer-frame":
+          if (!this.execution_leafer_app) {
+            this.execution_schedule_kind = "timer";
+            this.scheduleNextExecutionTick();
+            return;
+          }
+          this.execution_leafer_app.nextRender(this.executionTick, this);
+          return;
+        case "raf":
+          this.execution_animation_frame_id = window.requestAnimationFrame(
+            this.executionTick
+          );
+          this.execution_timer_id = this.execution_animation_frame_id;
+          return;
+        case "timer":
+          this.execution_timer_id = setTimeout(
+            this.executionTick,
+            this.execution_schedule_interval
+          );
+          return;
+        default:
+          return;
+      }
+    }
+    scheduleInitialExecutionTick() {
+      const scheduleRevision = this.execution_schedule_revision;
+      const runInitialTick = () => {
+        if (this.execution_schedule_revision !== scheduleRevision) {
+          return;
+        }
+        this.executionTick();
+      };
+      if (typeof queueMicrotask === "function") {
+        queueMicrotask(runInitialTick);
+        return;
+      }
+      Promise.resolve().then(runInitialTick);
+    }
+    clearExecutionSchedule() {
+      const previousKind = this.execution_schedule_kind;
+      const previousTimerId = this.execution_timer_id;
+      const previousAnimationFrameId = this.execution_animation_frame_id;
+      const previousLeaferApp = this.execution_leafer_app;
+      this.execution_schedule_revision += 1;
+      this.execution_schedule_kind = "none";
+      this.execution_timer_id = null;
+      this.execution_animation_frame_id = null;
+      this.execution_leafer_app = null;
+      if (previousKind === "leafer-frame" && previousLeaferApp) {
+        if (typeof previousLeaferApp.removeNextRender === "function") {
+          previousLeaferApp.removeNextRender(this.executionTick);
+        } else {
+          previousLeaferApp.nextRender(this.executionTick, this, "off");
+        }
+        return;
+      }
+      if (previousKind === "raf" && previousAnimationFrameId !== null) {
+        window.cancelAnimationFrame(previousAnimationFrameId);
+        return;
+      }
+      if (previousKind === "timer" && previousTimerId != null) {
+        clearTimeout(previousTimerId);
+      }
+    }
+    cancelPendingRuntimeVisualFlush() {
+      var _a3, _b3;
+      const canvasList = this.list_of_graphcanvas;
+      if (!(canvasList == null ? void 0 : canvasList.length)) {
+        return;
+      }
+      for (let i2 = 0; i2 < canvasList.length; ++i2) {
+        const canvas = canvasList[i2];
+        if ((canvas == null ? void 0 : canvas.renderRuntime) !== "leafer") {
+          continue;
+        }
+        if (typeof canvas.cancelPendingRuntimeRender === "function") {
+          canvas.cancelPendingRuntimeRender();
+          continue;
+        }
+        (_b3 = (_a3 = canvas.sceneSyncController) == null ? void 0 : _a3.cancelPendingRuntimeVisualFrame) == null ? void 0 : _b3.call(_a3);
+      }
+    }
+    resolveLeaferExecutionApp() {
+      var _a3;
+      const canvasList = this.list_of_graphcanvas;
+      if (!(canvasList == null ? void 0 : canvasList.length)) {
+        return null;
+      }
+      for (let i2 = 0; i2 < canvasList.length; ++i2) {
+        const canvas = canvasList[i2];
+        if ((canvas == null ? void 0 : canvas.renderRuntime) !== "leafer") {
+          continue;
+        }
+        const app = ((_a3 = canvas.leaferAppHost) == null ? void 0 : _a3.app) || null;
+        if (app && typeof app.nextRender === "function" && typeof app.requestRender === "function") {
+          return app;
+        }
+      }
+      return null;
     }
   }, _c.supported_types = ["number", "string", "boolean"], _c.STATUS_STOPPED = 1, _c.STATUS_RUNNING = 2, _c.liteGraph = defaultLiteGraphLifecycleHost, _c);
   const defaultExecutionHost = {
@@ -29392,44 +30534,50 @@ ${safeText}`;
       const nodesById = this._nodes_by_id;
       return nodesById[String(id)] || null;
     }
-    requestLeaferExecutionRender() {
+    flushRuntimeExecutionRender() {
+      var _a3, _b3;
+      const nodeIds = this.consumeRuntimeDirtyNodeIds();
+      const linkIds = this.consumeRuntimeDirtyLinkIds();
       const canvasList = this.list_of_graphcanvas;
       if (!(canvasList == null ? void 0 : canvasList.length)) {
         return;
       }
-      const nodeIds = this.collectRuntimeDirtyNodeIds();
       for (let i2 = 0; i2 < canvasList.length; ++i2) {
         const canvas = canvasList[i2];
-        if ((canvas == null ? void 0 : canvas.renderRuntime) !== "leafer" || typeof canvas.requestRuntimeRender !== "function") {
+        if ((canvas == null ? void 0 : canvas.renderRuntime) !== "leafer") {
           continue;
         }
-        canvas.requestRuntimeRender(nodeIds.length > 0, nodeIds);
+        const processedNodeIds = ((_b3 = (_a3 = canvas.sceneSyncController) == null ? void 0 : _a3.flushDeferredNodeDirtySignals) == null ? void 0 : _b3.call(_a3, false)) || [];
+        if (typeof canvas.requestRuntimeRender !== "function") {
+          continue;
+        }
+        if (!nodeIds.length && !linkIds.length) {
+          if (processedNodeIds.length) {
+            canvas.requestRuntimeRender(false);
+          }
+          continue;
+        }
+        const processedNodeKeySet = processedNodeIds.length > 0 ? new Set(processedNodeIds.map(String)) : null;
+        const remainingNodeIds = processedNodeKeySet ? nodeIds.filter((nodeId) => !processedNodeKeySet.has(String(nodeId))) : nodeIds;
+        if (remainingNodeIds.length || linkIds.length) {
+          canvas.requestRuntimeRender(
+            remainingNodeIds.length > 0,
+            remainingNodeIds.length ? remainingNodeIds : void 0,
+            linkIds.length ? linkIds : void 0
+          );
+        } else if (processedNodeIds.length) {
+          canvas.requestRuntimeRender(false, void 0, void 0);
+        }
       }
     }
-    collectRuntimeDirtyNodeIds() {
-      const collected = /* @__PURE__ */ new Set();
-      const sources = [
-        this.nodes_executing,
-        this.nodes_actioning,
-        this.nodes_executedAction
-      ];
-      for (let sourceIndex = 0; sourceIndex < sources.length; ++sourceIndex) {
-        const source = sources[sourceIndex];
-        if (!source) {
-          continue;
-        }
-        for (const [key, value] of Object.entries(source)) {
-          if (!value) {
-            continue;
-          }
-          const node2 = this.getNodeByIdExecution(key);
-          if (!node2) {
-            continue;
-          }
-          collected.add(node2.id);
-        }
+    afterExecutionTick() {
+      this.flushRuntimeExecutionRender();
+    }
+    flushInternalSceneBatch() {
+      if (this.consumeInternalSceneBatchExecutionOrder()) {
+        this.applyExecutionOrderNow();
       }
-      return Array.from(collected);
+      super.flushInternalSceneBatch();
     }
     /**
      * Run N steps (cycles) of the graph
@@ -29439,80 +30587,84 @@ ${safeText}`;
      * @param {number} limit max number of nodes to execute (used to execute from start to a node)
      */
     runStep(num, do_not_catch_errors, limit) {
-      const liteGraph = resolveExecutionHost(this);
-      num = num || 1;
-      const start = liteGraph.getTime();
-      this.globaltime = 1e-3 * (start - this.starttime);
-      const nodes = this._nodes_executable ? this._nodes_executable : this._nodes;
-      if (!nodes) {
-        return;
-      }
-      limit = limit || nodes.length;
-      if (do_not_catch_errors) {
-        for (let i2 = 0; i2 < num; i2++) {
-          for (let j2 = 0; j2 < limit; ++j2) {
-            const node2 = nodes[j2];
-            if (liteGraph.use_deferred_actions && node2._waiting_actions && node2._waiting_actions.length) {
-              node2.executePendingActions();
-            }
-            if (node2.mode == liteGraph.ALWAYS && node2.onExecute) {
-              node2.doExecute();
-            }
+      this.execution_phase_depth += 1;
+      try {
+        const liteGraph = resolveExecutionHost(this);
+        num = num || 1;
+        const totalSteps = num;
+        const start = liteGraph.getTime();
+        this.globaltime = 1e-3 * (start - this.starttime);
+        const nodes = this._nodes_executable ? this._nodes_executable : this._nodes;
+        if (!nodes) {
+          return;
+        }
+        const maxNodes = limit && limit > 0 ? Math.min(limit, nodes.length) : nodes.length;
+        const useDeferredActions = liteGraph.use_deferred_actions === true;
+        const onExecuteStep = this.onExecuteStep;
+        const onAfterExecute = this.onAfterExecute;
+        const executeNode = (node2) => {
+          if (useDeferredActions && node2._waiting_actions && node2._waiting_actions.length && typeof node2.executePendingActions === "function") {
+            node2.executePendingActions();
+          }
+          if (node2.mode != liteGraph.ALWAYS || !node2.onExecute) {
+            return;
+          }
+          if (typeof node2.doExecute === "function") {
+            node2.doExecute();
+            return;
+          }
+          node2.onExecute();
+        };
+        const runSingleStep = () => {
+          for (let j2 = 0; j2 < maxNodes; ++j2) {
+            executeNode(nodes[j2]);
           }
           this.fixedtime += this.fixedtime_lapse;
-          if (this.onExecuteStep) {
-            this.onExecuteStep();
+          if (onExecuteStep) {
+            onExecuteStep();
+          }
+        };
+        const runAllSteps = () => {
+          for (let i2 = 0; i2 < totalSteps; ++i2) {
+            runSingleStep();
+          }
+          if (onAfterExecute) {
+            onAfterExecute();
+          }
+        };
+        if (do_not_catch_errors) {
+          runAllSteps();
+        } else {
+          try {
+            runAllSteps();
+            this.errors_in_execution = false;
+          } catch (err) {
+            this.errors_in_execution = true;
+            if (liteGraph.throw_errors) {
+              throw err;
+            }
+            if (liteGraph.debug) {
+              console.log("Error during execution: " + err);
+            }
+            this.stop();
           }
         }
-        if (this.onAfterExecute) {
-          this.onAfterExecute();
+        const now = liteGraph.getTime();
+        let elapsed = now - start;
+        if (elapsed == 0) {
+          elapsed = 1;
         }
-      } else {
-        try {
-          for (let i2 = 0; i2 < num; i2++) {
-            for (let j2 = 0; j2 < limit; ++j2) {
-              const node2 = nodes[j2];
-              if (liteGraph.use_deferred_actions && node2._waiting_actions && node2._waiting_actions.length) {
-                node2.executePendingActions();
-              }
-              if (node2.mode == liteGraph.ALWAYS && node2.onExecute) {
-                node2.onExecute();
-              }
-            }
-            this.fixedtime += this.fixedtime_lapse;
-            if (this.onExecuteStep) {
-              this.onExecuteStep();
-            }
-          }
-          if (this.onAfterExecute) {
-            this.onAfterExecute();
-          }
-          this.errors_in_execution = false;
-        } catch (err) {
-          this.errors_in_execution = true;
-          if (liteGraph.throw_errors) {
-            throw err;
-          }
-          if (liteGraph.debug) {
-            console.log("Error during execution: " + err);
-          }
-          this.stop();
+        this.execution_time = 1e-3 * elapsed;
+        this.globaltime += 1e-3 * elapsed;
+        this.iteration += 1;
+        this.elapsed_time = (now - this.last_update_time) * 1e-3;
+        this.last_update_time = now;
+        this.resetRuntimeExecutionState();
+      } finally {
+        if (this.execution_phase_depth > 0) {
+          this.execution_phase_depth -= 1;
         }
       }
-      const now = liteGraph.getTime();
-      let elapsed = now - start;
-      if (elapsed == 0) {
-        elapsed = 1;
-      }
-      this.execution_time = 1e-3 * elapsed;
-      this.globaltime += 1e-3 * elapsed;
-      this.iteration += 1;
-      this.elapsed_time = (now - this.last_update_time) * 1e-3;
-      this.last_update_time = now;
-      this.requestLeaferExecutionRender();
-      this.nodes_executing = [];
-      this.nodes_actioning = [];
-      this.nodes_executedAction = [];
     }
     /**
      * Updates the graph execution order according to relevance of the nodes (nodes with only outputs have more relevance than
@@ -29520,6 +30672,12 @@ ${safeText}`;
      * @method updateExecutionOrder
      */
     updateExecutionOrder() {
+      if (this.queueInternalSceneBatchExecutionOrder()) {
+        return;
+      }
+      this.applyExecutionOrderNow();
+    }
+    applyExecutionOrderNow() {
       this._nodes_in_order = this.computeExecutionOrder(false);
       this._nodes_executable = [];
       for (let i2 = 0; i2 < this._nodes_in_order.length; ++i2) {
@@ -29870,7 +31028,9 @@ ${safeText}`;
       if (this.onNodeRemoved) {
         this.onNodeRemoved(graphNode);
       }
-      this.sendActionToCanvas("checkPanels");
+      if (!this.queueInternalSceneBatchCanvasAction("checkPanels")) {
+        this.sendActionToCanvas("checkPanels");
+      }
       this.setDirtyCanvas(true, true);
       this.afterChange();
       this.change();
@@ -30052,6 +31212,9 @@ ${safeText}`;
     constructor() {
       super(...arguments);
       this._input_nodes = [];
+      this.batchedAfterChangeInfo = void 0;
+      this.hasBatchedAfterChange = false;
+      this.batchedBeforeChangeEmitted = false;
     }
     getNodesInEventOrder() {
       const ordered = this._nodes_in_order;
@@ -30131,6 +31294,14 @@ ${safeText}`;
           );
         }
       }
+    }
+    __litegraphBeginSceneBatch() {
+      if (!this.isInternalSceneBatchActive()) {
+        this.batchedAfterChangeInfo = void 0;
+        this.hasBatchedAfterChange = false;
+        this.batchedBeforeChangeEmitted = false;
+      }
+      super.__litegraphBeginSceneBatch();
     }
     onAction(action, param, options) {
       const host = resolveIOEventsHost(this);
@@ -30396,17 +31567,22 @@ ${safeText}`;
     }
     // used for undo, called before any change is made to the graph
     beforeChange(info) {
-      if (this.onBeforeChange) {
-        this.onBeforeChange(this, info);
+      if (this.isInternalSceneBatchActive()) {
+        if (this.batchedBeforeChangeEmitted) {
+          return;
+        }
+        this.batchedBeforeChangeEmitted = true;
       }
-      this.sendActionToCanvas("onBeforeChange", this);
+      this.dispatchBeforeChange(info);
     }
     // used to resend actions, called after any change is made to the graph
     afterChange(info) {
-      if (this.onAfterChange) {
-        this.onAfterChange(this, info);
+      if (this.isInternalSceneBatchActive()) {
+        this.batchedAfterChangeInfo = info;
+        this.hasBatchedAfterChange = true;
+        return;
       }
-      this.sendActionToCanvas("onAfterChange", this);
+      this.dispatchAfterChange(info);
     }
     connectionChange(node2, _link_info) {
       this.updateExecutionOrder();
@@ -30414,6 +31590,9 @@ ${safeText}`;
         this.onConnectionChange(node2);
       }
       this._version++;
+      if (this.queueInternalSceneBatchCanvasAction("onConnectionChange")) {
+        return;
+      }
       this.sendActionToCanvas("onConnectionChange");
     }
     /**
@@ -30445,11 +31624,57 @@ ${safeText}`;
         }
         if (linkInfo._last_time) {
           linkInfo._last_time = 0;
+          this.trackRuntimeExecutionLink(i2);
         }
       }
     }
     /* Called when something visually changed (not the graph!) */
     change() {
+      if (this.queueInternalSceneBatchChange()) {
+        return;
+      }
+      this.dispatchChange();
+    }
+    setDirtyCanvas(fg, bg) {
+      if (this.queueInternalSceneBatchDirty(fg, bg)) {
+        return;
+      }
+      this.sendActionToCanvas("setDirty", [fg, bg]);
+    }
+    flushInternalSceneBatch() {
+      super.flushInternalSceneBatch();
+      const queuedCanvasActions = this.consumeInternalSceneBatchCanvasActions();
+      for (let i2 = 0; i2 < queuedCanvasActions.length; ++i2) {
+        this.sendActionToCanvas(queuedCanvasActions[i2]);
+      }
+      if (this.hasBatchedAfterChange) {
+        const info = this.batchedAfterChangeInfo;
+        this.batchedAfterChangeInfo = void 0;
+        this.hasBatchedAfterChange = false;
+        this.dispatchAfterChange(info);
+      }
+      if (this.consumeInternalSceneBatchChange()) {
+        this.dispatchChange();
+        return;
+      }
+      const dirtyState = this.consumeInternalSceneBatchDirty();
+      if (dirtyState) {
+        this.sendActionToCanvas("setDirty", dirtyState);
+      }
+    }
+    dispatchBeforeChange(info) {
+      if (this.onBeforeChange) {
+        this.onBeforeChange(this, info);
+      }
+      this.sendActionToCanvas("onBeforeChange", this);
+    }
+    dispatchAfterChange(info) {
+      if (this.onAfterChange) {
+        this.onAfterChange(this, info);
+      }
+      this.sendActionToCanvas("onAfterChange", this);
+    }
+    dispatchChange() {
       if (resolveIOEventsHost(this).debug) {
         console.log("Graph changed");
       }
@@ -30457,9 +31682,6 @@ ${safeText}`;
       if (this.on_change) {
         this.on_change(this);
       }
-    }
-    setDirtyCanvas(fg, bg) {
-      this.sendActionToCanvas("setDirty", [fg, bg]);
     }
   }
   function prepareGraphForSerialization(graph, createLink = () => new LLink(0, "", 0, 0, 0, 0)) {
@@ -30620,6 +31842,7 @@ ${safeText}`;
      * @param {Boolean} returns if there was any error parsing
      */
     configure(data, keep_old) {
+      var _a3, _b3;
       if (!data) {
         return void 0;
       }
@@ -30634,29 +31857,35 @@ ${safeText}`;
       const host = resolvePersistenceHost(this);
       const LGraphGroupCtor = host.LGraphGroup;
       let error = false;
-      deserializeGraphData(
-        this,
-        repaired.data,
-        {
-          createLink: () => new LLink(0, "", 0, 0, 0, 0),
-          createNode: (nodeData) => {
-            const result = createNodeWithSerializationRepair(
-              host,
-              nodeData
-            );
-            if (result.usedFallback) {
-              error = true;
-              if (host.debug) {
-                console.log(
-                  "Node not found or has errors: " + nodeData.type
-                );
+      const graphWithSceneBatch = this;
+      (_a3 = graphWithSceneBatch.__litegraphBeginSceneBatch) == null ? void 0 : _a3.call(graphWithSceneBatch);
+      try {
+        deserializeGraphData(
+          this,
+          repaired.data,
+          {
+            createLink: () => new LLink(0, "", 0, 0, 0, 0),
+            createNode: (nodeData) => {
+              const result = createNodeWithSerializationRepair(
+                host,
+                nodeData
+              );
+              if (result.usedFallback) {
+                error = true;
+                if (host.debug) {
+                  console.log(
+                    "Node not found or has errors: " + nodeData.type
+                  );
+                }
               }
-            }
-            return result.node;
-          },
-          createGroup: () => new LGraphGroupCtor()
-        }
-      );
+              return result.node;
+            },
+            createGroup: () => new LGraphGroupCtor()
+          }
+        );
+      } finally {
+        (_b3 = graphWithSceneBatch.__litegraphEndSceneBatch) == null ? void 0 : _b3.call(graphWithSceneBatch);
+      }
       return error;
     }
     load(url, callback) {

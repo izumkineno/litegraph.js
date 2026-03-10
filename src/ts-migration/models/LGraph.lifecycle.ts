@@ -24,8 +24,12 @@ interface LeaferExecutionAppLike {
 
 interface LGraphCanvasExecutionSchedulerLike extends LGraphCanvasLifecycleLike {
     renderRuntime?: "legacy-canvas" | "leafer";
+    cancelPendingRuntimeRender?: () => void;
     leaferAppHost?: {
         app?: LeaferExecutionAppLike | null;
+    } | null;
+    sceneSyncController?: {
+        cancelPendingRuntimeVisualFrame?: () => void;
     } | null;
 }
 
@@ -337,8 +341,8 @@ export class LGraph {
         }
 
         this.clearExecutionSchedule();
-
         this.sendEventToAllNodes("onStop");
+        this.cancelPendingRuntimeVisualFlush();
     }
 
     /**
@@ -565,16 +569,16 @@ export class LGraph {
             return;
         }
 
-        const leaferApp = this.resolveLeaferExecutionApp();
-        if (leaferApp) {
-            this.execution_schedule_kind = "leafer-frame";
-            this.execution_leafer_app = leaferApp;
+        if (typeof window != "undefined") {
+            this.execution_schedule_kind = "raf";
             this.scheduleInitialExecutionTick();
             return;
         }
 
-        if (typeof window != "undefined") {
-            this.execution_schedule_kind = "raf";
+        const leaferApp = this.resolveLeaferExecutionApp();
+        if (leaferApp) {
+            this.execution_schedule_kind = "leafer-frame";
+            this.execution_leafer_app = leaferApp;
             this.scheduleInitialExecutionTick();
             return;
         }
@@ -592,7 +596,6 @@ export class LGraph {
                     return;
                 }
                 this.execution_leafer_app.nextRender(this.executionTick, this);
-                this.execution_leafer_app.requestRender();
                 return;
             case "raf":
                 this.execution_animation_frame_id = window.requestAnimationFrame(
@@ -656,6 +659,28 @@ export class LGraph {
 
         if (previousKind === "timer" && previousTimerId != null) {
             clearTimeout(previousTimerId as ReturnType<typeof setTimeout>);
+        }
+    }
+
+    private cancelPendingRuntimeVisualFlush(): void {
+        const canvasList =
+            this.list_of_graphcanvas as LGraphCanvasExecutionSchedulerLike[] | null;
+        if (!canvasList?.length) {
+            return;
+        }
+
+        for (let i = 0; i < canvasList.length; ++i) {
+            const canvas = canvasList[i];
+            if (canvas?.renderRuntime !== "leafer") {
+                continue;
+            }
+
+            if (typeof canvas.cancelPendingRuntimeRender === "function") {
+                canvas.cancelPendingRuntimeRender();
+                continue;
+            }
+
+            canvas.sceneSyncController?.cancelPendingRuntimeVisualFrame?.();
         }
     }
 

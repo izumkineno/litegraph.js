@@ -32,6 +32,9 @@ export declare class LGraphIOEvents extends LGraphStructure {
     onConnectionChange?: (node: GraphNodeEventLike) => void;
     on_change?: (graph: LGraphIOEvents) => void;
     private _input_nodes;
+    private batchedAfterChangeInfo;
+    private hasBatchedAfterChange;
+    private batchedBeforeChangeEmitted;
     private getNodesInEventOrder;
     private getInputSlots;
     private getOutputSlots;
@@ -44,6 +47,7 @@ export declare class LGraphIOEvents extends LGraphStructure {
      */
     sendEventToAllNodes(eventname: string, params?: unknown, mode?: number): void;
     sendActionToCanvas(action: string, params?: unknown): void;
+    __litegraphBeginSceneBatch(): void;
     onAction(action: string, param?: unknown, options?: unknown): void;
     trigger(action: string, param?: unknown): void;
     /**
@@ -148,5 +152,9 @@ export declare class LGraphIOEvents extends LGraphStructure {
     clearTriggeredSlots(): void;
     change(): void;
     setDirtyCanvas(fg: boolean, bg?: boolean): void;
+    protected flushInternalSceneBatch(): void;
+    private dispatchBeforeChange;
+    private dispatchAfterChange;
+    private dispatchChange;
 }
 export {};

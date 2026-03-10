@@ -1,6 +1,7 @@
 import "@leafer-in/state";
-import { App } from "leafer-ui";
+import { App, Group } from "leafer-ui";
 import { type LeaferLayerRegistry } from "./LeaferLayerRegistry";
+import { LeaferTaskWorker } from "./LeaferTaskWorker";
 export interface LeaferAppHostOptions {
     fill?: string;
     backgroundColor?: string;
@@ -8,6 +9,7 @@ export interface LeaferAppHostOptions {
     backgroundTileSize?: number;
     backgroundAlpha?: number;
     zoomModifyBackgroundAlpha?: boolean;
+    useTaskWorker?: boolean;
 }
 /**
  * Phase 2 shell only.
@@ -24,6 +26,7 @@ export declare class LeaferAppHost {
     readonly treeZoomLayer: LeaferLayerRegistry["treeZoomLayer"];
     readonly groundRoot: LeaferLayerRegistry["groundRoot"];
     readonly treeRoot: LeaferLayerRegistry["treeRoot"];
+    readonly workspaceLayer: LeaferLayerRegistry["workspaceLayer"];
     readonly groupLayer: LeaferLayerRegistry["groupLayer"];
     readonly linkLayerBack: LeaferLayerRegistry["linkLayerBack"];
     readonly legacyNodeLayer: LeaferLayerRegistry["legacyNodeLayer"];
@@ -32,6 +35,8 @@ export declare class LeaferAppHost {
     readonly skyRoot: LeaferLayerRegistry["skyRoot"];
     readonly overlayWorld: LeaferLayerRegistry["overlayWorld"];
     readonly overlayScreen: LeaferLayerRegistry["overlayScreen"];
+    readonly measurementRoot: Group;
+    readonly taskWorker: LeaferTaskWorker;
     private readonly backgroundColorLayer;
     private readonly backgroundPatternLayer;
     private backgroundImage;

@@ -8,9 +8,15 @@ export interface LGraphNodeLifecycleLike extends LGraphNodeLifecycleIdentity {
 interface LGraphCanvasLifecycleGraphLike {
     detachCanvas: (canvas: LGraphCanvasLifecycleLike) => void;
 }
+interface LeaferExecutionAppLike {
+    nextRender: (item: () => void, bind?: object, off?: "off") => void;
+    removeNextRender?: (item: () => void) => void;
+    requestRender: (change?: boolean) => void;
+}
 export interface LGraphCanvasLifecycleLike extends GraphCanvasLifecyclePort<LGraphCanvasLifecycleGraphLike> {
     constructor: unknown;
 }
+type ExecutionScheduleKind = "none" | "leafer-frame" | "raf" | "timer";
 export interface LiteGraphLifecycleHost extends Pick<LiteGraphConstantsShape, "debug"> {
     getTime: () => number;
     LGraphCanvas?: GraphCanvasConstructorPort<LGraphCanvasLifecycleLike>;
@@ -55,16 +61,33 @@ export declare class LGraph {
     last_update_time: number;
     starttime: number;
     catch_errors: boolean;
-    nodes_executing: unknown[];
-    nodes_actioning: unknown[];
-    nodes_executedAction: unknown[];
+    nodes_executing: Record<string, unknown>;
+    nodes_actioning: Record<string, unknown>;
+    nodes_executedAction: Record<string, unknown>;
     inputs: Record<string, unknown>;
     outputs: Record<string, unknown>;
-    execution_timer_id: number | ReturnType<typeof setInterval> | null;
+    execution_timer_id: number | ReturnType<typeof setTimeout> | null;
+    protected execution_schedule_kind: ExecutionScheduleKind;
+    protected execution_schedule_interval: number;
+    protected execution_leafer_app: LeaferExecutionAppLike | null;
+    protected execution_animation_frame_id: number | null;
+    protected execution_schedule_revision: number;
+    protected execution_phase_depth: number;
+    protected readonly runtime_dirty_node_ids: Set<string | number>;
+    protected readonly runtime_dirty_link_ids: Set<string | number>;
+    protected readonly runtime_state_touched_node_keys: Set<string>;
+    protected readonly runtime_state_touched_node_id_list: string[];
+    protected internal_scene_batch_depth: number;
+    protected internal_scene_batch_execution_order_dirty: boolean;
+    protected internal_scene_batch_change_requested: boolean;
+    protected internal_scene_batch_dirty_foreground: boolean;
+    protected internal_scene_batch_dirty_background: boolean;
+    protected readonly internal_scene_batch_canvas_actions: Set<string>;
     onPlayEvent?: () => void;
     onStopEvent?: () => void;
     onBeforeStep?: () => void;
     onAfterStep?: () => void;
+    protected readonly executionTick: () => void;
     constructor(o?: object);
     getSupportedTypes(): string[];
     /**
@@ -114,8 +137,33 @@ export declare class LGraph {
     getElapsedTime(): number;
     configure(_data: object, _keep_old?: boolean): boolean | undefined;
     runStep(_num?: number, _do_not_catch_errors?: boolean): void;
+    protected trackRuntimeExecutionNode(nodeId: number | string): void;
+    protected trackRuntimeExecutionLink(linkId: number | string): void;
+    protected consumeRuntimeDirtyNodeIds(): (number | string)[];
+    protected consumeRuntimeDirtyLinkIds(): (number | string)[];
+    protected resetRuntimeExecutionState(): void;
+    protected afterExecutionTick(): void;
+    __litegraphBeginSceneBatch(): void;
+    __litegraphEndSceneBatch(): void;
+    __litegraphRunSceneBatch<T>(work: () => T): T;
+    protected isInternalSceneBatchActive(): boolean;
+    protected queueInternalSceneBatchExecutionOrder(): boolean;
+    protected consumeInternalSceneBatchExecutionOrder(): boolean;
+    protected queueInternalSceneBatchChange(): boolean;
+    protected consumeInternalSceneBatchChange(): boolean;
+    protected queueInternalSceneBatchDirty(dirtyForeground: boolean, dirtyBackground?: boolean): boolean;
+    protected consumeInternalSceneBatchDirty(): [boolean, boolean] | null;
+    protected queueInternalSceneBatchCanvasAction(action: string): boolean;
+    protected consumeInternalSceneBatchCanvasActions(): string[];
+    protected flushInternalSceneBatch(): void;
     change(): void;
     sendActionToCanvas(_action: string, ..._params: unknown[]): void;
     sendEventToAllNodes(_eventname: string, _params?: unknown[], _mode?: unknown): void;
+    private beginExecutionSchedule;
+    private scheduleNextExecutionTick;
+    private scheduleInitialExecutionTick;
+    private clearExecutionSchedule;
+    private cancelPendingRuntimeVisualFlush;
+    private resolveLeaferExecutionApp;
 }
 export {};

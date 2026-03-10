@@ -1,4 +1,5 @@
-import type { GraphMutationBus, GraphMutationGraphLike, GraphMutationNodeLike } from "./GraphMutationBus";
+import type { Vector2, Vector4 } from "../types/core-types";
+import type { GraphMutationBus, GraphMutationGroupLike, GraphMutationGraphLike, GraphMutationNodeLike } from "./GraphMutationBus";
 import type { LeaferAppHost } from "./LeaferAppHost";
 import type { SceneSyncController } from "./SceneSyncController";
 interface InteractionCanvasHost {
@@ -26,9 +27,26 @@ interface InteractionCanvasHost {
     processContextMenu?: (node: GraphMutationNodeLike | null, event: unknown) => void;
     processNodeDblClicked?: (node: GraphMutationNodeLike) => void;
     showEditPropertyValue?: (node: GraphMutationNodeLike, property: string, options?: Record<string, unknown>) => unknown;
+    clampNodeMoveDelta?: (nodes: readonly DraggableNodeLike[], deltaX: number, deltaY: number) => Vector2;
+    clampGroupMoveDelta?: (group: DraggableGroupLike, deltaX: number, deltaY: number, ignoreNodes?: boolean) => Vector2;
+    clampNodeSize?: (node: DraggableNodeLike, width: number, height: number) => Vector2;
+    clampGroupSize?: (group: DraggableGroupLike, width: number, height: number) => Vector2;
+    getWorldBounds?: () => Vector4 | null;
     selectNodes: (nodes?: GraphMutationNodeLike[], addToCurrentSelection?: boolean) => void;
     deselectAllNodes: () => void;
     getCanvasWindow?: () => Window;
+}
+interface DraggableNodeLike extends GraphMutationNodeLike {
+    pos: [number, number] | Float32Array;
+    size: [number, number] | Float32Array;
+    alignToGrid?: () => void;
+}
+interface DraggableGroupLike extends GraphMutationGroupLike {
+    pos: [number, number] | Float32Array;
+    size: [number, number] | Float32Array;
+    _nodes: GraphMutationNodeLike[];
+    move: (deltaX: number, deltaY: number, ignoreNodes?: boolean) => void;
+    recomputeInsideNodes: () => void;
 }
 export declare class InteractionController {
     private readonly canvas;

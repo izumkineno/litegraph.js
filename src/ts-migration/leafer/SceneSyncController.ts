@@ -77,6 +77,12 @@ interface DeferredNodeDirtySignal {
     readonly dirtyBackground: boolean;
 }
 
+interface LeaferRuntimeVisualSchedulerLike {
+    nextRender: (item: () => void, bind?: object, off?: "off") => void;
+    removeNextRender?: (item: () => void) => void;
+    requestRender?: (change?: boolean) => void;
+}
+
 interface EnsureNodeHostOptions {
     readonly syncPosition?: boolean;
     readonly repaint?: boolean;
@@ -120,7 +126,7 @@ function buildActiveLinkPresentationCacheKey(
     return `${buildActiveLinkLayoutKey(task)}|${lastTimeBucket}`;
 }
 
-const ACTIVE_LINK_WINDOW_MS = 150;
+const ACTIVE_LINK_WINDOW_MS = 180;
 const ACTIVE_LINK_OPACITY_BUCKETS = 6;
 const ACTIVE_LINK_CACHE_BUCKET_MS = Math.max(
     1,
@@ -270,7 +276,23 @@ export class SceneSyncController {
         null;
     private lastHandledActiveLinkPresentationRequestId = 0;
     private readonly pendingSettledNodeRepaints = new Set<GraphMutationNodeId>();
-    private runtimeAnimationFrame: number | null = null;
+    private readonly pendingRuntimeDirtyNodeIds = new Map<
+        string,
+        GraphMutationNodeId
+    >();
+    private readonly pendingRuntimeDirtyLinkIds = new Map<
+        string,
+        GraphMutationLinkId
+    >();
+    private pendingRuntimeDirtyBounds: RenderBoundsLike | null = null;
+    private pendingRuntimeForceNodeRepaint = false;
+    private pendingRuntimeRepaintAllNodes = false;
+    private runtimeVisualFrameHandle: number | null = null;
+    private runtimeVisualFrameScheduled = false;
+    private runtimeVisualFrameDriver: "none" | "leafer" | "raf" = "none";
+    private runtimeFlushEnqueueCount = 0;
+    private runtimeVisualFrameCount = 0;
+    private runtimeSceneRenderCount = 0;
     private readonly getViewportScale = (): number =>
         Math.max(
             1,
@@ -361,45 +383,39 @@ export class SceneSyncController {
         this.clearScene();
     }
 
+    cancelPendingRuntimeVisualFrame(): void {
+        this.cancelRuntimeVisualFrame();
+        this.pendingRuntimeDirtyNodeIds.clear();
+        this.pendingRuntimeDirtyLinkIds.clear();
+        this.pendingRuntimeDirtyBounds = null;
+        this.pendingRuntimeForceNodeRepaint = false;
+        this.pendingRuntimeRepaintAllNodes = false;
+    }
+
     requestRuntimeAnimation(
         forceNodeRepaint = false,
         nodeIds?: readonly GraphMutationNodeId[],
         linkIds?: readonly GraphMutationLinkId[]
     ): void {
-        this.queueDirtyRuntimeLinkIds(linkIds);
+        this.queuePendingRuntimeNodeIds(nodeIds);
+        this.queuePendingRuntimeLinkIds(linkIds);
 
-        let dirtyBounds: RenderBoundsLike | null = null;
-        let hasPendingNodeFrames =
-            this.pendingSettledNodeRepaints.size > 0 ||
-            this.activeTransientNodeIds.size > 0;
         if (forceNodeRepaint) {
-            const repaintNodeIds = this.resolveRuntimeRepaintNodeIds(nodeIds);
-            if (repaintNodeIds?.length) {
-                this.syncTransientNodeTrackingFor(repaintNodeIds);
+            this.pendingRuntimeForceNodeRepaint = true;
+            if (!nodeIds?.length) {
+                this.pendingRuntimeRepaintAllNodes = true;
             }
-            dirtyBounds = repaintNodeIds
-                ? this.repaintRuntimeNodeHostsWithBounds(repaintNodeIds)
-                : this.repaintAllNodeHostsWithBounds(false);
-            const activeNodeIds = this.captureTrackedTransientNodeIds();
-            hasPendingNodeFrames =
-                this.syncPendingSettledNodeRepaints(activeNodeIds) ||
-                this.activeTransientNodeIds.size > 0 ||
-                this.pendingSettledNodeRepaints.size > 0;
         }
 
-        const linkRefresh = this.refreshActiveLinkAnimations();
-        dirtyBounds = mergeRenderBounds(dirtyBounds, linkRefresh.dirtyBounds);
-        if (forceNodeRepaint) {
-            this.requestSceneRender(dirtyBounds);
-        } else if (linkRefresh.didUpdate) {
-            this.requestSceneRender(dirtyBounds);
+        if (!this.hasPendingRuntimeVisualWork()) {
+            return;
         }
-        if (linkRefresh.hasMore || hasPendingNodeFrames) {
-            this.ensureRuntimeAnimationFrame();
-        }
+
+        this.runtimeFlushEnqueueCount += 1;
+        this.ensureRuntimeVisualFrame();
     }
 
-    flushDeferredNodeDirtySignals(): GraphMutationNodeId[] {
+    flushDeferredNodeDirtySignals(requestRender = true): GraphMutationNodeId[] {
         if (!this.deferredNodeDirtySignalsByKey.size) {
             return [];
         }
@@ -423,8 +439,13 @@ export class SceneSyncController {
             );
         }
 
-        if (dirtyBounds) {
+        if (dirtyBounds && requestRender) {
             this.requestSceneRender(dirtyBounds);
+        } else if (dirtyBounds) {
+            this.pendingRuntimeDirtyBounds = mergeRenderBounds(
+                this.pendingRuntimeDirtyBounds,
+                dirtyBounds
+            );
         }
         return processedNodeIds;
     }
@@ -588,7 +609,7 @@ export class SceneSyncController {
     }
 
     private clearScene(): void {
-        this.cancelRuntimeAnimationFrame();
+        this.cancelPendingRuntimeVisualFrame();
         for (const host of this.nodeHosts.values()) {
             host.destroy();
         }
@@ -625,6 +646,9 @@ export class SceneSyncController {
         this.pendingSettledNodeRepaints.clear();
         this.deferredNodeDirtySignalsByKey.clear();
         this.dirtyRuntimeLinkIds.clear();
+        this.runtimeFlushEnqueueCount = 0;
+        this.runtimeVisualFrameCount = 0;
+        this.runtimeSceneRenderCount = 0;
     }
 
     private ensureNodeHost(
@@ -1303,45 +1327,123 @@ export class SceneSyncController {
         this.appHost.app.forceRender();
     }
 
-    private ensureRuntimeAnimationFrame(): void {
-        if (this.runtimeAnimationFrame !== null) {
+    private ensureRuntimeVisualFrame(): void {
+        if (this.runtimeVisualFrameScheduled || !this.hasPendingRuntimeVisualWork()) {
             return;
         }
 
-        this.runtimeAnimationFrame = this.getRuntimeWindow().requestAnimationFrame(
-            this.handleRuntimeAnimationFrame
+        const leaferApp = this.resolveRuntimeVisualScheduler();
+        this.runtimeVisualFrameScheduled = true;
+        if (leaferApp) {
+            this.runtimeVisualFrameDriver = "leafer";
+            leaferApp.nextRender(this.handleRuntimeVisualFrame, this);
+            leaferApp.requestRender?.();
+            return;
+        }
+
+        this.runtimeVisualFrameDriver = "raf";
+        this.runtimeVisualFrameHandle = this.getRuntimeWindow().requestAnimationFrame(
+            this.handleRuntimeVisualFrame
         );
     }
 
-    private cancelRuntimeAnimationFrame(): void {
-        if (this.runtimeAnimationFrame === null) {
+    private cancelRuntimeVisualFrame(): void {
+        if (!this.runtimeVisualFrameScheduled) {
             return;
         }
 
-        this.getRuntimeWindow().cancelAnimationFrame(this.runtimeAnimationFrame);
-        this.runtimeAnimationFrame = null;
+        if (this.runtimeVisualFrameDriver === "leafer") {
+            const leaferApp = this.resolveRuntimeVisualScheduler();
+            if (leaferApp) {
+                if (typeof leaferApp.removeNextRender === "function") {
+                    leaferApp.removeNextRender(this.handleRuntimeVisualFrame);
+                } else {
+                    leaferApp.nextRender(this.handleRuntimeVisualFrame, this, "off");
+                }
+            }
+        } else if (
+            this.runtimeVisualFrameDriver === "raf" &&
+            this.runtimeVisualFrameHandle !== null
+        ) {
+            this.getRuntimeWindow().cancelAnimationFrame(
+                this.runtimeVisualFrameHandle
+            );
+        }
+
+        this.runtimeVisualFrameHandle = null;
+        this.runtimeVisualFrameDriver = "none";
+        this.runtimeVisualFrameScheduled = false;
     }
 
-    private readonly handleRuntimeAnimationFrame = (): void => {
-        this.runtimeAnimationFrame = null;
+    private readonly handleRuntimeVisualFrame = (): void => {
+        this.runtimeVisualFrameHandle = null;
+        this.runtimeVisualFrameDriver = "none";
+        this.runtimeVisualFrameScheduled = false;
+        this.runtimeVisualFrameCount += 1;
 
-        const nodeFrame = this.repaintAnimatedNodes();
+        let dirtyBounds = this.consumePendingRuntimeDirtyBounds();
+        let didUpdate = Boolean(dirtyBounds);
+        const pendingNodeIds = this.consumePendingRuntimeNodeIds();
+        const pendingLinkIds = this.consumePendingRuntimeLinkIds();
+        const forceNodeRepaint = this.pendingRuntimeForceNodeRepaint;
+        const repaintAllNodes = this.pendingRuntimeRepaintAllNodes;
+        this.pendingRuntimeForceNodeRepaint = false;
+        this.pendingRuntimeRepaintAllNodes = false;
+
+        let freshNodeIds: readonly GraphMutationNodeId[] | undefined;
+        if (forceNodeRepaint) {
+            const repaintNodeIds = repaintAllNodes
+                ? null
+                : this.resolveRuntimeRepaintNodeIds(pendingNodeIds);
+            if (repaintNodeIds?.length) {
+                freshNodeIds = repaintNodeIds;
+                this.syncTransientNodeTrackingFor(repaintNodeIds);
+            }
+            dirtyBounds = mergeRenderBounds(
+                dirtyBounds,
+                repaintNodeIds
+                    ? this.repaintRuntimeNodeHostsWithBounds(repaintNodeIds)
+                    : this.repaintAllNodeHostsWithBounds(false)
+            );
+            didUpdate = true;
+        } else if (pendingNodeIds.length) {
+            this.syncTransientNodeTrackingFor(pendingNodeIds);
+        }
+
+        if (pendingLinkIds.length) {
+            this.queueDirtyRuntimeLinkIds(pendingLinkIds);
+        }
+
+        const nodeFrame = this.repaintAnimatedNodes(freshNodeIds);
         const linkFrame = this.refreshActiveLinkAnimations();
-        const dirtyBounds = mergeRenderBounds(
-            nodeFrame.dirtyBounds,
-            linkFrame.dirtyBounds
+        dirtyBounds = mergeRenderBounds(
+            dirtyBounds,
+            mergeRenderBounds(nodeFrame.dirtyBounds, linkFrame.dirtyBounds)
         );
-        if (dirtyBounds) {
+        const shouldRender = Boolean(dirtyBounds);
+        if (shouldRender) {
+            this.runtimeSceneRenderCount += 1;
             this.requestSceneRender(dirtyBounds);
-        } else if (nodeFrame.didUpdate || linkFrame.didUpdate) {
+        } else if (didUpdate || nodeFrame.didUpdate || linkFrame.didUpdate) {
+            this.runtimeSceneRenderCount += 1;
             this.requestSceneRender();
         }
-        if (nodeFrame.hasMore || linkFrame.hasMore) {
-            this.ensureRuntimeAnimationFrame();
+        if (
+            nodeFrame.hasMore ||
+            linkFrame.hasMore ||
+            this.hasPendingRuntimeVisualWork()
+        ) {
+            this.ensureRuntimeVisualFrame();
         }
     };
 
-    private repaintAnimatedNodes(): AnimationRefreshResult {
+    private repaintAnimatedNodes(
+        skipNodeIds?: readonly GraphMutationNodeId[]
+    ): AnimationRefreshResult {
+        const skipNodeKeys =
+            skipNodeIds && skipNodeIds.length
+                ? new Set(skipNodeIds.map(toMutationKey))
+                : null;
         let didUpdate = false;
         let dirtyBounds: RenderBoundsLike | null = null;
 
@@ -1357,7 +1459,7 @@ export class SceneSyncController {
             }
         }
 
-        const activeNodeIds = this.captureTrackedTransientNodeIds();
+        const activeNodeIds = this.captureTrackedTransientNodeIds(skipNodeKeys);
         if (activeNodeIds.length) {
             for (let i = 0; i < activeNodeIds.length; ++i) {
                 dirtyBounds = mergeRenderBounds(
@@ -1448,9 +1550,14 @@ export class SceneSyncController {
         return activeNodeIds;
     }
 
-    private captureTrackedTransientNodeIds(): GraphMutationNodeId[] {
+    private captureTrackedTransientNodeIds(
+        skipNodeKeys?: ReadonlySet<string> | null
+    ): GraphMutationNodeId[] {
         const activeNodeIds: GraphMutationNodeId[] = [];
         for (const nodeId of Array.from(this.activeTransientNodeIds)) {
+            if (skipNodeKeys?.has(toMutationKey(nodeId))) {
+                continue;
+            }
             if (this.syncTransientNodeTracking(nodeId)) {
                 activeNodeIds.push(nodeId);
             }
@@ -1481,6 +1588,98 @@ export class SceneSyncController {
         }
 
         return hasMore;
+    }
+
+    private queuePendingRuntimeNodeIds(
+        nodeIds?: readonly GraphMutationNodeId[]
+    ): void {
+        if (!nodeIds?.length) {
+            return;
+        }
+
+        for (let i = 0; i < nodeIds.length; ++i) {
+            const nodeId = nodeIds[i];
+            this.pendingRuntimeDirtyNodeIds.set(toMutationKey(nodeId), nodeId);
+        }
+    }
+
+    private queuePendingRuntimeLinkIds(
+        linkIds?: readonly GraphMutationLinkId[]
+    ): void {
+        if (!linkIds?.length) {
+            return;
+        }
+
+        for (let i = 0; i < linkIds.length; ++i) {
+            const rawLinkId = linkIds[i];
+            const resolvedLinkId =
+                this.linkIdsByKey.get(toMutationKey(rawLinkId)) ?? rawLinkId;
+            this.pendingRuntimeDirtyLinkIds.set(
+                toMutationKey(resolvedLinkId),
+                resolvedLinkId
+            );
+        }
+    }
+
+    private consumePendingRuntimeNodeIds(): GraphMutationNodeId[] {
+        if (!this.pendingRuntimeDirtyNodeIds.size) {
+            return [];
+        }
+
+        const nodeIds = Array.from(this.pendingRuntimeDirtyNodeIds.values());
+        this.pendingRuntimeDirtyNodeIds.clear();
+        return nodeIds;
+    }
+
+    private consumePendingRuntimeLinkIds(): GraphMutationLinkId[] {
+        if (!this.pendingRuntimeDirtyLinkIds.size) {
+            return [];
+        }
+
+        const linkIds = Array.from(this.pendingRuntimeDirtyLinkIds.values());
+        this.pendingRuntimeDirtyLinkIds.clear();
+        return linkIds;
+    }
+
+    private consumePendingRuntimeDirtyBounds(): RenderBoundsLike | null {
+        const dirtyBounds = this.pendingRuntimeDirtyBounds;
+        this.pendingRuntimeDirtyBounds = null;
+        return dirtyBounds;
+    }
+
+    private hasPendingRuntimeVisualWork(): boolean {
+        return (
+            this.pendingRuntimeForceNodeRepaint ||
+            this.pendingRuntimeRepaintAllNodes ||
+            this.pendingRuntimeDirtyNodeIds.size > 0 ||
+            this.pendingRuntimeDirtyLinkIds.size > 0 ||
+            this.pendingRuntimeDirtyBounds !== null ||
+            this.pendingSettledNodeRepaints.size > 0 ||
+            this.activeTransientNodeIds.size > 0 ||
+            this.activeLinkIds.size > 0 ||
+            this.dirtyRuntimeLinkIds.size > 0
+        );
+    }
+
+    private resolveRuntimeVisualScheduler(): LeaferRuntimeVisualSchedulerLike | null {
+        const app = this.appHost.app as LeaferRuntimeVisualSchedulerLike | null;
+        if (!app || typeof app.nextRender !== "function") {
+            return null;
+        }
+
+        return app;
+    }
+
+    getRuntimeDiagnostics(): {
+        readonly runtimeFlushEnqueueCount: number;
+        readonly runtimeVisualFrameCount: number;
+        readonly runtimeSceneRenderCount: number;
+    } {
+        return {
+            runtimeFlushEnqueueCount: this.runtimeFlushEnqueueCount,
+            runtimeVisualFrameCount: this.runtimeVisualFrameCount,
+            runtimeSceneRenderCount: this.runtimeSceneRenderCount,
+        };
     }
 
     private queueDirtyRuntimeLinkIds(
@@ -1658,45 +1857,31 @@ export class SceneSyncController {
         }
         this.lastHandledActiveLinkPresentationRequestId = requestId;
 
-        const shouldApplyImmediately = this.runtimeAnimationFrame === null;
-        let dirtyBounds: RenderBoundsLike | null = null;
+        let hasQueuedVisualWork = false;
         for (let i = 0; i < results.length; ++i) {
             const result = results[i];
             const linkId = this.linkIdsByKey.get(result.linkId);
             if (linkId == null) {
                 continue;
             }
-            const previousBounds = shouldApplyImmediately
-                ? this.captureLinkRenderBounds(linkId)
-                : null;
             this.workerLinkPresentationById.set(result.linkId, result);
             this.linkGeometryCache.set(linkId, {
                 curve: result.curve as LinkCurveGeometry,
             });
             const link = this.linksById.get(linkId);
-            if (link && shouldApplyImmediately) {
+            if (link) {
                 this.syncLinkMidpointToPoint(
                     link as RuntimeAnimatedLink,
                     result.midpoint
                 );
-                this.syncLinkView(
-                    linkId,
-                    link,
-                    this.linkViews.get(linkId),
-                    this.getRuntimeNow(),
-                    true
-                );
             }
-            if (shouldApplyImmediately) {
-                dirtyBounds = mergeRenderBounds(
-                    dirtyBounds,
-                    mergeRenderBounds(previousBounds, this.captureLinkRenderBounds(linkId))
-                );
-            }
+            this.queuePendingRuntimeLinkIds([linkId]);
+            hasQueuedVisualWork = true;
         }
 
-        if (dirtyBounds && shouldApplyImmediately) {
-            this.requestSceneRender(dirtyBounds);
+        if (hasQueuedVisualWork) {
+            this.runtimeFlushEnqueueCount += 1;
+            this.ensureRuntimeVisualFrame();
         }
 
         this.flushPendingActiveLinkPresentationRequest();

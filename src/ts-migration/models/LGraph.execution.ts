@@ -46,7 +46,9 @@ interface GraphCanvasExecutionLike {
         linkIds?: readonly (number | string)[]
     ) => void;
     sceneSyncController?: {
-        flushDeferredNodeDirtySignals?: () => readonly (number | string)[];
+        flushDeferredNodeDirtySignals?: (
+            requestRender?: boolean
+        ) => readonly (number | string)[];
     } | null;
 }
 
@@ -100,7 +102,8 @@ export class LGraphExecution extends LGraph {
             }
 
             const processedNodeIds =
-                canvas.sceneSyncController?.flushDeferredNodeDirtySignals?.() || [];
+                canvas.sceneSyncController?.flushDeferredNodeDirtySignals?.(false) ||
+                [];
             if (typeof canvas.requestRuntimeRender !== "function") {
                 continue;
             }

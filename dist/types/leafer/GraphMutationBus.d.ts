@@ -29,10 +29,17 @@ export interface GraphMutationGraphLike extends GraphLinksProxyGraphLike {
     add?: (...args: unknown[]) => unknown;
     remove?: (...args: unknown[]) => unknown;
     clear?: (...args: unknown[]) => unknown;
+    __litegraphBeginSceneBatch?: () => void;
+    __litegraphEndSceneBatch?: () => void;
+    __litegraphRunSceneBatch?: <T>(work: () => T) => T;
 }
 export interface GraphMutationEventMap {
     "graph:clear": {
         graph: GraphMutationGraphLike;
+    };
+    "graph:hydrate": {
+        graph: GraphMutationGraphLike;
+        sceneAlreadyCleared: boolean;
     };
     "node:add": {
         graph: GraphMutationGraphLike;

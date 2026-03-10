@@ -7,6 +7,7 @@ export interface LeaferLayerRegistry {
     readonly treeZoomLayer: App["tree"]["zoomLayer"];
     readonly groundRoot: Group;
     readonly treeRoot: Group;
+    readonly workspaceLayer: Group;
     readonly groupLayer: Group;
     readonly linkLayerBack: Group;
     readonly legacyNodeLayer: Group;

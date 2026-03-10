@@ -27,6 +27,7 @@ export declare abstract class ModernNodeBase extends LGraphNodeCanvasCollab {
     refreshModernPorts(): void;
     requestModernPatch(changeMask?: ModernNodeChangeMaskValue, dirtyBackground?: boolean): void;
     consumeModernChangeMask(): ModernNodeChangeMaskValue;
+    peekModernChangeMask(): ModernNodeChangeMaskValue;
     setProperty(name: string, value: unknown): void;
     configure(info: SerializedLGraphNodeState): void;
     collapse(force: boolean): void;

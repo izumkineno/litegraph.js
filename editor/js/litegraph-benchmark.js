@@ -881,6 +881,41 @@
             var originalBeforeStep = that.graph.onBeforeStep;
             var originalAfterStep = that.graph.onAfterStep;
             var resolved = false;
+            var runtimeDiagnosticsBefore =
+                that.graphcanvas.sceneSyncController &&
+                typeof that.graphcanvas.sceneSyncController.getRuntimeDiagnostics === "function"
+                    ? that.graphcanvas.sceneSyncController.getRuntimeDiagnostics()
+                    : null;
+
+            function buildRuntimeDiagnosticsDelta() {
+                if (
+                    !runtimeDiagnosticsBefore ||
+                    !that.graphcanvas.sceneSyncController ||
+                    typeof that.graphcanvas.sceneSyncController.getRuntimeDiagnostics !== "function"
+                ) {
+                    return null;
+                }
+
+                var runtimeDiagnosticsAfter =
+                    that.graphcanvas.sceneSyncController.getRuntimeDiagnostics();
+                return {
+                    runtimeFlushEnqueueCount: Math.max(
+                        0,
+                        Number(runtimeDiagnosticsAfter.runtimeFlushEnqueueCount || 0) -
+                            Number(runtimeDiagnosticsBefore.runtimeFlushEnqueueCount || 0)
+                    ),
+                    runtimeVisualFrameCount: Math.max(
+                        0,
+                        Number(runtimeDiagnosticsAfter.runtimeVisualFrameCount || 0) -
+                            Number(runtimeDiagnosticsBefore.runtimeVisualFrameCount || 0)
+                    ),
+                    runtimeSceneRenderCount: Math.max(
+                        0,
+                        Number(runtimeDiagnosticsAfter.runtimeSceneRenderCount || 0) -
+                            Number(runtimeDiagnosticsBefore.runtimeSceneRenderCount || 0)
+                    )
+                };
+            }
 
             function trackFrame(timestamp) {
                 if (resolved) {
@@ -927,7 +962,8 @@
                     renderMs: renderMs,
                     fps: fps,
                     frameGaps: frameGaps,
-                    dropped_frame_equivalent: droppedFrameEquivalent
+                    dropped_frame_equivalent: droppedFrameEquivalent,
+                    diagnostics: buildRuntimeDiagnosticsDelta()
                 });
             };
 
@@ -962,7 +998,8 @@
                         renderMs: renderMs,
                         fps: fps,
                         frameGaps: frameGaps,
-                        dropped_frame_equivalent: droppedFrameEquivalent
+                        dropped_frame_equivalent: droppedFrameEquivalent,
+                        diagnostics: buildRuntimeDiagnosticsDelta()
                     });
                 }
             };
@@ -1040,7 +1077,8 @@
                 renderMs: runtimeSamples.renderMs.map(round),
                 frameGapMs: runtimeSamples.frameGaps.map(round),
                 fps: runtimeSamples.fps.map(round)
-            }
+            },
+            diagnostics: runtimeSamples.diagnostics || undefined
         };
     };
 

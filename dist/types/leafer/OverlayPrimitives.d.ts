@@ -1,4 +1,4 @@
-import { Canvas, Rect } from "leafer-ui";
+import { Path, Rect } from "leafer-ui";
 import type { LinkCurveGeometry } from "./NodePortAdapter";
 import type { LeaferAppHost } from "./LeaferAppHost";
 export interface OverlayWorldBounds {
@@ -9,18 +9,15 @@ export interface OverlayWorldBounds {
 }
 export declare class OverlayPrimitives {
     private readonly appHost;
-    readonly connectionPreview: Canvas;
+    readonly connectionPreview: Path;
     readonly selectionBox: Rect;
-    private readonly offscreenCanvas;
-    private readonly offscreenContext;
+    readonly workspaceBoundsOutline: Rect;
     constructor(appHost: LeaferAppHost);
     destroy(): void;
+    setWorkspaceBounds(bounds: OverlayWorldBounds | null): void;
     setConnectionPreview(curve: LinkCurveGeometry, color?: string): void;
     hideConnectionPreview(): void;
     setSelectionBounds(bounds: OverlayWorldBounds): void;
     hideSelectionBox(): void;
     syncWorldTransform(): void;
-    private measureCurveBounds;
-    private ensurePreviewCanvasSize;
-    private paintConnectionPreview;
 }

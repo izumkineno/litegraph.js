@@ -1,17 +1,19 @@
+import "@leafer-in/arrow";
 import { Group } from "leafer-ui";
+import type { IArrowStyle } from "@leafer-ui/interface";
 import type { LinkCurveGeometry } from "./NodePortAdapter";
 export interface LinkFlowPresentation {
     active?: boolean;
     color?: string;
     opacity?: number;
-    dotRadius?: number;
-    dots?: ReadonlyArray<readonly [number, number]>;
 }
 export interface LinkViewPresentation {
     curve: LinkCurveGeometry | null;
     stroke?: string;
     strokeWidth?: number;
     visible?: boolean;
+    startArrow?: IArrowStyle | "none";
+    endArrow?: IArrowStyle | "none";
     flow?: LinkFlowPresentation;
 }
 interface LinkViewHostOptions {
@@ -23,9 +25,7 @@ export declare class LinkViewHost {
     private readonly borderPath;
     private readonly strokePath;
     private readonly flowPath;
-    private readonly flowDotLayer;
-    private readonly flowDots;
-    private readonly getViewportScale;
+    private flowOverlayActive;
     constructor(name: string, options?: LinkViewHostOptions);
     update(presentation: LinkViewPresentation): void;
     destroy(): void;

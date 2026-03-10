@@ -1594,6 +1594,14 @@ export class LGraphCanvasLifecycle extends LGraphCanvasStatic {
         }).draw(forceNodeRepaint, forceNodeRepaint);
     }
 
+    cancelPendingRuntimeRender(): void {
+        if (this.renderRuntime !== "leafer") {
+            return;
+        }
+
+        this.sceneSyncController?.cancelPendingRuntimeVisualFrame();
+    }
+
     notifyDirtySignal(fgcanvas?: boolean, bgcanvas?: boolean): void {
         this.setDirty(Boolean(fgcanvas), Boolean(bgcanvas));
         if (

@@ -1,6 +1,6 @@
 import "@leafer-in/view";
 import "@leafer-in/viewport";
-import type { Vector2 } from "../types/core-types";
+import type { Vector2, Vector4 } from "../types/core-types";
 import type { LeaferAppHost } from "./LeaferAppHost";
 import type { SceneSyncController } from "./SceneSyncController";
 export interface DragAndScaleViewportPort {
@@ -21,12 +21,13 @@ interface ViewportDragAndScaleHost {
 export declare class ViewportController implements DragAndScaleViewportPort {
     private readonly appHost;
     private readonly dragAndScale;
+    private readonly getWorldBounds?;
     private scaleListenerId;
     private moveListenerId;
     private sceneSyncController;
     private queuedScaleRepaintFrame;
     private lastScale;
-    constructor(appHost: LeaferAppHost, dragAndScale: ViewportDragAndScaleHost);
+    constructor(appHost: LeaferAppHost, dragAndScale: ViewportDragAndScaleHost, getWorldBounds?: (() => Vector4 | null) | undefined);
     destroy(): void;
     setSceneSyncController(sceneSyncController: Pick<SceneSyncController, "repaintLegacyNodeHosts" | "repaintAllLinkViews"> | null): void;
     getScale(): number;
@@ -41,6 +42,10 @@ export declare class ViewportController implements DragAndScaleViewportPort {
     private queueLegacyScaleRepaint;
     private clampScale;
     private resolveWorldOrigin;
+    private clampOffset;
+    private clampValue;
+    private applyClampedOffset;
+    private resolveWorldBoundsMinScale;
     private syncBackgroundViewport;
 }
 export {};
