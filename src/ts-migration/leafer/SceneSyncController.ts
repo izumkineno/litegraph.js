@@ -592,14 +592,14 @@ export class SceneSyncController {
             });
         }
 
-        for (const [linkId, link] of Object.entries(this.graph.links || {})) {
-            this.ensureLinkView(linkId, link);
-        }
-
         for (let i = 0; i < hydratedGroupHosts.length; ++i) {
             hydratedGroupHosts[i].repaint();
         }
         this.repaintAllNodeHosts(false);
+
+        for (const [linkId, link] of Object.entries(this.graph.links || {})) {
+            this.ensureLinkView(linkId, link);
+        }
     }
 
     private resyncFromGraph(): void {

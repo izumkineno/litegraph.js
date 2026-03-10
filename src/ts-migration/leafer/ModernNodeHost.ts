@@ -809,10 +809,10 @@ export class ModernNodeHost implements NodeViewHost {
         this.currentWidgetSchemas = this.collectWidgetSchemas();
         this.currentActionPartSchemas = this.collectActionPartSchemas(changeMask);
         const nextWidgetSignature = signatureOfWidgets(this.currentWidgetSchemas);
-        const nextActionPartSignature = signatureOfActionParts(
+        let nextActionPartSignature = signatureOfActionParts(
             this.currentActionPartSchemas
         );
-        const nextActionPartLayoutSignature = signatureOfActionPartLayouts(
+        let nextActionPartLayoutSignature = signatureOfActionPartLayouts(
             this.currentActionPartSchemas
         );
         const nodeSizeChanged = this.didMeasuredNodeSizeChange();
@@ -830,7 +830,17 @@ export class ModernNodeHost implements NodeViewHost {
             this.lastActionPartLayoutSignature !== nextActionPartLayoutSignature;
         this.refreshPortCacheVersions(changeMask, needsGeometryPass);
         if (needsGeometryPass) {
-            this.ensureMinimumNodeSize(this.shellState);
+            const didAdjustNodeSize = this.ensureMinimumNodeSize(this.shellState);
+            if (didAdjustNodeSize) {
+                this.currentActionPartSchemas =
+                    this.collectActionPartSchemas(changeMask);
+                nextActionPartSignature = signatureOfActionParts(
+                    this.currentActionPartSchemas
+                );
+                nextActionPartLayoutSignature = signatureOfActionPartLayouts(
+                    this.currentActionPartSchemas
+                );
+            }
             this.shellLayout = this.computeShellLayout(this.shellState);
         }
 
@@ -922,19 +932,21 @@ export class ModernNodeHost implements NodeViewHost {
             : [];
     }
 
-    private ensureMinimumNodeSize(shellState: ModernShellState): void {
+    private ensureMinimumNodeSize(shellState: ModernShellState): boolean {
         if (Boolean(this.node.flags?.collapsed)) {
-            return;
+            return false;
         }
 
         const size = this.node.size;
+        const previousWidth = toFiniteNumber(size?.[0], BODY_MIN_WIDTH);
+        const previousHeight = toFiniteNumber(size?.[1], BODY_MIN_HEIGHT);
         const nextWidth = Math.max(
-            toFiniteNumber(size?.[0], BODY_MIN_WIDTH),
+            previousWidth,
             toFiniteNumber(shellState.minimumWidth, BODY_MIN_WIDTH),
             this.resolveMinimumShellWidth(shellState)
         );
         const nextHeight = Math.max(
-            toFiniteNumber(size?.[1], BODY_MIN_HEIGHT),
+            previousHeight,
             toFiniteNumber(shellState.minimumHeight, BODY_MIN_HEIGHT),
             this.resolveMinimumBodyHeight(shellState)
         );
@@ -945,6 +957,12 @@ export class ModernNodeHost implements NodeViewHost {
         } else {
             this.node.size = [nextWidth, nextHeight] as [number, number];
         }
+
+        return (
+            previousWidth !== nextWidth ||
+            previousHeight !== nextHeight ||
+            !size
+        );
     }
 
     syncPosition(): void {
@@ -1916,19 +1934,42 @@ export class ModernNodeHost implements NodeViewHost {
         let maxWidth = 0;
         for (let i = 0; i < slots.length; ++i) {
             const presentation = this.resolvePortPresentation(kind, i, slots[i]);
-            const geometry = this.resolvePortGeometry(
-                kind,
-                i,
-                slots[i],
-                presentation
+            maxWidth = Math.max(
+                maxWidth,
+                this.resolvePortGutterWidth(presentation)
             );
-            maxWidth = Math.max(maxWidth, geometry?.gutter || PORT_GUTTER_MIN);
         }
 
         if (!maxWidth) {
             return PORT_GUTTER_MIN;
         }
         return Math.max(PORT_GUTTER_MIN, maxWidth);
+    }
+
+    private resolvePortGutterWidth(
+        presentation: ModernPortPresentation
+    ): number {
+        const labelWidth = this.resolvePortLabelWidth(presentation);
+        return labelWidth
+            ? Math.max(
+                  PORT_GUTTER_MIN,
+                  labelWidth + PORT_LABEL_PADDING + 10
+              )
+            : PORT_GUTTER_MIN;
+    }
+
+    private resolvePortLabelWidth(
+        presentation: ModernPortPresentation
+    ): number {
+        const label = String(presentation.label || "");
+        if (!label) {
+            return 0;
+        }
+
+        return Math.min(
+            PORT_LABEL_MAX_WIDTH,
+            measureTextWidth(label, '500 11px "Aptos", "Segoe UI", sans-serif')
+        );
     }
 
     private syncContentLayout(): void {
@@ -2690,15 +2731,7 @@ export class ModernNodeHost implements NodeViewHost {
         }
 
         const label = String(presentation.label || "");
-        const labelWidth = label
-            ? Math.min(
-                  PORT_LABEL_MAX_WIDTH,
-                  measureTextWidth(
-                      label,
-                      '500 11px "Aptos", "Segoe UI", sans-serif'
-                  )
-              )
-            : 0;
+        const labelWidth = label ? this.resolvePortLabelWidth(presentation) : 0;
         const geometry: ModernPortGeometryCacheEntry = {
             version: this.portGeometryCacheVersion,
             anchor,
@@ -2707,12 +2740,7 @@ export class ModernNodeHost implements NodeViewHost {
                 6
             ),
             labelWidth,
-            gutter: labelWidth
-                ? Math.max(
-                      PORT_GUTTER_MIN,
-                      labelWidth + PORT_LABEL_PADDING + 10
-                  )
-                : PORT_GUTTER_MIN,
+            gutter: label ? this.resolvePortGutterWidth(presentation) : PORT_GUTTER_MIN,
         };
         this.portGeometryCache.set(cacheKey, geometry);
         return geometry;
