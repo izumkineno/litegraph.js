@@ -16,6 +16,7 @@ export interface LeaferAppHostOptions {
     backgroundAlpha?: number;
     zoomModifyBackgroundAlpha?: boolean;
     useTaskWorker?: boolean;
+    maxFPS?: number;
 }
 
 /**
@@ -51,6 +52,7 @@ export class LeaferAppHost {
     private backgroundTileSize: number;
     private backgroundAlpha: number;
     private zoomModifyBackgroundAlpha: boolean;
+    private vsyncCalibrationHandle: number | null;
 
     constructor(view: HTMLElement, options: LeaferAppHostOptions = {}) {
         this.view = view;
@@ -60,6 +62,7 @@ export class LeaferAppHost {
         this.backgroundAlpha = this.clampAlpha(options.backgroundAlpha ?? 1);
         this.zoomModifyBackgroundAlpha =
             options.zoomModifyBackgroundAlpha !== false;
+        this.vsyncCalibrationHandle = null;
         this.backgroundColorLayer = this.createBackgroundLayer(
             "lgraph-leafer-background-color"
         );
@@ -115,6 +118,8 @@ export class LeaferAppHost {
         this.skyRoot.add(this.measurementRoot);
         getSharedLeaferTextMetrics().attachRoot(this.measurementRoot);
         this.taskWorker = new LeaferTaskWorker(options.useTaskWorker !== false);
+        this.applyMaxFPS(options.maxFPS || 60);
+        this.scheduleVSyncCalibration();
         this.syncBackgroundViewport(0, 0, 1);
     }
 
@@ -168,6 +173,10 @@ export class LeaferAppHost {
     }
 
     destroy(): void {
+        if (this.vsyncCalibrationHandle !== null) {
+            this.getViewWindow().cancelAnimationFrame(this.vsyncCalibrationHandle);
+            this.vsyncCalibrationHandle = null;
+        }
         getSharedLeaferTextMetrics().detachRoot(this.measurementRoot);
         this.taskWorker.destroy();
         this.app.destroy();
@@ -220,5 +229,83 @@ export class LeaferAppHost {
             return 1;
         }
         return Math.max(0, Math.min(1, value));
+    }
+
+    private scheduleVSyncCalibration(): void {
+        if (this.vsyncCalibrationHandle !== null) {
+            return;
+        }
+
+        const windowRef = this.getViewWindow();
+        const frameRates: number[] = [];
+        let previousTimestamp = 0;
+        const collect = (timestamp: number): void => {
+            if (previousTimestamp > 0) {
+                const delta = timestamp - previousTimestamp;
+                if (delta > 0 && delta < 100) {
+                    frameRates.push(1000 / delta);
+                }
+            }
+            previousTimestamp = timestamp;
+
+            if (frameRates.length < 12) {
+                this.vsyncCalibrationHandle =
+                    windowRef.requestAnimationFrame(collect);
+                return;
+            }
+
+            this.vsyncCalibrationHandle = null;
+            this.applyMaxFPS(this.resolveVSyncFPS(frameRates));
+        };
+
+        this.vsyncCalibrationHandle = windowRef.requestAnimationFrame(collect);
+    }
+
+    private resolveVSyncFPS(samples: readonly number[]): number {
+        if (!samples.length) {
+            return 60;
+        }
+
+        const sorted = [...samples].sort((left, right) => left - right);
+        const median = sorted[Math.floor(sorted.length / 2)];
+        if (!Number.isFinite(median) || median < 45 || median > 260) {
+            return 60;
+        }
+
+        const candidates = [60, 72, 75, 90, 100, 120, 144, 165, 180, 200, 240];
+        let best = candidates[0];
+        let bestDistance = Math.abs(candidates[0] - median);
+        for (let i = 1; i < candidates.length; ++i) {
+            const distance = Math.abs(candidates[i] - median);
+            if (distance < bestDistance) {
+                best = candidates[i];
+                bestDistance = distance;
+            }
+        }
+        return best;
+    }
+
+    private applyMaxFPS(maxFPS: number): void {
+        const resolved = Math.max(1, Math.round(maxFPS));
+        const targets: Array<{ config?: { maxFPS?: number } } | null | undefined> = [
+            this.app as unknown as { config?: { maxFPS?: number } },
+            this.ground as unknown as { config?: { maxFPS?: number } },
+            this.tree as unknown as { config?: { maxFPS?: number } },
+            this.sky as unknown as { config?: { maxFPS?: number } },
+        ];
+        for (let i = 0; i < targets.length; ++i) {
+            const config = targets[i]?.config;
+            if (!config) {
+                continue;
+            }
+            config.maxFPS = resolved;
+        }
+    }
+
+    private getViewWindow(): Window {
+        const doc = this.view.ownerDocument as Document & {
+            parentWindow?: Window;
+        };
+        return (doc.defaultView || doc.parentWindow || window) as Window;
     }
 }

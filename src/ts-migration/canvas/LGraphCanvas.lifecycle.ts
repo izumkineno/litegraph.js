@@ -106,8 +106,8 @@ const pointerEventNameMaps: Record<string, Record<string, string>> = {
 const DEFAULT_WORLD_BOUNDS = [
     0,
     0,
-    2048,
-    2048,
+    7680,
+    4320,
 ] as Vector4;
 const WORLD_BOUNDS_CAMERA_RING = 160;
 
@@ -278,6 +278,11 @@ export class LGraphCanvasLifecycle extends LGraphCanvasStatic {
     graphMutationBus: GraphMutationBus | null;
     sceneSyncController: SceneSyncController | null;
     interactionController: InteractionController | null;
+    infoOverlayElement: HTMLDivElement | null;
+    infoOverlayLastText: string;
+    infoOverlayLastUpdateTime: number;
+    infoOverlayRenderQueued: boolean;
+    infoOverlayIdleHandle: number | null;
 
     title_text_font: string;
     inner_text_font: string;
@@ -505,6 +510,11 @@ export class LGraphCanvasLifecycle extends LGraphCanvasStatic {
         this.graphMutationBus = null;
         this.sceneSyncController = null;
         this.interactionController = null;
+        this.infoOverlayElement = null;
+        this.infoOverlayLastText = "";
+        this.infoOverlayLastUpdateTime = 0;
+        this.infoOverlayRenderQueued = false;
+        this.infoOverlayIdleHandle = null;
 
         this.frame = 0;
         this.last_draw_time = 0;
@@ -589,6 +599,7 @@ export class LGraphCanvasLifecycle extends LGraphCanvasStatic {
 
         const self = this as unknown as { onClear?: () => void };
         self.onClear?.();
+        this.refreshRuntimeInfoOverlay(true);
     }
 
     setGraph(graph: GraphLike | null, skip_clear?: boolean): void {
@@ -619,6 +630,7 @@ export class LGraphCanvasLifecycle extends LGraphCanvasStatic {
 
         this.attachSceneSyncBackbone();
         this.setDirty(true, true);
+        this.refreshRuntimeInfoOverlay(true);
         (
             this as unknown as {
                 syncSubgraphSidebars?: () => void;
@@ -654,6 +666,7 @@ export class LGraphCanvasLifecycle extends LGraphCanvasStatic {
         this.attachSceneSyncBackbone();
         (this as unknown as { checkPanels: () => void }).checkPanels();
         this.setDirty(true, true);
+        this.refreshRuntimeInfoOverlay(true);
     }
 
     closeSubgraph(): void {
@@ -683,6 +696,7 @@ export class LGraphCanvasLifecycle extends LGraphCanvasStatic {
         }
         this.ds.offset = [0, 0];
         this.ds.scale = 1;
+        this.refreshRuntimeInfoOverlay(true);
     }
 
     getCurrentGraph(): GraphLike | null {
@@ -794,6 +808,7 @@ export class LGraphCanvasLifecycle extends LGraphCanvasStatic {
             this.viewportController.destroy();
             this.viewportController = null;
         }
+        this.destroyInfoOverlay();
         if (!this.leaferAppHost) {
             return;
         }
@@ -825,6 +840,7 @@ export class LGraphCanvasLifecycle extends LGraphCanvasStatic {
             backgroundAlpha: this.editor_alpha,
             zoomModifyBackgroundAlpha: this.zoom_modify_alpha,
         });
+        this.createInfoOverlay(hostView);
         this.viewportController = new ViewportController(
             this.leaferAppHost,
             this.ds,
@@ -834,6 +850,252 @@ export class LGraphCanvasLifecycle extends LGraphCanvasStatic {
         this.viewportController.setSceneSyncController(this.sceneSyncController);
 
         console.info("LGraphCanvas: Leafer App shell initialized.");
+        this.refreshRuntimeInfoOverlay(true);
+    }
+
+    notifyLeaferSceneRender(): void {
+        if (this.renderRuntime !== "leafer") {
+            return;
+        }
+        this.scheduleInfoOverlayRenderRefresh();
+    }
+
+    protected getRenderInfoLines(): string[] {
+        if (!this.graph) {
+            return ["No graph selected"];
+        }
+
+        const graph = this.graph as GraphLike & {
+            globaltime?: number;
+            iteration?: number;
+            _nodes?: unknown[];
+            _version?: number;
+        };
+        const nodeCount = Array.isArray(graph._nodes) ? graph._nodes.length : 0;
+        const visibleNodeCount = this.resolveVisibleNodeCount(nodeCount);
+        return [
+            `T: ${toFiniteNumber(graph.globaltime).toFixed(2)}s`,
+            `I: ${Math.trunc(toFiniteNumber(graph.iteration))}`,
+            `N: ${nodeCount} [${visibleNodeCount}]`,
+            `V: ${Math.trunc(toFiniteNumber(graph._version))}`,
+            `FPS:${this.resolveDisplayedFPS().toFixed(2)}`,
+        ];
+    }
+
+    refreshRuntimeInfoOverlay(force = false): void {
+        if (this.renderRuntime !== "leafer") {
+            return;
+        }
+
+        const overlay = this.infoOverlayElement;
+        if (!overlay) {
+            return;
+        }
+
+        overlay.style.display = this.show_info ? "" : "none";
+        if (!this.show_info) {
+            return;
+        }
+
+        const now = Date.now();
+        if (!force && now - this.infoOverlayLastUpdateTime < 120) {
+            return;
+        }
+
+        const nextText = this.getRenderInfoLines().join("\n");
+        if (force || nextText !== this.infoOverlayLastText) {
+            overlay.textContent = nextText;
+            this.infoOverlayLastText = nextText;
+        }
+        this.infoOverlayLastUpdateTime = now;
+    }
+
+    private createInfoOverlay(hostView: HTMLElement): void {
+        this.destroyInfoOverlay();
+        const overlay = hostView.ownerDocument.createElement("div");
+        overlay.className = "litegraph-runtime-info";
+        overlay.setAttribute("aria-hidden", "true");
+        overlay.style.position = "absolute";
+        overlay.style.left = "6px";
+        overlay.style.bottom = "6px";
+        overlay.style.pointerEvents = "none";
+        overlay.style.zIndex = "4";
+        overlay.style.whiteSpace = "pre";
+        overlay.style.margin = "0";
+        overlay.style.font = "10px Arial, sans-serif";
+        overlay.style.lineHeight = "13px";
+        overlay.style.color = "#888";
+        overlay.style.textAlign = "left";
+        overlay.style.textShadow = "0 1px 0 rgba(0,0,0,0.35)";
+        hostView.appendChild(overlay);
+        this.infoOverlayElement = overlay;
+        this.infoOverlayLastText = "";
+        this.infoOverlayLastUpdateTime = 0;
+        this.infoOverlayRenderQueued = false;
+        this.infoOverlayIdleHandle = null;
+    }
+
+    private destroyInfoOverlay(): void {
+        if (this.infoOverlayIdleHandle !== null) {
+            this.getCanvasWindow().clearTimeout(this.infoOverlayIdleHandle);
+            this.infoOverlayIdleHandle = null;
+        }
+        this.infoOverlayElement?.remove();
+        this.infoOverlayElement = null;
+        this.infoOverlayLastText = "";
+        this.infoOverlayLastUpdateTime = 0;
+        this.infoOverlayRenderQueued = false;
+    }
+
+    private resolveVisibleNodeCount(fallback: number): number {
+        const graph = this.graph as { _nodes?: unknown[] } | null;
+        const nodes = Array.isArray(graph?._nodes) ? graph._nodes : [];
+        if (!nodes.length) {
+            this.visible_nodes = [];
+            return 0;
+        }
+
+        this.syncVisibleAreaSnapshot();
+        const computeVisibleNodes = (
+            this as unknown as {
+                computeVisibleNodes?: (nodes?: unknown[], out?: unknown[]) => unknown[];
+            }
+        ).computeVisibleNodes;
+        if (
+            typeof computeVisibleNodes !== "function" ||
+            this.visible_area[2] <= 0 ||
+            this.visible_area[3] <= 0
+        ) {
+            return fallback;
+        }
+
+        try {
+            const visibleNodes = computeVisibleNodes.call(
+                this,
+                nodes,
+                this.visible_nodes
+            );
+            return Array.isArray(visibleNodes) ? visibleNodes.length : fallback;
+        } catch {
+            return fallback;
+        }
+    }
+
+    private syncVisibleAreaSnapshot(): void {
+        const scale = Math.max(0.0001, toFiniteNumber(this.ds.scale, 1));
+        const offsetX = toFiniteNumber(this.ds.offset?.[0]);
+        const offsetY = toFiniteNumber(this.ds.offset?.[1]);
+        const size = this.resolveViewportPixelSize();
+
+        let startX = -offsetX;
+        let startY = -offsetY;
+        let width = size[0];
+        let height = size[1];
+        if (this.viewport) {
+            startX += this.viewport[0] / scale;
+            startY += this.viewport[1] / scale;
+            width = this.viewport[2];
+            height = this.viewport[3];
+        }
+
+        this.visible_area[0] = startX;
+        this.visible_area[1] = startY;
+        this.visible_area[2] = Math.max(0, width / scale);
+        this.visible_area[3] = Math.max(0, height / scale);
+    }
+
+    private scheduleInfoOverlayRenderRefresh(): void {
+        if (
+            this.renderRuntime !== "leafer" ||
+            !this.infoOverlayElement ||
+            this.infoOverlayRenderQueued
+        ) {
+            return;
+        }
+
+        this.infoOverlayRenderQueued = true;
+        this.getCanvasWindow().requestAnimationFrame(
+            this.handleInfoOverlayRenderRefresh
+        );
+    }
+
+    private readonly handleInfoOverlayRenderRefresh = (): void => {
+        this.infoOverlayRenderQueued = false;
+        if (this.renderRuntime !== "leafer" || !this.infoOverlayElement) {
+            return;
+        }
+
+        this.captureLeaferRenderStats();
+        this.refreshRuntimeInfoOverlay(true);
+        this.scheduleIdleInfoOverlayRefresh();
+    };
+
+    private captureLeaferRenderStats(): void {
+        const now = this.getLeaferStatsNow();
+        if (this.last_draw_time > 0) {
+            this.render_time = (now - this.last_draw_time) * 0.001;
+        } else {
+            this.render_time = 0;
+        }
+        this.last_draw_time = now;
+        this.frame += 1;
+
+        const app = this.leaferAppHost?.app as {
+            FPS?: unknown;
+            tree?: { FPS?: unknown } | null;
+        } | null;
+        const nextFPS = toFiniteNumber(app?.tree?.FPS, toFiniteNumber(app?.FPS, 0));
+        const measuredFPS = this.render_time > 0 ? 1 / this.render_time : 0;
+        if (measuredFPS > 0) {
+            this.fps = measuredFPS;
+            return;
+        }
+
+        this.fps = nextFPS > 0 ? nextFPS : 0;
+    }
+
+    private resolveDisplayedFPS(): number {
+        if (this.renderRuntime !== "leafer") {
+            return this.fps;
+        }
+
+        const app = this.leaferAppHost?.app as {
+            config?: { maxFPS?: unknown } | null;
+            tree?: {
+                config?: { maxFPS?: unknown } | null;
+            } | null;
+        } | null;
+        const maxFPS = toFiniteNumber(
+            app?.tree?.config?.maxFPS,
+            toFiniteNumber(app?.config?.maxFPS, 60)
+        );
+        const idleForMs =
+            this.last_draw_time > 0
+                ? this.getLeaferStatsNow() - this.last_draw_time
+                : Number.POSITIVE_INFINITY;
+        if (idleForMs > 250) {
+            return maxFPS > 0 ? maxFPS : 60;
+        }
+
+        return this.fps > 0 ? this.fps : maxFPS > 0 ? maxFPS : 60;
+    }
+
+    private scheduleIdleInfoOverlayRefresh(): void {
+        if (this.infoOverlayIdleHandle !== null) {
+            this.getCanvasWindow().clearTimeout(this.infoOverlayIdleHandle);
+        }
+
+        this.infoOverlayIdleHandle = this.getCanvasWindow().setTimeout(() => {
+            this.infoOverlayIdleHandle = null;
+            if (this.renderRuntime !== "leafer" || !this.infoOverlayElement) {
+                return;
+            }
+            this.refreshRuntimeInfoOverlay(true);
+        }, 300);
+    }
+
+    private getLeaferStatsNow(): number {
+        return this.getCanvasWindow().performance?.now?.() ?? Date.now();
     }
 
     private destroySceneSyncBackbone(): void {
@@ -1036,6 +1298,83 @@ export class LGraphCanvasLifecycle extends LGraphCanvasStatic {
         return this.clampNodeSize(group, width, height);
     }
 
+    getInteractionSurfaceElement(): HTMLElement | null {
+        if (this.renderRuntime === "leafer") {
+            return this.canvasHostElement;
+        }
+
+        return (this.canvasHostElement ||
+            (this.canvas as unknown as HTMLElement | null) ||
+            null) as HTMLElement | null;
+    }
+
+    getKeyboardEventTarget(): HTMLElement | null {
+        return this.getInteractionSurfaceElement();
+    }
+
+    markAsActiveCanvas(): void {
+        LGraphCanvasStatic.active_canvas = this as any;
+    }
+
+    focusInteractiveSurface(): void {
+        this.markAsActiveCanvas();
+
+        const target = this.getKeyboardEventTarget();
+        if (!target || typeof target.focus !== "function") {
+            return;
+        }
+
+        try {
+            target.focus({ preventScroll: true });
+        } catch {
+            target.focus();
+        }
+    }
+
+    syncPointerPosition(
+        clientX: number,
+        clientY: number,
+        graphX: number,
+        graphY: number
+    ): void {
+        const target = this.getInteractionSurfaceElement();
+        const rect = target?.getBoundingClientRect?.();
+        const clampedGraphPoint = this.clampWorldPoint(
+            toFiniteNumber(graphX),
+            toFiniteNumber(graphY)
+        );
+
+        this.mouse[0] = toFiniteNumber(clientX);
+        this.mouse[1] = toFiniteNumber(clientY);
+        this.last_mouse_position[0] = rect
+            ? toFiniteNumber(clientX) - toFiniteNumber(rect.left)
+            : toFiniteNumber(clientX);
+        this.last_mouse_position[1] = rect
+            ? toFiniteNumber(clientY) - toFiniteNumber(rect.top)
+            : toFiniteNumber(clientY);
+        this.graph_mouse[0] = clampedGraphPoint[0];
+        this.graph_mouse[1] = clampedGraphPoint[1];
+    }
+
+    isEventInsideInteractiveSurface(target: EventTarget | null): boolean {
+        const surface = this.getInteractionSurfaceElement();
+        if (!surface) {
+            return false;
+        }
+
+        const element =
+            target instanceof Element
+                ? target
+                : target instanceof Node
+                  ? target.parentElement
+                  : null;
+        if (!element) {
+            return false;
+        }
+
+        return element === surface || surface.contains(element);
+    }
+
     private normalizeWorldBounds(bounds?: Vector4 | null): Vector4 | null {
         if (!bounds || bounds.length < 4) {
             return null;
@@ -1189,6 +1528,9 @@ export class LGraphCanvasLifecycle extends LGraphCanvasStatic {
                 this.unbindEvents();
             }
             this.attachLeaferAppShell(targetCanvas as HTMLElement);
+            if (!skip_events) {
+                this.bindEvents();
+            }
             return;
         }
 
@@ -1254,6 +1596,12 @@ export class LGraphCanvasLifecycle extends LGraphCanvasStatic {
             return;
         }
         const canvas = this.canvas as CanvasLike;
+        const interactionTarget =
+            this.getInteractionSurfaceElement() ||
+            (canvas as unknown as HTMLElement);
+        const keyboardTarget =
+            this.getKeyboardEventTarget() || interactionTarget;
+        const useLegacyPointerBindings = this.renderRuntime !== "leafer";
 
         const ref_window = this.getCanvasWindow();
         const doc = ref_window.document;
@@ -1267,85 +1615,98 @@ export class LGraphCanvasLifecycle extends LGraphCanvasStatic {
         this._pointercapture_callback = this.processPointerCapture.bind(this) as CanvasPointerListener;
         this._touch_callback = this.processTouch.bind(this) as CanvasPointerListener;
 
-        host.pointerListenerAdd(canvas, "down", this._mousedown_callback, true);
         const wheelEventOptions = { passive: false } as AddEventListenerOptions;
-        canvas.addEventListener(
-            "wheel",
-            this._mousewheel_callback as EventListener,
-            wheelEventOptions
-        );
         const wheelCapableCanvas = canvas as CanvasLike & { onwheel?: unknown };
-        if (typeof wheelCapableCanvas.onwheel === "undefined") {
+        if (useLegacyPointerBindings) {
+            host.pointerListenerAdd(canvas, "down", this._mousedown_callback, true);
             canvas.addEventListener(
-                "mousewheel",
+                "wheel",
                 this._mousewheel_callback as EventListener,
                 wheelEventOptions
             );
-        }
-        host.pointerListenerAdd(canvas, "up", this._mouseup_callback, true);
-        host.pointerListenerAdd(canvas, "move", this._mousemove_callback);
-        host.pointerListenerAdd(
-            canvas,
-            "cancel",
-            this._pointercancel_callback,
-            true
-        );
-        host.pointerListenerAdd(
-            canvas,
-            "gotpointercapture",
-            this._pointercapture_callback,
-            true
-        );
-        host.pointerListenerAdd(
-            canvas,
-            "lostpointercapture",
-            this._pointercancel_callback,
-            true
-        );
+            if (typeof wheelCapableCanvas.onwheel === "undefined") {
+                canvas.addEventListener(
+                    "mousewheel",
+                    this._mousewheel_callback as EventListener,
+                    wheelEventOptions
+                );
+            }
+            host.pointerListenerAdd(canvas, "up", this._mouseup_callback, true);
+            host.pointerListenerAdd(canvas, "move", this._mousemove_callback);
+            host.pointerListenerAdd(
+                canvas,
+                "cancel",
+                this._pointercancel_callback,
+                true
+            );
+            host.pointerListenerAdd(
+                canvas,
+                "gotpointercapture",
+                this._pointercapture_callback,
+                true
+            );
+            host.pointerListenerAdd(
+                canvas,
+                "lostpointercapture",
+                this._pointercancel_callback,
+                true
+            );
 
-        canvas.addEventListener("contextmenu", this._doNothing);
-        if (typeof wheelCapableCanvas.onwheel === "undefined") {
-            canvas.addEventListener(
-                "DOMMouseScroll",
-                this._mousewheel_callback as EventListener,
-                wheelEventOptions
-            );
-        }
+            if (typeof wheelCapableCanvas.onwheel === "undefined") {
+                canvas.addEventListener(
+                    "DOMMouseScroll",
+                    this._mousewheel_callback as EventListener,
+                    wheelEventOptions
+                );
+            }
 
-        if (host.pointerevents_method === "mouse" && host.isTouchDevice()) {
-            const options = { capture: true, passive: false } as AddEventListenerOptions;
-            canvas.addEventListener(
-                "touchstart",
-                this._touch_callback as EventListener,
-                options
-            );
-            canvas.addEventListener(
-                "touchmove",
-                this._touch_callback as EventListener,
-                options
-            );
-            canvas.addEventListener(
-                "touchend",
-                this._touch_callback as EventListener,
-                options
-            );
-            canvas.addEventListener(
-                "touchcancel",
-                this._touch_callback as EventListener,
-                options
-            );
+            if (host.pointerevents_method === "mouse" && host.isTouchDevice()) {
+                const options = {
+                    capture: true,
+                    passive: false,
+                } as AddEventListenerOptions;
+                canvas.addEventListener(
+                    "touchstart",
+                    this._touch_callback as EventListener,
+                    options
+                );
+                canvas.addEventListener(
+                    "touchmove",
+                    this._touch_callback as EventListener,
+                    options
+                );
+                canvas.addEventListener(
+                    "touchend",
+                    this._touch_callback as EventListener,
+                    options
+                );
+                canvas.addEventListener(
+                    "touchcancel",
+                    this._touch_callback as EventListener,
+                    options
+                );
+            }
         }
 
         this._key_callback = this.processKey.bind(this) as CanvasPointerListener;
-        canvas.setAttribute("tabindex", "1");
-        canvas.addEventListener("keydown", this._key_callback as EventListener, true);
+        keyboardTarget.setAttribute("tabindex", "1");
+        keyboardTarget.addEventListener(
+            "keydown",
+            this._key_callback as EventListener,
+            true
+        );
         doc.addEventListener("keyup", this._key_callback as EventListener, true);
 
         this._ondrop_callback = this.processDrop.bind(this) as CanvasPointerListener;
-        canvas.addEventListener("dragover", this._doNothing, false);
-        canvas.addEventListener("dragend", this._doNothing, false);
-        canvas.addEventListener("drop", this._ondrop_callback as EventListener, false);
-        canvas.addEventListener("dragenter", this._doReturnTrue, false);
+        interactionTarget.addEventListener("contextmenu", this._doNothing);
+        interactionTarget.addEventListener("dragover", this._doNothing, false);
+        interactionTarget.addEventListener("dragend", this._doNothing, false);
+        interactionTarget.addEventListener(
+            "drop",
+            this._ondrop_callback as EventListener,
+            false
+        );
+        interactionTarget.addEventListener("dragenter", this._doReturnTrue, false);
 
         this._events_binded = true;
     }
@@ -1356,62 +1717,79 @@ export class LGraphCanvasLifecycle extends LGraphCanvasStatic {
             return;
         }
         const canvas = this.canvas as CanvasLike;
+        const interactionTarget =
+            this.getInteractionSurfaceElement() ||
+            (canvas as unknown as HTMLElement);
+        const keyboardTarget =
+            this.getKeyboardEventTarget() || interactionTarget;
         const ref_window = this.getCanvasWindow();
         const doc = ref_window.document;
         const host = this.host();
 
-        host.pointerListenerRemove(
-            canvas,
-            "move",
-            this._mousemove_callback as CanvasPointerListener
-        );
-        host.pointerListenerRemove(
-            canvas,
-            "up",
-            this._mouseup_callback as CanvasPointerListener,
+        if (this.renderRuntime !== "leafer") {
+            host.pointerListenerRemove(
+                canvas,
+                "move",
+                this._mousemove_callback as CanvasPointerListener
+            );
+            host.pointerListenerRemove(
+                canvas,
+                "up",
+                this._mouseup_callback as CanvasPointerListener,
+                true
+            );
+            host.pointerListenerRemove(
+                canvas,
+                "down",
+                this._mousedown_callback as CanvasPointerListener,
+                true
+            );
+            host.pointerListenerRemove(
+                canvas,
+                "cancel",
+                this._pointercancel_callback as CanvasPointerListener,
+                true
+            );
+            host.pointerListenerRemove(
+                canvas,
+                "gotpointercapture",
+                this._pointercapture_callback as CanvasPointerListener,
+                true
+            );
+            host.pointerListenerRemove(
+                canvas,
+                "lostpointercapture",
+                this._pointercancel_callback as CanvasPointerListener,
+                true
+            );
+            canvas.removeEventListener(
+                "wheel",
+                this._mousewheel_callback as EventListener
+            );
+            canvas.removeEventListener(
+                "mousewheel",
+                this._mousewheel_callback as EventListener
+            );
+            canvas.removeEventListener(
+                "DOMMouseScroll",
+                this._mousewheel_callback as EventListener
+            );
+        }
+
+        keyboardTarget.removeEventListener(
+            "keydown",
+            this._key_callback as EventListener,
             true
         );
-        host.pointerListenerRemove(
-            canvas,
-            "down",
-            this._mousedown_callback as CanvasPointerListener,
-            true
+        doc.removeEventListener("keyup", this._key_callback as EventListener, true);
+        interactionTarget.removeEventListener("contextmenu", this._doNothing);
+        interactionTarget.removeEventListener(
+            "drop",
+            this._ondrop_callback as EventListener
         );
-        host.pointerListenerRemove(
-            canvas,
-            "cancel",
-            this._pointercancel_callback as CanvasPointerListener,
-            true
-        );
-        host.pointerListenerRemove(
-            canvas,
-            "gotpointercapture",
-            this._pointercapture_callback as CanvasPointerListener,
-            true
-        );
-        host.pointerListenerRemove(
-            canvas,
-            "lostpointercapture",
-            this._pointercancel_callback as CanvasPointerListener,
-            true
-        );
-        canvas.removeEventListener(
-            "wheel",
-            this._mousewheel_callback as EventListener
-        );
-        canvas.removeEventListener(
-            "mousewheel",
-            this._mousewheel_callback as EventListener
-        );
-        canvas.removeEventListener(
-            "DOMMouseScroll",
-            this._mousewheel_callback as EventListener
-        );
-        canvas.removeEventListener("keydown", this._key_callback as EventListener);
-        doc.removeEventListener("keyup", this._key_callback as EventListener);
-        canvas.removeEventListener("contextmenu", this._doNothing);
-        canvas.removeEventListener("drop", this._ondrop_callback as EventListener);
-        canvas.removeEventListener("dragenter", this._doReturnTrue);
+        interactionTarget.removeEventListener("dragenter", this._doReturnTrue);
+        interactionTarget.removeEventListener("dragover", this._doNothing);
+        interactionTarget.removeEventListener("dragend", this._doNothing);
         canvas.removeEventListener(
             "touchstart",
             this._touch_callback as EventListener,

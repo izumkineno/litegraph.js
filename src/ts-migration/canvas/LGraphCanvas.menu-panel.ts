@@ -56,7 +56,7 @@ export class LGraphCanvasMenuPanel
     }
 
     private setActiveCanvas(): void {
-        this.menuClass().active_canvas = this as any;
+        this.markAsActiveCanvas();
     }
 
     showLinkMenu(link: any, e: MouseEvent): false {
@@ -142,7 +142,7 @@ export class LGraphCanvasMenuPanel
                     convertEventToCanvasOffset: this.convertEventToCanvasOffset.bind(this),
                     clampNodePosition: this.clampNodePosition.bind(this),
                     focusCanvas: () => {
-                        this.canvas?.focus();
+                        this.focusInteractiveSurface();
                     },
                 } as SearchBoxControllerPort,
             },

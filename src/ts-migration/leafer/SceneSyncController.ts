@@ -1305,6 +1305,13 @@ export class SceneSyncController {
         return this.appHost.view.ownerDocument?.defaultView || window;
     }
 
+    private tryGetRuntimeWindow(): Window | null {
+        if (typeof window === "undefined") {
+            return null;
+        }
+        return this.getRuntimeWindow();
+    }
+
     private getRuntimeNow(): number {
         const runtimeWindow = this.getRuntimeWindow() as Window & {
             performance?: { now?: () => number };
@@ -1312,19 +1319,37 @@ export class SceneSyncController {
         return runtimeWindow.performance?.now?.() ?? Date.now();
     }
 
-    private requestSceneRender(bounds?: RenderBoundsLike | null): void {
+    private requestSceneRender(
+        bounds?: RenderBoundsLike | null,
+        sync = false
+    ): void {
         const partialBounds = toRenderBoundsLike(bounds);
         if (partialBounds) {
-            this.appHost.app.forceRender(partialBounds);
+            this.appHost.app.forceRender(partialBounds, sync);
+            (
+                this.renderHost as {
+                    notifyLeaferSceneRender?: () => void;
+                }
+            ).notifyLeaferSceneRender?.();
             return;
         }
 
-        if (typeof this.appHost.app.requestRender === "function") {
+        if (!sync && typeof this.appHost.app.requestRender === "function") {
             this.appHost.app.requestRender();
+            (
+                this.renderHost as {
+                    notifyLeaferSceneRender?: () => void;
+                }
+            ).notifyLeaferSceneRender?.();
             return;
         }
 
-        this.appHost.app.forceRender();
+        this.appHost.app.forceRender(undefined, sync);
+        (
+            this.renderHost as {
+                notifyLeaferSceneRender?: () => void;
+            }
+        ).notifyLeaferSceneRender?.();
     }
 
     private ensureRuntimeVisualFrame(): void {
@@ -1332,8 +1357,17 @@ export class SceneSyncController {
             return;
         }
 
-        const leaferApp = this.resolveRuntimeVisualScheduler();
         this.runtimeVisualFrameScheduled = true;
+        const runtimeWindow = this.tryGetRuntimeWindow();
+        if (runtimeWindow) {
+            this.runtimeVisualFrameDriver = "raf";
+            this.runtimeVisualFrameHandle = runtimeWindow.requestAnimationFrame(
+                this.handleRuntimeVisualFrame
+            );
+            return;
+        }
+
+        const leaferApp = this.resolveRuntimeVisualScheduler();
         if (leaferApp) {
             this.runtimeVisualFrameDriver = "leafer";
             leaferApp.nextRender(this.handleRuntimeVisualFrame, this);
@@ -1341,10 +1375,8 @@ export class SceneSyncController {
             return;
         }
 
-        this.runtimeVisualFrameDriver = "raf";
-        this.runtimeVisualFrameHandle = this.getRuntimeWindow().requestAnimationFrame(
-            this.handleRuntimeVisualFrame
-        );
+        this.runtimeVisualFrameDriver = "none";
+        this.runtimeVisualFrameScheduled = false;
     }
 
     private cancelRuntimeVisualFrame(): void {
@@ -1365,7 +1397,7 @@ export class SceneSyncController {
             this.runtimeVisualFrameDriver === "raf" &&
             this.runtimeVisualFrameHandle !== null
         ) {
-            this.getRuntimeWindow().cancelAnimationFrame(
+            this.tryGetRuntimeWindow()?.cancelAnimationFrame(
                 this.runtimeVisualFrameHandle
             );
         }
@@ -1423,10 +1455,10 @@ export class SceneSyncController {
         const shouldRender = Boolean(dirtyBounds);
         if (shouldRender) {
             this.runtimeSceneRenderCount += 1;
-            this.requestSceneRender(dirtyBounds);
+            this.requestSceneRender(dirtyBounds, true);
         } else if (didUpdate || nodeFrame.didUpdate || linkFrame.didUpdate) {
             this.runtimeSceneRenderCount += 1;
-            this.requestSceneRender();
+            this.requestSceneRender(undefined, true);
         }
         if (
             nodeFrame.hasMore ||

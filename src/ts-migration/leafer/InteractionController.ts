@@ -45,6 +45,14 @@ interface InteractionCanvasHost {
     readonly read_only?: boolean;
     readonly align_to_grid?: boolean;
     readonly onNodeMoved?: ((node: GraphMutationNodeLike) => void) | null;
+    markAsActiveCanvas?: () => void;
+    focusInteractiveSurface?: () => void;
+    syncPointerPosition?: (
+        clientX: number,
+        clientY: number,
+        graphX: number,
+        graphY: number
+    ) => void;
     processMouseDown: (event: unknown) => boolean | undefined;
     processMouseMove: (event: unknown) => boolean | undefined;
     processMouseUp: (event: unknown) => boolean | undefined;
@@ -354,6 +362,9 @@ export class InteractionController {
             return;
         }
 
+        this.canvas.markAsActiveCanvas?.();
+        this.canvas.focusInteractiveSurface?.();
+
         if (event.button === 2) {
             this.stopPropagationOnly(event, true);
             return;
@@ -381,6 +392,12 @@ export class InteractionController {
             x: toFiniteNumber(graphPoint.x),
             y: toFiniteNumber(graphPoint.y),
         };
+        this.canvas.syncPointerPosition?.(
+            event.clientX,
+            event.clientY,
+            normalizedGraphPoint.x,
+            normalizedGraphPoint.y
+        );
 
         this.pointerIsDown = true;
         this.pointerDownAt = Date.now();
@@ -598,6 +615,12 @@ export class InteractionController {
             x: toFiniteNumber(graphPoint.x),
             y: toFiniteNumber(graphPoint.y),
         };
+        this.canvas.syncPointerPosition?.(
+            event.clientX,
+            event.clientY,
+            normalizedGraphPoint.x,
+            normalizedGraphPoint.y
+        );
 
         if (this.session?.kind === "connection") {
             this.connectionController.finish(
@@ -661,6 +684,12 @@ export class InteractionController {
         const worldPoint = source.getWorldPoint();
         const pagePoint = source.getPagePoint();
         const graphPoint = source.getInnerPoint();
+        this.canvas.syncPointerPosition?.(
+            event.clientX,
+            event.clientY,
+            toFiniteNumber(graphPoint.x),
+            toFiniteNumber(graphPoint.y)
+        );
         const hit = this.hitTestService.hitNodeAt(graphPoint.x, graphPoint.y);
         const modernHost = isModernHost(hit?.host) ? hit.host : null;
         const modernPart = modernHost
@@ -741,6 +770,12 @@ export class InteractionController {
             x: toFiniteNumber(graphPoint.x),
             y: toFiniteNumber(graphPoint.y),
         };
+        this.canvas.syncPointerPosition?.(
+            event.clientX,
+            event.clientY,
+            normalizedGraphPoint.x,
+            normalizedGraphPoint.y
+        );
 
         if (this.session.kind === "connection") {
             this.connectionController.update(
@@ -1787,6 +1822,12 @@ export class InteractionController {
     private dispatchContextMenu(event: MouseEvent | PointerEvent): void {
         const source = this.createPointerSource(event);
         const graphPoint = source.getInnerPoint();
+        this.canvas.syncPointerPosition?.(
+            event.clientX,
+            event.clientY,
+            toFiniteNumber(graphPoint.x),
+            toFiniteNumber(graphPoint.y)
+        );
         const hit = this.hitTestService.hitNodeAt(graphPoint.x, graphPoint.y);
         const node = hit?.node || null;
 

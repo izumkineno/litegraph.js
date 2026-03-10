@@ -84,6 +84,21 @@ const resolveCanvasInputHost = createClassHostResolver(defaultLiteGraphHost, {
 });
 
 const temp = new Float32Array(4) as unknown as Vector4;
+const CLIPBOARD_STORAGE_KEY = "litegrapheditor_clipboard";
+const DUPLICATE_SELECTION_OFFSET = 20;
+
+type ClipboardLinkInfo = [
+    number | null,
+    number,
+    number,
+    number,
+    string | number | null | undefined,
+];
+
+interface ClipboardPayload {
+    nodes: any[];
+    links: ClipboardLinkInfo[];
+}
 
 /**
  * LGraphCanvas input interaction layer.
@@ -134,6 +149,252 @@ export class LGraphCanvasInput extends LGraphCanvasLifecycle {
 
     private selectedNodesRef(): Record<string, any> {
         return (this.selected_nodes || {}) as Record<string, any>;
+    }
+
+    private resolveKeyboardEventElement(target: EventTarget | null): Element | null {
+        if (target instanceof Element) {
+            return target;
+        }
+        if (target instanceof Node) {
+            return target.parentElement;
+        }
+        return null;
+    }
+
+    private isEditableKeyboardTarget(target: EventTarget | null): boolean {
+        const element = this.resolveKeyboardEventElement(target);
+        if (!element) {
+            return false;
+        }
+
+        const htmlElement = element as HTMLElement;
+        if (htmlElement.isContentEditable) {
+            return true;
+        }
+
+        if (
+            element.closest(
+                [
+                    ".graphdialog",
+                    ".graphmenu",
+                    ".graphcontextualmenu",
+                    ".litemenu",
+                    ".litecontextmenu",
+                    ".litesearchbox",
+                    ".litegraph-subgraph-sidebars",
+                    ".litegraph-editor-dialog",
+                    ".litegraph-editor-panel",
+                    "#node-panel",
+                    "#option-panel",
+                ].join(",")
+            )
+        ) {
+            return true;
+        }
+
+        switch (element.tagName) {
+            case "INPUT":
+            case "TEXTAREA":
+            case "SELECT":
+            case "OPTION":
+            case "BUTTON":
+            case "LABEL":
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    private buildSelectionClipboardPayload(): ClipboardPayload | null {
+        const clipboardInfo: ClipboardPayload = {
+            nodes: [],
+            links: [],
+        };
+        const selectedNodesArray: any[] = [];
+        const relativeIds = new Map<any, number>();
+        let index = 0;
+
+        for (const key in this.selected_nodes) {
+            const node = this.selected_nodes[key] as any;
+            if (!node || node.clonable === false) {
+                continue;
+            }
+            relativeIds.set(node, index);
+            selectedNodesArray.push(node);
+            index += 1;
+        }
+
+        for (let i = 0; i < selectedNodesArray.length; ++i) {
+            const node = selectedNodesArray[i];
+            const cloned = node.clone();
+            if (!cloned) {
+                console.warn("node type not found: " + node.type);
+                continue;
+            }
+
+            clipboardInfo.nodes.push(cloned.serialize());
+            if (!node.inputs || !node.inputs.length) {
+                continue;
+            }
+
+            for (let j = 0; j < node.inputs.length; ++j) {
+                const input = node.inputs[j];
+                if (!input || input.link == null) {
+                    continue;
+                }
+                const linkInfo = this.graph.links[input.link];
+                if (!linkInfo) {
+                    continue;
+                }
+                const originNode = this.graph.getNodeById(linkInfo.origin_id);
+                if (!originNode) {
+                    continue;
+                }
+                clipboardInfo.links.push([
+                    relativeIds.has(originNode) ? relativeIds.get(originNode)! : null,
+                    linkInfo.origin_slot,
+                    relativeIds.get(node) ?? i,
+                    linkInfo.target_slot,
+                    originNode.id,
+                ]);
+            }
+        }
+
+        return clipboardInfo.nodes.length ? clipboardInfo : null;
+    }
+
+    private resolveClipboardSourceMinPos(clipboardInfo: ClipboardPayload): Vector2 {
+        let posMin: Vector2 | null = null;
+
+        for (let i = 0; i < clipboardInfo.nodes.length; ++i) {
+            const nodeData = clipboardInfo.nodes[i];
+            const x = Number(nodeData?.pos?.[0]) || 0;
+            const y = Number(nodeData?.pos?.[1]) || 0;
+            if (posMin) {
+                if (posMin[0] > x) {
+                    posMin[0] = x;
+                }
+                if (posMin[1] > y) {
+                    posMin[1] = y;
+                }
+            } else {
+                posMin = [x, y];
+            }
+        }
+
+        return posMin || [0, 0];
+    }
+
+    private applyGridAlignment(nodes: any[]): void {
+        const graph = this.graphRef();
+        if (!(graph?.config?.align_to_grid || this.align_to_grid)) {
+            return;
+        }
+
+        for (let i = 0; i < nodes.length; ++i) {
+            nodes[i]?.alignToGrid?.();
+        }
+    }
+
+    private pasteClipboardPayload(
+        clipboardInfo: ClipboardPayload | null,
+        options?: {
+            isConnectUnselected?: boolean;
+            targetGraphPoint?: Vector2;
+            fixedDelta?: Vector2;
+        }
+    ): any[] {
+        const LiteGraph = this.getLiteGraphHost();
+        const graph = this.graphRef();
+        if (!graph || !clipboardInfo?.nodes?.length) {
+            return [];
+        }
+
+        const isConnectUnselected = options?.isConnectUnselected === true;
+        const nodes: any[] = [];
+        graph.beforeChange();
+        try {
+            for (let i = 0; i < clipboardInfo.nodes.length; ++i) {
+                const nodeData = clipboardInfo.nodes[i];
+                const node = LiteGraph.createNode(nodeData.type);
+                if (!node) {
+                    continue;
+                }
+                node.configure(nodeData);
+                nodes.push(node);
+            }
+
+            if (!nodes.length) {
+                return [];
+            }
+
+            const sourceMinPos = this.resolveClipboardSourceMinPos(clipboardInfo);
+            let deltaX = options?.fixedDelta?.[0];
+            let deltaY = options?.fixedDelta?.[1];
+            if (deltaX === undefined || deltaY === undefined) {
+                const targetGraphPoint = options?.targetGraphPoint || this.graph_mouse;
+                deltaX = targetGraphPoint[0] - sourceMinPos[0];
+                deltaY = targetGraphPoint[1] - sourceMinPos[1];
+            }
+
+            [deltaX, deltaY] = this.clampNodeMoveDelta(nodes, deltaX, deltaY);
+
+            for (let i = 0; i < nodes.length; ++i) {
+                const node = nodes[i];
+                node.pos[0] += deltaX;
+                node.pos[1] += deltaY;
+                graph.add(node, { doProcessChange: false });
+            }
+
+            this.applyGridAlignment(nodes);
+
+            for (let i = 0; i < clipboardInfo.links.length; ++i) {
+                const linkInfo = clipboardInfo.links[i];
+                let origin_node;
+                const originNodeRelativeId = linkInfo[0];
+                if (originNodeRelativeId != null) {
+                    origin_node = nodes[originNodeRelativeId];
+                } else if (
+                    LiteGraph.ctrl_shift_v_paste_connect_unselected_outputs &&
+                    isConnectUnselected
+                ) {
+                    const originNodeId = linkInfo[4];
+                    if (originNodeId != null) {
+                        origin_node = graph.getNodeById(originNodeId);
+                    }
+                }
+
+                const target_node = nodes[linkInfo[2]];
+                if (origin_node && target_node) {
+                    origin_node.connect(linkInfo[1], target_node, linkInfo[3]);
+                } else {
+                    console.warn("Warning, nodes missing on pasting");
+                }
+            }
+
+            this.selectNodes(nodes);
+            return nodes;
+        } finally {
+            graph.afterChange();
+        }
+    }
+
+    private cutSelection(): void {
+        if (!Object.keys(this.selectedNodesRef()).length) {
+            return;
+        }
+        this.copyToClipboard();
+        this.deleteSelectedNodes();
+    }
+
+    private duplicateSelection(): void {
+        this.pasteClipboardPayload(this.buildSelectionClipboardPayload(), {
+            fixedDelta: [DUPLICATE_SELECTION_OFFSET, DUPLICATE_SELECTION_OFFSET],
+        });
+    }
+
+    private resolvePasteTargetGraphPoint(): Vector2 {
+        return [this.graph_mouse[0], this.graph_mouse[1]];
     }
 
     private callProcessNodeWidgets(
@@ -189,7 +450,7 @@ export class LGraphCanvasInput extends LGraphCanvasLifecycle {
 
         const ref_window = this.getCanvasWindow();
         const LiteGraph = this.getLiteGraphHost();
-        LGraphCanvasInput.active_canvas = this as any;
+        this.markAsActiveCanvas();
 
         const x = e.clientX;
         const y = e.clientY;
@@ -256,7 +517,7 @@ export class LGraphCanvasInput extends LGraphCanvasLifecycle {
         }
         this.pointer_is_down = true;
 
-        (this.canvas as HTMLCanvasElement).focus();
+        this.focusInteractiveSurface();
         LiteGraph.closeAllContextMenus(ref_window);
 
         if (this.onMouse) {
@@ -1786,12 +2047,26 @@ export class LGraphCanvasInput extends LGraphCanvasLifecycle {
             return;
         }
 
-        let block_default = false;
-        let node_consumed = false;
-        const target = e.target as unknown as { localName: string };
-        if (target.localName == "input") {
+        if (this.isEditableKeyboardTarget(e.target)) {
             return;
         }
+
+        if (e.type === "keydown" && !this.isEventInsideInteractiveSurface(e.target)) {
+            return;
+        }
+
+        if (
+            e.type === "keyup" &&
+            LGraphCanvasInput.active_canvas !== (this as any)
+        ) {
+            return;
+        }
+
+        this.markAsActiveCanvas();
+
+        let block_default = false;
+        let node_consumed = false;
+        const commandKey = e.metaKey || e.ctrlKey;
 
         if (e.type == "keydown") {
             if (e.keyCode == 32) {
@@ -1814,20 +2089,30 @@ export class LGraphCanvasInput extends LGraphCanvasLifecycle {
             }
 
             // select all Control A
-            if (e.keyCode == 65 && e.ctrlKey) {
+            if (e.keyCode == 65 && commandKey) {
                 this.selectNodes();
                 block_default = true;
             }
 
-            if (e.keyCode === 67 && (e.metaKey || e.ctrlKey) && !e.shiftKey) {
+            if (e.keyCode === 67 && commandKey && !e.shiftKey) {
                 // copy
-                if (this.selected_nodes) {
-                    this.copyToClipboard();
-                    block_default = true;
-                }
+                this.copyToClipboard();
+                block_default = true;
             }
 
-            if (e.keyCode === 86 && (e.metaKey || e.ctrlKey)) {
+            if (e.keyCode === 88 && commandKey && !e.shiftKey) {
+                // cut
+                this.cutSelection();
+                block_default = true;
+            }
+
+            if (e.keyCode === 68 && commandKey && !e.shiftKey) {
+                // duplicate
+                this.duplicateSelection();
+                block_default = true;
+            }
+
+            if (e.keyCode === 86 && commandKey) {
                 // paste
                 this.pasteFromClipboard(e.shiftKey);
                 block_default = true;
@@ -1835,10 +2120,8 @@ export class LGraphCanvasInput extends LGraphCanvasLifecycle {
 
             // delete or backspace
             if (e.keyCode == 46 || e.keyCode == 8) {
-                if (target.localName != "input" && target.localName != "textarea") {
-                    this.deleteSelectedNodes();
-                    block_default = true;
-                }
+                this.deleteSelectedNodes();
+                block_default = true;
             }
 
             node_consumed = this.dispatchNodeKeyHook(this.selectedNodesRef(), "onKeyDown", e);
@@ -1861,58 +2144,15 @@ export class LGraphCanvasInput extends LGraphCanvasLifecycle {
     }
 
     copyToClipboard(): void {
-        const clipboard_info: any = {
-            nodes: [],
-            links: [],
-        };
-        let index = 0;
-        const selected_nodes_array = [];
-        for (const i in this.selected_nodes) {
-            const node: any = this.selected_nodes[i];
-            if (node.clonable === false) {
-                continue;
-            }
-            node._relative_id = index;
-            selected_nodes_array.push(node);
-            index += 1;
+        const clipboardInfo = this.buildSelectionClipboardPayload();
+        if (!clipboardInfo) {
+            return;
         }
 
-        for (let i = 0; i < selected_nodes_array.length; ++i) {
-            const node = selected_nodes_array[i];
-            if (node.clonable === false) {
-                continue;
-            }
-            const cloned = node.clone();
-            if (!cloned) {
-                console.warn("node type not found: " + node.type);
-                continue;
-            }
-            clipboard_info.nodes.push(cloned.serialize());
-            if (node.inputs && node.inputs.length) {
-                for (let j = 0; j < node.inputs.length; ++j) {
-                    const input = node.inputs[j];
-                    if (!input || input.link == null) {
-                        continue;
-                    }
-                    const link_info = this.graph.links[input.link];
-                    if (!link_info) {
-                        continue;
-                    }
-                    const target_node = this.graph.getNodeById(link_info.origin_id);
-                    if (!target_node) {
-                        continue;
-                    }
-                    clipboard_info.links.push([
-                        target_node._relative_id,
-                        link_info.origin_slot,
-                        node._relative_id,
-                        link_info.target_slot,
-                        target_node.id,
-                    ]);
-                }
-            }
-        }
-        localStorage.setItem("litegrapheditor_clipboard", JSON.stringify(clipboard_info));
+        localStorage.setItem(
+            CLIPBOARD_STORAGE_KEY,
+            JSON.stringify(clipboardInfo)
+        );
     }
 
     pasteFromClipboard(isConnectUnselected = false): void {
@@ -1921,74 +2161,23 @@ export class LGraphCanvasInput extends LGraphCanvasLifecycle {
         if (!LiteGraph.ctrl_shift_v_paste_connect_unselected_outputs && isConnectUnselected) {
             return;
         }
-        const data = localStorage.getItem("litegrapheditor_clipboard");
+        const data = localStorage.getItem(CLIPBOARD_STORAGE_KEY);
         if (!data) {
             return;
         }
 
-        this.graph.beforeChange();
-
-        // create nodes
-        const clipboard_info = JSON.parse(data);
-        let posMin: Vector2 | false = false;
-        for (let i = 0; i < clipboard_info.nodes.length; ++i) {
-            if (posMin) {
-                if (posMin[0] > clipboard_info.nodes[i].pos[0]) {
-                    posMin[0] = clipboard_info.nodes[i].pos[0];
-                }
-                if (posMin[1] > clipboard_info.nodes[i].pos[1]) {
-                    posMin[1] = clipboard_info.nodes[i].pos[1];
-                }
-            } else {
-                posMin = [clipboard_info.nodes[i].pos[0], clipboard_info.nodes[i].pos[1]];
-            }
+        let clipboardInfo: ClipboardPayload | null = null;
+        try {
+            clipboardInfo = JSON.parse(data) as ClipboardPayload;
+        } catch (error) {
+            console.warn("Invalid clipboard payload", error);
+            return;
         }
 
-        const nodes = [];
-        for (let i = 0; i < clipboard_info.nodes.length; ++i) {
-            const node_data = clipboard_info.nodes[i];
-            const node = LiteGraph.createNode(node_data.type);
-            if (node) {
-                node.configure(node_data);
-                nodes.push(node);
-            }
-        }
-
-        const sourceMinPos: Vector2 = posMin || [0, 0];
-        let deltaX = this.graph_mouse[0] - sourceMinPos[0];
-        let deltaY = this.graph_mouse[1] - sourceMinPos[1];
-        [deltaX, deltaY] = this.clampNodeMoveDelta(nodes, deltaX, deltaY);
-
-        for (let i = 0; i < nodes.length; ++i) {
-            const node = nodes[i];
-            node.pos[0] += deltaX;
-            node.pos[1] += deltaY;
-            this.graph.add(node, { doProcessChange: false });
-        }
-
-        // create links
-        for (let i = 0; i < clipboard_info.links.length; ++i) {
-            const link_info = clipboard_info.links[i];
-            let origin_node;
-            const origin_node_relative_id = link_info[0];
-            if (origin_node_relative_id != null) {
-                origin_node = nodes[origin_node_relative_id];
-            } else if (LiteGraph.ctrl_shift_v_paste_connect_unselected_outputs && isConnectUnselected) {
-                const origin_node_id = link_info[4];
-                if (origin_node_id) {
-                    origin_node = this.graph.getNodeById(origin_node_id);
-                }
-            }
-            const target_node = nodes[link_info[2]];
-            if (origin_node && target_node) {
-                origin_node.connect(link_info[1], target_node, link_info[3]);
-            } else {
-                console.warn("Warning, nodes missing on pasting");
-            }
-        }
-
-        this.selectNodes(nodes);
-        this.graph.afterChange();
+        this.pasteClipboardPayload(clipboardInfo, {
+            isConnectUnselected,
+            targetGraphPoint: this.resolvePasteTargetGraphPoint(),
+        });
     }
 
     /**

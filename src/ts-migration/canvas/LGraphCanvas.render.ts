@@ -290,18 +290,9 @@ export class LGraphCanvasRender extends LGraphCanvasInput {
         ctx.font = "10px Arial";
         ctx.fillStyle = "#888";
         ctx.textAlign = "left";
-        if (this.graph) {
-            ctx.fillText("T: " + this.graph.globaltime.toFixed(2) + "s", 5, 13 * 1);
-            ctx.fillText("I: " + this.graph.iteration, 5, 13 * 2);
-            ctx.fillText(
-                "N: " + this.graph._nodes.length + " [" + (this.visible_nodes ? this.visible_nodes.length : 0) + "]",
-                5,
-                13 * 3
-            );
-            ctx.fillText("V: " + this.graph._version, 5, 13 * 4);
-            ctx.fillText("FPS:" + this.fps.toFixed(2), 5, 13 * 5);
-        } else {
-            ctx.fillText("No graph selected", 5, 13 * 1);
+        const lines = this.getRenderInfoLines();
+        for (let i = 0; i < lines.length; ++i) {
+            ctx.fillText(lines[i], 5, 13 * (i + 1));
         }
         ctx.restore();
     }
