@@ -45,6 +45,13 @@ LiteGraph.allow_scripts = true;
 //test
 //editor.graphcanvas.viewport = [200,200,400,400];
 
+function runSceneBatch(graph, work)
+{
+	if(graph && graph.__litegraphRunSceneBatch)
+		return graph.__litegraphRunSceneBatch(work);
+	return work();
+}
+
 //create scene selector
 var elem = document.createElement("span");
 elem.id = "LGEditorTopBarSelector";
@@ -60,9 +67,11 @@ select.addEventListener("change", function(e){
 	if(url)
 		graph.load( url );
 	else if(option.callback)
-		option.callback();
+	{
+		runSceneBatch(graph, function(){ option.callback(); });
+	}
 	else
-		graph.clear();
+		runSceneBatch(graph, function(){ graph.clear(); });
 });
 
 elem.querySelector("#save").addEventListener("click",function(){

@@ -130,6 +130,13 @@ export class LGraphExecution extends LGraph {
         this.flushRuntimeExecutionRender();
     }
 
+    protected override flushInternalSceneBatch(): void {
+        if (this.consumeInternalSceneBatchExecutionOrder()) {
+            this.applyExecutionOrderNow();
+        }
+        super.flushInternalSceneBatch();
+    }
+
     /**
      * Run N steps (cycles) of the graph
      * @method runStep
@@ -246,6 +253,13 @@ export class LGraphExecution extends LGraph {
      * @method updateExecutionOrder
      */
     updateExecutionOrder(): void {
+        if (this.queueInternalSceneBatchExecutionOrder()) {
+            return;
+        }
+        this.applyExecutionOrderNow();
+    }
+
+    private applyExecutionOrderNow(): void {
         this._nodes_in_order = this.computeExecutionOrder(false);
         this._nodes_executable = [];
         for (let i = 0; i < this._nodes_in_order.length; ++i) {

@@ -94,6 +94,9 @@ export class LGraphIOEvents extends LGraphStructure {
     on_change?: (graph: LGraphIOEvents) => void;
 
     private _input_nodes: GraphNodeEventLike[] = [];
+    private batchedAfterChangeInfo: unknown = undefined;
+    private hasBatchedAfterChange = false;
+    private batchedBeforeChangeEmitted = false;
 
     private getNodesInEventOrder(): GraphNodeEventLike[] {
         const ordered = this._nodes_in_order as unknown as GraphNodeEventLike[] | null;
@@ -189,6 +192,15 @@ export class LGraphIOEvents extends LGraphStructure {
                 );
             }
         }
+    }
+
+    override __litegraphBeginSceneBatch(): void {
+        if (!this.isInternalSceneBatchActive()) {
+            this.batchedAfterChangeInfo = undefined;
+            this.hasBatchedAfterChange = false;
+            this.batchedBeforeChangeEmitted = false;
+        }
+        super.__litegraphBeginSceneBatch();
     }
 
     onAction(action: string, param?: unknown, options?: unknown): void {
@@ -504,18 +516,23 @@ export class LGraphIOEvents extends LGraphStructure {
 
     // used for undo, called before any change is made to the graph
     beforeChange(info?: unknown): void {
-        if (this.onBeforeChange) {
-            this.onBeforeChange(this, info as GraphNodeEventLike | undefined);
+        if (this.isInternalSceneBatchActive()) {
+            if (this.batchedBeforeChangeEmitted) {
+                return;
+            }
+            this.batchedBeforeChangeEmitted = true;
         }
-        this.sendActionToCanvas("onBeforeChange", this);
+        this.dispatchBeforeChange(info);
     }
 
     // used to resend actions, called after any change is made to the graph
     afterChange(info?: unknown): void {
-        if (this.onAfterChange) {
-            this.onAfterChange(this, info as GraphNodeEventLike | undefined);
+        if (this.isInternalSceneBatchActive()) {
+            this.batchedAfterChangeInfo = info;
+            this.hasBatchedAfterChange = true;
+            return;
         }
-        this.sendActionToCanvas("onAfterChange", this);
+        this.dispatchAfterChange(info);
     }
 
     connectionChange(node: GraphNodeEventLike, _link_info?: unknown): void {
@@ -524,6 +541,9 @@ export class LGraphIOEvents extends LGraphStructure {
             this.onConnectionChange(node);
         }
         this._version++;
+        if (this.queueInternalSceneBatchCanvasAction("onConnectionChange")) {
+            return;
+        }
         this.sendActionToCanvas("onConnectionChange");
     }
 
@@ -564,6 +584,60 @@ export class LGraphIOEvents extends LGraphStructure {
 
     /* Called when something visually changed (not the graph!) */
     change(): void {
+        if (this.queueInternalSceneBatchChange()) {
+            return;
+        }
+        this.dispatchChange();
+    }
+
+    setDirtyCanvas(fg: boolean, bg?: boolean): void {
+        if (this.queueInternalSceneBatchDirty(fg, bg)) {
+            return;
+        }
+        this.sendActionToCanvas("setDirty", [fg, bg]);
+    }
+
+    protected override flushInternalSceneBatch(): void {
+        super.flushInternalSceneBatch();
+
+        const queuedCanvasActions = this.consumeInternalSceneBatchCanvasActions();
+        for (let i = 0; i < queuedCanvasActions.length; ++i) {
+            this.sendActionToCanvas(queuedCanvasActions[i]);
+        }
+
+        if (this.hasBatchedAfterChange) {
+            const info = this.batchedAfterChangeInfo;
+            this.batchedAfterChangeInfo = undefined;
+            this.hasBatchedAfterChange = false;
+            this.dispatchAfterChange(info);
+        }
+
+        if (this.consumeInternalSceneBatchChange()) {
+            this.dispatchChange();
+            return;
+        }
+
+        const dirtyState = this.consumeInternalSceneBatchDirty();
+        if (dirtyState) {
+            this.sendActionToCanvas("setDirty", dirtyState);
+        }
+    }
+
+    private dispatchBeforeChange(info?: unknown): void {
+        if (this.onBeforeChange) {
+            this.onBeforeChange(this, info as GraphNodeEventLike | undefined);
+        }
+        this.sendActionToCanvas("onBeforeChange", this);
+    }
+
+    private dispatchAfterChange(info?: unknown): void {
+        if (this.onAfterChange) {
+            this.onAfterChange(this, info as GraphNodeEventLike | undefined);
+        }
+        this.sendActionToCanvas("onAfterChange", this);
+    }
+
+    private dispatchChange(): void {
         if (resolveIOEventsHost(this).debug) {
             console.log("Graph changed");
         }
@@ -571,9 +645,5 @@ export class LGraphIOEvents extends LGraphStructure {
         if (this.on_change) {
             this.on_change(this);
         }
-    }
-
-    setDirtyCanvas(fg: boolean, bg?: boolean): void {
-        this.sendActionToCanvas("setDirty", [fg, bg]);
     }
 }

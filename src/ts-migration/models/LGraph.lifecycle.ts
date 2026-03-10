@@ -123,6 +123,12 @@ export class LGraph {
     protected readonly runtime_dirty_node_ids = new Set<number | string>();
     protected readonly runtime_state_touched_node_keys = new Set<string>();
     protected readonly runtime_state_touched_node_id_list: string[] = [];
+    protected internal_scene_batch_depth = 0;
+    protected internal_scene_batch_execution_order_dirty = false;
+    protected internal_scene_batch_change_requested = false;
+    protected internal_scene_batch_dirty_foreground = false;
+    protected internal_scene_batch_dirty_background = false;
+    protected readonly internal_scene_batch_canvas_actions = new Set<string>();
 
     onPlayEvent?: () => void;
     onStopEvent?: () => void;
@@ -404,6 +410,118 @@ export class LGraph {
 
     protected afterExecutionTick(): void {
         // implemented by execution host when runtime-side flushing is needed
+    }
+
+    __litegraphBeginSceneBatch(): void {
+        if (this.internal_scene_batch_depth === 0) {
+            this.internal_scene_batch_execution_order_dirty = false;
+            this.internal_scene_batch_change_requested = false;
+            this.internal_scene_batch_dirty_foreground = false;
+            this.internal_scene_batch_dirty_background = false;
+            this.internal_scene_batch_canvas_actions.clear();
+        }
+        this.internal_scene_batch_depth += 1;
+    }
+
+    __litegraphEndSceneBatch(): void {
+        if (this.internal_scene_batch_depth <= 0) {
+            return;
+        }
+        this.internal_scene_batch_depth -= 1;
+        if (this.internal_scene_batch_depth !== 0) {
+            return;
+        }
+
+        this.flushInternalSceneBatch();
+        this.internal_scene_batch_execution_order_dirty = false;
+        this.internal_scene_batch_change_requested = false;
+        this.internal_scene_batch_dirty_foreground = false;
+        this.internal_scene_batch_dirty_background = false;
+        this.internal_scene_batch_canvas_actions.clear();
+    }
+
+    __litegraphRunSceneBatch<T>(work: () => T): T {
+        this.__litegraphBeginSceneBatch();
+        try {
+            return work();
+        } finally {
+            this.__litegraphEndSceneBatch();
+        }
+    }
+
+    protected isInternalSceneBatchActive(): boolean {
+        return this.internal_scene_batch_depth > 0;
+    }
+
+    protected queueInternalSceneBatchExecutionOrder(): boolean {
+        if (!this.isInternalSceneBatchActive()) {
+            return false;
+        }
+        this.internal_scene_batch_execution_order_dirty = true;
+        return true;
+    }
+
+    protected consumeInternalSceneBatchExecutionOrder(): boolean {
+        const pending = this.internal_scene_batch_execution_order_dirty;
+        this.internal_scene_batch_execution_order_dirty = false;
+        return pending;
+    }
+
+    protected queueInternalSceneBatchChange(): boolean {
+        if (!this.isInternalSceneBatchActive()) {
+            return false;
+        }
+        this.internal_scene_batch_change_requested = true;
+        return true;
+    }
+
+    protected consumeInternalSceneBatchChange(): boolean {
+        const pending = this.internal_scene_batch_change_requested;
+        this.internal_scene_batch_change_requested = false;
+        return pending;
+    }
+
+    protected queueInternalSceneBatchDirty(
+        dirtyForeground: boolean,
+        dirtyBackground?: boolean
+    ): boolean {
+        if (!this.isInternalSceneBatchActive()) {
+            return false;
+        }
+        this.internal_scene_batch_dirty_foreground =
+            this.internal_scene_batch_dirty_foreground || dirtyForeground === true;
+        this.internal_scene_batch_dirty_background =
+            this.internal_scene_batch_dirty_background || dirtyBackground === true;
+        return true;
+    }
+
+    protected consumeInternalSceneBatchDirty(): [boolean, boolean] | null {
+        const dirtyForeground = this.internal_scene_batch_dirty_foreground;
+        const dirtyBackground = this.internal_scene_batch_dirty_background;
+        this.internal_scene_batch_dirty_foreground = false;
+        this.internal_scene_batch_dirty_background = false;
+        if (!dirtyForeground && !dirtyBackground) {
+            return null;
+        }
+        return [dirtyForeground, dirtyBackground];
+    }
+
+    protected queueInternalSceneBatchCanvasAction(action: string): boolean {
+        if (!this.isInternalSceneBatchActive()) {
+            return false;
+        }
+        this.internal_scene_batch_canvas_actions.add(action);
+        return true;
+    }
+
+    protected consumeInternalSceneBatchCanvasActions(): string[] {
+        const actions = Array.from(this.internal_scene_batch_canvas_actions);
+        this.internal_scene_batch_canvas_actions.clear();
+        return actions;
+    }
+
+    protected flushInternalSceneBatch(): void {
+        // implemented by derived graph hosts that coalesce graph-side work
     }
 
     change(): void {

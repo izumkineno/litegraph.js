@@ -301,7 +301,9 @@ export class LGraphStructure extends LGraphExecution {
         }
 
         // close panels
-        this.sendActionToCanvas("checkPanels");
+        if (!this.queueInternalSceneBatchCanvasAction("checkPanels")) {
+            this.sendActionToCanvas("checkPanels");
+        }
 
         this.setDirtyCanvas(true, true);
         this.afterChange(); // sure? - almost sure is wrong

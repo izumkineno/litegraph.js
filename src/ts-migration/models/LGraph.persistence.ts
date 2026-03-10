@@ -109,30 +109,41 @@ export class LGraphPersistence extends LGraphIOEvents {
         const host = resolvePersistenceHost(this);
         const LGraphGroupCtor = host.LGraphGroup as new () => GraphGroupPersistenceLike;
         let error = false;
+        const graphWithSceneBatch =
+            this as unknown as LGraphIOEvents & {
+                __litegraphBeginSceneBatch?: () => void;
+                __litegraphEndSceneBatch?: () => void;
+            };
 
-        deserializeGraphData(
-            this as unknown as GraphDeserializeTarget,
-            repaired.data,
-            {
-                createLink: () => new LLink(0, "", 0, 0, 0, 0),
-                createNode: (nodeData) => {
-                    const result = createNodeWithSerializationRepair(
-                        host,
-                        nodeData
-                    );
-                    if (result.usedFallback) {
-                        error = true;
-                        if (host.debug) {
-                            console.log(
-                                "Node not found or has errors: " + nodeData.type
-                            );
+        graphWithSceneBatch.__litegraphBeginSceneBatch?.();
+        try {
+            deserializeGraphData(
+                this as unknown as GraphDeserializeTarget,
+                repaired.data,
+                {
+                    createLink: () => new LLink(0, "", 0, 0, 0, 0),
+                    createNode: (nodeData) => {
+                        const result = createNodeWithSerializationRepair(
+                            host,
+                            nodeData
+                        );
+                        if (result.usedFallback) {
+                            error = true;
+                            if (host.debug) {
+                                console.log(
+                                    "Node not found or has errors: " +
+                                        nodeData.type
+                                );
+                            }
                         }
-                    }
-                    return result.node;
-                },
-                createGroup: () => new LGraphGroupCtor(),
-            }
-        );
+                        return result.node;
+                    },
+                    createGroup: () => new LGraphGroupCtor(),
+                }
+            );
+        } finally {
+            graphWithSceneBatch.__litegraphEndSceneBatch?.();
+        }
 
         return error;
     }

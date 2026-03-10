@@ -83,6 +83,10 @@ interface EnsureNodeHostOptions {
     readonly updateLinks?: boolean;
 }
 
+interface EnsureGroupHostOptions {
+    readonly repaint?: boolean;
+}
+
 function toMutationKey(id: GraphMutationNodeId | GraphMutationLinkId): string {
     return String(id);
 }
@@ -266,6 +270,14 @@ export class SceneSyncController {
         this.unsubscribers.push(
             this.bus.on("graph:clear", () => {
                 this.clearScene();
+            }),
+            this.bus.on("graph:hydrate", ({ sceneAlreadyCleared }) => {
+                if (sceneAlreadyCleared) {
+                    this.hydrateFromGraph();
+                    this.requestSceneRender();
+                    return;
+                }
+                this.resyncFromGraph();
             }),
             this.bus.on("node:add", ({ node }) => {
                 this.ensureNodeHost(node);
@@ -498,8 +510,13 @@ export class SceneSyncController {
         const existingGroups = Array.isArray(this.graph._groups)
             ? this.graph._groups
             : [];
+        const hydratedGroupHosts: GroupHost[] = [];
         for (let i = 0; i < existingGroups.length; ++i) {
-            this.ensureGroupHost(existingGroups[i]);
+            hydratedGroupHosts.push(
+                this.ensureGroupHost(existingGroups[i], {
+                    repaint: false,
+                })
+            );
         }
 
         const existingNodes = Array.isArray(this.graph._nodes)
@@ -508,12 +525,24 @@ export class SceneSyncController {
         for (let i = 0; i < existingNodes.length; ++i) {
             this.ensureNodeHost(existingNodes[i], {
                 updateLinks: false,
+                repaint: false,
             });
         }
 
         for (const [linkId, link] of Object.entries(this.graph.links || {})) {
             this.ensureLinkView(linkId, link);
         }
+
+        for (let i = 0; i < hydratedGroupHosts.length; ++i) {
+            hydratedGroupHosts[i].repaint();
+        }
+        this.repaintAllNodeHosts(false);
+    }
+
+    private resyncFromGraph(): void {
+        this.clearScene();
+        this.hydrateFromGraph();
+        this.requestSceneRender();
     }
 
     private clearScene(): void {
@@ -624,11 +653,17 @@ export class SceneSyncController {
         return nodeHost;
     }
 
-    private ensureGroupHost(group: GraphMutationGroupLike): GroupHost {
+    private ensureGroupHost(
+        group: GraphMutationGroupLike,
+        options?: EnsureGroupHostOptions
+    ): GroupHost {
+        const shouldRepaint = options?.repaint !== false;
         const existingHost = this.groupHosts.get(group);
         if (existingHost) {
             this.installGroupDirtyBridge(group);
-            existingHost.repaint();
+            if (shouldRepaint) {
+                existingHost.repaint();
+            }
             return existingHost;
         }
 
@@ -636,8 +671,10 @@ export class SceneSyncController {
         this.groupHosts.set(group, groupHost);
         this.installGroupDirtyBridge(group);
         this.appHost.groupLayer.add(groupHost.root);
-        groupHost.repaint();
-        this.requestSceneRender(groupHost.captureRenderBounds());
+        if (shouldRepaint) {
+            groupHost.repaint();
+            this.requestSceneRender(groupHost.captureRenderBounds());
+        }
         return groupHost;
     }
 

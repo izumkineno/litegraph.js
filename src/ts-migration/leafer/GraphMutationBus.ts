@@ -51,11 +51,18 @@ export interface GraphMutationGraphLike extends GraphLinksProxyGraphLike {
     add?: (...args: unknown[]) => unknown;
     remove?: (...args: unknown[]) => unknown;
     clear?: (...args: unknown[]) => unknown;
+    __litegraphBeginSceneBatch?: () => void;
+    __litegraphEndSceneBatch?: () => void;
+    __litegraphRunSceneBatch?: <T>(work: () => T) => T;
 }
 
 export interface GraphMutationEventMap {
     "graph:clear": {
         graph: GraphMutationGraphLike;
+    };
+    "graph:hydrate": {
+        graph: GraphMutationGraphLike;
+        sceneAlreadyCleared: boolean;
     };
     "node:add": {
         graph: GraphMutationGraphLike;
@@ -115,22 +122,34 @@ interface GraphInstrumentationState {
     graph: GraphMutationGraphLike;
     refCount: number;
     listeners: Set<GraphInstrumentationListener>;
+    batchDepth: number;
+    pendingHydrate: boolean;
+    batchClearedScene: boolean;
     addBridge: (...args: unknown[]) => unknown;
     removeBridge: (...args: unknown[]) => unknown;
     nodeAddedBridge: (node: GraphMutationNodeLike) => void;
     nodeRemovedBridge: (node: GraphMutationNodeLike) => void;
     clearBridge: (...args: unknown[]) => unknown;
+    beginSceneBatch: () => void;
+    endSceneBatch: () => void;
+    runSceneBatch: <T>(work: () => T) => T;
     linksProxy: GraphLinksProxy;
     hadOwnAdd: boolean;
     hadOwnRemove: boolean;
     hadOwnOnNodeAdded: boolean;
     hadOwnOnNodeRemoved: boolean;
     hadOwnClear: boolean;
+    hadOwnBeginSceneBatch: boolean;
+    hadOwnEndSceneBatch: boolean;
+    hadOwnRunSceneBatch: boolean;
     originalAdd?: (...args: unknown[]) => unknown;
     originalRemove?: (...args: unknown[]) => unknown;
     userOnNodeAdded?: ((node: GraphMutationNodeLike) => void) | null;
     userOnNodeRemoved?: ((node: GraphMutationNodeLike) => void) | null;
     originalClear?: (...args: unknown[]) => unknown;
+    originalBeginSceneBatch?: (() => void) | null;
+    originalEndSceneBatch?: (() => void) | null;
+    originalRunSceneBatch?: (<T>(work: () => T) => T) | null;
 }
 
 const instrumentedGraphs = new WeakMap<
@@ -143,6 +162,14 @@ function dispatchGraphMutation<TEvent extends GraphMutationEventName>(
     eventName: TEvent,
     payload: GraphMutationEventMap[TEvent]
 ): void {
+    if (eventName === "graph:clear" && state.batchDepth > 0) {
+        state.batchClearedScene = true;
+    }
+    if (state.batchDepth > 0 && eventName !== "graph:clear") {
+        state.pendingHydrate = true;
+        return;
+    }
+
     for (const listener of Array.from(state.listeners)) {
         listener(eventName, payload);
     }
@@ -164,9 +191,15 @@ function restoreGraphHook(
 
 function restoreGraphMethod(
     graph: GraphMutationGraphLike,
-    key: "add" | "remove" | "clear",
+    key:
+        | "add"
+        | "remove"
+        | "clear"
+        | "__litegraphBeginSceneBatch"
+        | "__litegraphEndSceneBatch"
+        | "__litegraphRunSceneBatch",
     hadOwnProperty: boolean,
-    originalMethod?: ((...args: unknown[]) => unknown) | null
+    originalMethod?: unknown
 ): void {
     delete (graph as unknown as Record<string, unknown>)[key];
 
@@ -236,6 +269,24 @@ function teardownGraphInstrumentation(
         state.hadOwnClear,
         state.originalClear || null
     );
+    restoreGraphMethod(
+        graph,
+        "__litegraphBeginSceneBatch",
+        state.hadOwnBeginSceneBatch,
+        state.originalBeginSceneBatch || null
+    );
+    restoreGraphMethod(
+        graph,
+        "__litegraphEndSceneBatch",
+        state.hadOwnEndSceneBatch,
+        state.originalEndSceneBatch || null
+    );
+    restoreGraphMethod(
+        graph,
+        "__litegraphRunSceneBatch",
+        state.hadOwnRunSceneBatch,
+        state.originalRunSceneBatch || null
+    );
 
     instrumentedGraphs.delete(graph);
 }
@@ -252,6 +303,9 @@ function instrumentGraph(
     state.graph = graph;
     state.refCount = 0;
     state.listeners = new Set<GraphInstrumentationListener>();
+    state.batchDepth = 0;
+    state.pendingHydrate = false;
+    state.batchClearedScene = false;
     state.hadOwnAdd = Object.prototype.hasOwnProperty.call(graph, "add");
     state.hadOwnRemove = Object.prototype.hasOwnProperty.call(graph, "remove");
     state.hadOwnOnNodeAdded = Object.prototype.hasOwnProperty.call(
@@ -263,6 +317,18 @@ function instrumentGraph(
         "onNodeRemoved"
     );
     state.hadOwnClear = Object.prototype.hasOwnProperty.call(graph, "clear");
+    state.hadOwnBeginSceneBatch = Object.prototype.hasOwnProperty.call(
+        graph,
+        "__litegraphBeginSceneBatch"
+    );
+    state.hadOwnEndSceneBatch = Object.prototype.hasOwnProperty.call(
+        graph,
+        "__litegraphEndSceneBatch"
+    );
+    state.hadOwnRunSceneBatch = Object.prototype.hasOwnProperty.call(
+        graph,
+        "__litegraphRunSceneBatch"
+    );
     state.originalAdd =
         typeof graph.add === "function" ? graph.add.bind(graph) : undefined;
     state.originalRemove =
@@ -273,6 +339,18 @@ function instrumentGraph(
         typeof graph.onNodeRemoved === "function" ? graph.onNodeRemoved : null;
     state.originalClear =
         typeof graph.clear === "function" ? graph.clear.bind(graph) : undefined;
+    state.originalBeginSceneBatch =
+        typeof graph.__litegraphBeginSceneBatch === "function"
+            ? graph.__litegraphBeginSceneBatch.bind(graph)
+            : null;
+    state.originalEndSceneBatch =
+        typeof graph.__litegraphEndSceneBatch === "function"
+            ? graph.__litegraphEndSceneBatch.bind(graph)
+            : null;
+    state.originalRunSceneBatch =
+        typeof graph.__litegraphRunSceneBatch === "function"
+            ? graph.__litegraphRunSceneBatch.bind(graph)
+            : null;
 
     state.addBridge = (...args: unknown[]) => {
         const result = state.originalAdd?.(...args);
@@ -329,6 +407,41 @@ function instrumentGraph(
         return result;
     };
 
+    state.beginSceneBatch = () => {
+        if (state.batchDepth === 0) {
+            state.pendingHydrate = false;
+            state.batchClearedScene = false;
+        }
+        state.originalBeginSceneBatch?.();
+        state.batchDepth += 1;
+    };
+
+    state.endSceneBatch = () => {
+        if (state.batchDepth <= 0) {
+            return;
+        }
+        state.batchDepth -= 1;
+        state.originalEndSceneBatch?.();
+        if (state.batchDepth === 0 && state.pendingHydrate) {
+            const sceneAlreadyCleared = state.batchClearedScene;
+            state.pendingHydrate = false;
+            state.batchClearedScene = false;
+            dispatchGraphMutation(state, "graph:hydrate", {
+                graph,
+                sceneAlreadyCleared,
+            });
+        }
+    };
+
+    state.runSceneBatch = <T>(work: () => T): T => {
+        state.beginSceneBatch();
+        try {
+            return work();
+        } finally {
+            state.endSceneBatch();
+        }
+    };
+
     Object.defineProperty(graph, "onNodeAdded", {
         configurable: true,
         enumerable: true,
@@ -360,6 +473,15 @@ function instrumentGraph(
         (graph as unknown as Record<string, unknown>).remove = state.removeBridge;
     }
     (graph as unknown as Record<string, unknown>).clear = state.clearBridge;
+    (
+        graph as unknown as Record<string, unknown>
+    ).__litegraphBeginSceneBatch = state.beginSceneBatch;
+    (
+        graph as unknown as Record<string, unknown>
+    ).__litegraphEndSceneBatch = state.endSceneBatch;
+    (
+        graph as unknown as Record<string, unknown>
+    ).__litegraphRunSceneBatch = state.runSceneBatch;
     state.linksProxy = new GraphLinksProxy(graph, {
         onLinkAdded: (linkId, link) => {
             dispatchGraphMutation(state, "link:add", {

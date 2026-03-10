@@ -49,6 +49,13 @@
         return JSON.parse(JSON.stringify(value));
     }
 
+    function runSceneBatch(graph, work) {
+        if (graph && typeof graph.__litegraphRunSceneBatch === "function") {
+            return graph.__litegraphRunSceneBatch(work);
+        }
+        return work();
+    }
+
     function round(value) {
         return Number(Number(value || 0).toFixed(4));
     }
@@ -660,13 +667,17 @@
     EditorBenchmark.prototype.createNodes = function(type, count) {
         var positions = this.buildGridPositions(count);
         var nodes = [];
-        for (var i = 0; i < count; i += 1) {
-            this.throwIfAborted();
-            var node = LiteGraph.createNode(type);
-            node.pos = positions[i];
-            this.graph.add(node);
-            nodes.push(node);
-        }
+        var graph = this.graph;
+        var that = this;
+        runSceneBatch(graph, function() {
+            for (var i = 0; i < count; i += 1) {
+                that.throwIfAborted();
+                var node = LiteGraph.createNode(type);
+                node.pos = positions[i];
+                graph.add(node);
+                nodes.push(node);
+            }
+        });
         this.graphcanvas.setDirty(true, true);
         this.graphcanvas.draw(true, true);
         return nodes;
@@ -704,10 +715,13 @@
         await nextFrame();
         var nodes = this.graph._nodes.slice();
         var removeStart = now();
-        for (var i = nodes.length - 1; i >= 0; i -= 1) {
-            this.throwIfAborted();
-            this.graph.remove(nodes[i]);
-        }
+        var that = this;
+        runSceneBatch(this.graph, function() {
+            for (var i = nodes.length - 1; i >= 0; i -= 1) {
+                that.throwIfAborted();
+                that.graph.remove(nodes[i]);
+            }
+        });
         var removeTotalMs = now() - removeStart;
         this.graphcanvas.setDirty(true, true);
         this.graphcanvas.draw(true, true);
@@ -743,40 +757,42 @@
         var totalNodes = preset.nodes;
         var tick = null;
         var links = 0;
+        runSceneBatch(graph, function() {
+            if (mode === "event-runtime") {
+                var stringSource = LiteGraph.createNode("basic/string");
+                stringSource.pos = [80, 200];
+                stringSource.properties.value = "{\"value\":1}";
+                graph.add(stringSource);
 
-        if (mode === "event-runtime") {
-            var stringSource = LiteGraph.createNode("basic/string");
-            stringSource.pos = [80, 200];
-            stringSource.properties.value = "{\"value\":1}";
-            graph.add(stringSource);
-
-            var parsers = [];
-            for (var i = 1; i < totalNodes; i += 1) {
-                var parser = LiteGraph.createNode("basic/jsonparse");
-                parser.pos = [80 + i * 160, 200];
-                graph.add(parser);
-                stringSource.connect(0, parser, 1);
-                links += 1;
-
-                if (parsers.length) {
-                    parsers[parsers.length - 1].connect(0, parser, 0);
+                var parsers = [];
+                for (var i = 1; i < totalNodes; i += 1) {
+                    var parser = LiteGraph.createNode("basic/jsonparse");
+                    parser.pos = [80 + i * 160, 200];
+                    graph.add(parser);
+                    stringSource.connect(0, parser, 1);
                     links += 1;
+
+                    if (parsers.length) {
+                        parsers[parsers.length - 1].connect(0, parser, 0);
+                        links += 1;
+                    }
+
+                    parsers.push(parser);
                 }
 
-                parsers.push(parser);
+                tick = function() {
+                    if (!parsers.length) {
+                        return;
+                    }
+                    stringSource.onExecute();
+                    for (var parserIndex = 0; parserIndex < parsers.length; parserIndex += 1) {
+                        parsers[parserIndex].onExecute();
+                    }
+                    parsers[0].parse();
+                };
+                return;
             }
 
-            tick = function() {
-                if (!parsers.length) {
-                    return;
-                }
-                stringSource.onExecute();
-                for (var parserIndex = 0; parserIndex < parsers.length; parserIndex += 1) {
-                    parsers[parserIndex].onExecute();
-                }
-                parsers[0].parse();
-            };
-        } else {
             var source = LiteGraph.createNode("basic/time");
             source.pos = [80, 200];
             graph.add(source);
@@ -796,9 +812,12 @@
             graph.add(sink);
             previous.connect(0, sink, 0);
             links += 1;
-        }
+        });
 
-        if (typeof graph.updateExecutionOrder === "function") {
+        if (
+            typeof graph.updateExecutionOrder === "function" &&
+            typeof graph.__litegraphRunSceneBatch !== "function"
+        ) {
             graph.updateExecutionOrder();
         }
         this.graphcanvas.setDirty(true, true);
