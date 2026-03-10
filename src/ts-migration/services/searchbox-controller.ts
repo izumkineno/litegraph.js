@@ -265,7 +265,16 @@ export function showSearchBoxController(
                 graphcanvas.graph.beforeChange?.();
                 const node = host.createNode?.(name);
                 if (node) {
-                    node.pos = graphcanvas.convertEventToCanvasOffset(event);
+                    const graphPoint = graphcanvas.convertEventToCanvasOffset(
+                        event
+                    );
+                    node.pos = graphcanvas.clampNodePosition
+                        ? graphcanvas.clampNodePosition(
+                              node,
+                              graphPoint[0],
+                              graphPoint[1]
+                          )
+                        : graphPoint;
                     graphcanvas.graph.add(node, false);
                 }
 

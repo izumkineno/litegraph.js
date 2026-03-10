@@ -140,6 +140,7 @@ export class LGraphCanvasMenuPanel
                     onSearchBoxSelection: this.onSearchBoxSelection,
                     onSearchBox: this.onSearchBox,
                     convertEventToCanvasOffset: this.convertEventToCanvasOffset.bind(this),
+                    clampNodePosition: this.clampNodePosition.bind(this),
                     focusCanvas: () => {
                         this.canvas?.focus();
                     },
@@ -272,6 +273,7 @@ export class LGraphCanvasMenuPanel
                 selectNodes: this.selectNodes.bind(this),
                 convertEventToCanvasOffset:
                     this.convertEventToCanvasOffset.bind(this),
+                clampNodePosition: this.clampNodePosition.bind(this),
                 closeSubgraph: this.closeSubgraph.bind(this),
                 showSubgraphPropertiesDialog:
                     this.showSubgraphPropertiesDialog.bind(this),

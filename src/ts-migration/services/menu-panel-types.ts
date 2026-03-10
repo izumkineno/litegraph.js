@@ -180,6 +180,11 @@ export interface SearchBoxControllerPort {
         graphcanvas: SearchBoxControllerPort
     ) => any[] | null;
     convertEventToCanvasOffset: (event?: MouseEvent) => [number, number];
+    clampNodePosition?: (
+        node: { pos: [number, number]; size: [number, number] },
+        x?: number,
+        y?: number
+    ) => [number, number];
     focusCanvas: () => void;
 }
 

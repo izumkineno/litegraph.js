@@ -2,6 +2,7 @@ import { Flow } from "@leafer-in/flow";
 import * as leafer from "leafer-ui";
 import { Group, Path, Rect, Text, UI } from "leafer-ui";
 
+import type { Vector2 } from "../types/core-types";
 import {
     MODERN_NODE_STATE_KEY,
     ModernNodeChangeMask,
@@ -768,6 +769,8 @@ export class ModernNodeHost implements NodeViewHost {
     private lastWidgetSignature = "";
     private lastActionPartSignature = "";
     private lastActionPartLayoutSignature = "";
+    private lastMeasuredNodeWidth = NaN;
+    private lastMeasuredNodeHeight = NaN;
     private portPresentationCacheVersion = 1;
     private portGeometryCacheVersion = 1;
     private portLifecycleContext:
@@ -812,6 +815,7 @@ export class ModernNodeHost implements NodeViewHost {
         const nextActionPartLayoutSignature = signatureOfActionPartLayouts(
             this.currentActionPartSchemas
         );
+        const nodeSizeChanged = this.didMeasuredNodeSizeChange();
         const shellGeometryChanged =
             signatureOfShellGeometry(previousShellState) !==
             signatureOfShellGeometry(this.shellState);
@@ -820,6 +824,7 @@ export class ModernNodeHost implements NodeViewHost {
             (changeMask &
                 (ModernNodeChangeMask.Layout | ModernNodeChangeMask.Ports)) !==
                 0 ||
+            nodeSizeChanged ||
             shellGeometryChanged ||
             this.lastWidgetSignature !== nextWidgetSignature ||
             this.lastActionPartLayoutSignature !== nextActionPartLayoutSignature;
@@ -863,6 +868,7 @@ export class ModernNodeHost implements NodeViewHost {
         }
         this.applyInteractionState();
         this.syncPosition();
+        this.syncMeasuredNodeSize();
         this.storeInspectableState();
     }
 
@@ -1095,25 +1101,37 @@ export class ModernNodeHost implements NodeViewHost {
         });
     }
 
-    updateResize(worldX: number, worldY: number): boolean {
+    updateResize(
+        worldX: number,
+        worldY: number,
+        clampSize?: (width: number, height: number) => Vector2
+    ): boolean {
         if (!this.resizeAnchor) {
             return false;
         }
 
-        const nextWidth = Math.max(
+        let nextWidth = Math.max(
             BODY_MIN_WIDTH,
             Math.round(
                 this.resizeAnchor.startWidth +
                     (worldX - this.resizeAnchor.startWorldX)
             )
         );
-        const nextHeight = Math.max(
+        let nextHeight = Math.max(
             BODY_MIN_HEIGHT,
             Math.round(
                 this.resizeAnchor.startHeight +
                     (worldY - this.resizeAnchor.startWorldY)
             )
         );
+        if (clampSize) {
+            const [clampedWidth, clampedHeight] = clampSize(
+                nextWidth,
+                nextHeight
+            );
+            nextWidth = Math.max(BODY_MIN_WIDTH, Math.round(clampedWidth));
+            nextHeight = Math.max(BODY_MIN_HEIGHT, Math.round(clampedHeight));
+        }
 
         if (
             nextWidth === toFiniteNumber(this.node.size?.[0]) &&
@@ -1484,6 +1502,26 @@ export class ModernNodeHost implements NodeViewHost {
             inputPorts: [],
             outputPorts: [],
         };
+    }
+
+    private didMeasuredNodeSizeChange(): boolean {
+        const width = toFiniteNumber(this.node.size?.[0], BODY_MIN_WIDTH);
+        const height = toFiniteNumber(this.node.size?.[1], BODY_MIN_HEIGHT);
+        return (
+            this.lastMeasuredNodeWidth !== width ||
+            this.lastMeasuredNodeHeight !== height
+        );
+    }
+
+    private syncMeasuredNodeSize(): void {
+        this.lastMeasuredNodeWidth = toFiniteNumber(
+            this.node.size?.[0],
+            BODY_MIN_WIDTH
+        );
+        this.lastMeasuredNodeHeight = toFiniteNumber(
+            this.node.size?.[1],
+            BODY_MIN_HEIGHT
+        );
     }
 
     private applyShellLayout(): void {

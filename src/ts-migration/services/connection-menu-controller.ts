@@ -20,6 +20,11 @@ export interface ConnectionMenuCanvasPort {
     allow_searchbox?: boolean;
     getCanvasWindow: () => Window;
     showSearchBox: (event?: MouseEvent, options?: any) => DialogLike;
+    clampNodePosition?: (
+        node: { pos: [number, number]; size: [number, number] },
+        x?: number,
+        y?: number
+    ) => [number, number];
 }
 
 export interface ConnectionMenuContext {
@@ -153,14 +158,17 @@ export function createDefaultNodeForSlotController(
     }
 
     context.graphcanvas.graph.add(newNode);
-    newNode.pos = [
+    const nextPos = [
         opts.position[0] +
             opts.posAdd[0] +
             (opts.posSizeFix[0] ? opts.posSizeFix[0] * newNode.size[0] : 0),
         opts.position[1] +
             opts.posAdd[1] +
             (opts.posSizeFix[1] ? opts.posSizeFix[1] * newNode.size[1] : 0),
-    ];
+    ] as [number, number];
+    newNode.pos = context.graphcanvas.clampNodePosition
+        ? context.graphcanvas.clampNodePosition(newNode, nextPos[0], nextPos[1])
+        : nextPos;
     if (isFrom) {
         opts.nodeFrom.connectByType(slotIndex, newNode, fromSlotType);
     } else {

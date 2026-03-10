@@ -45,10 +45,16 @@ interface LGraphCanvasOptions {
     skip_events?: boolean;
     autoresize?: boolean;
     viewport?: Vector4 | null;
+    worldBounds?: Vector4 | null;
     renderRuntime?: RenderRuntime;
 }
 
 type RenderRuntime = "legacy-canvas" | "leafer";
+
+interface PositionedRectLike {
+    pos?: Vector2 | Float32Array | number[] | null;
+    size?: Vector2 | Float32Array | number[] | null;
+}
 
 interface GraphLike {
     _subgraph_node?: unknown;
@@ -96,6 +102,26 @@ const pointerEventNameMaps: Record<string, Record<string, string>> = {
         lostpointercapture: "touchend",
     },
 };
+
+const DEFAULT_WORLD_BOUNDS = [
+    0,
+    0,
+    2048,
+    2048,
+] as Vector4;
+const WORLD_BOUNDS_CAMERA_RING = 160;
+
+function toFiniteNumber(value: unknown, fallback = 0): number {
+    const numericValue = Number(value);
+    return Number.isFinite(numericValue) ? numericValue : fallback;
+}
+
+function clampValue(value: number, min: number, max: number): number {
+    if (min > max) {
+        return (min + max) * 0.5;
+    }
+    return Math.min(max, Math.max(min, value));
+}
 
 function resolvePointerEventName(
     method: string,
@@ -320,6 +346,7 @@ export class LGraphCanvasLifecycle extends LGraphCanvasStatic {
     visible_area: Float32Array;
     visible_links: unknown[];
     viewport: Vector4 | null;
+    world_bounds: Vector4 | null;
     autoresize?: boolean;
 
     frame: number;
@@ -462,6 +489,11 @@ export class LGraphCanvasLifecycle extends LGraphCanvasStatic {
         this.visible_area = this.ds.visible_area as unknown as Float32Array;
         this.visible_links = [];
         this.viewport = this.options.viewport || null;
+        this.world_bounds = this.normalizeWorldBounds(
+            options && Object.prototype.hasOwnProperty.call(options, "worldBounds")
+                ? options.worldBounds || null
+                : DEFAULT_WORLD_BOUNDS
+        );
 
         this.canvas = null;
         this.canvasHostElement = null;
@@ -795,7 +827,8 @@ export class LGraphCanvasLifecycle extends LGraphCanvasStatic {
         });
         this.viewportController = new ViewportController(
             this.leaferAppHost,
-            this.ds
+            this.ds,
+            () => this.getWorldBounds()
         );
         this.attachSceneSyncBackbone();
         this.viewportController.setSceneSyncController(this.sceneSyncController);
@@ -864,6 +897,7 @@ export class LGraphCanvasLifecycle extends LGraphCanvasStatic {
                 read_only?: boolean;
                 align_to_grid?: boolean;
                 onNodeMoved?: ((node: GraphMutationNodeLike) => void) | null;
+                getWorldBounds?: () => Vector4 | null;
                 processMouseDown: (event: unknown) => boolean | undefined;
                 processMouseMove: (event: unknown) => boolean | undefined;
                 processMouseUp: (event: unknown) => boolean | undefined;
@@ -877,6 +911,232 @@ export class LGraphCanvasLifecycle extends LGraphCanvasStatic {
             this.sceneSyncController
         );
         this.viewportController?.setSceneSyncController(this.sceneSyncController);
+    }
+
+    getWorldBounds(): Vector4 | null {
+        if (!this.world_bounds) {
+            return null;
+        }
+        return [
+            this.world_bounds[0],
+            this.world_bounds[1],
+            this.world_bounds[2],
+            this.world_bounds[3],
+        ] as Vector4;
+    }
+
+    clampCanvasOffset(
+        offsetX: number,
+        offsetY: number,
+        scale = this.ds.scale,
+        viewportWidth?: number,
+        viewportHeight?: number
+    ): Vector2 {
+        if (!this.world_bounds) {
+            return [offsetX, offsetY];
+        }
+
+        const bounds = this.world_bounds;
+        const safeScale = Math.max(0.0001, toFiniteNumber(scale, 1));
+        const size = this.resolveViewportPixelSize();
+        const viewWidth = Math.max(
+            1,
+            toFiniteNumber(viewportWidth, size[0]) / safeScale
+        );
+        const viewHeight = Math.max(
+            1,
+            toFiniteNumber(viewportHeight, size[1]) / safeScale
+        );
+        const minOffsetX =
+            viewWidth - (bounds[0] + bounds[2] + WORLD_BOUNDS_CAMERA_RING);
+        const maxOffsetX = WORLD_BOUNDS_CAMERA_RING - bounds[0];
+        const minOffsetY =
+            viewHeight - (bounds[1] + bounds[3] + WORLD_BOUNDS_CAMERA_RING);
+        const maxOffsetY = WORLD_BOUNDS_CAMERA_RING - bounds[1];
+
+        return [
+            clampValue(toFiniteNumber(offsetX), minOffsetX, maxOffsetX),
+            clampValue(toFiniteNumber(offsetY), minOffsetY, maxOffsetY),
+        ];
+    }
+
+    clampWorldPoint(x: number, y: number): Vector2 {
+        return this.clampRectPosition(x, y, 0, 0);
+    }
+
+    clampNodePosition(node: PositionedRectLike, x?: number, y?: number): Vector2 {
+        const width = toFiniteNumber(node?.size?.[0]);
+        const height = toFiniteNumber(node?.size?.[1]);
+        const left = x === undefined ? toFiniteNumber(node?.pos?.[0]) : x;
+        const top = y === undefined ? toFiniteNumber(node?.pos?.[1]) : y;
+        return this.clampRectPosition(left, top, width, height);
+    }
+
+    clampNodeMoveDelta(
+        nodes: readonly PositionedRectLike[],
+        deltaX: number,
+        deltaY: number
+    ): Vector2 {
+        return this.clampAggregateMoveDelta(
+            nodes,
+            toFiniteNumber(deltaX),
+            toFiniteNumber(deltaY)
+        );
+    }
+
+    clampGroupMoveDelta(
+        group: PositionedRectLike & { _nodes?: readonly PositionedRectLike[] },
+        deltaX: number,
+        deltaY: number,
+        ignoreNodes = false
+    ): Vector2 {
+        const items: PositionedRectLike[] = [group];
+        if (!ignoreNodes && Array.isArray(group._nodes)) {
+            items.push(...group._nodes);
+        }
+
+        return this.clampAggregateMoveDelta(
+            items,
+            toFiniteNumber(deltaX),
+            toFiniteNumber(deltaY)
+        );
+    }
+
+    clampNodeSize(
+        node: PositionedRectLike,
+        width: number,
+        height: number
+    ): Vector2 {
+        if (!this.world_bounds) {
+            return [Math.round(width), Math.round(height)];
+        }
+
+        const bounds = this.world_bounds;
+        const left = toFiniteNumber(node?.pos?.[0]);
+        const top = toFiniteNumber(node?.pos?.[1]);
+        const maxWidth = bounds[0] + bounds[2] - left;
+        const maxHeight = bounds[1] + bounds[3] - top;
+        const clampedWidth =
+            maxWidth > 0
+                ? Math.min(toFiniteNumber(width), maxWidth)
+                : toFiniteNumber(width);
+        const clampedHeight =
+            maxHeight > 0
+                ? Math.min(toFiniteNumber(height), maxHeight)
+                : toFiniteNumber(height);
+
+        return [Math.round(clampedWidth), Math.round(clampedHeight)];
+    }
+
+    clampGroupSize(
+        group: PositionedRectLike,
+        width: number,
+        height: number
+    ): Vector2 {
+        return this.clampNodeSize(group, width, height);
+    }
+
+    private normalizeWorldBounds(bounds?: Vector4 | null): Vector4 | null {
+        if (!bounds || bounds.length < 4) {
+            return null;
+        }
+
+        const x = toFiniteNumber(bounds[0]);
+        const y = toFiniteNumber(bounds[1]);
+        const width = Math.max(1, toFiniteNumber(bounds[2], 1));
+        const height = Math.max(1, toFiniteNumber(bounds[3], 1));
+        return [x, y, width, height] as Vector4;
+    }
+
+    private resolveViewportPixelSize(): Vector2 {
+        const target =
+            this.canvasHostElement ||
+            this.ds.element ||
+            this.canvas ||
+            null;
+        const rect = target?.getBoundingClientRect?.();
+        const width = Math.max(
+            1,
+            toFiniteNumber(rect?.width, (target as CanvasLike | null)?.width || 0)
+        );
+        const height = Math.max(
+            1,
+            toFiniteNumber(rect?.height, (target as CanvasLike | null)?.height || 0)
+        );
+        return [width, height];
+    }
+
+    private clampRectPosition(
+        x: number,
+        y: number,
+        width: number,
+        height: number
+    ): Vector2 {
+        if (!this.world_bounds) {
+            return [toFiniteNumber(x), toFiniteNumber(y)];
+        }
+
+        const bounds = this.world_bounds;
+        const minX = bounds[0];
+        const minY = bounds[1];
+        const maxX = bounds[0] + bounds[2] - Math.max(0, toFiniteNumber(width));
+        const maxY = bounds[1] + bounds[3] - Math.max(0, toFiniteNumber(height));
+
+        return [
+            clampValue(toFiniteNumber(x), minX, maxX),
+            clampValue(toFiniteNumber(y), minY, maxY),
+        ];
+    }
+
+    private clampAggregateMoveDelta(
+        items: readonly PositionedRectLike[],
+        deltaX: number,
+        deltaY: number
+    ): Vector2 {
+        if (!this.world_bounds || items.length === 0) {
+            return [deltaX, deltaY];
+        }
+
+        let minLeft = Infinity;
+        let minTop = Infinity;
+        let maxRight = -Infinity;
+        let maxBottom = -Infinity;
+
+        for (let i = 0; i < items.length; ++i) {
+            const item = items[i];
+            const left = toFiniteNumber(item?.pos?.[0]);
+            const top = toFiniteNumber(item?.pos?.[1]);
+            const width = Math.max(0, toFiniteNumber(item?.size?.[0]));
+            const height = Math.max(0, toFiniteNumber(item?.size?.[1]));
+            minLeft = Math.min(minLeft, left);
+            minTop = Math.min(minTop, top);
+            maxRight = Math.max(maxRight, left + width);
+            maxBottom = Math.max(maxBottom, top + height);
+        }
+
+        if (
+            !Number.isFinite(minLeft) ||
+            !Number.isFinite(minTop) ||
+            !Number.isFinite(maxRight) ||
+            !Number.isFinite(maxBottom)
+        ) {
+            return [deltaX, deltaY];
+        }
+
+        const bounds = this.world_bounds;
+        const minDeltaX = bounds[0] - minLeft;
+        const maxDeltaX = bounds[0] + bounds[2] - maxRight;
+        const minDeltaY = bounds[1] - minTop;
+        const maxDeltaY = bounds[1] + bounds[3] - maxBottom;
+
+        return [
+            maxDeltaX < minDeltaX
+                ? 0
+                : clampValue(toFiniteNumber(deltaX), minDeltaX, maxDeltaX),
+            maxDeltaY < minDeltaY
+                ? 0
+                : clampValue(toFiniteNumber(deltaY), minDeltaY, maxDeltaY),
+        ];
     }
 
     setCanvas(

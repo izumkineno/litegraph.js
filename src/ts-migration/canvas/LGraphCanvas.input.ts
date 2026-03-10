@@ -702,13 +702,21 @@ export class LGraphCanvasInput extends LGraphCanvasLifecycle {
         } else if (this.selected_group && !this.read_only) {
             // moving/resizing a group
             if (this.selected_group_resizing) {
-                this.selected_group.size = [
+                const nextSize = this.clampGroupSize(
+                    this.selected_group,
                     e.canvasX - this.selected_group.pos[0],
-                    e.canvasY - this.selected_group.pos[1],
-                ];
+                    e.canvasY - this.selected_group.pos[1]
+                );
+                this.selected_group.size = [nextSize[0], nextSize[1]];
             } else {
-                const deltax = delta[0] / this.ds.scale;
-                const deltay = delta[1] / this.ds.scale;
+                let deltax = delta[0] / this.ds.scale;
+                let deltay = delta[1] / this.ds.scale;
+                [deltax, deltay] = this.clampGroupMoveDelta(
+                    this.selected_group,
+                    deltax,
+                    deltay,
+                    e.ctrlKey
+                );
                 this.selected_group.move(deltax, deltay, e.ctrlKey);
                 if (this.selected_group._nodes.length) {
                     this.dirty_canvas = true;
@@ -720,8 +728,13 @@ export class LGraphCanvasInput extends LGraphCanvasLifecycle {
                 this.dragging_canvas = false;
                 return;
             }
-            this.ds.offset[0] += delta[0] / this.ds.scale;
-            this.ds.offset[1] += delta[1] / this.ds.scale;
+            const nextOffset = this.clampCanvasOffset(
+                this.ds.offset[0] + delta[0] / this.ds.scale,
+                this.ds.offset[1] + delta[1] / this.ds.scale,
+                this.ds.scale
+            );
+            this.ds.offset[0] = nextOffset[0];
+            this.ds.offset[1] = nextOffset[1];
             this.dirty_canvas = true;
             this.dirty_bgcanvas = true;
         } else if ((this.allow_interaction || (node && node.flags.allow_interaction)) && !this.read_only) {
@@ -850,10 +863,16 @@ export class LGraphCanvasInput extends LGraphCanvasLifecycle {
             // node being dragged
             if (this.node_dragged && !this.live_mode) {
                 const selected_nodes = this.selectedNodesRef();
+                const draggedNodes = Object.values(selected_nodes);
+                const moveDelta = this.clampNodeMoveDelta(
+                    draggedNodes,
+                    delta[0] / this.ds.scale,
+                    delta[1] / this.ds.scale
+                );
                 for (const i in selected_nodes) {
                     const n = selected_nodes[i];
-                    n.pos[0] += delta[0] / this.ds.scale;
-                    n.pos[1] += delta[1] / this.ds.scale;
+                    n.pos[0] += moveDelta[0];
+                    n.pos[1] += moveDelta[1];
                     if (!n.is_selected) {
                         this.processNodeSelected(n, e);
                     }
@@ -871,7 +890,12 @@ export class LGraphCanvasInput extends LGraphCanvasLifecycle {
                 const min_size = this.resizing_node.computeSize();
                 desired_size[0] = Math.max(min_size[0], desired_size[0]);
                 desired_size[1] = Math.max(min_size[1], desired_size[1]);
-                this.resizing_node.setSize(desired_size);
+                const nextSize = this.clampNodeSize(
+                    this.resizing_node,
+                    desired_size[0],
+                    desired_size[1]
+                );
+                this.resizing_node.setSize(nextSize);
 
                 (this.canvas as HTMLCanvasElement).style.cursor = "se-resize";
                 this.dirty_canvas = true;
@@ -1390,10 +1414,16 @@ export class LGraphCanvasInput extends LGraphCanvasLifecycle {
 
         if (this.node_dragged && !this.live_mode) {
             const selected_nodes = this.selectedNodesRef();
+            const draggedNodes = Object.values(selected_nodes);
+            const moveDelta = this.clampNodeMoveDelta(
+                draggedNodes,
+                delta[0],
+                delta[1]
+            );
             for (const key in selected_nodes) {
                 const draggedNode = selected_nodes[key];
-                draggedNode.pos[0] += delta[0];
-                draggedNode.pos[1] += delta[1];
+                draggedNode.pos[0] += moveDelta[0];
+                draggedNode.pos[1] += moveDelta[1];
                 if (!draggedNode.is_selected) {
                     this.processNodeSelected(
                         draggedNode,
@@ -1416,7 +1446,12 @@ export class LGraphCanvasInput extends LGraphCanvasLifecycle {
             const min_size = this.resizing_node.computeSize();
             desired_size[0] = Math.max(min_size[0], desired_size[0]);
             desired_size[1] = Math.max(min_size[1], desired_size[1]);
-            this.resizing_node.setSize(desired_size);
+            const nextSize = this.clampNodeSize(
+                this.resizing_node,
+                desired_size[0],
+                desired_size[1]
+            );
+            this.resizing_node.setSize(nextSize);
 
             if (this.canvas) {
                 this.canvas.style.cursor = "se-resize";
@@ -1915,13 +1950,20 @@ export class LGraphCanvasInput extends LGraphCanvasLifecycle {
             const node = LiteGraph.createNode(node_data.type);
             if (node) {
                 node.configure(node_data);
-                const sourceMinPos: Vector2 = posMin || [0, 0];
-                // paste in last known mouse position
-                node.pos[0] += this.graph_mouse[0] - sourceMinPos[0];
-                node.pos[1] += this.graph_mouse[1] - sourceMinPos[1];
-                this.graph.add(node, { doProcessChange: false });
                 nodes.push(node);
             }
+        }
+
+        const sourceMinPos: Vector2 = posMin || [0, 0];
+        let deltaX = this.graph_mouse[0] - sourceMinPos[0];
+        let deltaY = this.graph_mouse[1] - sourceMinPos[1];
+        [deltaX, deltaY] = this.clampNodeMoveDelta(nodes, deltaX, deltaY);
+
+        for (let i = 0; i < nodes.length; ++i) {
+            const node = nodes[i];
+            node.pos[0] += deltaX;
+            node.pos[1] += deltaY;
+            this.graph.add(node, { doProcessChange: false });
         }
 
         // create links
@@ -2306,7 +2348,11 @@ export class LGraphCanvasInput extends LGraphCanvasLifecycle {
     // converts event coordinates from canvas2D to graph coordinates
     convertEventToCanvasOffset(e: MouseEvent): Vector2 {
         const rect = (this.canvas as HTMLCanvasElement).getBoundingClientRect();
-        return this.convertCanvasToOffset([e.clientX - rect.left, e.clientY - rect.top]);
+        const graphPoint = this.convertCanvasToOffset([
+            e.clientX - rect.left,
+            e.clientY - rect.top,
+        ]);
+        return this.clampWorldPoint(graphPoint[0], graphPoint[1]);
     }
 
     /**

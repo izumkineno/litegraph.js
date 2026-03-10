@@ -1,5 +1,6 @@
 import * as leafer from "leafer-ui";
 
+import type { Vector2, Vector4 } from "../types/core-types";
 import type {
     GraphMutationBus,
     GraphMutationGroupLike,
@@ -58,6 +59,28 @@ interface InteractionCanvasHost {
         property: string,
         options?: Record<string, unknown>
     ) => unknown;
+    clampNodeMoveDelta?: (
+        nodes: readonly DraggableNodeLike[],
+        deltaX: number,
+        deltaY: number
+    ) => Vector2;
+    clampGroupMoveDelta?: (
+        group: DraggableGroupLike,
+        deltaX: number,
+        deltaY: number,
+        ignoreNodes?: boolean
+    ) => Vector2;
+    clampNodeSize?: (
+        node: DraggableNodeLike,
+        width: number,
+        height: number
+    ) => Vector2;
+    clampGroupSize?: (
+        group: DraggableGroupLike,
+        width: number,
+        height: number
+    ) => Vector2;
+    getWorldBounds?: () => Vector4 | null;
     selectNodes: (
         nodes?: GraphMutationNodeLike[],
         addToCurrentSelection?: boolean
@@ -260,6 +283,17 @@ export class InteractionController {
             }
         );
         this.overlayPrimitives = new OverlayPrimitives(this.appHost);
+        const initialWorldBounds = this.canvas.getWorldBounds?.() || null;
+        this.overlayPrimitives.setWorkspaceBounds(
+            initialWorldBounds
+                ? {
+                      x: initialWorldBounds[0],
+                      y: initialWorldBounds[1],
+                      width: initialWorldBounds[2],
+                      height: initialWorldBounds[3],
+                  }
+                : null
+        );
         this.connectionController = new ConnectionController(
             this.graphRef,
             sceneSyncController,
@@ -752,19 +786,37 @@ export class InteractionController {
 
         if (this.session.kind === "group-drag") {
             if (this.session.resizing) {
+                const nextSize = this.canvas.clampGroupSize
+                    ? this.canvas.clampGroupSize(
+                          this.session.group,
+                          normalizedGraphPoint.x - this.session.group.pos[0],
+                          normalizedGraphPoint.y - this.session.group.pos[1]
+                      )
+                    : ([
+                          normalizedGraphPoint.x - this.session.group.pos[0],
+                          normalizedGraphPoint.y - this.session.group.pos[1],
+                      ] as Vector2);
                 this.session.group.size = [
-                    normalizedGraphPoint.x - this.session.group.pos[0],
-                    normalizedGraphPoint.y - this.session.group.pos[1],
+                    nextSize[0],
+                    nextSize[1],
                 ];
                 this.canvas.sceneSyncController?.syncGroupChanged(
                     this.session.group
                 );
                 this.view.style.cursor = "se-resize";
             } else {
-                const deltaX =
+                let deltaX =
                     normalizedGraphPoint.x - this.session.lastGraphPoint.x;
-                const deltaY =
+                let deltaY =
                     normalizedGraphPoint.y - this.session.lastGraphPoint.y;
+                if (this.canvas.clampGroupMoveDelta) {
+                    [deltaX, deltaY] = this.canvas.clampGroupMoveDelta(
+                        this.session.group,
+                        deltaX,
+                        deltaY,
+                        event.ctrlKey
+                    );
+                }
                 if (deltaX || deltaY) {
                     this.session.group.move(deltaX, deltaY, event.ctrlKey);
                     if (!event.ctrlKey) {
@@ -877,11 +929,20 @@ export class InteractionController {
         }
 
         if (this.session.kind === "node-resize") {
-            const didResize = this.session.host.updateResize(
+            const resizeSession = this.session;
+            const didResize = resizeSession.host.updateResize(
                 normalizedGraphPoint.x,
-                normalizedGraphPoint.y
+                normalizedGraphPoint.y,
+                this.canvas.clampNodeSize
+                    ? (width, height) =>
+                          this.canvas.clampNodeSize!(
+                              resizeSession.node,
+                              width,
+                              height
+                          )
+                    : undefined
             );
-            this.session.host.updateInteractionState({
+            resizeSession.host.updateInteractionState({
                 hovered: true,
                 pressed: true,
                 resizing: true,
@@ -896,7 +957,7 @@ export class InteractionController {
             });
             if (didResize) {
                 this.canvas.sceneSyncController?.repaintNodeHost(
-                    this.session.node.id
+                    resizeSession.node.id
                 );
             }
             this.lastPagePoint = normalizedPagePoint;
@@ -906,10 +967,17 @@ export class InteractionController {
         }
 
         if (this.session.kind === "node-drag") {
-            const deltaX =
+            let deltaX =
                 normalizedGraphPoint.x - this.session.lastGraphPoint.x;
-            const deltaY =
+            let deltaY =
                 normalizedGraphPoint.y - this.session.lastGraphPoint.y;
+            if (this.canvas.clampNodeMoveDelta) {
+                [deltaX, deltaY] = this.canvas.clampNodeMoveDelta(
+                    this.session.dragNodes,
+                    deltaX,
+                    deltaY
+                );
+            }
             if (deltaX || deltaY) {
                 for (let i = 0; i < this.session.dragNodes.length; ++i) {
                     const node = this.session.dragNodes[i];

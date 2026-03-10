@@ -37,6 +37,11 @@ export interface SubgraphSidebarsPresenterContext {
     createNode: (type: string) => any;
     selectNodes: (nodes?: any[], addToCurrentSelection?: boolean) => void;
     convertEventToCanvasOffset: (event: MouseEvent) => [number, number];
+    clampNodePosition?: (
+        node: { pos: [number, number]; size: [number, number] },
+        x?: number,
+        y?: number
+    ) => [number, number];
     closeSubgraph: () => void;
     showSubgraphPropertiesDialog: (node: any) => unknown;
     showSubgraphPropertiesDialogRight: (node: any) => unknown;
@@ -298,8 +303,11 @@ function spawnSubgraphProxyNode(
     }
 
     const offset = context.convertEventToCanvasOffset(event);
-    newNode.pos[0] = offset[0] - 5;
-    newNode.pos[1] = offset[1] - 5;
+    const nextPos = context.clampNodePosition
+        ? context.clampNodePosition(newNode, offset[0] - 5, offset[1] - 5)
+        : ([offset[0] - 5, offset[1] - 5] as [number, number]);
+    newNode.pos[0] = nextPos[0];
+    newNode.pos[1] = nextPos[1];
     graph.afterChange?.();
     context.selectNodes([newNode]);
     context.sceneSyncController?.repaintAllNodeHosts?.();

@@ -140,8 +140,8 @@
                         slotIndex,
                         context
                     );
-                    if (kind === "input" && slotIndex === 0) {
-                        portPresentation.label = this._displayValue || "";
+                    if (kind === "input" && slotIndex === 0 && portPresentation) {
+                        portPresentation.label = "";
                     }
                     return portPresentation;
                 }
@@ -152,9 +152,12 @@
                         return;
                     }
                     this._displayValue = nextValue;
+                    var changeMask = ModernNodeChangeMask.Data;
+                    if (this.flags.collapsed) {
+                        changeMask |= ModernNodeChangeMask.Layout;
+                    }
                     this.requestModernPatch(
-                        ModernNodeChangeMask.Data |
-                            ModernNodeChangeMask.Ports
+                        changeMask
                     );
                 }
             }

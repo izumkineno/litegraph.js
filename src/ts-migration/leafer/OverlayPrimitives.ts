@@ -18,6 +18,7 @@ function toFiniteNumber(value: unknown, fallback = 0): number {
 export class OverlayPrimitives {
     readonly connectionPreview: Path;
     readonly selectionBox: Rect;
+    readonly workspaceBoundsOutline: Rect;
 
     constructor(private readonly appHost: LeaferAppHost) {
         this.connectionPreview = new Path({
@@ -44,6 +45,24 @@ export class OverlayPrimitives {
             hittable: false,
         });
 
+        this.workspaceBoundsOutline = new Rect({
+            name: "litegraph-workspace-bounds-outline",
+            x: 0,
+            y: 0,
+            width: 1,
+            height: 1,
+            fill: "rgba(0,0,0,0)",
+            stroke: "#8EA2B8",
+            strokeWidth: 4,
+            strokeCap: "round",
+            strokeJoin: "round",
+            dashPattern: [18, 10],
+            opacity: 0.92,
+            visible: false,
+            hittable: false,
+        });
+
+        this.appHost.workspaceLayer.add(this.workspaceBoundsOutline);
         this.appHost.overlayWorld.add([
             this.connectionPreview,
             this.selectionBox,
@@ -53,6 +72,20 @@ export class OverlayPrimitives {
     destroy(): void {
         this.connectionPreview.destroy();
         this.selectionBox.destroy();
+        this.workspaceBoundsOutline.destroy();
+    }
+
+    setWorkspaceBounds(bounds: OverlayWorldBounds | null): void {
+        if (!bounds || bounds.width <= 0 || bounds.height <= 0) {
+            this.workspaceBoundsOutline.visible = false;
+            return;
+        }
+
+        this.workspaceBoundsOutline.x = bounds.x;
+        this.workspaceBoundsOutline.y = bounds.y;
+        this.workspaceBoundsOutline.width = bounds.width;
+        this.workspaceBoundsOutline.height = bounds.height;
+        this.workspaceBoundsOutline.visible = true;
     }
 
     setConnectionPreview(curve: LinkCurveGeometry, color = "#7F7"): void {

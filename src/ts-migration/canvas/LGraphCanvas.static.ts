@@ -81,6 +81,12 @@ interface LGraphCanvasRuntimeLike {
     dirty_canvas?: boolean;
     dirty_bgcanvas?: boolean;
     closeSubgraph?: () => void;
+    clampWorldPoint?: (x: number, y: number) => Vector2;
+    clampNodePosition?: (
+        node: LGraphNodeLike,
+        x?: number,
+        y?: number
+    ) => Vector2;
 }
 
 interface NodeTypeLike {
@@ -263,7 +269,12 @@ export class LGraphCanvas {
 
         const host = LGraphCanvas.callbackHost();
         const group = new (host.LGraphGroup as new () => LGraphNodeLike)();
-        group.pos = canvas.convertEventToCanvasOffset(mouse_event);
+        group.pos = canvas.clampNodePosition
+            ? canvas.clampNodePosition(
+                  group,
+                  ...canvas.convertEventToCanvasOffset(mouse_event)
+              )
+            : canvas.convertEventToCanvasOffset(mouse_event);
         canvas.graph.add(group);
     }
 
@@ -487,7 +498,17 @@ export class LGraphCanvas {
                         canvasRef.graph.beforeChange!();
                         const newNode = host.createNode(selected.value || "");
                         if (newNode) {
-                            newNode.pos = canvasRef.convertEventToCanvasOffset(first_event);
+                            const nextPos = canvasRef.clampNodePosition
+                                ? canvasRef.clampNodePosition(
+                                      newNode,
+                                      ...canvasRef.convertEventToCanvasOffset(
+                                          first_event
+                                      )
+                                  )
+                                : canvasRef.convertEventToCanvasOffset(
+                                      first_event
+                                  );
+                            newNode.pos = nextPos;
                             canvasRef.graph.add(newNode);
                         }
                         if (callback) {
