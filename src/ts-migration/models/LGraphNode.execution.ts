@@ -85,6 +85,7 @@ interface LGraphExecutionStateLike extends Pick<LGraph, "iteration"> {
     nodes_actioning: Record<string, unknown>;
     nodes_executedAction: Record<string, unknown>;
     trackRuntimeExecutionNode?: (nodeId: number | string) => void;
+    trackRuntimeExecutionLink?: (linkId: number | string) => void;
     _last_trigger_time?: number;
 }
 
@@ -682,7 +683,8 @@ export class LGraphNodeExecution extends LGraphNode {
         if (!graph) {
             return;
         }
-        graph._last_trigger_time = host.getTime();
+        const triggerTime = host.getTime();
+        graph._last_trigger_time = triggerTime;
 
         // for every link attached here
         for (let k = 0; k < links.length; ++k) {
@@ -696,7 +698,8 @@ export class LGraphNodeExecution extends LGraphNode {
                 // not connected
                 continue;
             }
-            link_info._last_time = host.getTime();
+            link_info._last_time = triggerTime;
+            graph.trackRuntimeExecutionLink?.(id);
             const node = graph.getNodeById(link_info.target_id);
             if (!node) {
                 // node not found?
@@ -787,7 +790,11 @@ export class LGraphNodeExecution extends LGraphNode {
                 // not connected
                 continue;
             }
+            if (!link_info._last_time) {
+                continue;
+            }
             link_info._last_time = 0;
+            graph.trackRuntimeExecutionLink?.(id);
         }
     }
 }

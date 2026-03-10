@@ -113,8 +113,42 @@ function buildActiveLinkLayoutKey(task: LeaferActiveLinkPresentationTask): strin
 function buildActiveLinkPresentationCacheKey(
     task: LeaferActiveLinkPresentationTask
 ): string {
-    const lastTimeBucket = Math.max(0, Math.floor(toFiniteNumber(task.lastTime) / 16));
+    const lastTimeBucket = Math.max(
+        0,
+        Math.floor(toFiniteNumber(task.lastTime) / ACTIVE_LINK_CACHE_BUCKET_MS)
+    );
     return `${buildActiveLinkLayoutKey(task)}|${lastTimeBucket}`;
+}
+
+const ACTIVE_LINK_WINDOW_MS = 150;
+const ACTIVE_LINK_OPACITY_BUCKETS = 6;
+const ACTIVE_LINK_CACHE_BUCKET_MS = Math.max(
+    1,
+    Math.floor(ACTIVE_LINK_WINDOW_MS / ACTIVE_LINK_OPACITY_BUCKETS)
+);
+
+function clamp01(value: number): number {
+    return Math.max(0, Math.min(1, value));
+}
+
+function quantizeActiveLinkOpacity(value: number): number {
+    if (!(value > 0)) {
+        return 0;
+    }
+
+    return (
+        Math.round(clamp01(value) * ACTIVE_LINK_OPACITY_BUCKETS) /
+        ACTIVE_LINK_OPACITY_BUCKETS
+    );
+}
+
+function resolveActiveLinkOpacity(lastTime: number, now: number): number {
+    const elapsed = now - lastTime;
+    if (elapsed < 0 || elapsed >= ACTIVE_LINK_WINDOW_MS) {
+        return 0;
+    }
+
+    return quantizeActiveLinkOpacity(1 - elapsed / ACTIVE_LINK_WINDOW_MS);
 }
 
 interface RenderBoundsLike {
@@ -216,7 +250,9 @@ export class SceneSyncController {
         string,
         DeferredNodeDirtySignal
     >();
+    private readonly activeTransientNodeIds = new Set<GraphMutationNodeId>();
     private readonly activeLinkIds = new Set<GraphMutationLinkId>();
+    private readonly dirtyRuntimeLinkIds = new Set<GraphMutationLinkId>();
     private readonly linkGeometryCache = new Map<
         GraphMutationLinkId,
         CachedLinkGeometry
@@ -327,24 +363,30 @@ export class SceneSyncController {
 
     requestRuntimeAnimation(
         forceNodeRepaint = false,
-        nodeIds?: readonly GraphMutationNodeId[]
+        nodeIds?: readonly GraphMutationNodeId[],
+        linkIds?: readonly GraphMutationLinkId[]
     ): void {
+        this.queueDirtyRuntimeLinkIds(linkIds);
+
         let dirtyBounds: RenderBoundsLike | null = null;
         let hasPendingNodeFrames =
             this.pendingSettledNodeRepaints.size > 0 ||
-            this.hasAnyTransientNodeAnimation();
+            this.activeTransientNodeIds.size > 0;
         if (forceNodeRepaint) {
-            const activeNodeIds = this.captureActiveTransientNodeIds();
             const repaintNodeIds = this.resolveRuntimeRepaintNodeIds(nodeIds);
+            if (repaintNodeIds?.length) {
+                this.syncTransientNodeTrackingFor(repaintNodeIds);
+            }
             dirtyBounds = repaintNodeIds
                 ? this.repaintRuntimeNodeHostsWithBounds(repaintNodeIds)
                 : this.repaintAllNodeHostsWithBounds(false);
+            const activeNodeIds = this.captureTrackedTransientNodeIds();
             hasPendingNodeFrames =
                 this.syncPendingSettledNodeRepaints(activeNodeIds) ||
+                this.activeTransientNodeIds.size > 0 ||
                 this.pendingSettledNodeRepaints.size > 0;
         }
 
-        this.collectActiveLinks();
         const linkRefresh = this.refreshActiveLinkAnimations();
         dirtyBounds = mergeRenderBounds(dirtyBounds, linkRefresh.dirtyBounds);
         if (forceNodeRepaint) {
@@ -579,8 +621,10 @@ export class SceneSyncController {
         this.activeLinkPresentationRequestInFlight = false;
         this.pendingActiveLinkPresentationRequest = null;
         this.lastHandledActiveLinkPresentationRequestId = 0;
+        this.activeTransientNodeIds.clear();
         this.pendingSettledNodeRepaints.clear();
         this.deferredNodeDirtySignalsByKey.clear();
+        this.dirtyRuntimeLinkIds.clear();
     }
 
     private ensureNodeHost(
@@ -595,6 +639,7 @@ export class SceneSyncController {
         const shouldUpdateLinks = options?.updateLinks !== false;
 
         this.nodesById.set(nodeId, node);
+        this.syncTransientNodeTracking(nodeId, node);
         this.ensureTrackedNodeId(nodeId);
         this.installNodeDirtyBridge(node);
 
@@ -704,6 +749,7 @@ export class SceneSyncController {
         this.dirtyBridgeUninstallers.delete(nodeId);
         this.nodesById.delete(nodeId);
         this.linksByNodeId.delete(nodeId);
+        this.activeTransientNodeIds.delete(nodeId);
         this.pendingSettledNodeRepaints.delete(nodeId);
     }
 
@@ -772,6 +818,7 @@ export class SceneSyncController {
         this.linksById.delete(linkId);
         this.linkIdsByKey.delete(toMutationKey(linkId));
         this.activeLinkIds.delete(linkId);
+        this.dirtyRuntimeLinkIds.delete(linkId);
         this.linkGeometryCache.delete(linkId);
         this.activeLinkPresentationStateById.delete(linkId);
         this.workerLinkPresentationById.delete(toMutationKey(linkId));
@@ -808,6 +855,7 @@ export class SceneSyncController {
     ): RenderBoundsLike | null {
         if (node) {
             this.nodesById.set(nodeId, node);
+            this.syncTransientNodeTracking(nodeId, node);
         }
 
         const fastPathBounds = this.tryHandleModernForegroundDirtyFastPath(
@@ -1149,7 +1197,6 @@ export class SceneSyncController {
             : this.buildLinkFlowPresentation(
                   linkId,
                   link as RuntimeAnimatedLink,
-                  curve,
                   now
               );
         const strokeWidth = this.getLinkStrokeWidth();
@@ -1310,7 +1357,7 @@ export class SceneSyncController {
             }
         }
 
-        const activeNodeIds = this.captureActiveTransientNodeIds();
+        const activeNodeIds = this.captureTrackedTransientNodeIds();
         if (activeNodeIds.length) {
             for (let i = 0; i < activeNodeIds.length; ++i) {
                 dirtyBounds = mergeRenderBounds(
@@ -1319,6 +1366,7 @@ export class SceneSyncController {
                 );
             }
             this.decayTransientNodeAnimations(activeNodeIds);
+            this.syncTransientNodeTrackingFor(activeNodeIds);
             didUpdate = true;
         }
 
@@ -1327,6 +1375,7 @@ export class SceneSyncController {
             dirtyBounds,
             hasMore:
                 this.syncPendingSettledNodeRepaints(activeNodeIds) ||
+                this.activeTransientNodeIds.size > 0 ||
                 this.pendingSettledNodeRepaints.size > 0,
         };
     }
@@ -1364,20 +1413,45 @@ export class SceneSyncController {
         );
     }
 
-    private hasAnyTransientNodeAnimation(): boolean {
-        for (const node of this.nodesById.values()) {
-            if (this.hasTransientNodeAnimation(node)) {
-                return true;
-            }
+    private syncTransientNodeTracking(
+        nodeId: GraphMutationNodeId,
+        node?: GraphMutationNodeLike
+    ): boolean {
+        const resolvedNode = node || this.nodesById.get(nodeId);
+        if (resolvedNode && this.hasTransientNodeAnimation(resolvedNode)) {
+            this.activeTransientNodeIds.add(nodeId);
+            return true;
         }
 
+        this.activeTransientNodeIds.delete(nodeId);
         return false;
     }
 
-    private captureActiveTransientNodeIds(): GraphMutationNodeId[] {
+    private syncTransientNodeTrackingFor(
+        nodeIds: readonly GraphMutationNodeId[]
+    ): GraphMutationNodeId[] {
         const activeNodeIds: GraphMutationNodeId[] = [];
-        for (const [nodeId, node] of this.nodesById.entries()) {
-            if (this.hasTransientNodeAnimation(node)) {
+        const seenNodeIds = new Set<string>();
+        for (let i = 0; i < nodeIds.length; ++i) {
+            const nodeId = nodeIds[i];
+            const nodeKey = toMutationKey(nodeId);
+            if (seenNodeIds.has(nodeKey)) {
+                continue;
+            }
+
+            seenNodeIds.add(nodeKey);
+            if (this.syncTransientNodeTracking(nodeId)) {
+                activeNodeIds.push(nodeId);
+            }
+        }
+
+        return activeNodeIds;
+    }
+
+    private captureTrackedTransientNodeIds(): GraphMutationNodeId[] {
+        const activeNodeIds: GraphMutationNodeId[] = [];
+        for (const nodeId of Array.from(this.activeTransientNodeIds)) {
+            if (this.syncTransientNodeTracking(nodeId)) {
                 activeNodeIds.push(nodeId);
             }
         }
@@ -1409,13 +1483,81 @@ export class SceneSyncController {
         return hasMore;
     }
 
-    private collectActiveLinks(): void {
-        const now = this.getRuntimeNow();
-        for (const [linkId, link] of this.linksById.entries()) {
-            if (this.isLinkFlowActive(link as RuntimeAnimatedLink, now)) {
-                this.activeLinkIds.add(linkId);
-            }
+    private queueDirtyRuntimeLinkIds(
+        linkIds?: readonly GraphMutationLinkId[]
+    ): void {
+        if (!linkIds?.length) {
+            return;
         }
+
+        for (let i = 0; i < linkIds.length; ++i) {
+            const rawLinkId = linkIds[i];
+            const resolvedLinkId =
+                this.linkIdsByKey.get(toMutationKey(rawLinkId)) ?? rawLinkId;
+            this.dirtyRuntimeLinkIds.add(resolvedLinkId);
+        }
+    }
+
+    private syncActiveLinkTracking(
+        linkId: GraphMutationLinkId,
+        link?: GraphMutationLinkLike,
+        now = this.getRuntimeNow()
+    ): boolean {
+        const resolvedLink = link || this.linksById.get(linkId);
+        if (
+            resolvedLink &&
+            this.isLinkFlowActive(resolvedLink as RuntimeAnimatedLink, now)
+        ) {
+            this.activeLinkIds.add(linkId);
+            return true;
+        }
+
+        this.activeLinkIds.delete(linkId);
+        return false;
+    }
+
+    private consumeRuntimeLinkRefreshIds(now: number): GraphMutationLinkId[] {
+        if (!this.activeLinkIds.size && !this.dirtyRuntimeLinkIds.size) {
+            return [];
+        }
+
+        const refreshIds: GraphMutationLinkId[] = [];
+        const seenLinkIds = new Set<string>();
+        const pushRefreshId = (linkId: GraphMutationLinkId): void => {
+            const key = toMutationKey(linkId);
+            if (seenLinkIds.has(key)) {
+                return;
+            }
+
+            seenLinkIds.add(key);
+            refreshIds.push(linkId);
+        };
+
+        for (const dirtyLinkId of Array.from(this.dirtyRuntimeLinkIds)) {
+            const resolvedLinkId =
+                this.linkIdsByKey.get(toMutationKey(dirtyLinkId)) ?? dirtyLinkId;
+            this.syncActiveLinkTracking(
+                resolvedLinkId,
+                this.linksById.get(resolvedLinkId),
+                now
+            );
+            pushRefreshId(resolvedLinkId);
+        }
+        this.dirtyRuntimeLinkIds.clear();
+
+        for (const activeLinkId of Array.from(this.activeLinkIds)) {
+            if (!this.linksById.has(activeLinkId)) {
+                this.activeLinkIds.delete(activeLinkId);
+                this.linkGeometryCache.delete(activeLinkId);
+                this.activeLinkPresentationStateById.delete(activeLinkId);
+                this.workerLinkPresentationById.delete(toMutationKey(activeLinkId));
+                continue;
+            }
+
+            pushRefreshId(activeLinkId);
+        }
+
+        return refreshIds;
     }
 
     private prepareActiveLinkPresentations(now: number): void {
@@ -1460,16 +1602,17 @@ export class SceneSyncController {
     }
 
     private refreshActiveLinkAnimations(): AnimationRefreshResult {
-        if (!this.activeLinkIds.size) {
+        const now = this.getRuntimeNow();
+        const refreshLinkIds = this.consumeRuntimeLinkRefreshIds(now);
+        if (!refreshLinkIds.length) {
             return { didUpdate: false, hasMore: false, dirtyBounds: null };
         }
 
-        const now = this.getRuntimeNow();
         this.prepareActiveLinkPresentations(now);
         let didUpdate = false;
-        let hasActiveLinks = false;
         let dirtyBounds: RenderBoundsLike | null = null;
-        for (const linkId of Array.from(this.activeLinkIds)) {
+        for (let i = 0; i < refreshLinkIds.length; ++i) {
+            const linkId = refreshLinkIds[i];
             const previousBounds = this.captureLinkRenderBounds(linkId);
             const wasTracked = this.activeLinkIds.has(linkId);
             const isActive = this.syncLinkView(
@@ -1487,17 +1630,18 @@ export class SceneSyncController {
             if (wasTracked || isActive) {
                 didUpdate = true;
             }
-            if (isActive) {
-                hasActiveLinks = true;
-            }
         }
 
-        return { didUpdate, hasMore: hasActiveLinks, dirtyBounds };
+        return {
+            didUpdate,
+            hasMore: this.activeLinkIds.size > 0,
+            dirtyBounds,
+        };
     }
 
     private isLinkFlowActive(link: RuntimeAnimatedLink, now: number): boolean {
         const lastTime = toFiniteNumber(link._last_time);
-        return Boolean(lastTime) && now - lastTime < 1000;
+        return Boolean(lastTime) && now - lastTime < ACTIVE_LINK_WINDOW_MS;
     }
 
     private readonly handleActiveLinkPresentationResult = (
@@ -1661,9 +1805,6 @@ export class SceneSyncController {
     private buildLinkFlowPresentation(
         _linkId: GraphMutationLinkId,
         link: RuntimeAnimatedLink,
-        curve: ReturnType<NodePortAdapter["getLinkCurve"]> extends infer TResult
-            ? Exclude<TResult, null>
-            : never,
         now: number
     ): NonNullable<Parameters<LinkView["update"]>[0]["flow"]> {
         const lastTime = toFiniteNumber(link._last_time);
@@ -1671,25 +1812,15 @@ export class SceneSyncController {
             return { active: false };
         }
 
-        const elapsed = now - lastTime;
-        if (elapsed < 0 || elapsed >= 1000) {
+        const opacity = resolveActiveLinkOpacity(lastTime, now);
+        if (!(opacity > 0)) {
             return { active: false };
         }
-
-        const opacity = Math.max(0, Math.min(1, 2 - elapsed * 0.002));
-        const dots = Array.from({ length: 5 }, (_, index) =>
-            this.nodePortAdapter.getPointOnLinkCurve(
-                curve,
-                (now * 0.001 + index * 0.2) % 1
-            )
-        );
 
         return {
             active: true,
             color: "#FFF",
             opacity,
-            dotRadius: 5,
-            dots,
         };
     }
 
@@ -1704,8 +1835,6 @@ export class SceneSyncController {
             active: true,
             color: "#FFF",
             opacity: presentation.opacity,
-            dotRadius: 5,
-            dots: presentation.dots,
         };
     }
 

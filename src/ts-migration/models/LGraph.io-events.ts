@@ -578,6 +578,7 @@ export class LGraphIOEvents extends LGraphStructure {
             }
             if (linkInfo._last_time) {
                 linkInfo._last_time = 0;
+                this.trackRuntimeExecutionLink(i);
             }
         }
     }

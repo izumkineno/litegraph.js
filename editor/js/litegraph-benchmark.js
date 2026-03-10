@@ -30,6 +30,7 @@
         "#livemode_button",
         "#maximize_button"
     ];
+    var FRAME_BUDGET_MS = 1000 / 60;
 
     var STATUS_LABELS = {
         idle: "空闲",
@@ -870,18 +871,46 @@
             var executionMs = [];
             var renderMs = [];
             var fps = [];
+            var frameGaps = [];
+            var droppedFrameEquivalent = 0;
             var firstFrameMs = null;
             var frameCount = 0;
             var startAt = now();
+            var previousFrameAt = null;
+            var rafHandle = 0;
             var originalBeforeStep = that.graph.onBeforeStep;
             var originalAfterStep = that.graph.onAfterStep;
             var resolved = false;
+
+            function trackFrame(timestamp) {
+                if (resolved) {
+                    return;
+                }
+
+                if (previousFrameAt != null) {
+                    var frameGap = timestamp - previousFrameAt;
+                    frameGaps.push(frameGap);
+                    if (frameGap > FRAME_BUDGET_MS) {
+                        droppedFrameEquivalent += Math.max(
+                            0,
+                            Math.round(frameGap / FRAME_BUDGET_MS) - 1
+                        );
+                    }
+                }
+
+                previousFrameAt = timestamp;
+                rafHandle = global.requestAnimationFrame(trackFrame);
+            }
 
             function cleanup(payload) {
                 if (resolved) {
                     return;
                 }
                 resolved = true;
+                if (rafHandle) {
+                    global.cancelAnimationFrame(rafHandle);
+                    rafHandle = 0;
+                }
                 that.activeRuntimeCanceler = null;
                 that.graph.onBeforeStep = originalBeforeStep;
                 that.graph.onAfterStep = originalAfterStep;
@@ -896,7 +925,9 @@
                     first_frame_ms: firstFrameMs == null ? 0 : firstFrameMs,
                     executionMs: executionMs,
                     renderMs: renderMs,
-                    fps: fps
+                    fps: fps,
+                    frameGaps: frameGaps,
+                    dropped_frame_equivalent: droppedFrameEquivalent
                 });
             };
 
@@ -929,14 +960,21 @@
                         first_frame_ms: firstFrameMs,
                         executionMs: executionMs,
                         renderMs: renderMs,
-                        fps: fps
+                        fps: fps,
+                        frameGaps: frameGaps,
+                        dropped_frame_equivalent: droppedFrameEquivalent
                     });
                 }
             };
 
             try {
+                rafHandle = global.requestAnimationFrame(trackFrame);
                 that.graph.start(0);
             } catch (error) {
+                if (rafHandle) {
+                    global.cancelAnimationFrame(rafHandle);
+                    rafHandle = 0;
+                }
                 that.graph.onBeforeStep = originalBeforeStep;
                 that.graph.onAfterStep = originalAfterStep;
                 that.activeRuntimeCanceler = null;
@@ -987,6 +1025,12 @@
                 exec_p95_ms: round(percentile(runtimeSamples.executionMs, 95)),
                 render_avg_ms: round(average(runtimeSamples.renderMs)),
                 render_p95_ms: round(percentile(runtimeSamples.renderMs, 95)),
+                frame_gap_avg_ms: round(average(runtimeSamples.frameGaps)),
+                frame_gap_p95_ms: round(percentile(runtimeSamples.frameGaps, 95)),
+                frame_gap_max_ms: round(max(runtimeSamples.frameGaps)),
+                dropped_frame_equivalent: round(
+                    runtimeSamples.dropped_frame_equivalent
+                ),
                 fps_avg: round(average(runtimeSamples.fps)),
                 fps_min: round(min(runtimeSamples.fps))
             },
@@ -994,6 +1038,7 @@
                 stepMs: stepSamples.map(round),
                 executionMs: runtimeSamples.executionMs.map(round),
                 renderMs: runtimeSamples.renderMs.map(round),
+                frameGapMs: runtimeSamples.frameGaps.map(round),
                 fps: runtimeSamples.fps.map(round)
             }
         };
@@ -1018,9 +1063,13 @@
                 clear_total_ms: byId["node-delete"] ? byId["node-delete"].metrics.clear_total_ms : 0,
                 data_step_avg_ms: byId["data-runtime"] ? byId["data-runtime"].metrics.step_avg_ms : 0,
                 data_first_frame_ms: byId["data-runtime"] ? byId["data-runtime"].metrics.first_frame_ms : 0,
+                data_frame_gap_p95_ms: byId["data-runtime"] ? byId["data-runtime"].metrics.frame_gap_p95_ms : 0,
+                data_dropped_frame_equivalent: byId["data-runtime"] ? byId["data-runtime"].metrics.dropped_frame_equivalent : 0,
                 data_fps_avg: byId["data-runtime"] ? byId["data-runtime"].metrics.fps_avg : 0,
                 event_step_avg_ms: byId["event-runtime"] ? byId["event-runtime"].metrics.step_avg_ms : 0,
                 event_first_frame_ms: byId["event-runtime"] ? byId["event-runtime"].metrics.first_frame_ms : 0,
+                event_frame_gap_p95_ms: byId["event-runtime"] ? byId["event-runtime"].metrics.frame_gap_p95_ms : 0,
+                event_dropped_frame_equivalent: byId["event-runtime"] ? byId["event-runtime"].metrics.dropped_frame_equivalent : 0,
                 event_fps_avg: byId["event-runtime"] ? byId["event-runtime"].metrics.fps_avg : 0
             }
         };

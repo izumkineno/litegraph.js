@@ -10,19 +10,6 @@ export interface LeaferWorkerLinkCurve {
     readonly path: string;
 }
 
-export interface LeaferLinkFlowSampleTask {
-    readonly linkId: string;
-    readonly start: LeaferWorkerPoint;
-    readonly c1: LeaferWorkerPoint;
-    readonly c2: LeaferWorkerPoint;
-    readonly end: LeaferWorkerPoint;
-}
-
-export interface LeaferLinkFlowSampleResult {
-    readonly linkId: string;
-    readonly dots: ReadonlyArray<LeaferWorkerPoint>;
-}
-
 export interface LeaferActiveLinkPresentationTask {
     readonly linkId: string;
     readonly start: LeaferWorkerPoint;
@@ -40,28 +27,12 @@ export interface LeaferActiveLinkPresentationResult {
     readonly opacity: number;
     readonly curve: LeaferWorkerLinkCurve;
     readonly midpoint: LeaferWorkerPoint;
-    readonly dots: ReadonlyArray<LeaferWorkerPoint>;
-}
-
-interface LinkFlowSampleRequestMessage {
-    readonly type: "sample-link-flow-dots";
-    readonly requestId: number;
-    readonly now: number;
-    readonly dotCount: number;
-    readonly tasks: ReadonlyArray<LeaferLinkFlowSampleTask>;
-}
-
-interface LinkFlowSampleResultMessage {
-    readonly type: "sample-link-flow-dots-result";
-    readonly requestId: number;
-    readonly results: ReadonlyArray<LeaferLinkFlowSampleResult>;
 }
 
 interface ActiveLinkPresentationRequestMessage {
     readonly type: "compute-active-link-presentations";
     readonly requestId: number;
     readonly now: number;
-    readonly dotCount: number;
     readonly tasks: ReadonlyArray<LeaferActiveLinkPresentationTask>;
 }
 
@@ -72,8 +43,6 @@ interface ActiveLinkPresentationResultMessage {
 }
 
 type LeaferTaskWorkerMessage =
-    | LinkFlowSampleRequestMessage
-    | LinkFlowSampleResultMessage
     | ActiveLinkPresentationRequestMessage
     | ActiveLinkPresentationResultMessage;
 
@@ -83,9 +52,20 @@ const PORT_DIRECTION_UP = 2
 const PORT_DIRECTION_RIGHT = 3
 const PORT_DIRECTION_DOWN = 4
 const CURVE_CACHE_LIMIT = 4096
+const ACTIVE_LINK_WINDOW_MS = 180
+const ACTIVE_LINK_OPACITY_BUCKETS = 6
 const curveCache = new Map()
 
 const clamp01 = (value) => Math.max(0, Math.min(1, Number.isFinite(value) ? value : 0))
+const quantizeOpacity = (value) => {
+  if (!(value > 0)) return 0
+  return Math.round(clamp01(value) * ACTIVE_LINK_OPACITY_BUCKETS) / ACTIVE_LINK_OPACITY_BUCKETS
+}
+const resolveActiveLinkOpacity = (lastTime, now) => {
+  const elapsed = now - lastTime
+  if (elapsed < 0 || elapsed >= ACTIVE_LINK_WINDOW_MS) return 0
+  return quantizeOpacity(1 - elapsed / ACTIVE_LINK_WINDOW_MS)
+}
 
 const cacheSet = (map, key, value, limit) => {
   if (map.has(key)) map.delete(key)
@@ -168,20 +148,12 @@ const getOrCreateCurve = (task) => {
   return { layoutKey, curve }
 }
 
-const buildActiveLinkPresentation = (task, now, dotCount) => {
+const buildActiveLinkPresentation = (task, now) => {
   const { layoutKey, curve } = getOrCreateCurve(task)
   const midpoint = cubicPointAt(curve.start, curve.c1, curve.c2, curve.end, 0.5)
   const lastTime = Number.isFinite(task.lastTime) ? task.lastTime : 0
-  const elapsed = now - lastTime
-  const active = !!lastTime && elapsed >= 0 && elapsed < 1000
-  const opacity = active ? Math.max(0, Math.min(1, 2 - elapsed * 0.002)) : 0
-  const dots = []
-  if (active) {
-    for (let index = 0; index < dotCount; ++index) {
-      const t = (now * 0.001 + index * 0.2) % 1
-      dots.push(cubicPointAt(curve.start, curve.c1, curve.c2, curve.end, t))
-    }
-  }
+  const opacity = lastTime ? resolveActiveLinkOpacity(lastTime, now) : 0
+  const active = opacity > 0
   return {
     linkId: String(task.linkId),
     layoutKey,
@@ -189,8 +161,7 @@ const buildActiveLinkPresentation = (task, now, dotCount) => {
     active,
     opacity,
     curve,
-    midpoint,
-    dots
+    midpoint
   }
 }
 
@@ -198,32 +169,11 @@ self.onmessage = (event) => {
   const data = event.data
   if (!data) return
 
-  if (data.type === 'sample-link-flow-dots') {
-    const now = Number.isFinite(data.now) ? data.now : 0
-    const dotCount = Math.max(1, Number.isFinite(data.dotCount) ? data.dotCount : 5)
-    const results = (Array.isArray(data.tasks) ? data.tasks : []).map((task) => {
-      const dots = []
-      for (let index = 0; index < dotCount; ++index) {
-        const t = (now * 0.001 + index * 0.2) % 1
-        dots.push(cubicPointAt(task.start, task.c1, task.c2, task.end, t))
-      }
-      return { linkId: String(task.linkId), dots }
-    })
-
-    self.postMessage({
-      type: 'sample-link-flow-dots-result',
-      requestId: data.requestId,
-      results
-    })
-    return
-  }
-
   if (data.type !== 'compute-active-link-presentations') return
 
   const now = Number.isFinite(data.now) ? data.now : 0
-  const dotCount = Math.max(1, Number.isFinite(data.dotCount) ? data.dotCount : 5)
   const results = (Array.isArray(data.tasks) ? data.tasks : []).map((task) =>
-    buildActiveLinkPresentation(task, now, dotCount)
+    buildActiveLinkPresentation(task, now)
   )
 
   self.postMessage({
@@ -256,12 +206,6 @@ export class LeaferTaskWorker {
     private readonly worker: Worker | null;
     private readonly workerUrl: string | null;
     private nextRequestId = 1;
-    private linkFlowListener:
-        | ((
-              requestId: number,
-              results: ReadonlyArray<LeaferLinkFlowSampleResult>
-          ) => void)
-        | null = null;
     private activeLinkPresentationListener:
         | ((
               requestId: number,
@@ -290,10 +234,6 @@ export class LeaferTaskWorker {
             if (!data) {
                 return;
             }
-            if (data.type === "sample-link-flow-dots-result") {
-                this.linkFlowListener?.(data.requestId, data.results);
-                return;
-            }
             if (data.type === "compute-active-link-presentations-result") {
                 this.activeLinkPresentationListener?.(data.requestId, data.results);
             }
@@ -305,39 +245,7 @@ export class LeaferTaskWorker {
         if (this.workerUrl && typeof URL !== "undefined") {
             URL.revokeObjectURL(this.workerUrl);
         }
-        this.linkFlowListener = null;
         this.activeLinkPresentationListener = null;
-    }
-
-    onLinkFlowSample(
-        listener:
-            | ((
-                  requestId: number,
-                  results: ReadonlyArray<LeaferLinkFlowSampleResult>
-              ) => void)
-            | null
-    ): void {
-        this.linkFlowListener = listener;
-    }
-
-    requestLinkFlowSample(
-        now: number,
-        tasks: ReadonlyArray<LeaferLinkFlowSampleTask>,
-        dotCount = 5
-    ): number | null {
-        if (!this.worker || !tasks.length) {
-            return null;
-        }
-
-        const requestId = this.nextRequestId++;
-        this.worker.postMessage({
-            type: "sample-link-flow-dots",
-            requestId,
-            now,
-            dotCount,
-            tasks,
-        } satisfies LinkFlowSampleRequestMessage);
-        return requestId;
     }
 
     onActiveLinkPresentation(
@@ -353,8 +261,7 @@ export class LeaferTaskWorker {
 
     requestActiveLinkPresentations(
         now: number,
-        tasks: ReadonlyArray<LeaferActiveLinkPresentationTask>,
-        dotCount = 5
+        tasks: ReadonlyArray<LeaferActiveLinkPresentationTask>
     ): number | null {
         if (!this.worker || !tasks.length) {
             return null;
@@ -365,7 +272,6 @@ export class LeaferTaskWorker {
             type: "compute-active-link-presentations",
             requestId,
             now,
-            dotCount,
             tasks,
         } satisfies ActiveLinkPresentationRequestMessage);
         return requestId;

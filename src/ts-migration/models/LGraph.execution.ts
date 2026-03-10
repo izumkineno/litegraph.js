@@ -42,7 +42,8 @@ interface GraphCanvasExecutionLike {
     renderRuntime?: "legacy-canvas" | "leafer";
     requestRuntimeRender?: (
         forceNodeRepaint?: boolean,
-        nodeIds?: readonly (number | string)[]
+        nodeIds?: readonly (number | string)[],
+        linkIds?: readonly (number | string)[]
     ) => void;
     sceneSyncController?: {
         flushDeferredNodeDirtySignals?: () => readonly (number | string)[];
@@ -85,6 +86,7 @@ export class LGraphExecution extends LGraph {
 
     flushRuntimeExecutionRender(): void {
         const nodeIds = this.consumeRuntimeDirtyNodeIds();
+        const linkIds = this.consumeRuntimeDirtyLinkIds();
         const canvasList =
             this.list_of_graphcanvas as GraphCanvasExecutionLike[] | null;
         if (!canvasList?.length) {
@@ -103,7 +105,7 @@ export class LGraphExecution extends LGraph {
                 continue;
             }
 
-            if (!nodeIds.length) {
+            if (!nodeIds.length && !linkIds.length) {
                 if (processedNodeIds.length) {
                     canvas.requestRuntimeRender(false);
                 }
@@ -118,10 +120,14 @@ export class LGraphExecution extends LGraph {
                 ? nodeIds.filter((nodeId) => !processedNodeKeySet.has(String(nodeId)))
                 : nodeIds;
 
-            if (remainingNodeIds.length) {
-                canvas.requestRuntimeRender(true, remainingNodeIds);
+            if (remainingNodeIds.length || linkIds.length) {
+                canvas.requestRuntimeRender(
+                    remainingNodeIds.length > 0,
+                    remainingNodeIds.length ? remainingNodeIds : undefined,
+                    linkIds.length ? linkIds : undefined
+                );
             } else if (processedNodeIds.length) {
-                canvas.requestRuntimeRender(false);
+                canvas.requestRuntimeRender(false, undefined, undefined);
             }
         }
     }

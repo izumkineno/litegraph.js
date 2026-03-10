@@ -121,6 +121,7 @@ export class LGraph {
     protected execution_schedule_revision = 0;
     protected execution_phase_depth = 0;
     protected readonly runtime_dirty_node_ids = new Set<number | string>();
+    protected readonly runtime_dirty_link_ids = new Set<number | string>();
     protected readonly runtime_state_touched_node_keys = new Set<string>();
     protected readonly runtime_state_touched_node_id_list: string[] = [];
     protected internal_scene_batch_depth = 0;
@@ -238,6 +239,7 @@ export class LGraph {
         this.nodes_executedAction = {};
         this.execution_phase_depth = 0;
         this.runtime_dirty_node_ids.clear();
+        this.runtime_dirty_link_ids.clear();
         this.runtime_state_touched_node_keys.clear();
         this.runtime_state_touched_node_id_list.length = 0;
 
@@ -385,6 +387,10 @@ export class LGraph {
         }
     }
 
+    protected trackRuntimeExecutionLink(linkId: number | string): void {
+        this.runtime_dirty_link_ids.add(linkId);
+    }
+
     protected consumeRuntimeDirtyNodeIds(): (number | string)[] {
         if (!this.runtime_dirty_node_ids.size) {
             return [];
@@ -393,6 +399,16 @@ export class LGraph {
         const dirtyNodeIds = Array.from(this.runtime_dirty_node_ids);
         this.runtime_dirty_node_ids.clear();
         return dirtyNodeIds;
+    }
+
+    protected consumeRuntimeDirtyLinkIds(): (number | string)[] {
+        if (!this.runtime_dirty_link_ids.size) {
+            return [];
+        }
+
+        const dirtyLinkIds = Array.from(this.runtime_dirty_link_ids);
+        this.runtime_dirty_link_ids.clear();
+        return dirtyLinkIds;
     }
 
     protected resetRuntimeExecutionState(): void {
