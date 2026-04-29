@@ -158,13 +158,13 @@ sequenceDiagram
 
 ## 5. 关键实现位置
 
-- [LGraph.lifecycle.ts](/E:/Code/litegraph.js/src/ts-migration/models/LGraph.lifecycle.ts)
-- [LGraph.execution.ts](/E:/Code/litegraph.js/src/ts-migration/models/LGraph.execution.ts)
-- [LGraph.structure.ts](/E:/Code/litegraph.js/src/ts-migration/models/LGraph.structure.ts)
-- [LGraph.io-events.ts](/E:/Code/litegraph.js/src/ts-migration/models/LGraph.io-events.ts)
-- [LGraph.persistence.ts](/E:/Code/litegraph.js/src/ts-migration/models/LGraph.persistence.ts)
-- [LGraphNode.execution.ts](/E:/Code/litegraph.js/src/ts-migration/models/LGraphNode.execution.ts)
-- [LGraphNode.connect-geometry.ts](/E:/Code/litegraph.js/src/ts-migration/models/LGraphNode.connect-geometry.ts)
-- [LGraphCanvas.lifecycle.ts](/E:/Code/litegraph.js/src/ts-migration/canvas/LGraphCanvas.lifecycle.ts)
-- [LGraphCanvas.render.ts](/E:/Code/litegraph.js/src/ts-migration/canvas/LGraphCanvas.render.ts)
-- [litegraph.registry.ts](/E:/Code/litegraph.js/src/ts-migration/core/litegraph.registry.ts)
+- [LGraph.lifecycle.ts](../src/ts-migration/models/LGraph.lifecycle.ts)
+- [LGraph.execution.ts](../src/ts-migration/models/LGraph.execution.ts)
+- [LGraph.structure.ts](../src/ts-migration/models/LGraph.structure.ts)
+- [LGraph.io-events.ts](../src/ts-migration/models/LGraph.io-events.ts)
+- [LGraph.persistence.ts](../src/ts-migration/models/LGraph.persistence.ts)
+- [LGraphNode.execution.ts](../src/ts-migration/models/LGraphNode.execution.ts)
+- [LGraphNode.connect-geometry.ts](../src/ts-migration/models/LGraphNode.connect-geometry.ts)
+- [LGraphCanvas.lifecycle.ts](../src/ts-migration/canvas/LGraphCanvas.lifecycle.ts)
+- [LGraphCanvas.render.ts](../src/ts-migration/canvas/LGraphCanvas.render.ts)
+- [litegraph.registry.ts](../src/ts-migration/core/litegraph.registry.ts)

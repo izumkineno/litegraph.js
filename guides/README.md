@@ -1,20 +1,31 @@
-# LiteGraph
+# LiteGraph Guides
 
-这里汇总了使用 LiteGraph 时的实用信息。
+这里汇总 LiteGraph 开发者与维护者常用文档。计划、审计进度、角色提示等一次性执行材料已从 `guides/` 中移除，避免和长期维护文档混在一起。
 
-## 索引导航（2026-03-03 更新）
+## 导航
 
-- [源码总索引（类/方法/关键流转）](./CORE_INDEX.md)
-- [渲染机制与操作时序 + 函数行号索引](./rendering-and-operations.md)
-- [节点注册、生命周期与 API 指南](./node-registration-and-lifecycle.md)
-- [TS 迁移蓝图与进度追踪](./Migration_Plan_and_Progress.md)
+### 架构与维护
 
-行号会随源码变化而漂移。需要精确定位时，建议在仓库根目录使用 `rg -n \"函数名\" src/litegraph.js`。
+- [架构总览](./Architecture_Overview.md)
+- [数据模型](./Architecture_Data_Model.md)
+- [执行与渲染流程](./Architecture_Execution_Flow.md)
+- [扩展点与维护指南](./Architecture_Extensibility_Guide.md)
 
-## 附加指南
 
-- [LiteGraph 渲染机制与基础操作时序图](./rendering-and-operations.md)
-- [LiteGraph 节点注册、可调用 API 与生命周期指南](./node-registration-and-lifecycle.md)
+### TS Migration 维护
+
+- [TS Migration 维护指南](./TS_Migration_Maintenance_Guide.md)
+- [TS Migration 问题清单](./TS_Migration_Issues.md)
+
+### JavaScript API 与运行时行为
+
+- [源码总索引（类/方法/关键流转）](./JS文档/CORE_INDEX.md)
+- [渲染机制与操作时序 + 函数行号索引](./JS文档/rendering-and-operations.md)
+- [节点注册、生命周期与 API 指南](./JS文档/node-registration-and-lifecycle.md)
+
+> 注：部分文档包含源码行号，行号会随源码变化而漂移。需要精确定位时，建议在仓库根目录使用 `rg -n "函数名" src`。
+
+## 快速入门
 
 该库主要分为四个层级：
 * **LGraphNode**：节点基类（本库使用自己的继承机制）
