@@ -1,13 +1,16 @@
 import type {
     MenuActionBuilderCanvasPort,
+    MenuPanelEntryList,
+    NodeMenuLike,
     ResolvedMenuPanelCanvasClassPort,
+    SlotMenuInfo,
 } from "./menu-panel-types";
 
 export function buildCanvasMenuOptions(
     canvas: MenuActionBuilderCanvasPort,
     menuClass: ResolvedMenuPanelCanvasClassPort
-): any[] {
-    let options: any[] = [];
+): MenuPanelEntryList {
+    let options: MenuPanelEntryList = [];
     if (canvas.getMenuOptions) {
         options = canvas.getMenuOptions();
     } else {
@@ -41,9 +44,9 @@ export function buildCanvasMenuOptions(
 export function buildNodeMenuOptions(
     canvas: MenuActionBuilderCanvasPort,
     menuClass: ResolvedMenuPanelCanvasClassPort,
-    node: any
-): any[] {
-    let options: any[] = [];
+    node: NodeMenuLike
+): MenuPanelEntryList {
+    let options: MenuPanelEntryList = [];
     if (node.getMenuOptions) {
         options = node.getMenuOptions(canvas);
     } else {
@@ -82,10 +85,16 @@ export function buildNodeMenuOptions(
         );
     }
     if (node.onGetInputs?.()?.length) {
-        options[0].disabled = false;
+        const inputOption = options[0];
+        if (inputOption && typeof inputOption !== "string" && "disabled" in inputOption) {
+            inputOption.disabled = false;
+        }
     }
     if (node.onGetOutputs?.()?.length) {
-        options[1].disabled = false;
+        const outputOption = options[1];
+        if (outputOption && typeof outputOption !== "string" && "disabled" in outputOption) {
+            outputOption.disabled = false;
+        }
     }
     if (node.getExtraMenuOptions) {
         const extra = node.getExtraMenuOptions(canvas, options);
@@ -123,7 +132,7 @@ export function buildNodeMenuOptions(
 
 export function buildGroupMenuOptions(
     menuClass: ResolvedMenuPanelCanvasClassPort
-): any[] {
+): MenuPanelEntryList {
     return [
         { content: "Title", callback: menuClass.onShowPropertyEditor },
         { content: "Color", has_submenu: true, callback: menuClass.onMenuNodeColors },
@@ -138,13 +147,13 @@ export function buildGroupMenuOptions(
     ];
 }
 
-export function buildSlotMenuOptions(node: any, slot: any): any[] {
+export function buildSlotMenuOptions(node: NodeMenuLike, slot: SlotMenuInfo): MenuPanelEntryList {
     if (node.getSlotMenuOptions) {
         return node.getSlotMenuOptions(slot);
     }
 
-    const options: any[] = [];
-    if (slot?.output?.links?.length) {
+    const options: MenuPanelEntryList = [];
+    if (slot?.output && "links" in slot.output && slot.output.links?.length) {
         options.push({ content: "Disconnect Links", slot });
     }
     const slotDefinition = slot.input || slot.output;

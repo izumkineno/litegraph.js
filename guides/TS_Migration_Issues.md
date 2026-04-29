@@ -57,8 +57,11 @@
 
 | 项 | 数量 | 热点 |
 | --- | ---: | --- |
-| `any` | 359 | `LGraphCanvas.input.ts`、`LGraphCanvas.render.ts`、`menu-panel-types.ts`、`LGraphCanvas.menu-panel.ts` |
+| `any` | 275 | `LGraphCanvas.input.ts`、`LGraphCanvas.render.ts`、`LGraphCanvas.menu-panel.ts`、`ContextMenu.ts` |
 | `as any` | 98 | `LGraphCanvas.input.ts`、`LGraphCanvas.render.ts`、`ContextMenu.ts`、`LGraphCanvas.menu-panel.ts` |
+| `Record<*, any>` | 13 | 主要剩余在跨层动态注册表和 legacy 扩展点附近 |
+| `any[]` | 24 | 主要剩余在 Canvas 输入、渲染热路径和少量 legacy 动态参数 |
+| rest `...args: any[]` | 9 | 主要剩余在历史静态菜单回调边界 |
 
 **影响**
 
@@ -68,9 +71,12 @@
 
 **建议**
 
-- 不做全量去 `any`；先从 `menu-panel-types.ts`、`contracts/canvas.ts`、`contracts/ui.ts` 收紧跨层 port。
+- 不做全量去 `any`，也不要用 `unknown` 做无结构替换；只有能写出字段结构、回调签名或 DOM 扩展属性时才替换。
+- 已完成第一批低风险收敛：`services/menu-panel-types.ts` 新增 `MenuPanelValue`、`MenuPanelOptions`、`RegisteredNodeType`、`SlotTypeRegistryEntry`、`SearchBoxExtraEntry` 等明确接口，替换菜单/搜索/注册表边界中可确定的 `any`。
+- 已完成第二批低风险收敛：`services/context-menu-action-builder.ts`、`services/connection-menu-controller.ts`、`services/context-menu-controller.ts` 改用菜单条目、插槽、连接菜单、画布事件和默认节点描述等结构化类型；该批次把 services 侧上下文菜单路径的显式 `any` 清到 0。
+- 下一批建议继续从 `services/panel-factory.ts`、`services/link-menu-controller.ts` 入手；暂缓直接改 `LGraphCanvas.input.ts` / `render.ts` 热路径，直到有 characterization test。
 - 对 input/render 中重复出现的 node/link/widget 结构建立最小局部类型。
-- 每次收紧类型都要跑 `typecheck` 和相关 migration-unit 测试。
+- 每次收紧类型都要跑 `typecheck`、`build:ts-migration` 和相关 migration-unit 测试。
 
 ## P1 — 高频 canvas 文件仍然过大
 

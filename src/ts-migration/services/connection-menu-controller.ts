@@ -1,25 +1,39 @@
+import type { LGraphNodeCanvasCollab as LGraphNode } from "../models/LGraphNode.canvas-collab";
 import type {
+    ConnectionNodeLike,
+    DefaultNodeDescriptor,
+    DefaultNodeType,
     DialogLike,
+    MenuPanelEntry,
+    MenuPanelEntryList,
     MenuPanelHost,
+    MenuPanelValue,
     ResolvedMenuPanelCanvasClassPort,
+    SlotDefinition,
+    SlotSelector,
 } from "./menu-panel-types";
 
 export interface CreateDefaultNodeForSlotOptions {
-    nodeFrom?: any;
-    slotFrom?: any;
-    nodeTo?: any;
-    slotTo?: any;
+    nodeFrom?: ConnectionNodeLike | null;
+    slotFrom?: SlotSelector | null;
+    nodeTo?: ConnectionNodeLike | null;
+    slotTo?: SlotSelector | null;
     position?: [number, number];
-    nodeType?: any;
+    nodeType?: DefaultNodeType | "AUTO" | null;
     posAdd?: [number, number];
     posSizeFix?: [number, number];
 }
 
+export interface ShowConnectionMenuOptions
+    extends Omit<CreateDefaultNodeForSlotOptions, "position" | "nodeType" | "posAdd" | "posSizeFix"> {
+    e?: (MouseEvent & { canvasX: number; canvasY: number }) | null;
+}
+
 export interface ConnectionMenuCanvasPort {
-    graph: any;
+    graph: { add: (node: LGraphNode) => void };
     allow_searchbox?: boolean;
     getCanvasWindow: () => Window;
-    showSearchBox: (event?: MouseEvent, options?: any) => DialogLike;
+    showSearchBox: (event?: MouseEvent, options?: Record<string, ConnectionNodeLike | SlotDefinition | string | number>) => DialogLike;
 }
 
 export interface ConnectionMenuContext {
@@ -33,16 +47,16 @@ export function createDefaultNodeForSlotController(
     optPass?: CreateDefaultNodeForSlotOptions
 ): boolean {
     const host = context.host;
-    const opts = Object.assign(
+    const opts: Required<CreateDefaultNodeForSlotOptions> = Object.assign(
         {
             nodeFrom: null,
             slotFrom: null,
             nodeTo: null,
             slotTo: null,
-            position: [0, 0],
+            position: [0, 0] as [number, number],
             nodeType: null,
-            posAdd: [0, 0],
-            posSizeFix: [0, 0],
+            posAdd: [0, 0] as [number, number],
+            posSizeFix: [0, 0] as [number, number],
         },
         optPass || {}
     );
@@ -67,18 +81,20 @@ export function createDefaultNodeForSlotController(
         return false;
     }
 
-    const nodeX = isFrom ? opts.nodeFrom : opts.nodeTo;
-    let slotX: any = isFrom ? opts.slotFrom : opts.slotTo;
-    let slotIndex: any = false;
+    const nodeX = (isFrom ? opts.nodeFrom : opts.nodeTo) as ConnectionNodeLike;
+    let slotX: SlotSelector | SlotDefinition | false | undefined = isFrom ? opts.slotFrom : opts.slotTo;
+    let slotIndex: number | false = false;
     if (typeof slotX === "string") {
-        slotIndex = isFrom
+        const foundSlot = isFrom
             ? nodeX.findOutputSlot(slotX, false)
             : nodeX.findInputSlot(slotX, false);
-        slotX = isFrom ? nodeX.outputs[slotX] : nodeX.inputs[slotX];
+        slotIndex = typeof foundSlot === "number" ? foundSlot : false;
+        slotX = typeof slotIndex === "number" ? (isFrom ? nodeX.outputs?.[slotIndex] : nodeX.inputs?.[slotIndex]) : false;
     } else if (typeof slotX === "object") {
-        slotIndex = isFrom
+        const foundSlot = isFrom
             ? nodeX.findOutputSlot(slotX.name)
             : nodeX.findInputSlot(slotX.name);
+        slotIndex = typeof foundSlot === "number" ? foundSlot : false;
     } else if (typeof slotX === "number") {
         slotIndex = slotX;
         slotX = isFrom ? nodeX.outputs[slotX] : nodeX.inputs[slotX];
@@ -89,6 +105,7 @@ export function createDefaultNodeForSlotController(
 
     if (slotX === false || slotIndex === false) {
         console.warn("createDefaultNodeForSlot bad slotX " + slotX + " " + slotIndex);
+        return false;
     }
     const fromSlotType = slotX.type == host.EVENT ? "_event_" : slotX.type;
     const slotTypesDefault = isFrom
@@ -99,7 +116,7 @@ export function createDefaultNodeForSlotController(
         return false;
     }
 
-    let nodeNewType: any = false;
+    let nodeNewType: DefaultNodeType | false = false;
     if (typeof slotDefault === "object") {
         for (const key in slotDefault) {
             if (opts.nodeType == slotDefault[key] || opts.nodeType == "AUTO") {
@@ -114,40 +131,43 @@ export function createDefaultNodeForSlotController(
         return false;
     }
 
-    let nodeNewOpts: any = null;
+    let nodeNewOpts: DefaultNodeDescriptor | null = null;
     if (typeof nodeNewType === "object" && nodeNewType.node) {
         nodeNewOpts = nodeNewType;
         nodeNewType = nodeNewType.node;
     }
-    const newNode = host.createNode?.(nodeNewType);
+    const nodeNewTypeName = typeof nodeNewType === "string" ? nodeNewType : nodeNewType.node;
+    const newNode = host.createNode?.(nodeNewTypeName);
     if (!newNode) {
-        console.log("failed creating " + nodeNewType);
+        console.log("failed creating " + nodeNewTypeName);
         return false;
     }
     if (nodeNewOpts) {
-        const nodeCompat = newNode as any;
         if (nodeNewOpts.properties) {
+            const legacyPropertyNode = newNode as LGraphNode & {
+                addProperty: (name: string, value: MenuPanelValue) => void;
+            };
             for (const key in nodeNewOpts.properties) {
-                nodeCompat.addProperty(key, nodeNewOpts.properties[key]);
+                legacyPropertyNode.addProperty(key, nodeNewOpts.properties[key]);
             }
         }
         if (nodeNewOpts.inputs) {
-            nodeCompat.inputs = [];
+            newNode.inputs = [];
             for (const key in nodeNewOpts.inputs) {
-                nodeCompat.addOutput(nodeNewOpts.inputs[key][0], nodeNewOpts.inputs[key][1]);
+                newNode.addOutput(nodeNewOpts.inputs[key][0], nodeNewOpts.inputs[key][1]);
             }
         }
         if (nodeNewOpts.outputs) {
-            nodeCompat.outputs = [];
+            newNode.outputs = [];
             for (const key in nodeNewOpts.outputs) {
-                nodeCompat.addOutput(nodeNewOpts.outputs[key][0], nodeNewOpts.outputs[key][1]);
+                newNode.addOutput(nodeNewOpts.outputs[key][0], nodeNewOpts.outputs[key][1]);
             }
         }
         if (nodeNewOpts.title) {
-            nodeCompat.title = nodeNewOpts.title;
+            newNode.title = nodeNewOpts.title;
         }
         if (nodeNewOpts.json) {
-            nodeCompat.configure(nodeNewOpts.json);
+            newNode.configure(nodeNewOpts.json);
         }
     }
 
@@ -174,10 +194,10 @@ export function createDefaultNodeForSlotController(
 
 export function showConnectionMenuController(
     context: ConnectionMenuContext,
-    optPass?: any
+    optPass?: ShowConnectionMenuOptions
 ): false {
     const host = context.host;
-    const opts = Object.assign(
+    const opts: Required<ShowConnectionMenuOptions> = Object.assign(
         {
             nodeFrom: null,
             slotFrom: null,
@@ -192,18 +212,20 @@ export function showConnectionMenuController(
     if (!isFrom && !isTo) {
         return false;
     }
-    const nodeX = isFrom ? opts.nodeFrom : opts.nodeTo;
-    let slotX: any = isFrom ? opts.slotFrom : opts.slotTo;
-    let slotIndex: any = false;
+    const nodeX = (isFrom ? opts.nodeFrom : opts.nodeTo) as ConnectionNodeLike;
+    let slotX: SlotSelector | SlotDefinition | false | undefined = isFrom ? opts.slotFrom : opts.slotTo;
+    let slotIndex: number | false = false;
     if (typeof slotX === "string") {
-        slotIndex = isFrom
-            ? nodeX.findOutputSlot?.(slotX, false)
-            : nodeX.findInputSlot?.(slotX, false);
-        slotX = isFrom ? nodeX.outputs?.[slotIndex] : nodeX.inputs?.[slotIndex];
+        const foundSlot = isFrom
+            ? nodeX.findOutputSlot(slotX, false)
+            : nodeX.findInputSlot(slotX, false);
+        slotIndex = typeof foundSlot === "number" ? foundSlot : false;
+        slotX = typeof slotIndex === "number" ? (isFrom ? nodeX.outputs?.[slotIndex] : nodeX.inputs?.[slotIndex]) : false;
     } else if (typeof slotX === "object") {
-        slotIndex = isFrom
-            ? nodeX.findOutputSlot?.(slotX.name)
-            : nodeX.findInputSlot?.(slotX.name);
+        const foundSlot = isFrom
+            ? nodeX.findOutputSlot(slotX.name)
+            : nodeX.findInputSlot(slotX.name);
+        slotIndex = typeof foundSlot === "number" ? foundSlot : false;
     } else if (typeof slotX === "number") {
         slotIndex = slotX;
         slotX = isFrom ? nodeX.outputs?.[slotX] : nodeX.inputs?.[slotX];
@@ -211,8 +233,11 @@ export function showConnectionMenuController(
         return false;
     }
 
+    if (slotX === false || slotIndex === false) {
+        return false;
+    }
     const fromSlotType = slotX.type == host.EVENT ? "_event_" : slotX.type;
-    const options: any[] = ["Add Node", null];
+    const options: MenuPanelEntryList = ["Add Node", null];
     if (context.graphcanvas.allow_searchbox) {
         options.push("Search", null);
     }
@@ -236,9 +261,9 @@ export function showConnectionMenuController(
             title:
                 (slotX?.name ? slotX.name + (fromSlotType ? " | " : "") : "") +
                 (fromSlotType || ""),
-            callback: (value: any, _menuOpt: any, e: any) => {
+            callback: (value: MenuPanelEntry | null, _menuOpt, e: MouseEvent) => {
                 if (value === "Add Node") {
-                    context.menuClass.onMenuAdd(null, null, e, menu, (node: any) => {
+                    context.menuClass.onMenuAdd(null, null, e, menu, (node: LGraphNode) => {
                         if (isFrom) {
                             opts.nodeFrom.connectByType(slotIndex, node, fromSlotType);
                         } else {
@@ -263,8 +288,8 @@ export function showConnectionMenuController(
                     createDefaultNodeForSlotController(
                         context,
                         Object.assign(opts, {
-                            position: [opts.e.canvasX, opts.e.canvasY],
-                            nodeType: value,
+                            position: [opts.e?.canvasX || 0, opts.e?.canvasY || 0] as [number, number],
+                            nodeType: typeof value === "string" || (value && "node" in value) ? value : null,
                         })
                     );
                 }

@@ -5,17 +5,23 @@ import {
     buildSlotMenuOptions,
 } from "./context-menu-action-builder";
 import type {
+    CanvasPointerEventLike,
+    ContextMenuNodeLike,
+    ContextMenuOptionsLike,
     DialogLike,
     MenuActionBuilderCanvasPort,
+    MenuPanelEntry,
+    MenuPanelEntryList,
     MenuPanelHost,
     ResolvedMenuPanelCanvasClassPort,
+    SlotMenuInfo,
 } from "./menu-panel-types";
 
 export interface ContextMenuControllerCanvasPort
     extends MenuActionBuilderCanvasPort {
-    graph: any;
+    graph: { getGroupOnPos?: (x: number, y: number) => object | null };
     getCanvasWindow: () => Window;
-    createDialog: (html: string, options?: any) => DialogLike;
+    createDialog: (html: string, options?: ContextMenuOptionsLike) => DialogLike;
     setDirty: (fgcanvas: boolean, bgcanvas: boolean) => void;
 }
 
@@ -27,13 +33,13 @@ export interface ContextMenuControllerContext {
 
 export function processContextMenuController(
     context: ContextMenuControllerContext,
-    node: any,
-    event: any
+    node: ContextMenuNodeLike | null,
+    event: CanvasPointerEventLike
 ): void {
     const { host, menuClass, graphcanvas } = context;
-    const options: any = {
+    const options: ContextMenuOptionsLike = {
         event,
-        callback: (value: any, callbackOptions: any) => {
+        callback: (value: MenuPanelEntry | null, callbackOptions: ContextMenuOptionsLike) => {
             handleContextMenuAction(context, node, value, callbackOptions);
         },
         extra: node,
@@ -42,8 +48,8 @@ export function processContextMenuController(
         options.title = node.type;
     }
 
-    let menuInfo: any[] | null = null;
-    let slot: any = null;
+    let menuInfo: MenuPanelEntryList | null = null;
+    let slot: SlotMenuInfo | null = null;
     if (node) {
         slot = node.getSlotInPosition?.(event.canvasX, event.canvasY);
         menuClass.active_node = node;
@@ -51,7 +57,7 @@ export function processContextMenuController(
 
     if (slot) {
         menuInfo = buildSlotMenuOptions(node, slot);
-        options.title = (slot.input ? slot.input.type : slot.output.type) || "*";
+        options.title = String((slot.input ? slot.input.type : slot.output?.type) || "*");
         if (slot.input?.type == host.ACTION) {
             options.title = "Action";
         }
@@ -91,11 +97,14 @@ export function processContextMenuController(
 
 function handleContextMenuAction(
     context: ContextMenuControllerContext,
-    node: any,
-    value: any,
-    options: any
+    node: ContextMenuNodeLike | null,
+    value: MenuPanelEntry | null,
+    options: ContextMenuOptionsLike
 ): void {
-    if (!value) {
+    if (!value || typeof value === "string" || !("content" in value)) {
+        return;
+    }
+    if (!node) {
         return;
     }
     if (value.content == "Remove Slot") {
@@ -127,9 +136,9 @@ function handleContextMenuAction(
 
 function showRenameSlotDialog(
     context: ContextMenuControllerContext,
-    node: any,
-    info: any,
-    options: any
+    node: ContextMenuNodeLike,
+    info: SlotMenuInfo,
+    options: ContextMenuOptionsLike
 ): void {
     const slotInfo = info.input
         ? node.getInputInfo?.(info.slot)
