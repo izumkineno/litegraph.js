@@ -16,3 +16,8 @@ test-results/
 auth.json
 .codex/config.toml
 tests/playwright/reports/**
+.codex
+.omx
+.omc
+.agents
+.claude
